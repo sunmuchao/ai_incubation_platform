@@ -1,0 +1,30 @@
+FROM centos:7
+# 替换yum源
+#COPY CentOS-Base.repo /etc/yum.repos.d/
+# 更新软件
+#RUN yum -y upgrade
+# 安装中文包
+RUN yum install -y kde-l10n-Chinese
+RUN yum -y reinstall glibc-common
+RUN localedef -c -f UTF-8 -i zh_CN zh_CN.utf8
+RUN echo 'LANG="zh_CN.UTF-8"' > /etc/locale.conf
+ENV LANG zh_CN.UTF-8
+ENV LC_ALL zh_CN.UTF-8
+#设置时区
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+RUN echo "Asia/Shanghai" > /etc/timezone
+WORKDIR /usr
+RUN mkdir jdk
+ADD jdk11 /usr/jdk/
+#ADD jdk1.8.0 /usr/jdk/
+RUN mkdir polarstest
+RUN yum -y install vim net-tools gcc gcc-c++ make automake wget
+RUN wget https://cmake.org/files/v3.6/cmake-3.6.2.tar.gz
+RUN tar -zxvf cmake-3.6.2.tar.gz
+RUN cd cmake-3.6.2
+RUN ./bootstrap && make -j4 && sudo make install
+WORKDIR /usr/banchMark/
+ENV JAVA_HOME=/usr/jdk
+ENV JRE_HOME=$JAVA_HOME/jre
+ENV CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar:$JRE_HOME/lib:$CLASSPATH
+ENV PATH=$JAVA_HOME/bin:$PATH
