@@ -163,5 +163,10 @@ class AntiCheatService:
         logger.warning("Task marked as cheating: task_id=%s, worker_id=%s, reason=%s",
                       task.id, task.worker_id, reason)
 
+    def reset_state(self) -> None:
+        """Reset in-memory state (used by internal test endpoints)."""
+        self._global_content_hashes.clear()
+        self._worker_submissions.clear()
+
 
 anti_cheat_service = AntiCheatService()

@@ -1,0 +1,69 @@
+/* 机会匹配页面样式 */
+.opportunity-match-page {
+  min-height: 100vh;
+  background: #f5f7fa;
+
+  .page-header {
+    background: #fff;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .header-icon {
+        font-size: 28px;
+        color: #722ed1;
+      }
+    }
+  }
+
+  .page-content {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .filter-card {
+      .slider-container {
+        display: flex;
+        align-items: center;
+
+        .ant-slider {
+          flex: 1;
+          margin: 0 8px;
+        }
+      }
+
+      .result-count {
+        text-align: center;
+        font-size: 14px;
+      }
+    }
+
+    .opportunities-card {
+      min-height: 400px;
+    }
+
+    .ai-tip-card {
+      background: linear-gradient(135deg, #f9f0ff 0%, #f0f5ff 100%);
+      border-color: #d9b3ff;
+
+      .tip-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+
+        .tip-icon {
+          font-size: 20px;
+          color: #722ed1;
+          flex-shrink: 0;
+        }
+      }
+    }
+  }
+}

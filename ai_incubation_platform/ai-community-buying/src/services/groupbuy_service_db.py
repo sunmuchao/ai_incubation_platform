@@ -49,6 +49,9 @@ class GroupBuyServiceDB:
     def create_product(self, data: ProductCreate) -> Product:
         """创建商品"""
         product_entity = ProductEntity(**data.model_dump())
+        # stock 为 0 时应视为售罄
+        if product_entity.stock <= 0:
+            product_entity.status = ProductStatus.SOLD_OUT
         self.db.add(product_entity)
         self.db.commit()
         self.db.refresh(product_entity)
@@ -205,10 +208,19 @@ class GroupBuyServiceDB:
 
         product_entity.locked_stock -= quantity
         product_entity.sold_stock += quantity
+        product_entity.stock -= quantity
+        if product_entity.stock <= 0 and product_entity.status == ProductStatus.ACTIVE:
+            product_entity.status = ProductStatus.SOLD_OUT
+            logger.info(f"商品 {product_id} 已售罄")
+        elif product_entity.stock > 0 and product_entity.status == ProductStatus.SOLD_OUT:
+            product_entity.status = ProductStatus.ACTIVE
         product_entity.updated_at = datetime.now()
         self.db.commit()
 
-        logger.info(f"库存扣减成功: 商品 {product_id}, 扣减 {quantity} 件, 已售: {product_entity.sold_stock}")
+        logger.info(
+            f"库存扣减成功: 商品 {product_id}, 扣减 {quantity} 件, "
+            f"已售: {product_entity.sold_stock}, 剩余: {product_entity.stock}"
+        )
         return True
 
     # ========== 团购管理 ==========
@@ -272,6 +284,25 @@ class GroupBuyServiceDB:
         group_buy_entity = self.db.query(GroupBuyEntity).filter(GroupBuyEntity.id == group_buy_id).first()
         if not group_buy_entity:
             return None
+
+        # 过期后必须立刻解锁库存并更新状态，避免“只尝试 join/查询但不列表”的场景漏处理
+        if group_buy_entity.status == GroupBuyStatus.OPEN and group_buy_entity.deadline < datetime.now():
+            # 显式构造，避免 Pydantic 在 members: List[str] 上解析 ORM 关系导致类型不一致
+            group = GroupBuy(
+                id=group_buy_entity.id,
+                product_id=group_buy_entity.product_id,
+                organizer_id=group_buy_entity.organizer_id,
+                product=self.get_product(group_buy_entity.product_id),
+                target_size=group_buy_entity.target_size,
+                current_size=group_buy_entity.current_size,
+                status=group_buy_entity.status,
+                deadline=group_buy_entity.deadline,
+                members=[m.user_id for m in group_buy_entity.members],
+                created_at=group_buy_entity.created_at,
+                updated_at=group_buy_entity.updated_at
+            )
+            self._handle_group_failure(group, reason="expired")
+            group_buy_entity = self.db.query(GroupBuyEntity).filter(GroupBuyEntity.id == group_buy_id).first()
 
         group_buy = GroupBuy(
             id=group_buy_entity.id,
@@ -351,6 +382,14 @@ class GroupBuyServiceDB:
         # 检查团购状态
         if not group_buy.can_join(user_id):
             if group_buy.status != GroupBuyStatus.OPEN:
+                if group_buy.status == GroupBuyStatus.EXPIRED:
+                    raise GroupBuyNotOpenError(f"团购 {group_buy_id} 已过期")
+                if group_buy.status == GroupBuyStatus.CANCELLED:
+                    raise GroupBuyNotOpenError(f"团购 {group_buy_id} 已取消")
+                if group_buy.status == GroupBuyStatus.FAILED:
+                    raise GroupBuyNotOpenError(f"团购 {group_buy_id} 成团失败")
+                if group_buy.status == GroupBuyStatus.SUCCESS:
+                    raise GroupBuyNotOpenError(f"团购 {group_buy_id} 已成团")
                 raise GroupBuyNotOpenError(f"团购 {group_buy_id} 已关闭")
             if group_buy.is_expired():
                 raise GroupBuyNotOpenError(f"团购 {group_buy_id} 已过期")
@@ -441,6 +480,10 @@ class GroupBuyServiceDB:
 
         if reason == "expired":
             group_buy_entity.status = GroupBuyStatus.EXPIRED
+        elif reason == "cancelled":
+            group_buy_entity.status = GroupBuyStatus.CANCELLED
+        elif reason == "failed":
+            group_buy_entity.status = GroupBuyStatus.FAILED
         else:
             group_buy_entity.status = GroupBuyStatus.FAILED
 
@@ -466,8 +509,20 @@ class GroupBuyServiceDB:
         ).all()
 
         for group_entity in expired_groups:
-            group = GroupBuy.model_validate(group_entity)
-            group.members = [m.user_id for m in group_entity.members]
+            # 显式构造，避免 Pydantic 解析 members ORM 关系
+            group = GroupBuy(
+                id=group_entity.id,
+                product_id=group_entity.product_id,
+                organizer_id=group_entity.organizer_id,
+                product=self.get_product(group_entity.product_id),
+                target_size=group_entity.target_size,
+                current_size=group_entity.current_size,
+                status=group_entity.status,
+                deadline=group_entity.deadline,
+                members=[m.user_id for m in group_entity.members],
+                created_at=group_entity.created_at,
+                updated_at=group_entity.updated_at
+            )
             self._handle_group_failure(group, reason="expired")
 
     def cancel_group_buy(self, group_buy_id: str, operator_id: str) -> bool:
@@ -593,12 +648,24 @@ class GroupBuyServiceDB:
         members = self.db.query(GroupMemberEntity).filter(GroupMemberEntity.user_id == user_id).all()
         records = []
         for member in members:
+            if member.order_id:
+                record_status = "paid"
+            else:
+                group_status = self.db.query(GroupBuyEntity.status).filter(GroupBuyEntity.id == member.group_buy_id).scalar()
+                if group_status == GroupBuyStatus.EXPIRED:
+                    record_status = "expired"
+                elif group_status == GroupBuyStatus.CANCELLED:
+                    record_status = "cancelled"
+                elif group_status == GroupBuyStatus.FAILED:
+                    record_status = "failed"
+                else:
+                    record_status = "joined"
             record = GroupJoinRecord(
                 group_buy_id=member.group_buy_id,
                 user_id=member.user_id,
                 join_time=member.join_time,
                 order_id=member.order_id,
-                status="paid" if member.order_id else "joined"
+                status=record_status
             )
             records.append(record)
         return records
@@ -608,12 +675,24 @@ class GroupBuyServiceDB:
         members = self.db.query(GroupMemberEntity).filter(GroupMemberEntity.group_buy_id == group_buy_id).all()
         records = []
         for member in members:
+            if member.order_id:
+                record_status = "paid"
+            else:
+                group_status = self.db.query(GroupBuyEntity.status).filter(GroupBuyEntity.id == member.group_buy_id).scalar()
+                if group_status == GroupBuyStatus.EXPIRED:
+                    record_status = "expired"
+                elif group_status == GroupBuyStatus.CANCELLED:
+                    record_status = "cancelled"
+                elif group_status == GroupBuyStatus.FAILED:
+                    record_status = "failed"
+                else:
+                    record_status = "joined"
             record = GroupJoinRecord(
                 group_buy_id=member.group_buy_id,
                 user_id=member.user_id,
                 join_time=member.join_time,
                 order_id=member.order_id,
-                status="paid" if member.order_id else "joined"
+                status=record_status
             )
             records.append(record)
         return records

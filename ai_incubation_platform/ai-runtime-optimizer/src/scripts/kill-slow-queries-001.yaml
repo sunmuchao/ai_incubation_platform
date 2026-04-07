@@ -1,0 +1,135 @@
+# 终止慢查询 - 终止超时的数据库查询
+script_id: kill-slow-queries-001
+name: 终止慢查询
+description: 终止超时的数据库查询
+category: database_optimization
+target_type: database
+risk_level: medium
+timeout_seconds: 30
+
+parameters:
+  - name: db_host
+    type: string
+    default: "localhost"
+    description: 数据库主机
+  - name: db_port
+    type: integer
+    default: 5432
+    description: 数据库端口
+  - name: db_name
+    type: string
+    default: "postgres"
+    description: 数据库名称
+  - name: timeout_seconds
+    type: integer
+    default: 300
+    description: 查询超时阈值（秒）
+  - name: min_duration
+    type: integer
+    default: 60
+    description: 最小执行时间（秒）
+
+script_content: |
+  #!/bin/bash
+  set -e
+
+  DB_HOST="{{db_host}}"
+  DB_PORT="{{db_port}}"
+  DB_NAME="{{db_name}}"
+  TIMEOUT_SECONDS="{{timeout_seconds}}"
+  MIN_DURATION="{{min_duration}}"
+
+  echo "=== 终止慢查询 ==="
+  echo "数据库：${DB_HOST}:${DB_PORT}/${DB_NAME}"
+  echo "超时阈值：${TIMEOUT_SECONDS}s"
+  echo "最小执行时间：${MIN_DURATION}s"
+
+  # 检查数据库连接
+  echo "检查数据库连接..."
+  if ! psql -h "$DB_HOST" -p "$DB_PORT" -U postgres -d "$DB_NAME" -c "SELECT 1" > /dev/null 2>&1; then
+    echo "错误：无法连接到数据库"
+    exit 1
+  fi
+
+  # 获取当前运行的慢查询
+  echo "查找慢查询..."
+  SLOW_QUERIES=$(psql -h "$DB_HOST" -p "$DB_PORT" -U postgres -d "$DB_NAME" -t -c "
+    SELECT pid, now() - query_start AS duration, state, left(query, 100) AS query_preview
+    FROM pg_stat_activity
+    WHERE datname = '$DB_NAME'
+    AND state = 'active'
+    AND pid <> pg_backend_pid()
+    AND EXTRACT(EPOCH FROM (now() - query_start)) > $MIN_DURATION
+    ORDER BY duration DESC
+    LIMIT 10
+  " 2>/dev/null)
+
+  if [ -z "$SLOW_QUERIES" ]; then
+    echo "未发现慢查询"
+    exit 0
+  fi
+
+  echo "发现的慢查询:"
+  echo "$SLOW_QUERIES"
+
+  # 获取需要终止的 PID
+  PIDS=$(psql -h "$DB_HOST" -p "$DB_PORT" -U postgres -d "$DB_NAME" -t -c "
+    SELECT pid
+    FROM pg_stat_activity
+    WHERE datname = '$DB_NAME'
+    AND state = 'active'
+    AND pid <> pg_backend_pid()
+    AND EXTRACT(EPOCH FROM (now() - query_start)) > $TIMEOUT_SECONDS
+  " 2>/dev/null)
+
+  if [ -z "$PIDS" ]; then
+    echo "没有超过超时阈值的查询"
+    exit 0
+  fi
+
+  # 终止慢查询
+  echo "终止超时查询 (>${TIMEOUT_SECONDS}s)..."
+  for PID in $PIDS; do
+    PID=$(echo "$PID" | tr -d ' ')
+    if [ -n "$PID" ]; then
+      echo "终止查询 PID: $PID"
+      psql -h "$DB_HOST" -p "$DB_PORT" -U postgres -d "$DB_NAME" -c "SELECT pg_terminate_backend($PID)" 2>/dev/null || true
+    fi
+  done
+
+  # 验证
+  REMAINING=$(psql -h "$DB_HOST" -p "$DB_PORT" -U postgres -d "$DB_NAME" -t -c "
+    SELECT count(*)
+    FROM pg_stat_activity
+    WHERE datname = '$DB_NAME'
+    AND state = 'active'
+    AND EXTRACT(EPOCH FROM (now() - query_start)) > $TIMEOUT_SECONDS
+  " 2>/dev/null | tr -d ' ')
+
+  echo "剩余超时查询数：$REMAINING"
+  echo "=== 慢查询终止完成 ==="
+
+verification_steps:
+  - name: db_connection
+    check: psql -h {{db_host}} -p {{db_port}} -U postgres -d {{db_name}} -c "SELECT 1"
+    expected: "1"
+    timeout: 10
+
+  - name: slow_query_count
+    check: psql -h {{db_host}} -p {{db_port}} -U postgres -d {{db_name}} -t -c "SELECT count(*) FROM pg_stat_activity WHERE state = 'active' AND EXTRACT(EPOCH FROM (now() - query_start)) > {{timeout_seconds}}" | tr -d '
+    expected: "0"
+    timeout: 10
+
+rollback_script: |
+  # 终止的查询无法回滚
+  echo "Killed queries cannot be rolled back"
+  echo "The application should retry the queries if needed"
+
+version: 1.0.0
+author: system
+tags:
+  - database
+  - postgresql
+  - slow_query
+  - performance
+enabled: true

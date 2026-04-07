@@ -1,0 +1,346 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========== 设计令牌 ========== */
+:root {
+  /* 主色系 - Monochromatic 深蓝灰 */
+  --bg-primary: #0f1419;
+  --bg-secondary: #1a2332;
+  --bg-tertiary: #232f3e;
+
+  /* 文本色 */
+  --text-primary: #e8ecf1;
+  --text-secondary: #9aa8b8;
+  --text-muted: #64748b;
+
+  /* 强调色 */
+  --accent: #3d9cf5;
+  --accent-soft: rgba(61, 156, 245, 0.15);
+  --accent-glow: rgba(61, 156, 245, 0.3);
+
+  /* 边框 */
+  --border-light: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.12);
+
+  /* 状态色 */
+  --success: #4caf50;
+  --warning: #ff9800;
+  --error: #f44336;
+
+  /* 圆角 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  /* 阴影 - Linear.app 风格 */
+  --shadow-bento: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-bento-hover: 0 2px 4px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 20px rgba(61, 156, 245, 0.15);
+}
+
+/* ========== 基础样式 ========== */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  font-family: 'SF Pro Text', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+/* ========== 滚动条 - 精致样式 ========== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ========== 选中文本 ========== */
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ========== 代码样式 ========== */
+code {
+  font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
+  font-size: 0.9em;
+  letter-spacing: -0.02em;
+}
+
+/* ========== 链接样式 ========== */
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+/* ========== 按钮基础样式 ========== */
+button {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s var(--ease-bento);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ========== 输入框样式 ========== */
+input, textarea, select {
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ========== 动画 ========== */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(61, 156, 245, 0.15); }
+  50% { box-shadow: 0 0 30px rgba(61, 156, 245, 0.25); }
+}
+
+/* ========== 工具类 ========== */
+.loading {
+  animation: spin 1s linear infinite;
+}
+
+.loading-slow {
+  animation: spin 2s linear infinite;
+}
+
+.pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+.slide-up {
+  animation: slideUp 0.4s ease-out;
+}
+
+.scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, var(--bg-secondary) 0%, var(--bg-tertiary) 50%, var(--bg-secondary) 100%);
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* ========== Bento Grid 卡片样式 ========== */
+.bento-card {
+  background: linear-gradient(135deg, rgba(26, 35, 50, 0.95) 0%, rgba(35, 47, 62, 0.9) 100%);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-bento);
+  transition: all 0.3s var(--ease-bento);
+  backdrop-filter: blur(8px);
+}
+
+.bento-card:hover {
+  background: linear-gradient(135deg, rgba(26, 35, 50, 1) 0%, rgba(35, 47, 62, 0.95) 100%);
+  border-color: var(--border-medium);
+  box-shadow: var(--shadow-bento-hover);
+  transform: translateY(-2px);
+}
+
+.bento-card:active {
+  transform: translateY(0);
+  box-shadow: 0 0 0 1px var(--accent-soft), var(--shadow-bento);
+}
+
+/* ========== Bento Grid 布局 ========== */
+.bento-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(12, 1fr);
+}
+
+.bento-span-12 { grid-column: span 12; }
+.bento-span-8 { grid-column: span 8; }
+.bento-span-6 { grid-column: span 6; }
+.bento-span-4 { grid-column: span 4; }
+.bento-span-3 { grid-column: span 3; }
+.bento-span-2 { grid-column: span 2; }
+
+@media (max-width: 1024px) {
+  .bento-span-8, .bento-span-6, .bento-span-4, .bento-span-3, .bento-span-2 {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 640px) {
+  .bento-span-8, .bento-span-6, .bento-span-4, .bento-span-3, .bento-span-2 {
+    grid-column: span 12;
+  }
+}
+
+/* ========== 渐变背景 ========== */
+.gradient-accent {
+  background: linear-gradient(135deg, var(--accent) 0%, #60a5fa 100%);
+}
+
+.gradient-subtle {
+  background: linear-gradient(135deg, rgba(61, 156, 245, 0.15) 0%, rgba(61, 156, 245, 0.05) 100%);
+}
+
+/* ========== 玻璃态效果 ========== */
+.glass {
+  background: rgba(26, 35, 50, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ========== 骨架屏 ========== */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-tertiary) 50%, var(--bg-secondary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ========== 过渡缓动曲线 ========== */
+:root {
+  --ease-bento: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* ========== 焦点样式 ========== */
+.focus-ring {
+  transition: box-shadow 0.2s ease;
+}
+
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--accent);
+}
+
+/* ========== 文本渐变 ========== */
+.text-gradient {
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-accent {
+  background: linear-gradient(135deg, var(--accent) 0%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

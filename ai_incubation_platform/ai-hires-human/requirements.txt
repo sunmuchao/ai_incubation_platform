@@ -11,4 +11,6 @@ stripe>=7.0.0
 python-dotenv>=1.0.0
 
 # 孵化器统一 Agent 运行时（DeerFlow 2.0）— 见 PLATFORM_AGENT_STANDARD.md
--e ../deerflow-integration
+# 该依赖对本地 P0 端到端 API 演示/测试不是强依赖。
+# 如需与 DeerFlow 网关集成，可在可用环境下自行安装：
+#   pip install -e ../deerflow-integration

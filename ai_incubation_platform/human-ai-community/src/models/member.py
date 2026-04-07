@@ -1,7 +1,7 @@
 """
 社区成员模型
 """
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import uuid
@@ -21,7 +21,7 @@ class MemberRole(str, Enum):
 
 class CommunityMember(BaseModel):
     """社区成员模型"""
-    id: str = str(uuid.uuid4())
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     email: Optional[str] = None
     member_type: MemberType = MemberType.HUMAN
@@ -33,19 +33,24 @@ class CommunityMember(BaseModel):
 
     # 统计
     post_count: int = 0
-    join_date: datetime = datetime.now()
+    join_date: datetime = Field(default_factory=datetime.now)
+
+    # 用户等级系统
+    experience_points: int = 0
+    level: int = 1
+    last_checkin_date: Optional[datetime] = None
 
 
 class Post(BaseModel):
     """帖子模型"""
-    id: str = str(uuid.uuid4())
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     author_id: str
     author_type: MemberType = MemberType.HUMAN
     title: str
     content: str
-    tags: List[str] = []
-    created_at: datetime = datetime.now()
-    updated_at: datetime = datetime.now()
+    tags: List[str] = Field(default_factory=list)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
 
 
 class MemberCreate(BaseModel):
@@ -63,19 +68,19 @@ class PostCreate(BaseModel):
     author_type: MemberType = MemberType.HUMAN
     title: str
     content: str
-    tags: List[str] = []
+    tags: List[str] = Field(default_factory=list)
 
 
 class Comment(BaseModel):
     """评论模型"""
-    id: str = str(uuid.uuid4())
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     post_id: str
     author_id: str
     author_type: MemberType = MemberType.HUMAN
     content: str
     parent_id: Optional[str] = None  # 回复的评论ID，顶层评论为None
-    created_at: datetime = datetime.now()
-    updated_at: datetime = datetime.now()
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
 
 
 class CommentCreate(BaseModel):
@@ -106,59 +111,59 @@ class ReviewResult(BaseModel):
     status: ReviewStatus
     reason: Optional[str] = None
     reviewer: Optional[str] = None  # 审核者ID，AI审核为模型名，人工审核为用户ID
-    review_time: datetime = datetime.now()
+    review_time: datetime = Field(default_factory=datetime.now)
     risk_score: float = 0.0  # 风险分数，0-1，越高越危险
 
 
 class ContentReview(BaseModel):
     """内容审核记录"""
-    id: str = str(uuid.uuid4())
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     content_id: str  # 内容ID（帖子ID或评论ID）
     content_type: ContentType
     content: str  # 待审核内容
     author_id: str
     author_type: MemberType
     status: ReviewStatus = ReviewStatus.PENDING
-    submit_time: datetime = datetime.now()
+    submit_time: datetime = Field(default_factory=datetime.now)
     review_result: Optional[ReviewResult] = None
 
 
 class ReviewRule(BaseModel):
     """审核规则"""
-    id: str = str(uuid.uuid4())
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     description: str
     rule_type: str  # 规则类型：keyword, ai, regex, custom
-    config: Dict[str, Any] = {}  # 规则配置
+    config: Dict[str, Any] = Field(default_factory=dict)  # 规则配置
     enabled: bool = True
     risk_score: float = 0.5  # 触发时的风险分数
     action: str = "flag"  # 触发后的动作：flag, reject, warn
-    created_at: datetime = datetime.now()
-    updated_at: datetime = datetime.now()
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
 
 
 class AgentCallRecord(BaseModel):
     """AI Agent调用记录"""
-    id: str = str(uuid.uuid4())
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     agent_name: str  # Agent名称/标识
     action: str  # 动作：post, reply, review
     content_id: Optional[str] = None  # 关联的内容ID
-    input_params: Dict[str, Any] = {}  # 调用参数
-    output_result: Dict[str, Any] = {}  # 返回结果
+    input_params: Dict[str, Any] = Field(default_factory=dict)  # 调用参数
+    output_result: Dict[str, Any] = Field(default_factory=dict)  # 返回结果
     status: str = "success"  # 调用状态：success, failed, timeout
     error_message: Optional[str] = None
-    call_time: datetime = datetime.now()
+    call_time: datetime = Field(default_factory=datetime.now)
     response_time: float = 0.0  # 响应时间（毫秒）
 
 
 class RateLimitConfig(BaseModel):
     """速率限制配置"""
-    id: str = str(uuid.uuid4())
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     resource: str  # 受限资源：post, comment, login等
     limit: int  # 限制次数
     window_seconds: int  # 时间窗口（秒）
     enabled: bool = True
-    created_at: datetime = datetime.now()
+    created_at: datetime = Field(default_factory=datetime.now)
 
 
 class ReportType(str, Enum):
@@ -168,6 +173,7 @@ class ReportType(str, Enum):
     PORNOGRAPHY = "pornography"  # 色情内容
     HATE_SPEECH = "hate_speech"  # 仇恨言论
     COPYRIGHT = "copyright"  # 版权侵权
+    ADVERTISEMENT = "advertisement"  # 垃圾广告
     OTHER = "other"  # 其他
 
 
@@ -176,12 +182,13 @@ class ReportStatus(str, Enum):
     PENDING = "pending"  # 待处理
     PROCESSING = "processing"  # 处理中
     RESOLVED = "resolved"  # 已处理
+    DISMISS = "dismiss"  # 已驳回 (兼容旧代码)
     DISMISSED = "dismissed"  # 已驳回
 
 
 class Report(BaseModel):
     """举报记录"""
-    id: str = str(uuid.uuid4())
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     reporter_id: str  # 举报人ID
     reported_content_id: str  # 被举报内容ID
     reported_content_type: ContentType  # 被举报内容类型
@@ -191,8 +198,21 @@ class Report(BaseModel):
     status: ReportStatus = ReportStatus.PENDING
     handler_id: Optional[str] = None  # 处理人ID
     handler_note: Optional[str] = None  # 处理备注
-    created_at: datetime = datetime.now()
+    created_at: datetime = Field(default_factory=datetime.now)
     updated_at: Optional[datetime] = None
+
+
+class BanReason(str, Enum):
+    """封禁原因"""
+    SPAM = "spam"  # 垃圾广告
+    VIOLENCE = "violence"  # 暴力内容
+    PORNOGRAPHY = "pornography"  # 色情内容
+    HATE_SPEECH = "hate_speech"  # 仇恨言论
+    HARASSMENT = "harassment"  # 骚扰行为
+    COPYRIGHT = "copyright"  # 版权侵权
+    FRAUD = "fraud"  # 欺诈行为
+    TERMS_VIOLATION = "terms_violation"  # 违反条款
+    OTHER = "other"  # 其他
 
 
 class BanStatus(str, Enum):
@@ -204,7 +224,7 @@ class BanStatus(str, Enum):
 
 class BanRecord(BaseModel):
     """封禁记录"""
-    id: str = str(uuid.uuid4())
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str  # 被封禁用户ID
     reason: str  # 封禁原因
     ban_type: str  # 封禁类型：post, comment, login, all
@@ -212,7 +232,7 @@ class BanRecord(BaseModel):
     status: BanStatus = BanStatus.ACTIVE
     operator_id: str  # 操作人ID
     expire_time: Optional[datetime] = None  # 过期时间
-    created_at: datetime = datetime.now()
+    created_at: datetime = Field(default_factory=datetime.now)
     lifted_at: Optional[datetime] = None  # 解封时间
     lift_reason: Optional[str] = None  # 解封原因
 
@@ -238,7 +258,7 @@ class OperationType(str, Enum):
 
 class AuditLog(BaseModel):
     """审计日志"""
-    id: str = str(uuid.uuid4())
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     operator_id: str  # 操作者ID
     operator_type: MemberType  # 操作者类型
     operation_type: OperationType
@@ -250,7 +270,7 @@ class AuditLog(BaseModel):
     user_agent: Optional[str] = None  # 客户端信息
     status: str = "success"  # 操作状态：success, failed
     error_message: Optional[str] = None
-    created_at: datetime = datetime.now()
+    created_at: datetime = Field(default_factory=datetime.now)
 
 
 class UnifiedUserInfo(BaseModel):
@@ -260,8 +280,8 @@ class UnifiedUserInfo(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
     avatar: Optional[str] = None
-    roles: List[str] = []
-    permissions: List[str] = []
+    roles: List[str] = Field(default_factory=list)
+    permissions: List[str] = Field(default_factory=list)
     is_verified: bool = False
     created_at: datetime
     last_login_at: Optional[datetime] = None

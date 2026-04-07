@@ -3,6 +3,7 @@
 """
 from __future__ import annotations
 
+from datetime import datetime
 import os
 import sys
 from typing import List, Optional
@@ -20,6 +21,7 @@ from models.task import (
     TaskCompleteBody,
     TaskCreate,
     TaskManualReviewBody,
+    TaskPriority,
     TaskStatus,
     TaskSubmitBody,
 )
@@ -47,6 +49,22 @@ async def search_tasks(
     - sort_by 可选值: created_at, reward, priority, deadline
     - sort_order 可选值: asc, desc
     """
+    allowed_sort_by = {"created_at", "reward", "priority", "deadline"}
+    allowed_sort_order = {"asc", "desc"}
+    sort_by_normalized = sort_by.lower().strip()
+    sort_order_normalized = sort_order.lower().strip()
+    if sort_by_normalized not in allowed_sort_by:
+        raise HTTPException(status_code=400, detail=f"Invalid sort_by: {sort_by}")
+    if sort_order_normalized not in allowed_sort_order:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid sort_order: {sort_order}"
+        )
+    if min_reward < 0:
+        raise HTTPException(status_code=400, detail="Invalid min_reward: must be >= 0")
+    if max_reward is not None and max_reward < min_reward:
+        raise HTTPException(
+            status_code=400, detail="Invalid max_reward: must be >= min_reward"
+        )
     return task_service.search_tasks(
         skill=skill,
         min_reward=min_reward,
@@ -55,12 +73,12 @@ async def search_tasks(
         location=location,
         priority=priority,
         keyword=keyword,
-        sort_by=sort_by,
-        sort_order=sort_order,
+        sort_by=sort_by_normalized,
+        sort_order=sort_order_normalized,
     )
 
 
-@router.get("/", response_model=List[Task])
+@router.get("", response_model=List[Task])
 async def list_tasks(
     status: Optional[TaskStatus] = None,
     interaction_type: Optional[InteractionType] = None,
@@ -72,7 +90,7 @@ async def list_tasks(
     )
 
 
-@router.post("/", response_model=Task)
+@router.post("", response_model=Task)
 async def create_task(task_data: TaskCreate):
     """AI / Agent 发布任务（默认因能力缺口立即进入可接单状态）。"""
     return task_service.create_task(task_data)
@@ -154,6 +172,8 @@ async def submit_work(task_id: str, body: TaskSubmitBody):
         task.delivery_content_hash = content_hash
         task.submission_count += 1
         task.last_submitted_at = task.submitted_at
+        # 反作弊字段写入完成后更新更新时间，便于审计/排查
+        task.updated_at = datetime.now()
 
     return {"message": "Work submitted", "task_id": task_id}
 
@@ -283,6 +303,8 @@ async def mark_task_cheating(task_id: str, reviewer_id: str, reason: str):
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     anti_cheat_service.mark_cheating(task, reason)
+    # 记录管理员/复核人，便于后续审计与排查
+    task.reviewer_id = reviewer_id
     return {
         "message": "Task marked as cheating",
         "task_id": task_id,

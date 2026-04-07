@@ -1,0 +1,57 @@
+/* App 全局样式 */
+.app-container {
+  min-height: 100vh;
+  background-color: #f0f2f5;
+}
+
+/* 布局容器 */
+.layout-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* 主内容区域 */
+.main-content {
+  flex: 1;
+  padding: 24px;
+  overflow: auto;
+}
+
+/* 卡片通用样式 */
+.page-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* 页面标题 */
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f1f1f;
+  margin-bottom: 16px;
+}
+
+/* 页面副标题 */
+.page-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 16px;
+  }
+
+  .page-card {
+    padding: 16px;
+  }
+
+  .page-title {
+    font-size: 18px;
+  }
+}

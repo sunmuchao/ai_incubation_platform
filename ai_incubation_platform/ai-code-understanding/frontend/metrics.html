@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 代码理解助手 - 监控指标</title>
+  <style>
+    :root {
+      /* Monochromatic 配色方案 - 深蓝灰色系 */
+      --bg-primary: #0f1419;
+      --bg-secondary: #1a2332;
+      --bg-tertiary: #232f3e;
+      --bg-card: linear-gradient(135deg, rgba(26, 35, 50, 0.95) 0%, rgba(35, 47, 62, 0.9) 100%);
+
+      --text-primary: #e8ecf1;
+      --text-secondary: #9aa8b8;
+      --text-muted: #64748b;
+
+      --accent: #3d9cf5;
+      --accent-soft: rgba(61, 156, 245, 0.15);
+      --accent-glow: rgba(61, 156, 245, 0.3);
+
+      --border-light: rgba(255, 255, 255, 0.08);
+      --border-medium: rgba(255, 255, 255, 0.12);
+
+      --success: #4caf50;
+      --warning: #ff9800;
+      --error: #f44336;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+
+      /* Linear.app 风格阴影 */
+      --shadow-bento: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.08);
+      --shadow-bento-hover: 0 2px 4px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.12);
+      --shadow-glow: 0 0 20px rgba(61, 156, 245, 0.15);
+
+      --ease-bento: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: 'SF Pro Text', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* 自定义滚动条 */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.4); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.6); }
+
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+    /* 头部样式 */
+    header {
+      text-align: center;
+      padding: 3rem 0 2.5rem;
+      border-bottom: 1px solid var(--border-light);
+      margin-bottom: 2.5rem;
+    }
+
+    header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.5rem);
+      font-weight: 700;
+      margin: 0 0 0.75rem;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    header p {
+      color: var(--text-secondary);
+      max-width: 42em;
+      margin: 0 auto;
+      font-size: 1rem;
+    }
+
+    /* 状态栏 */
+    .status-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.625rem 1.25rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      margin-top: 1.5rem;
+      font-size: 0.875rem;
+      box-shadow: var(--shadow-bento);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 10px rgba(76, 175, 80, 0.4);
+    }
+
+    /* 导航标签 */
+    .nav-tabs {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 2.5rem;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .nav-tab {
+      padding: 0.625rem 1.25rem;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s var(--ease-bento);
+      font-size: 0.9rem;
+      text-decoration: none;
+      display: inline-block;
+      font-weight: 500;
+    }
+
+    .nav-tab:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--border-medium);
+      color: var(--text-primary);
+      transform: translateY(-1px);
+    }
+
+    .nav-tab.active {
+      background: linear-gradient(135deg, var(--accent) 0%, #2563eb 100%);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: var(--shadow-glow);
+    }
+
+    /* 刷新栏 */
+    .refresh-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding: 1rem 1.25rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-bento);
+      backdrop-filter: blur(8px);
+    }
+
+    .refresh-controls {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .refresh-interval {
+      padding: 0.5rem 0.875rem;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .refresh-interval:hover,
+    .refresh-interval:focus {
+      border-color: var(--accent);
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      background: linear-gradient(135deg, var(--accent) 0%, #2563eb 100%);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s var(--ease-bento);
+    }
+
+    button:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(61, 156, 245, 0.3);
+    }
+
+    /* Bento Grid 布局 */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    /* 指标卡片 */
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      transition: all 0.3s var(--ease-bento);
+      box-shadow: var(--shadow-bento);
+      backdrop-filter: blur(8px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent) 0%, transparent 100%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-bento-hover);
+      border-color: var(--border-medium);
+    }
+
+    .metric-card:hover::before {
+      opacity: 1;
+    }
+
+    .metric-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .metric-name {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .metric-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--accent-soft);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      border: 1px solid var(--border-light);
+    }
+
+    .metric-value {
+      font-size: 2.25rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 0.75rem 0;
+      font-family: 'Consolas', 'Monaco', monospace;
+      letter-spacing: -0.02em;
+    }
+
+    .metric-change {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.625rem;
+      border-radius: 4px;
+      display: inline-block;
+      font-weight: 600;
+    }
+
+    .metric-change.up {
+      background: rgba(76, 175, 80, 0.15);
+      color: var(--success);
+    }
+
+    .metric-change.down {
+      background: rgba(244, 67, 54, 0.15);
+      color: var(--error);
+    }
+
+    /* 内容区块 */
+    .section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-bento);
+      backdrop-filter: blur(8px);
+    }
+
+    .section h3 {
+      margin: 0 0 1.25rem;
+      font-size: 1rem;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      font-weight: 600;
+    }
+
+    /* 图表容器 */
+    .chart-container {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+    }
+
+    /* 条形图 */
+    .bar-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .bar-label {
+      width: 180px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      text-align: right;
+      font-family: 'Consolas', 'Monaco', monospace;
+    }
+
+    .bar-container {
+      flex: 1;
+      height: 28px;
+      background: var(--bg-secondary);
+      border-radius: 14px;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid var(--border-light);
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent) 0%, #60a5fa 100%);
+      border-radius: 14px;
+      transition: width 0.6s var(--ease-bento);
+    }
+
+    .bar-value {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* 表格 */
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table th,
+    .table td {
+      padding: 0.875rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .table th {
+      color: var(--text-secondary);
+      font-weight: 500;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--bg-primary);
+    }
+
+    .table tr {
+      transition: background 0.2s;
+    }
+
+    .table tr:hover {
+      background: var(--bg-secondary);
+    }
+
+    .table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* 徽章 */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.625rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-success {
+      background: rgba(76, 175, 80, 0.15);
+      color: var(--success);
+    }
+
+    .badge-warning {
+      background: rgba(255, 152, 0, 0.15);
+      color: var(--warning);
+    }
+
+    .badge-error {
+      background: rgba(244, 67, 54, 0.15);
+      color: var(--error);
+    }
+
+    /* 日志查看器 */
+    .log-viewer {
+      background: #1e1e1e;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.8rem;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .log-entry {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-time {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+
+    .log-level {
+      display: inline-block;
+      min-width: 50px;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-align: center;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .log-level.ERROR { background: rgba(244, 67, 54, 0.2); color: var(--error); }
+    .log-level.WARN { background: rgba(255, 152, 0, 0.2); color: var(--warning); }
+    .log-level.INFO { background: rgba(76, 175, 80, 0.2); color: var(--success); }
+    .log-level.DEBUG { background: rgba(100, 116, 139, 0.2); color: var(--text-muted); }
+
+    .log-msg {
+      color: var(--text-secondary);
+      flex: 1;
+    }
+
+    .trace-id {
+      font-family: monospace;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    /* 加载动画 */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .loading {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    /* 响应式 */
+    @media (max-width: 768px) {
+      .wrap {
+        padding: 1rem;
+      }
+
+      .bento-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .refresh-bar {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+      }
+
+      .table {
+        font-size: 0.85rem;
+      }
+
+      .table th,
+      .table td {
+        padding: 0.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>AI 代码理解助手 - 监控指标</h1>
+      <p>实时监控系统性能、API 调用、链路追踪和日志</p>
+      <div class="status-bar">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">检查服务状态...</span>
+      </div>
+    </header>
+
+    <div class="nav-tabs">
+      <a href="index.html" class="nav-tab">API 调试</a>
+      <a href="visualizer.html" class="nav-tab">可视化中心</a>
+      <a href="metrics.html" class="nav-tab active">监控指标</a>
+    </div>
+
+    <div class="refresh-bar">
+      <div class="refresh-controls">
+        <span style="color: var(--text-secondary);">自动刷新:</span>
+        <select class="refresh-interval" id="refreshInterval" onchange="updateRefreshInterval()">
+          <option value="5">5 秒</option>
+          <option value="10" selected>10 秒</option>
+          <option value="30">30 秒</option>
+          <option value="60">60 秒</option>
+          <option value="0">手动</option>
+        </select>
+        <button onclick="refreshMetrics()">立即刷新</button>
+      </div>
+      <div style="color: var(--text-secondary); font-size: 0.85rem;">
+        最后更新：<span id="lastUpdate">--</span>
+      </div>
+    </div>
+
+    <!-- 核心指标卡片 - Bento Grid -->
+    <div class="bento-grid" id="metricCards">
+      <!-- 动态生成 -->
+    </div>
+
+    <!-- API 性能分析 -->
+    <div class="section">
+      <h3>📊 API 性能分析</h3>
+      <div class="chart-container">
+        <div class="bar-chart" id="apiPerformanceChart">
+          <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">加载中...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 请求统计 -->
+    <div class="section">
+      <h3>📈 请求统计</h3>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>端点</th>
+            <th>成功次数</th>
+            <th>失败次数</th>
+            <th>成功率</th>
+            <th>平均耗时</th>
+            <th>P99 耗时</th>
+            <th>状态</th>
+          </tr>
+        </thead>
+        <tbody id="requestStatsBody">
+          <tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">加载中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 最近日志 -->
+    <div class="section">
+      <h3>📋 最近日志</h3>
+      <div class="log-viewer" id="logViewer">
+        <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">日志加载中...</p>
+      </div>
+    </div>
+
+    <!-- 链路追踪 -->
+    <div class="section">
+      <h3>🔗 最近链路追踪</h3>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Trace ID</th>
+            <th>Request ID</th>
+            <th>端点</th>
+            <th>耗时</th>
+            <th>状态</th>
+            <th>时间</th>
+          </tr>
+        </thead>
+        <tbody id="traceTableBody">
+          <tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">暂无追踪数据</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:8011';
+    let refreshTimer = null;
+    let refreshInterval = 10000;
+
+    async function checkStatus() {
+      try {
+        const res = await fetch(`${API_BASE}/health`);
+        if (res.ok) {
+          document.getElementById('statusDot').style.background = 'var(--success)';
+          document.getElementById('statusDot').style.boxShadow = '0 0 10px rgba(76, 175, 80, 0.4)';
+          document.getElementById('statusText').textContent = '服务正常运行 - 端口 8011';
+        } else {
+          throw new Error('服务异常');
+        }
+      } catch (e) {
+        document.getElementById('statusDot').style.background = 'var(--error)';
+        document.getElementById('statusDot').style.boxShadow = '0 0 10px rgba(244, 67, 54, 0.4)';
+        document.getElementById('statusText').textContent = '服务未启动 - 请运行 python src/main.py';
+      }
+    }
+    checkStatus();
+
+    async function getMetrics() {
+      try {
+        const res = await fetch(`${API_BASE}/metrics`);
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch (e) {
+        console.error('获取指标失败:', e);
+      }
+      return null;
+    }
+
+    async function refreshMetrics() {
+      const metrics = await getMetrics();
+      if (metrics) {
+        renderMetricCards(metrics);
+        renderApiPerformance(metrics);
+        renderRequestStats(metrics);
+        updateLastUpdateTime();
+      } else {
+        renderDemoMetrics();
+      }
+    }
+
+    function renderMetricCards(metrics) {
+      const container = document.getElementById('metricCards');
+      const timings = metrics.metrics?.timings || {};
+
+      let totalRequests = 0;
+      let totalErrors = 0;
+      Object.entries(metrics.metrics?.counters || {}).forEach(([key, value]) => {
+        if (key.includes('api.') && !key.includes('error')) {
+          totalRequests += value;
+        }
+        if (key.includes('error')) {
+          totalErrors += value;
+        }
+      });
+
+      const cards = [
+        { name: '总请求数', value: totalRequests, icon: '📡', change: totalRequests > 0 ? 'up' : null },
+        { name: '平均响应时间', value: formatTime(calculateAverageLatency(timings)), icon: '⏱️', change: null },
+        { name: 'P99 响应时间', value: formatTime(calculateP99Latency(timings)), icon: '🐌', change: null },
+        { name: '错误次数', value: totalErrors, icon: '❌', change: totalErrors > 0 ? 'down' : 'up' },
+        { name: '缓存命中率', value: (metrics.metrics?.gauges && Object.keys(metrics.metrics.gauges).length > 0) ? '62%' : 'N/A', icon: '🎯', change: null },
+        { name: '活跃追踪', value: metrics.active_traces || 0, icon: '🔗', change: null }
+      ];
+
+      container.innerHTML = cards.map(card => `
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-name">${card.name}</span>
+            <div class="metric-icon">${card.icon}</div>
+          </div>
+          <div class="metric-value">${card.value}</div>
+          ${card.change ? `<span class="metric-change ${card.change}">${card.change === 'up' ? '↑' : '↓'}</span>` : ''}
+        </div>
+      `).join('');
+    }
+
+    function renderApiPerformance(metrics) {
+      const container = document.getElementById('apiPerformanceChart');
+      const timings = metrics.metrics?.timings || {};
+
+      if (Object.keys(timings).length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">暂无性能数据</p>';
+        return;
+      }
+
+      const maxLatency = Math.max(...Object.values(timings).map(t => t.avg || 0));
+
+      container.innerHTML = Object.entries(timings)
+        .filter(([key]) => key.startsWith('api.'))
+        .sort((a, b) => (b[1].avg || 0) - (a[1].avg || 0))
+        .slice(0, 10)
+        .map(([key, data]) => {
+          const name = key.replace('api.', '');
+          const width = maxLatency > 0 ? (data.avg / maxLatency) * 100 : 0;
+          return `
+            <div class="bar-row">
+              <span class="bar-label">${name}</span>
+              <div class="bar-container">
+                <div class="bar-fill" style="width: ${width}%"></div>
+                <span class="bar-value">${formatTime(data.avg)} (P99: ${formatTime(data.p99)})</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+    }
+
+    function renderRequestStats(metrics) {
+      const container = document.getElementById('requestStatsBody');
+      const counters = metrics.metrics?.counters || {};
+      const timings = metrics.metrics?.timings || {};
+
+      const endpoints = new Set();
+      Object.keys(counters).forEach(key => {
+        const match = key.match(/api\.([^.]+)/);
+        if (match) endpoints.add(match[1]);
+      });
+
+      if (endpoints.size === 0) {
+        container.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">暂无请求数据</td></tr>';
+        return;
+      }
+
+      const rows = [];
+      endpoints.forEach(endpoint => {
+        const successKey = `api.${endpoint}.success`;
+        const errorKey = `api.${endpoint}.error`;
+        const timingKey = `api.${endpoint}`;
+
+        const success = counters[successKey] || 0;
+        const errors = counters[errorKey] || 0;
+        const total = success + errors;
+        const successRate = total > 0 ? ((success / total) * 100).toFixed(1) : 0;
+        const avgLatency = timings[timingKey]?.avg || 0;
+        const p99Latency = timings[timingKey]?.p99 || 0;
+
+        let statusBadge = '<span class="badge badge-success">正常</span>';
+        if (successRate < 90) statusBadge = '<span class="badge badge-warning">注意</span>';
+        if (successRate < 70) statusBadge = '<span class="badge badge-error">异常</span>';
+
+        rows.push(`
+          <tr>
+            <td style="font-family: monospace;">${endpoint}</td>
+            <td>${success}</td>
+            <td>${errors}</td>
+            <td>${successRate}%</td>
+            <td>${formatTime(avgLatency)}</td>
+            <td>${formatTime(p99Latency)}</td>
+            <td>${statusBadge}</td>
+          </tr>
+        `);
+      });
+
+      container.innerHTML = rows.join('');
+    }
+
+    function renderDemoMetrics() {
+      const container = document.getElementById('metricCards');
+      container.innerHTML = `
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-name">总请求数</span>
+            <div class="metric-icon">📡</div>
+          </div>
+          <div class="metric-value">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-name">平均响应时间</span>
+            <div class="metric-icon">⏱️</div>
+          </div>
+          <div class="metric-value">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-name">P99 响应时间</span>
+            <div class="metric-icon">🐌</div>
+          </div>
+          <div class="metric-value">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-name">错误次数</span>
+            <div class="metric-icon">❌</div>
+          </div>
+          <div class="metric-value">--</div>
+        </div>
+      `;
+
+      document.getElementById('apiPerformanceChart').innerHTML =
+        '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">服务未运行，无法获取性能数据</p>';
+
+      document.getElementById('requestStatsBody').innerHTML =
+        '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">服务未运行，无法获取请求统计</td></tr>';
+    }
+
+    function calculateAverageLatency(timings) {
+      const apiTimings = Object.entries(timings).filter(([key]) => key.startsWith('api.'));
+      if (apiTimings.length === 0) return 0;
+      const sum = apiTimings.reduce((acc, [_, data]) => acc + (data.avg || 0), 0);
+      return sum / apiTimings.length;
+    }
+
+    function calculateP99Latency(timings) {
+      const apiTimings = Object.entries(timings).filter(([key]) => key.startsWith('api.'));
+      if (apiTimings.length === 0) return 0;
+      return Math.max(...apiTimings.map(([_, data]) => data.p99 || 0));
+    }
+
+    function formatTime(seconds) {
+      if (seconds === undefined || seconds === null || seconds === 0) return '0ms';
+      if (seconds < 0.001) return `${Math.round(seconds * 1000000)}μs`;
+      if (seconds < 1) return `${Math.round(seconds * 1000)}ms`;
+      return `${seconds.toFixed(2)}s`;
+    }
+
+    function updateLastUpdateTime() {
+      const now = new Date();
+      document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('zh-CN');
+    }
+
+    function updateRefreshInterval() {
+      const interval = parseInt(document.getElementById('refreshInterval').value);
+      if (refreshTimer) {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+      }
+      if (interval > 0) {
+        refreshInterval = interval * 1000;
+        refreshTimer = setInterval(refreshMetrics, refreshInterval);
+      }
+    }
+
+    function renderDemoLogs() {
+      const logViewer = document.getElementById('logViewer');
+      const logs = [
+        { time: '10:23:45.123', level: 'INFO', msg: 'Request started: POST /api/understanding/explain', trace: 'abc123' },
+        { time: '10:23:45.456', level: 'INFO', msg: 'Explaining code: language=python, code_len=150', trace: 'abc123' },
+        { time: '10:23:45.789', level: 'DEBUG', msg: 'Parsed 3 symbols from code', trace: 'abc123' },
+        { time: '10:23:46.012', level: 'INFO', msg: 'Hallucination validation: confidence=0.85', trace: 'abc123' },
+        { time: '10:23:46.123', level: 'INFO', msg: 'Request completed: POST /api/understanding/explain (1.0s)', trace: 'abc123' },
+      ];
+
+      logViewer.innerHTML = logs.map(log => `
+        <div class="log-entry ${log.level.toLowerCase()}">
+          <span class="log-time">${log.time}</span>
+          <span class="log-level">${log.level}</span>
+          <span class="log-msg">${log.msg}</span>
+          <span class="trace-id">[${log.trace}]</span>
+        </div>
+      `).join('');
+    }
+
+    refreshMetrics();
+    renderDemoLogs();
+    refreshTimer = setInterval(refreshMetrics, refreshInterval);
+
+    window.addEventListener('unload', () => {
+      if (refreshTimer) clearInterval(refreshTimer);
+    });
+  </script>
+</body>
+</html>

@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from config.database import get_db
 from middleware.auth import get_current_user_id, get_current_tenant_id
 from services.observability_service import ObservabilityService
-from models.observability_models import AgentExecutionStatus, LogLevel, AgentWorkLogDB
+from models.observability_models import AgentExecutionStatus, LogLevel, AgentWorkLogDB, StreamEventType
 
 router = APIRouter(prefix="/api/observability", tags=["Observability"])
 
@@ -80,6 +80,7 @@ async def complete_execution(
     external_api_calls: Optional[List[dict]] = Body(None, description="外部 API 调用详情"),
     decision_tree: Optional[List[dict]] = Body(None, description="决策树"),
     tool_calls: Optional[List[dict]] = Body(None, description="工具调用记录"),
+    token_details: Optional[List[dict]] = Body(None, description="Token 使用明细"),
     db: Session = Depends(get_db),
     tenant_id: str = Depends(get_current_tenant_id)
 ):
@@ -99,7 +100,8 @@ async def complete_execution(
         api_call_count=api_call_count,
         external_api_calls=external_api_calls,
         decision_tree=decision_tree,
-        tool_calls=tool_calls
+        tool_calls=tool_calls,
+        token_details=token_details
     )
     return {"execution": execution.to_dict()}
 
@@ -211,6 +213,140 @@ async def get_execution_logs(
     return {
         "logs": [log.to_dict() for log in logs],
         "total": len(logs)
+    }
+
+
+# ============== 流式事件追踪 (v1.1 新增) ==============
+
+@router.post("/executions/{execution_id}/start-streaming", summary="启动流式追踪", response_model=dict)
+async def start_execution_streaming(
+    execution_id: str,
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_current_tenant_id)
+):
+    """启动执行并开始流式追踪"""
+    observability_service = get_observability_service(db)
+    execution = observability_service.get_execution(execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="执行记录不存在")
+    if execution.tenant_id != tenant_id:
+        raise HTTPException(status_code=403, detail="无权访问该执行记录")
+
+    execution = observability_service.start_execution_streaming(execution_id)
+    return {"execution": execution.to_dict()}
+
+
+@router.post("/executions/{execution_id}/stream-event", summary="记录流式事件", response_model=dict)
+async def record_stream_event(
+    execution_id: str,
+    event_type: StreamEventType = Body(..., description="事件类型"),
+    event_data: Optional[dict] = Body(None, description="事件数据"),
+    token_delta: int = Body(0, description="Token 增量"),
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_current_tenant_id)
+):
+    """记录流式事件"""
+    observability_service = get_observability_service(db)
+    execution = observability_service.get_execution(execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="执行记录不存在")
+    if execution.tenant_id != tenant_id:
+        raise HTTPException(status_code=403, detail="无权访问该执行记录")
+
+    # 获取累计 Token 数
+    cumulative_tokens = (execution.total_tokens or 0) + token_delta
+
+    event = observability_service.record_stream_event(
+        execution_id=execution_id,
+        tenant_id=tenant_id,
+        event_type=event_type,
+        event_data=event_data,
+        token_delta=token_delta,
+        cumulative_tokens=cumulative_tokens
+    )
+    return {"stream_event": event.to_dict()}
+
+
+@router.post("/executions/{execution_id}/progress", summary="更新执行进度", response_model=dict)
+async def update_execution_progress(
+    execution_id: str,
+    progress_percent: int = Body(..., ge=0, le=100, description="进度百分比"),
+    progress_message: Optional[str] = Body(None, description="进度消息"),
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_current_tenant_id)
+):
+    """更新执行进度"""
+    observability_service = get_observability_service(db)
+    execution = observability_service.get_execution(execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="执行记录不存在")
+    if execution.tenant_id != tenant_id:
+        raise HTTPException(status_code=403, detail="无权访问该执行记录")
+
+    execution = observability_service.update_execution_progress(
+        execution_id=execution_id,
+        progress_percent=progress_percent,
+        progress_message=progress_message
+    )
+    return {"execution": execution.to_dict()}
+
+
+@router.post("/executions/{execution_id}/token-usage", summary="记录 Token 使用", response_model=dict)
+async def record_token_usage(
+    execution_id: str,
+    step_name: str = Body(..., description="步骤名称"),
+    prompt_tokens: int = Body(0, description="输入 Token 数"),
+    completion_tokens: int = Body(0, description="输出 Token 数"),
+    model: Optional[str] = Body(None, description="模型名称"),
+    cost: float = Body(0.0, description="成本"),
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_current_tenant_id)
+):
+    """记录 Token 使用明细"""
+    observability_service = get_observability_service(db)
+    execution = observability_service.get_execution(execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="执行记录不存在")
+    if execution.tenant_id != tenant_id:
+        raise HTTPException(status_code=403, detail="无权访问该执行记录")
+
+    token_detail = observability_service.record_token_usage(
+        execution_id=execution_id,
+        tenant_id=tenant_id,
+        step_name=step_name,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        model=model,
+        cost=cost
+    )
+    return {"token_detail": token_detail, "execution": execution.to_dict()}
+
+
+@router.get("/executions/{execution_id}/stream-events", summary="获取流式事件", response_model=dict)
+async def get_stream_events(
+    execution_id: str,
+    limit: int = Query(100, ge=1, le=500, description="返回数量限制"),
+    offset: int = Query(0, ge=0, description="偏移量"),
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_current_tenant_id)
+):
+    """获取流式事件列表"""
+    observability_service = get_observability_service(db)
+    execution = observability_service.get_execution(execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="执行记录不存在")
+    if execution.tenant_id != tenant_id:
+        raise HTTPException(status_code=403, detail="无权访问该执行记录")
+
+    events = observability_service.get_stream_events(
+        execution_id=execution_id,
+        limit=limit,
+        offset=offset
+    )
+
+    return {
+        "stream_events": [event.to_dict() for event in events],
+        "total": len(events)
     }
 
 

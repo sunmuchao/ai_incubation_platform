@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 15%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 15%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 201 92% 60%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 201 92% 60%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 58%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 25%;
+    --input: 217 33% 25%;
+    --ring: 201 92% 60%;
+    --radius: 0.75rem;
+  }
+
+  .light {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 201 92% 60%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 201 92% 60%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 201 92% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--secondary));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--accent));
+}
+
+/* 隐藏滚动条但保持滚动功能 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* 安全区域适配 */
+@supports (padding: max(0px)) {
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .safe-left {
+    padding-left: env(safe-area-inset-left, 0);
+  }
+  .safe-right {
+    padding-right: env(safe-area-inset-right, 0);
+  }
+}
+
+/* PWA 全屏模式 */
+@media (display-mode: standalone) {
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+/* 触摸反馈 */
+.touch-feedback:active {
+  transform: scale(0.98);
+  opacity: 0.8;
+}
+
+/* AI 身份标识动画 */
+@keyframes ai-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(61, 156, 245, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(61, 156, 245, 0.6);
+  }
+}
+
+.ai-badge {
+  animation: ai-glow 2s ease-in-out infinite;
+}
+
+/* 人类身份标识 */
+@keyframes human-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+  }
+}
+
+.human-badge {
+  animation: human-pulse 2s ease-in-out infinite;
+}
+
+/* 加载骨架屏 */
+.skeleton {
+  @apply animate-pulse bg-secondary;
+}
+
+/* 无限滚动加载指示器 */
+.infinite-scroll-loading {
+  @apply flex items-center justify-center py-4 text-muted-foreground;
+}
+
+/* 内容标签 */
+.content-tag {
+  @apply inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-secondary text-secondary-foreground;
+}
+
+/* 热度指示器 */
+.heat-indicator {
+  @apply inline-flex items-center gap-1 text-orange-500;
+}

@@ -1,0 +1,218 @@
+{
+  "p0_demo.py": {
+    "hash": "36addd4a9d993fca8c9b968bdfc82b09",
+    "size": 3251,
+    "last_indexed_time": 1775136214.998573,
+    "indexed_at": "2026-04-03T16:14:59.956366",
+    "chunk_count": 1,
+    "symbol_count": 1
+  },
+  "ci/generate_global_map.py": {
+    "hash": "1ad14aceca648eecc4ca9f655adae9df",
+    "size": 6273,
+    "last_indexed_time": 1775203990.4799228,
+    "indexed_at": "2026-04-03T16:14:59.973545",
+    "chunk_count": 1,
+    "symbol_count": 3
+  },
+  "src/main.py": {
+    "hash": "e12a7a6a93962d8dd5983fc386eeeb48",
+    "size": 1665,
+    "last_indexed_time": 1775136214.9945927,
+    "indexed_at": "2026-04-03T16:15:00.036865",
+    "chunk_count": 1,
+    "symbol_count": 2
+  },
+  "src/core/__init__.py": {
+    "hash": "710c57b353d76289a1a363a2bc179382",
+    "size": 30,
+    "last_indexed_time": 1775110039.5264075,
+    "indexed_at": "2026-04-03T16:15:00.043219",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "src/core/halucination_control/validator.py": {
+    "hash": "574a1604faf94ef373574eaf46ce9ed2",
+    "size": 24925,
+    "last_indexed_time": 1775136214.998112,
+    "indexed_at": "2026-04-03T16:15:00.070213",
+    "chunk_count": 1,
+    "symbol_count": 17
+  },
+  "src/core/halucination_control/__init__.py": {
+    "hash": "3d7bd7c5271775c455ddc1bb27f41930",
+    "size": 169,
+    "last_indexed_time": 1775110106.4670215,
+    "indexed_at": "2026-04-03T16:15:00.084459",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "src/core/global_map/__init__.py": {
+    "hash": "6f1c06fc5f10eb61ea96f81579257ba8",
+    "size": 167,
+    "last_indexed_time": 1775110088.0394802,
+    "indexed_at": "2026-04-03T16:15:00.090440",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "src/core/global_map/generator.py": {
+    "hash": "f75ea09cc16b8d7272a8aef98ab8d88b",
+    "size": 30784,
+    "last_indexed_time": 1775204023.963594,
+    "indexed_at": "2026-04-03T16:15:00.115823",
+    "chunk_count": 1,
+    "symbol_count": 25
+  },
+  "src/core/task_guide/__init__.py": {
+    "hash": "6114f9f64934131cab915dac7ad696a7",
+    "size": 107,
+    "last_indexed_time": 1775110095.7984002,
+    "indexed_at": "2026-04-03T16:15:00.121811",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "src/core/task_guide/guide_generator.py": {
+    "hash": "e77808ccb0ddc666e179785c024ad718",
+    "size": 26316,
+    "last_indexed_time": 1775136214.9979105,
+    "indexed_at": "2026-04-03T16:15:00.138391",
+    "chunk_count": 1,
+    "symbol_count": 18
+  },
+  "src/core/indexer/__init__.py": {
+    "hash": "bc6411273670d8a823a50e90dc49ac41",
+    "size": 326,
+    "last_indexed_time": 1775110053.2252247,
+    "indexed_at": "2026-04-03T16:15:00.143419",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "src/core/indexer/pipeline.py": {
+    "hash": "a07d6dad1f8972606662b4bfb58e1901",
+    "size": 14698,
+    "last_indexed_time": 1775136214.8422184,
+    "indexed_at": "2026-04-03T16:15:00.189415",
+    "chunk_count": 1,
+    "symbol_count": 16
+  },
+  "src/core/indexer/base.py": {
+    "hash": "f6a057a78f883468b699ca36d6dc64fb",
+    "size": 3704,
+    "last_indexed_time": 1775136214.9987032,
+    "indexed_at": "2026-04-03T16:15:00.199951",
+    "chunk_count": 1,
+    "symbol_count": 17
+  },
+  "src/core/indexer/vector_stores/chroma_store.py": {
+    "hash": "c6c336223621c6dabcc9815392cc7070",
+    "size": 8670,
+    "last_indexed_time": 1775136214.8449917,
+    "indexed_at": "2026-04-03T16:15:00.217936",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "src/core/indexer/vector_stores/__init__.py": {
+    "hash": "3e28f4495076e358c69d83ac0e825308",
+    "size": 102,
+    "last_indexed_time": 1775110080.6144755,
+    "indexed_at": "2026-04-03T16:15:00.226473",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "src/core/indexer/parsers/tree_sitter_parser.py": {
+    "hash": "874f1dc88282edeeefde10f5d95487a6",
+    "size": 21903,
+    "last_indexed_time": 1775136214.9986248,
+    "indexed_at": "2026-04-03T16:15:00.248777",
+    "chunk_count": 1,
+    "symbol_count": 16
+  },
+  "src/core/indexer/parsers/__init__.py": {
+    "hash": "ef27bee22071dc222af140370fb1b169",
+    "size": 109,
+    "last_indexed_time": 1775110064.7100677,
+    "indexed_at": "2026-04-03T16:15:00.255009",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "src/core/indexer/embeddings/hash_embedding.py": {
+    "hash": "9a5e3cdffa6bc60c0bf2f9d6d5ee302b",
+    "size": 2251,
+    "last_indexed_time": 1775136214.995712,
+    "indexed_at": "2026-04-03T16:15:00.265062",
+    "chunk_count": 1,
+    "symbol_count": 6
+  },
+  "src/core/indexer/embeddings/__init__.py": {
+    "hash": "131241a1ec4eee04d77cd347038717d7",
+    "size": 330,
+    "last_indexed_time": 1775136214.994883,
+    "indexed_at": "2026-04-03T16:15:00.282378",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "src/core/indexer/embeddings/resilient_embedding.py": {
+    "hash": "5f29cc03ede9b22e5a42efa5aaa2a41d",
+    "size": 1469,
+    "last_indexed_time": 1775136214.997822,
+    "indexed_at": "2026-04-03T16:15:00.289854",
+    "chunk_count": 1,
+    "symbol_count": 5
+  },
+  "src/core/indexer/embeddings/bge_embedding.py": {
+    "hash": "a92a7e78ad4c8ad65aa72b1901b799dc",
+    "size": 5550,
+    "last_indexed_time": 1775109394.832384,
+    "indexed_at": "2026-04-03T16:15:00.299942",
+    "chunk_count": 1,
+    "symbol_count": 13
+  },
+  "src/agent/deerflow_runtime.py": {
+    "hash": "efded27c6fa80fa00d3036b7aa444c2f",
+    "size": 460,
+    "last_indexed_time": 1775136214.9971273,
+    "indexed_at": "2026-04-03T16:15:00.305982",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "src/agent/tools.py": {
+    "hash": "2820c8f2c2d343cc25ef8893bf8289f1",
+    "size": 12510,
+    "last_indexed_time": 1775204061.4609337,
+    "indexed_at": "2026-04-03T16:15:00.322866",
+    "chunk_count": 1,
+    "symbol_count": 16
+  },
+  "src/agent/__init__.py": {
+    "hash": "cfdaf98accff724eed9d5b31bc6c49de",
+    "size": 89,
+    "last_indexed_time": 1775136214.9986973,
+    "indexed_at": "2026-04-03T16:15:00.328907",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "src/agent/agent_orchestration.py": {
+    "hash": "9fecc391ae1bf57d1901086aca7f5652",
+    "size": 9053,
+    "last_indexed_time": 1775204080.2727811,
+    "indexed_at": "2026-04-03T16:15:00.339728",
+    "chunk_count": 1,
+    "symbol_count": 6
+  },
+  "src/api/understanding.py": {
+    "hash": "353a3045785a43963b102156af797d3b",
+    "size": 4472,
+    "last_indexed_time": 1775136214.998676,
+    "indexed_at": "2026-04-03T16:15:00.348249",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "src/services/understanding_service.py": {
+    "hash": "6697ace94f509eee27e7a5e26a44efa0",
+    "size": 28477,
+    "last_indexed_time": 1775136214.966026,
+    "indexed_at": "2026-04-03T16:15:00.388598",
+    "chunk_count": 1,
+    "symbol_count": 12
+  }
+}

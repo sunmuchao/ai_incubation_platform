@@ -1,0 +1,142 @@
+# 调整 JVM GC 配置 - 热重载 JVM GC 参数
+script_id: adjust-gc-001
+name: 调整 GC 配置
+description: 调整 JVM GC 参数（需要重启服务）
+category: config_adjustment
+target_type: service
+risk_level: medium
+timeout_seconds: 180
+
+parameters:
+  - name: service_name
+    type: string
+    default: ""
+    description: 服务名称
+  - name: gc_type
+    type: string
+    default: "G1"
+    description: GC 类型：G1/CMS/ZGC
+  - name: heap_size
+    type: string
+    default: ""
+    description: 堆大小，如 2g
+  - name: gc_log_enabled
+    type: boolean
+    default: true
+    description: 是否启用 GC 日志
+
+script_content: |
+  #!/bin/bash
+  set -e
+
+  SERVICE_NAME="{{service_name}}"
+  GC_TYPE="{{gc_type}}"
+  HEAP_SIZE="{{heap_size}}"
+  GC_LOG_ENABLED="{{gc_log_enabled}}"
+
+  echo "=== 调整 JVM GC 配置 ==="
+  echo "服务：$SERVICE_NAME"
+  echo "GC 类型：$GC_TYPE"
+
+  # 检查服务是否存在
+  if ! systemctl list-units --type=service --all | grep -q "$SERVICE_NAME"; then
+    echo "错误：服务 $SERVICE_NAME 不存在"
+    exit 1
+  fi
+
+  # 获取 GC 参数
+  GC_ARGS=""
+  case $GC_TYPE in
+    "G1")
+      GC_ARGS="-XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+      ;;
+    "CMS")
+      GC_ARGS="-XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled"
+      ;;
+    "ZGC")
+      GC_ARGS="-XX:+UseZGC"
+      ;;
+    *)
+      echo "错误：不支持的 GC 类型：$GC_TYPE"
+      exit 1
+      ;;
+  esac
+
+  # 添加堆大小
+  if [ -n "$HEAP_SIZE" ]; then
+    GC_ARGS="$GC_ARGS -Xms${HEAP_SIZE} -Xmx${HEAP_SIZE}"
+  fi
+
+  # 添加 GC 日志
+  if [ "$GC_LOG_ENABLED" = "true" ]; then
+    GC_ARGS="$GC_ARGS -Xlog:gc*:file=/var/log/${SERVICE_NAME}_gc.log:time,uptime:filecount=5,filesize=10M"
+  fi
+
+  echo "GC 参数：$GC_ARGS"
+
+  # 备份当前配置
+  CONFIG_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+  if [ -f "$CONFIG_FILE" ]; then
+    BACKUP_FILE="${CONFIG_FILE}.bak.$(date +%Y%m%d%H%M%S)"
+    cp "$CONFIG_FILE" "$BACKUP_FILE"
+    echo "配置已备份到：$BACKUP_FILE"
+  fi
+
+  # 更新 systemd 配置
+  echo "更新服务配置..."
+  mkdir -p /etc/systemd/system/${SERVICE_NAME}.service.d/
+  cat > /etc/systemd/system/${SERVICE_NAME}.service.d/jvm-gc.conf << EOF
+  [Service]
+  Environment="JAVA_OPTS=$GC_ARGS"
+  EOF
+
+  # 重载 systemd
+  systemctl daemon-reload
+
+  # 重启服务
+  echo "重启服务：$SERVICE_NAME"
+  systemctl restart "$SERVICE_NAME"
+
+  # 等待服务启动
+  sleep 5
+
+  # 检查服务状态
+  echo "检查服务状态..."
+  systemctl status "$SERVICE_NAME" --no-pager
+
+  echo "=== GC 配置调整完成 ==="
+
+verification_steps:
+  - name: service_active
+    check: systemctl is-active {{service_name}}
+    expected: active
+    timeout: 30
+
+  - name: jvm_check
+    check: ps aux | grep {{service_name}} | grep -c "UseG1GC\|UseConcMarkSweepGC\|UseZGC"
+    expected: "0"
+    timeout: 10
+
+rollback_script: |
+  #!/bin/bash
+  # 恢复备份的配置文件
+  CONFIG_FILE="/etc/systemd/system/{{service_name}}.service"
+  BACKUP_FILE=$(ls -t ${CONFIG_FILE}.bak.* 2>/dev/null | head -1)
+
+  if [ -n "$BACKUP_FILE" ]; then
+    echo "恢复配置：$BACKUP_FILE"
+    cp "$BACKUP_FILE" "$CONFIG_FILE"
+    systemctl daemon-reload
+    systemctl restart {{service_name}}
+    echo "配置已恢复"
+  else
+    echo "未找到备份配置"
+  fi
+
+version: 1.0.0
+author: system
+tags:
+  - jvm
+  - gc
+  - performance
+enabled: true

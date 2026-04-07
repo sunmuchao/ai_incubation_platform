@@ -1,0 +1,14 @@
+# Agent Platform Core Dependencies
+
+# Core
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+
+# Optional: DeerFlow integration
+# deerflow>=2.0.0
+
+# Config
+pyyaml>=6.0
+
+# Utils
+python-json-logger>=2.0.0

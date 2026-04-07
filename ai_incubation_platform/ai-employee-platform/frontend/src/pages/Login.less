@@ -1,0 +1,133 @@
+/* AI Native 登录页面样式 */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+
+  .login-background {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+
+    .bg-circle {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(114, 46, 209, 0.1);
+
+      &.circle-1 {
+        width: 400px;
+        height: 400px;
+        top: -100px;
+        right: -100px;
+        background: rgba(114, 46, 209, 0.15);
+      }
+
+      &.circle-2 {
+        width: 300px;
+        height: 300px;
+        bottom: -50px;
+        left: -50px;
+        background: rgba(24, 144, 255, 0.1);
+      }
+
+      &.circle-3 {
+        width: 200px;
+        height: 200px;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(82, 196, 26, 0.05);
+      }
+    }
+  }
+
+  .login-container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 16px;
+
+      .logo-icon {
+        font-size: 56px;
+        color: #722ed1;
+      }
+
+      h2 {
+        color: #fff !important;
+        font-weight: 600;
+      }
+
+      .ant-typography {
+        color: rgba(255, 255, 255, 0.8);
+      }
+    }
+
+    .login-card {
+      width: 100%;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+      .login-button {
+        background: linear-gradient(135deg, #722ed1 0%, #1890ff 100%);
+        border: none;
+        height: 48px;
+        font-size: 16px;
+        font-weight: 500;
+
+        &:hover {
+          opacity: 0.9;
+        }
+      }
+
+      .quick-login-button {
+        height: 48px;
+        font-size: 16px;
+        border-color: #722ed1;
+        color: #722ed1;
+
+        &:hover {
+          background: #f9f0ff;
+          border-color: #722ed1;
+          color: #722ed1;
+        }
+      }
+
+      .login-footer {
+        text-align: center;
+        margin-top: 16px;
+      }
+    }
+
+    .login-features {
+      display: flex;
+      gap: 32px;
+      margin-top: 16px;
+
+      .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: rgba(255, 255, 255, 0.8);
+
+        .feature-icon {
+          font-size: 20px;
+          color: #722ed1;
+        }
+      }
+    }
+  }
+}

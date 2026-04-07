@@ -1,0 +1,6 @@
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.0.0
+
+# 孵化器统一 Agent 运行时（DeerFlow 2.0）— 见 PLATFORM_AGENT_STANDARD.md
+# -e ../deerflow-integration

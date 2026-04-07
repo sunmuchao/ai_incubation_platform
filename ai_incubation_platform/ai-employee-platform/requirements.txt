@@ -1,0 +1,51 @@
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.0.0
+email-validator>=2.3.0
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+stripe>=7.0.0
+python-dotenv>=1.0.0
+bcrypt>=4.0.0
+pyjwt>=2.8.0
+python-multipart>=0.0.6
+
+# 孵化器统一 Agent 运行时（DeerFlow 2.0）— 见 PLATFORM_AGENT_STANDARD.md
+-e ../deerflow-integration
+
+# ==================== P6 新增依赖 ====================
+
+# HTTP 请求库（支付网关使用）
+requests>=2.31.0
+
+# 加密库（RSA 签名、数据加密）
+pycryptodome>=3.19.0
+cryptography>=41.0.0
+
+# 二维码生成（支付二维码）
+qrcode[pil]>=7.4.2
+
+# API 限流
+slowapi>=0.1.8
+
+# 文件类型检测
+python-magic>=0.4.27
+
+# 病毒扫描（可选）
+python-clamd>=1.0.2
+
+# 邮件发送
+sendgrid>=6.10.0
+
+# 阿里云 SDK（短信/邮件）
+alibabacloud_dysmsapi20170525>=2.0.0
+
+# ==================== 测试依赖 ====================
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+httpx>=0.25.0  # 用于异步测试
+
+# ==================== 开发工具 ====================
+black>=23.0.0  # 代码格式化
+flake8>=6.0.0  # 代码检查
+mypy>=1.0.0  # 类型检查

@@ -1,0 +1,209 @@
+/* AI Native 演示页面样式 */
+
+.ai-native-demo-page {
+  min-height: 100vh;
+  background: #f0f2f5;
+}
+
+.demo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 0 24px;
+
+  .header-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .header-icon {
+      font-size: 32px;
+    }
+  }
+}
+
+.demo-content {
+  padding: 24px;
+}
+
+/* Agent 状态卡片 */
+.agent-card,
+.confidence-card,
+.workflow-card,
+.push-settings-card,
+.ai-suggestions-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* 置信度显示 */
+.confidence-display {
+  .confidence-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+
+  .confidence-value {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 12px;
+  }
+
+  .confidence-description {
+    margin-top: 12px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+}
+
+/* 工作流显示 */
+.workflow-display {
+  .workflow-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+
+  .workflow-step {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+  }
+}
+
+/* Generative UI 卡片 */
+.generative-ui-card,
+.skills-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* 推送设置 */
+.push-settings {
+  .setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+/* AI 建议列表 */
+.suggestions-list {
+  max-height: 400px;
+  overflow-y: auto;
+
+  .suggestion-item {
+    margin-bottom: 8px;
+    border-radius: 6px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .suggestion-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .suggestion-description {
+      margin: 0 0 8px 0 !important;
+      font-size: 12px;
+    }
+  }
+}
+
+/* 演示提示 */
+.demo-tip {
+  margin-top: 16px;
+  border-radius: 8px;
+}
+
+/* 特性卡片 */
+.feature-card {
+  text-align: center;
+  border-radius: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .feature-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    color: #fff;
+    font-size: 24px;
+  }
+
+  .ant-card-body {
+    padding: 16px;
+  }
+
+  .ant-typography-title {
+    margin-bottom: 8px !important;
+  }
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .demo-header {
+    padding: 0 16px;
+
+    .header-content {
+      .header-icon {
+        font-size: 24px;
+      }
+    }
+  }
+
+  .demo-content {
+    padding: 16px;
+  }
+
+  .confidence-value {
+    font-size: 24px !important;
+  }
+}
+
+/* 动画效果 */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.agent-status-panel {
+  .status-indicator.active {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+}

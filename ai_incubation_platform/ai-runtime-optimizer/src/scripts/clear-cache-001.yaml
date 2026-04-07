@@ -1,0 +1,96 @@
+# 清理缓存 - 清理 Redis/Memcached 缓存
+script_id: clear-cache-001
+name: 清理缓存
+description: 安全清理 Redis 缓存，支持指定 key 前缀
+category: cache_optimization
+target_type: cache
+risk_level: low
+timeout_seconds: 60
+
+parameters:
+  - name: redis_host
+    type: string
+    default: "localhost"
+    description: Redis 主机地址
+  - name: redis_port
+    type: integer
+    default: 6379
+    description: Redis 端口
+  - name: key_pattern
+    type: string
+    default: "*"
+    description: 要清理的 key 模式，默认清理所有
+  - name: confirm
+    type: boolean
+    default: false
+    description: 确认清理（必需为 true）
+
+script_content: |
+  #!/bin/bash
+  set -e
+
+  REDIS_HOST="{{redis_host}}"
+  REDIS_PORT="{{redis_port}}"
+  KEY_PATTERN="{{key_pattern}}"
+  CONFIRM="{{confirm}}"
+
+  echo "=== 清理缓存 ==="
+  echo "Redis: ${REDIS_HOST}:${REDIS_PORT}"
+  echo "Key 模式：${KEY_PATTERN}"
+
+  # 确认清理
+  if [ "$CONFIRM" != "true" ]; then
+    echo "错误：必须设置 confirm=true 确认清理"
+    exit 1
+  fi
+
+  # 检查 Redis 连接
+  echo "检查 Redis 连接..."
+  if ! redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" ping > /dev/null 2>&1; then
+    echo "错误：无法连接到 Redis"
+    exit 1
+  fi
+
+  # 获取清理前的 key 数量
+  BEFORE_COUNT=$(redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" KEYS "$KEY_PATTERN" | wc -l)
+  echo "清理前 key 数量：$BEFORE_COUNT"
+
+  # 清理 key
+  if [ "$KEY_PATTERN" = "*" ]; then
+    echo "警告：将清理所有 key！"
+    redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" FLUSHALL
+  else
+    echo "清理匹配的 key..."
+    redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" KEYS "$KEY_PATTERN" | xargs -r redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" DEL
+  fi
+
+  # 获取清理后的 key 数量
+  AFTER_COUNT=$(redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" KEYS "$KEY_PATTERN" | wc -l)
+  echo "清理后 key 数量：$AFTER_COUNT"
+
+  echo "=== 缓存清理完成 ==="
+  echo "清理 key 数：$((BEFORE_COUNT - AFTER_COUNT))"
+
+verification_steps:
+  - name: redis_ping
+    check: redis-cli -h {{redis_host}} -p {{redis_port}} ping
+    expected: PONG
+    timeout: 5
+
+  - name: key_count_check
+    check: redis-cli -h {{redis_host}} -p {{redis_port}} KEYS "{{key_pattern}}" | wc -l
+    expected: "0"
+    timeout: 10
+
+rollback_script: |
+  # 缓存清理不可回滚
+  echo "Cache cleanup does not support rollback"
+  echo "Data has been permanently deleted"
+
+version: 1.0.0
+author: system
+tags:
+  - cache
+  - redis
+  - cleanup
+enabled: true

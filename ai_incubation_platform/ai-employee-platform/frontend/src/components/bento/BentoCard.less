@@ -1,0 +1,279 @@
+/**
+ * BentoCard 样式
+ * Linear.app 风格 - 精致细腻的阴影和边框
+ */
+@import '../../styles/design-tokens.less';
+
+.bento-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color-light);
+  border-radius: var(--border-radius-xl);
+  transition: all var(--transition-base);
+  overflow: hidden;
+
+  /* 基础阴影 */
+  box-shadow: var(--shadow-sm);
+
+  /* 尺寸配置 */
+  &.bento-card--1x1 {
+    grid-column: span 1;
+    grid-row: span 1;
+    min-height: var(--bento-unit);
+  }
+
+  &.bento-card--2x1 {
+    grid-column: span 2;
+    grid-row: span 1;
+    min-height: var(--bento-unit);
+  }
+
+  &.bento-card--1x2 {
+    grid-column: span 1;
+    grid-row: span 2;
+    min-height: calc(var(--bento-unit) * 2 + var(--bento-gap));
+  }
+
+  &.bento-card--2x2 {
+    grid-column: span 2;
+    grid-row: span 2;
+    min-height: calc(var(--bento-unit) * 2 + var(--bento-gap));
+  }
+
+  &.bento-card--3x2 {
+    grid-column: span 3;
+    grid-row: span 2;
+    min-height: calc(var(--bento-unit) * 2 + var(--bento-gap));
+  }
+
+  &.bento-card--4x2 {
+    grid-column: span 4;
+    grid-row: span 2;
+    min-height: calc(var(--bento-unit) * 2 + var(--bento-gap));
+  }
+
+  &.bento-card--full {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    min-height: auto;
+  }
+
+  /* 响应式调整 */
+  @media (max-width: @breakpoint-md) {
+    &.bento-card--2x1,
+    &.bento-card--3x2,
+    &.bento-card--4x2 {
+      grid-column: span 2;
+    }
+
+    &.bento-card--2x2 {
+      grid-column: span 2;
+      grid-row: span 1;
+      min-height: var(--bento-unit);
+    }
+  }
+
+  @media (max-width: @breakpoint-sm) {
+    &,
+    &.bento-card--1x1,
+    &.bento-card--2x1,
+    &.bento-card--2x2,
+    &.bento-card--3x2,
+    &.bento-card--4x2 {
+      grid-column: 1 / -1;
+      grid-row: auto;
+      min-height: auto;
+    }
+  }
+
+  /* 悬停效果 */
+  &:not(.bento-card--loading):hover {
+    border-color: var(--border-color-base);
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-2px);
+  }
+
+  /* 可点击卡片 */
+  &.bento-card--clickable {
+    cursor: pointer;
+
+    &:active {
+      transform: scale(0.98);
+      box-shadow: var(--shadow-sm);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--shadow-focus);
+    }
+  }
+
+  /* 选中状态 */
+  &.bento-card--selected {
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-focus);
+  }
+
+  /* 强调色卡片 */
+  &.bento-card--accent {
+    border-color: rgba(124, 58, 237, 0.3);
+
+    .bento-card__icon {
+      background: var(--gradient-accent);
+      color: white;
+    }
+  }
+
+  /* 渐变背景 */
+  &.bento-card--gradient {
+    background: var(--gradient-card-bg);
+  }
+
+  /* 加载中状态 */
+  &.bento-card--loading {
+    pointer-events: none;
+  }
+
+  /* ============================================
+   * 卡片头部
+   * ============================================ */
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: var(--bento-padding);
+    padding-bottom: var(--spacing-4);
+  }
+
+  &__header-start {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--border-radius-lg);
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    font-size: 18px;
+    flex-shrink: 0;
+    transition: all var(--transition-base);
+  }
+
+  &__title-container {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    line-height: var(--line-height-tight);
+    margin: 0 0 var(--spacing-1) 0;
+  }
+
+  &__description {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    line-height: var(--line-height-base);
+    margin: 0;
+  }
+
+  &__extra {
+    flex-shrink: 0;
+    margin-left: var(--spacing-2);
+  }
+
+  /* ============================================
+   * 卡片内容区
+   * ============================================ */
+
+  &__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0 var(--bento-padding) var(--bento-padding);
+    min-height: 0;
+  }
+
+  /* ============================================
+   * Skeleton 加载骨架
+   * ============================================ */
+
+  &__skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+    width: 100%;
+  }
+
+  &__skeleton-line {
+    height: 12px;
+    background: var(--color-neutral-200);
+    border-radius: var(--border-radius-full);
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(
+      90deg,
+      var(--color-neutral-200) 0%,
+      var(--color-neutral-100) 50%,
+      var(--color-neutral-200) 100%
+    );
+    background-size: 200% 100%;
+
+    &.short {
+      width: 60%;
+    }
+  }
+
+  /* ============================================
+   * 悬停光晕效果
+   * ============================================ */
+
+  &__glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(
+      600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(124, 58, 237, 0.06),
+      transparent 40%
+    );
+    opacity: 0;
+    transition: opacity var(--transition-slow);
+    pointer-events: none;
+    z-index: 1;
+
+    &--visible {
+      opacity: 1;
+    }
+  }
+}
+
+/* ============================================
+ * 暗色模式适配
+ * ============================================ */
+
+[data-theme='dark'] .bento-card {
+  &__skeleton-line {
+    background: linear-gradient(
+      90deg,
+      var(--color-neutral-700) 0%,
+      var(--color-neutral-800) 50%,
+      var(--color-neutral-700) 100%
+    );
+    background-size: 200% 100%;
+  }
+}

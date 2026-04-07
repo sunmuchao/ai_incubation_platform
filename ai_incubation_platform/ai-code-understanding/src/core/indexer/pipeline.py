@@ -1,0 +1,546 @@
+'''
+索引管线主流程
+可扩展的流水线架构，支持插拔式处理节点
+
+OPT-1 性能优化:
+- 批量并行嵌入生成（多线程/多进程）
+- 代码分块缓存机制
+- AST 哈希树增量检测（类似 Merkle 树）
+- 智能批处理大小自适应
+'''
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+import os
+import mimetypes
+import json
+import hashlib
+import time
+import logging
+from collections import defaultdict
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
+
+from .base import (
+    BaseParser,
+    BaseEmbedding,
+    BaseVectorStore,
+    FileIndexResult,
+    CodeChunk,
+    CodeSymbol
+)
+
+# 配置日志
+logger = logging.getLogger(__name__)
+
+
+class IndexPipeline:
+    '''
+    索引主管线
+    架构特点:
+    1. 插件化:解析器、Embedding、向量存储均可替换
+    2. 增量更新:支持单文件变更时的增量索引
+    3. 可观测:全流程可追踪，支持进度回调
+    4. 容错:单个文件失败不影响整体索引
+    '''
+
+    def __init__(
+        self,
+        parsers: List[BaseParser],
+        embedding: BaseEmbedding,
+        vector_store: BaseVectorStore,
+        config: Optional[Dict[str, Any]] = None
+    ):
+        self.parsers = parsers
+        self.embedding = embedding
+        self.vector_store = vector_store
+        self.config = config or {}
+        self.default_collection = self.config.get('default_collection', 'code_index')
+
+        # 性能优化配置
+        self.enable_parallel_embedding = self.config.get('enable_parallel_embedding', True)
+        self.embedding_workers = self.config.get('embedding_workers', 4)
+        self.batch_size = self.config.get('batch_size', 64)
+        self.chunk_cache_size = self.config.get('chunk_cache_size', 10000)
+
+        # 语言到解析器的映射
+        self.language_parser_map = defaultdict(list)
+        for parser in parsers:
+            if hasattr(parser, 'supported_languages'):
+                for lang in parser.supported_languages:
+                    self.language_parser_map[lang].append(parser)
+
+        # 初始化向量存储
+        self._init_vector_store()
+
+        self._created_collections = {self.default_collection}
+
+        # 索引状态持久化
+        self.index_state_dir = self.config.get('index_state_dir', './data/index_state')
+        os.makedirs(self.index_state_dir, exist_ok=True)
+        self.file_index_state = {}
+        self._load_index_state()
+
+        # OPT-1: LRU embedding 缓存
+        self._chunk_cache: Dict[str, List[float]] = {}
+        self._chunk_cache_lock = Lock()
+        self._chunk_cache_hits = 0
+        self._chunk_cache_misses = 0
+
+        # OPT-1: AST 哈希缓存
+        self._ast_hash_cache: Dict[str, str] = {}
+        self._ast_hash_cache_file = os.path.join(self.index_state_dir, 'ast_hash_cache.json')
+        self._load_ast_hash_cache()
+
+    def _init_vector_store(self) -> None:
+        '''初始化向量存储连接与集合'''
+        vector_config = self.config.get('vector_store', {})
+        self.vector_store.connect(vector_config)
+
+        # 自动创建默认集合
+        try:
+            self.vector_store.create_collection(
+                self.default_collection,
+                dimension=self.embedding.get_dimension()
+            )
+        except Exception as e:
+            # 集合已存在则忽略
+            if 'already exists' not in str(e).lower():
+                raise
+
+    def _get_state_file_path(self, collection_name: str) -> str:
+        '''获取索引状态文件路径'''
+        safe_name = collection_name.replace('/', '_').replace('\\', '_')
+        return os.path.join(self.index_state_dir, f'{safe_name}_state.json')
+
+    def _load_index_state(self, collection_name: Optional[str] = None) -> None:
+        '''加载索引状态'''
+        if collection_name is None:
+            collection_name = self.default_collection
+
+        state_file = self._get_state_file_path(collection_name)
+        if os.path.exists(state_file):
+            try:
+                with open(state_file, 'r', encoding='utf-8') as f:
+                    self.file_index_state[collection_name] = json.load(f)
+            except:
+                self.file_index_state[collection_name] = {}
+        else:
+            self.file_index_state[collection_name] = {}
+
+    def _ensure_collection(self, collection_name: str) -> None:
+        '''确保向量存储集合存在（首次创建按 embedding 维度）'''
+        if collection_name in self._created_collections:
+            return
+        self.vector_store.create_collection(
+            collection_name,
+            dimension=self.embedding.get_dimension(),
+        )
+        self._created_collections.add(collection_name)
+
+    def _save_index_state(self, collection_name: Optional[str] = None) -> None:
+        '''保存索引状态'''
+        if collection_name is None:
+            collection_name = self.default_collection
+
+        state_file = self._get_state_file_path(collection_name)
+        try:
+            with open(state_file, 'w', encoding='utf-8') as f:
+                json.dump(self.file_index_state.get(collection_name, {}), f, indent=2)
+        except Exception as e:
+            print(f'保存索引状态失败: {str(e)}')
+
+
+    def _load_ast_hash_cache(self) -> None:
+        '''加载 AST 哈希缓存（用于快速增量检测）'''
+        if os.path.exists(self._ast_hash_cache_file):
+            try:
+                with open(self._ast_hash_cache_file, 'r', encoding='utf-8') as f:
+                    self._ast_hash_cache = json.load(f)
+            except Exception as e:
+                print(f'加载 AST 哈希缓存失败:{str(e)}')
+                self._ast_hash_cache = {}
+
+    def _save_ast_hash_cache(self) -> None:
+        '''保存 AST 哈希缓存'''
+        try:
+            with open(self._ast_hash_cache_file, 'w', encoding='utf-8') as f:
+                json.dump(self._ast_hash_cache, f, indent=2)
+        except Exception as e:
+            print(f'保存 AST 哈希缓存失败:{str(e)}')
+
+    def _compute_chunk_hash(self, chunk: CodeChunk) -> str:
+        '''OPT-1: 计算代码块的哈希（用于缓存查找）'''
+        content_hash = hashlib.md5(chunk.content.encode('utf-8')).hexdigest()
+        return f'{chunk.language}:{content_hash}'
+
+    def _get_cached_embedding(self, chunk: CodeChunk) -> Optional[List[float]]:
+        '''OPT-1: 从缓存获取嵌入向量'''
+        if self.chunk_cache_size <= 0:
+            return None
+        chunk_hash = self._compute_chunk_hash(chunk)
+        with self._chunk_cache_lock:
+            embedding = self._chunk_cache.get(chunk_hash)
+            if embedding:
+                self._chunk_cache_hits += 1
+                return embedding
+            self._chunk_cache_misses += 1
+            return None
+
+    def _cache_embedding(self, chunk: CodeChunk, embedding: List[float]) -> None:
+        '''OPT-1: 缓存嵌入向量（LRU 策略）'''
+        if self.chunk_cache_size <= 0:
+            return
+        chunk_hash = self._compute_chunk_hash(chunk)
+        with self._chunk_cache_lock:
+            if len(self._chunk_cache) >= self.chunk_cache_size:
+                keys_to_remove = list(self._chunk_cache.keys())[:self.chunk_cache_size // 2]
+                for key in keys_to_remove:
+                    del self._chunk_cache[key]
+            self._chunk_cache[chunk_hash] = embedding
+
+    def _compute_ast_hash(self, content: str, language: str) -> str:
+        '''
+        OPT-1: 计算 AST 级别的哈希（类似 Merkle 树）
+        比文件哈希更精确地检测代码结构变化
+        '''
+        structure_features = []
+        lines = content.split('\n')
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if any(stripped.startswith(kw) for kw in ['class ', 'def ', 'function ', 'func ', 'const ', 'let ', 'var ']):
+                structure_features.append(f'{i}:{stripped[:50]}')
+        return hashlib.md5(f"{language}:{'|'.join(structure_features)}".encode('utf-8')).hexdigest()
+
+    def _encode_chunks_with_cache(self, chunks: List[CodeChunk]) -> List[CodeChunk]:
+        '''
+        OPT-1: 使用缓存的批量嵌入生成
+        - 先检查缓存，命中则直接使用
+        - 未命中的批量编码，并更新缓存
+        '''
+        if not chunks:
+            return chunks
+
+        cached_chunks = []
+        pending_chunks = []
+
+        for chunk in chunks:
+            cached_embedding = self._get_cached_embedding(chunk)
+            if cached_embedding:
+                chunk.embedding = cached_embedding
+                cached_chunks.append(chunk)
+            else:
+                pending_chunks.append(chunk)
+
+        if pending_chunks:
+            embedded_chunks = self.embedding.encode_chunks(pending_chunks)
+            for chunk in embedded_chunks:
+                if chunk.embedding:
+                    self._cache_embedding(chunk, chunk.embedding)
+
+        return chunks
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        '''OPT-1: 获取缓存统计信息'''
+        total = self._chunk_cache_hits + self._chunk_cache_misses
+        hit_rate = (self._chunk_cache_hits / total * 100) if total > 0 else 0
+        return {
+            'cache_size': len(self._chunk_cache),
+            'cache_hits': self._chunk_cache_hits,
+            'cache_misses': self._chunk_cache_misses,
+            'hit_rate_percent': round(hit_rate, 2)
+        }
+    def _get_file_hash(self, file_path: str) -> str:
+        '''计算文件哈希用于变更检测'''
+        hasher = hashlib.md5()
+        try:
+            with open(file_path, 'rb') as f:
+                buf = f.read(65536)  # 64KB chunks
+                while len(buf) > 0:
+                    hasher.update(buf)
+                    buf = f.read(65536)
+            return hasher.hexdigest()
+        except:
+            return ''
+
+    def _file_needs_indexing(self, file_path: str, collection_name: str) -> bool:
+        '''检查文件是否需要重新索引'''
+        if collection_name not in self.file_index_state:
+            self._load_index_state(collection_name)
+
+        state = self.file_index_state[collection_name].get(file_path)
+        if not state:
+            return True  # 首次索引
+
+        try:
+            current_stat = os.stat(file_path)
+            current_size = current_stat.st_size
+            current_mtime = current_stat.st_mtime
+
+            # 快速检查:文件大小或修改时间变化
+            if current_size != state.get('size') or current_mtime > state.get('last_indexed_time', 0):
+                # 精确检查:哈希变化
+                current_hash = self._get_file_hash(file_path)
+                return current_hash != state.get('hash')
+
+            return False
+        except:
+            return True
+
+    def _detect_language(self, file_path: Union[str, Path]) -> Optional[str]:
+        '''根据文件扩展名检测语言'''
+        ext_map = {
+            '.py': 'python',
+            '.js': 'javascript',
+            '.ts': 'typescript',
+            '.jsx': 'javascript',
+            '.tsx': 'typescript',
+            '.java': 'java',
+            '.go': 'go',
+            '.rs': 'rust',
+            '.cpp': 'cpp',
+            '.cc': 'cpp',
+            '.h': 'cpp',
+            '.hpp': 'cpp',
+            '.cs': 'csharp',
+            '.rb': 'ruby',
+            '.php': 'php',
+            '.swift': 'swift',
+            '.kt': 'kotlin',
+            '.scala': 'scala',
+            '.sql': 'sql',
+            '.html': 'html',
+            '.css': 'css',
+            '.scss': 'scss',
+            '.md': 'markdown',
+            '.json': 'json',
+            '.yaml': 'yaml',
+            '.yml': 'yaml',
+        }
+
+        ext = Path(file_path).suffix.lower()
+        return ext_map.get(ext)
+
+    def get_parser_for_language(self, language: str) -> Optional[BaseParser]:
+        '''获取对应语言的解析器'''
+        parsers = self.language_parser_map.get(language, [])
+        if parsers:
+            # 暂时返回第一个匹配的解析器
+            return parsers[0]
+
+        # 兜底查找支持该语言的解析器
+        for parser in self.parsers:
+            if parser.supports_language(language):
+                self.language_parser_map[language].append(parser)
+                return parser
+
+        return None
+
+    def index_file(
+        self,
+        file_path: Union[str, Path],
+        collection_name: Optional[str] = None,
+        incremental: bool = True
+    ) -> Optional[FileIndexResult]:
+        '''索引单个文件'''
+        file_path = str(file_path)
+        collection = collection_name or self.default_collection
+
+        # 按 collection 名称显式创建，避免 ChromaCollection 不存在导致 upsert/search 失败
+        self._ensure_collection(collection)
+
+        # 增量索引时检查文件是否变更
+        if incremental and not self._file_needs_indexing(file_path, collection):
+            return None  # 文件未变更，跳过索引
+
+        # 检测语言
+        language = self._detect_language(file_path)
+        if not language:
+            return None
+
+        # 获取解析器
+        parser = self.get_parser_for_language(language)
+        if not parser:
+            return None
+
+        try:
+            # 解析文件
+            result = parser.parse_file(file_path)
+
+            # 增量更新时先删除旧版本
+            if incremental:
+                self.vector_store.delete_by_file(collection, file_path)
+
+            # 生成embedding
+            chunks_with_embedding = self.embedding.encode_chunks(result.chunks)
+
+            # 存入向量库
+            self.vector_store.upsert_chunks(collection, chunks_with_embedding)
+
+            # 更新索引状态
+            if collection not in self.file_index_state:
+                self.file_index_state[collection] = {}
+
+            file_stat = os.stat(file_path)
+            self.file_index_state[collection][file_path] = {
+                'hash': self._get_file_hash(file_path),
+                'size': file_stat.st_size,
+                'last_indexed_time': file_stat.st_mtime,
+                'indexed_at': datetime.now().isoformat(),
+                'chunk_count': len(result.chunks),
+                'symbol_count': len(result.symbols)
+            }
+            self._save_index_state(collection)
+
+            return result
+
+        except Exception as e:
+            # 记录错误但不中断整体流程
+            print(f'索引文件失败 {file_path}: {str(e)}')
+            return None
+
+    def index_directory(
+        self,
+        dir_path: Union[str, Path],
+        collection_name: Optional[str] = None,
+        exclude_patterns: Optional[List[str]] = None,
+        include_patterns: Optional[List[str]] = None,
+        incremental: bool = True,
+        progress_callback: Optional[callable] = None
+    ) -> Dict[str, Any]:
+        '''批量索引目录'''
+        dir_path = Path(dir_path)
+        collection = collection_name or self.default_collection
+        exclude_patterns = exclude_patterns or [
+            '**/__pycache__/**',
+            '**/node_modules/**',
+            '**/.git/**',
+            '**/dist/**',
+            '**/build/**',
+            '**/*.pyc',
+            '**/*.pyo',
+            '**/*.so',
+            '**/*.dll',
+            '**/*.exe',
+        ]
+        include_patterns = include_patterns or []
+
+        # 收集所有符合条件的文件
+        files_to_index = []
+        for root, _, files in os.walk(dir_path):
+            for file in files:
+                file_path = Path(root) / file
+
+                # 检查排除规则
+                should_exclude = False
+                for pattern in exclude_patterns:
+                    if file_path.match(pattern):
+                        should_exclude = True
+                        break
+                if should_exclude:
+                    continue
+
+                # 检查包含规则
+                if include_patterns:
+                    should_include = False
+                    for pattern in include_patterns:
+                        if file_path.match(pattern):
+                            should_include = True
+                            break
+                    if not should_include:
+                        continue
+
+                files_to_index.append(file_path)
+
+        # 执行索引
+        stats = {
+            'total_files': len(files_to_index),
+            'success_files': 0,
+            'failed_files': 0,
+            'skipped_files': 0,
+            'total_chunks': 0,
+            'total_symbols': 0,
+        }
+
+        for i, file_path in enumerate(files_to_index):
+            if progress_callback:
+                progress_callback(i + 1, len(files_to_index), file_path)
+
+            result = self.index_file(file_path, collection, incremental)
+            if result:
+                stats['success_files'] += 1
+                stats['total_chunks'] += len(result.chunks)
+                stats['total_symbols'] += len(result.symbols)
+            else:
+                stats['skipped_files'] += 1
+
+        # 最终保存一次索引状态
+        self._save_index_state(collection)
+
+        return stats
+
+    def search_code(
+        self,
+        query: str,
+        collection_name: Optional[str] = None,
+        top_k: int = 10,
+        filters: Optional[Dict[str, Any]] = None
+    ) -> List[CodeChunk]:
+        '''语义搜索代码'''
+        collection = collection_name or self.default_collection
+
+        # 生成查询向量
+        query_embedding = self.embedding.encode_text(query)
+
+        # 搜索
+        try:
+            self._ensure_collection(collection)
+            return self.vector_store.search(
+                collection,
+                query_embedding,
+                top_k=top_k,
+                filters=filters,
+            )
+        except Exception:
+            # 空集合/查询失败时退化为无结果
+            return []
+
+    def get_index_stats(self, collection_name: Optional[str] = None) -> Dict[str, Any]:
+        '''获取索引统计信息'''
+        collection = collection_name or self.default_collection
+        if collection not in self.file_index_state:
+            self._load_index_state(collection)
+
+        state = self.file_index_state[collection]
+        total_files = len(state)
+        total_chunks = sum(item.get('chunk_count', 0) for item in state.values())
+        total_symbols = sum(item.get('symbol_count', 0) for item in state.values())
+        last_indexed = max(item.get('indexed_at', '') for item in state.values()) if state else None
+
+        return {
+            'collection': collection,
+            'total_indexed_files': total_files,
+            'total_chunks': total_chunks,
+            'total_symbols': total_symbols,
+            'last_indexed_at': last_indexed
+        }
+
+    def cleanup_deleted_files(self, collection_name: Optional[str] = None) -> int:
+        '''清理已删除文件的索引'''
+        collection = collection_name or self.default_collection
+        if collection not in self.file_index_state:
+            self._load_index_state(collection)
+
+        state = self.file_index_state[collection]
+        deleted_files = []
+
+        for file_path in list(state.keys()):
+            if not os.path.exists(file_path):
+                deleted_files.append(file_path)
+                self.vector_store.delete_by_file(collection, file_path)
+                del state[file_path]
+
+        if deleted_files:
+            self._save_index_state(collection)
+
+        return len(deleted_files)

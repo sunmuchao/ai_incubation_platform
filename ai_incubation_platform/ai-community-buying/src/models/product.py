@@ -107,7 +107,13 @@ class GroupJoinRecord(BaseModel):
     user_id: str
     join_time: datetime = Field(default_factory=datetime.now)
     order_id: Optional[str] = None
-    status: str = "joined"  # joined, paid, cancelled
+    # 状态用于“库存解锁/成团”结果回溯
+    # joined: 已参团（未成团/未结束）
+    # paid: 已生成订单（成团成功）
+    # cancelled: 团长取消
+    # expired: 团购过期（人数不足）
+    # failed: 其他失败原因（预留）
+    status: str = "joined"
 
 
 class ProductCreate(BaseModel):
@@ -133,3 +139,367 @@ class GroupBuyCreate(BaseModel):
 class GroupBuyJoinRequest(BaseModel):
     """加入团购请求"""
     user_id: str
+
+
+# ========== 佣金系统模型 ==========
+
+class CommissionRule(BaseModel):
+    """佣金规则模型"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    commission_rate: float  # 佣金比例 (0-1)
+    min_order_amount: float = 0.0
+    max_commission: Optional[float] = None
+    description: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+
+class CommissionRecord(BaseModel):
+    """佣金记录模型"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    organizer_id: str
+    group_buy_id: str
+    order_ids: List[str]
+    total_amount: float
+    commission_rate: float
+    commission_amount: float
+    status: str = "pending"  # pending, settled, withdrawn
+    rule_id: Optional[str] = None
+    settled_at: Optional[datetime] = None
+    withdrawn_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+
+class OrganizerProfile(BaseModel):
+    """团长档案模型"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    level: str = "normal"  # normal, gold, diamond
+    total_commission: float = 0.0
+    available_commission: float = 0.0
+    total_orders: int = 0
+    total_sales: float = 0.0
+    rating: float = 5.0
+    joined_at: datetime = Field(default_factory=datetime.now)
+    last_active_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+
+# ========== 优惠券系统模型 ==========
+
+class CouponType(str, Enum):
+    """优惠券类型"""
+    DISCOUNT = "discount"  # 折扣券
+    FIXED = "fixed"  # 满减券
+
+
+class CouponTemplate(BaseModel):
+    """优惠券模板模型"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    type: CouponType = CouponType.FIXED
+    value: float  # 优惠额度
+    min_purchase: float = 0.0
+    max_discount: Optional[float] = None
+    total_quantity: int = 1000
+    issued_quantity: int = 0
+    used_quantity: int = 0
+    valid_from: datetime
+    valid_to: datetime
+    applicable_products: Optional[List[str]] = None
+    applicable_categories: Optional[List[str]] = None
+    user_limit: int = 1
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+
+class CouponStatus(str, Enum):
+    """优惠券状态"""
+    AVAILABLE = "available"
+    USED = "used"
+    EXPIRED = "expired"
+
+
+class Coupon(BaseModel):
+    """用户优惠券模型"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    template_id: str
+    code: str
+    status: CouponStatus = CouponStatus.AVAILABLE
+    order_id: Optional[str] = None
+    valid_from: datetime
+    valid_to: datetime
+    used_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+
+# ========== 分享裂变系统模型 ==========
+
+class ShareType(str, Enum):
+    """分享类型"""
+    APP = "app"  # APP 下载
+    GROUP = "group"  # 团购分享
+    COUPON = "coupon"  # 优惠券分享
+
+
+class ShareInvite(BaseModel):
+    """分享邀请记录模型"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    inviter_id: str
+    invitee_id: str
+    invite_code: str
+    share_type: ShareType = ShareType.GROUP
+    related_id: Optional[str] = None
+    status: str = "pending"  # pending, converted
+    reward_amount: float = 0.0
+    reward_status: str = "pending"  # pending, granted
+    converted_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+
+class ShareRewardRule(BaseModel):
+    """分享奖励规则模型"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    share_type: ShareType
+    reward_type: str = "cash"  # cash, coupon, point
+    reward_value: float
+    min_order_amount: float = 0.0
+    max_reward_per_day: float = 100.0
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+
+# ========== 请求/响应模型 ==========
+
+class CommissionRuleCreate(BaseModel):
+    """创建佣金规则请求"""
+    name: str
+    commission_rate: float
+    min_order_amount: float = 0.0
+    max_commission: Optional[float] = None
+    description: Optional[str] = None
+
+
+class CouponTemplateCreate(BaseModel):
+    """创建优惠券模板请求"""
+    name: str
+    type: CouponType = CouponType.FIXED
+    value: float
+    min_purchase: float = 0.0
+    max_discount: Optional[float] = None
+    total_quantity: int = 1000
+    valid_from: datetime
+    valid_to: datetime
+    applicable_products: Optional[List[str]] = None
+    applicable_categories: Optional[List[str]] = None
+    user_limit: int = 1
+
+
+class CouponClaimRequest(BaseModel):
+    """领取优惠券请求"""
+    user_id: str
+    template_id: str
+
+
+class CouponUseRequest(BaseModel):
+    """使用优惠券请求"""
+    user_id: str
+    coupon_id: str
+    order_amount: float
+
+
+class ShareLinkGenerateRequest(BaseModel):
+    """生成分享链接请求"""
+    user_id: str
+    share_type: ShareType
+    related_id: Optional[str] = None
+
+
+class InviteConvertRequest(BaseModel):
+    """邀请转化请求"""
+    invite_code: str
+    invitee_id: str
+    order_amount: Optional[float] = 0.0
+
+
+# ========== P4 履约追踪系统模型 ==========
+
+class FulfillmentStatus(str, Enum):
+    """履约状态"""
+    PENDING = "pending"       # 待发货
+    SHIPPING = "shipping"     # 配送中
+    DELIVERED = "delivered"   # 待自提
+    COMPLETED = "completed"   # 已完成
+    CANCELLED = "cancelled"   # 已取消
+
+
+class EventType(str, Enum):
+    """事件类型"""
+    ORDER_CREATED = "order_created"      # 订单创建
+    PAID = "paid"                         # 已支付
+    SHIPPED = "shipped"                   # 已发货
+    IN_TRANSIT = "in_transit"             # 运输中
+    ARRIVED = "arrived"                   # 到达自提点
+    PICKED_UP = "picked_up"               # 已自提
+    COMPLETED = "completed"               # 已完成
+
+
+class Fulfillment(BaseModel):
+    """履约记录模型"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    order_id: str
+    group_buy_id: str
+    status: FulfillmentStatus = FulfillmentStatus.PENDING
+    tracking_number: Optional[str] = None
+    carrier: Optional[str] = None
+    warehouse_id: Optional[str] = None
+    shipped_at: Optional[datetime] = None
+    delivered_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    cancelled_at: Optional[datetime] = None
+    cancel_reason: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+
+class FulfillmentEvent(BaseModel):
+    """履约事件模型"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    fulfillment_id: str
+    event_type: EventType
+    event_time: datetime = Field(default_factory=datetime.now)
+    location: Optional[str] = None
+    description: str
+    operator: Optional[str] = None  # 系统/快递员/团长
+    extra_data: Optional[Dict] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+# ========== P4 团长管理后台模型 ==========
+
+class OrganizerDashboard(BaseModel):
+    """团长仪表盘模型"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    total_sales: float = 0.0
+    total_orders: int = 0
+    total_customers: int = 0
+    total_commission: float = 0.0
+    today_sales: float = 0.0
+    today_orders: int = 0
+    pending_orders: int = 0
+    pending_delivery: int = 0
+    completed_orders: int = 0
+    refund_orders: int = 0
+    customer_satisfaction: float = 5.0
+    data_date: datetime
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+
+class DashboardStats(BaseModel):
+    """仪表盘统计响应"""
+    user_id: str
+    total_sales: float
+    total_orders: int
+    total_customers: int
+    total_commission: float
+    today_sales: float
+    today_orders: int
+    pending_orders: int
+    pending_delivery: int
+    completed_orders: int
+    refund_orders: int
+    customer_satisfaction: float
+    data_date: datetime
+
+
+# ========== P4 AI 需求预测模型 ==========
+
+class DemandForecast(BaseModel):
+    """需求预测模型"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    product_id: str
+    community_id: str
+    forecast_date: datetime
+    forecast_quantity: int
+    actual_quantity: Optional[int] = None
+    accuracy: Optional[float] = None
+    confidence: float = 0.0
+    features: Optional[Dict] = None
+    model_version: str = "v1"
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+
+class CommunityPreference(BaseModel):
+    """社区偏好模型"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    community_id: str
+    category: str
+    preference_score: float = 0.0
+    avg_order_value: float = 0.0
+    purchase_frequency: float = 0.0
+    favorite_brands: Optional[List[str]] = None
+    favorite_price_range: Optional[Dict] = None
+    sample_size: int = 0
+    last_purchase_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+
+# ========== P4 请求/响应模型 ==========
+
+class FulfillmentCreate(BaseModel):
+    """创建履约记录请求"""
+    order_id: str
+    group_buy_id: str
+    tracking_number: Optional[str] = None
+    carrier: Optional[str] = None
+    warehouse_id: Optional[str] = None
+
+
+class FulfillmentUpdate(BaseModel):
+    """更新履约状态请求"""
+    status: FulfillmentStatus
+    tracking_number: Optional[str] = None
+    carrier: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class FulfillmentEventCreate(BaseModel):
+    """创建履约事件请求"""
+    fulfillment_id: str
+    event_type: EventType
+    location: Optional[str] = None
+    description: str
+    operator: Optional[str] = None
+    extra_data: Optional[Dict] = None
+
+
+class DemandForecastCreate(BaseModel):
+    """创建需求预测请求"""
+    product_id: str
+    community_id: str
+    forecast_date: datetime
+    forecast_quantity: int
+    confidence: float = 0.0
+    features: Optional[Dict] = None
+    model_version: str = "v1"
+
+
+class DemandForecastUpdate(BaseModel):
+    """更新需求预测请求"""
+    actual_quantity: int
+    accuracy: float

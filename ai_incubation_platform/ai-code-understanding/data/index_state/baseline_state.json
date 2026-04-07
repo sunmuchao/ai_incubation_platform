@@ -1,0 +1,802 @@
+{
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0088.py": {
+    "hash": "188dd366e87be4ea403f00e8aea5b497",
+    "size": 888,
+    "last_indexed_time": 1775317706.0354881,
+    "indexed_at": "2026-04-04T23:48:26.300832",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0098.py": {
+    "hash": "72cebbb475f663f2fb0202c4d748ced0",
+    "size": 888,
+    "last_indexed_time": 1775317706.0374548,
+    "indexed_at": "2026-04-04T23:48:26.325704",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0089.py": {
+    "hash": "9d025e6be40922c6c957dcd9bbb6d279",
+    "size": 888,
+    "last_indexed_time": 1775317706.0356708,
+    "indexed_at": "2026-04-04T23:48:26.330135",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0099.py": {
+    "hash": "7c9171f8faba9e9fefc84400e8f1ccb3",
+    "size": 888,
+    "last_indexed_time": 1775317706.0376348,
+    "indexed_at": "2026-04-04T23:48:26.334314",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0082.py": {
+    "hash": "d59f2d6106b8ad52fae95cae7960f5b5",
+    "size": 888,
+    "last_indexed_time": 1775317706.0344095,
+    "indexed_at": "2026-04-04T23:48:26.338459",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0020.py": {
+    "hash": "1c8dbde39eca2e089952772a837c1b33",
+    "size": 888,
+    "last_indexed_time": 1775317706.021637,
+    "indexed_at": "2026-04-04T23:48:26.342811",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0071.py": {
+    "hash": "df335986f9b91793bfb1b00ec65271f2",
+    "size": 888,
+    "last_indexed_time": 1775317706.0324008,
+    "indexed_at": "2026-04-04T23:48:26.347173",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0045.py": {
+    "hash": "6983d04329a2f1a291f3a8d1c047ea99",
+    "size": 888,
+    "last_indexed_time": 1775317706.0271096,
+    "indexed_at": "2026-04-04T23:48:26.351266",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0014.py": {
+    "hash": "f00dacb9e378e266d9068e0d958a3df1",
+    "size": 888,
+    "last_indexed_time": 1775317706.020327,
+    "indexed_at": "2026-04-04T23:48:26.355516",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0004.py": {
+    "hash": "75a7a6c8a52521cf980129b6c672a8fb",
+    "size": 876,
+    "last_indexed_time": 1775317706.0182364,
+    "indexed_at": "2026-04-04T23:48:26.359906",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0055.py": {
+    "hash": "07de25edb42241a96e3fa52525b0b36b",
+    "size": 888,
+    "last_indexed_time": 1775317706.0292735,
+    "indexed_at": "2026-04-04T23:48:26.364244",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0061.py": {
+    "hash": "07fbea25ad76a5cb39390e3c966e6cbe",
+    "size": 888,
+    "last_indexed_time": 1775317706.0304842,
+    "indexed_at": "2026-04-04T23:48:26.368370",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0030.py": {
+    "hash": "e03b882ccbaf82ba40a78c0228c13468",
+    "size": 888,
+    "last_indexed_time": 1775317706.023781,
+    "indexed_at": "2026-04-04T23:48:26.372708",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0092.py": {
+    "hash": "68047a108da3a83178994ae6a1c75548",
+    "size": 888,
+    "last_indexed_time": 1775317706.036333,
+    "indexed_at": "2026-04-04T23:48:26.377044",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0010.py": {
+    "hash": "ea125c165911c094e1734ca3656189d6",
+    "size": 888,
+    "last_indexed_time": 1775317706.0195084,
+    "indexed_at": "2026-04-04T23:48:26.381263",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0041.py": {
+    "hash": "d022fb03da0cf71f4ee705bd21376850",
+    "size": 888,
+    "last_indexed_time": 1775317706.0261672,
+    "indexed_at": "2026-04-04T23:48:26.386817",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0086.py": {
+    "hash": "601bb33aeaa76bf4310e060d4fd886a2",
+    "size": 888,
+    "last_indexed_time": 1775317706.0351334,
+    "indexed_at": "2026-04-04T23:48:26.391231",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0075.py": {
+    "hash": "5ca97c11f0d1f2f8971b208006c441fa",
+    "size": 888,
+    "last_indexed_time": 1775317706.0331364,
+    "indexed_at": "2026-04-04T23:48:26.395437",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0024.py": {
+    "hash": "c10a118f6e6b25c942eb2f5607b639a4",
+    "size": 888,
+    "last_indexed_time": 1775317706.0224936,
+    "indexed_at": "2026-04-04T23:48:26.399988",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0034.py": {
+    "hash": "0280cf8db231b0967ae6bd4c37e59ee3",
+    "size": 888,
+    "last_indexed_time": 1775317706.0247047,
+    "indexed_at": "2026-04-04T23:48:26.404424",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0065.py": {
+    "hash": "39262e6e7a300388ec8b87f03baaecf2",
+    "size": 888,
+    "last_indexed_time": 1775317706.0312426,
+    "indexed_at": "2026-04-04T23:48:26.408863",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0096.py": {
+    "hash": "13e88270e755631b8c0903535f695101",
+    "size": 888,
+    "last_indexed_time": 1775317706.0370939,
+    "indexed_at": "2026-04-04T23:48:26.413341",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0051.py": {
+    "hash": "0a110dbcd9fc9e3797fcc0a26c714a89",
+    "size": 888,
+    "last_indexed_time": 1775317706.0284393,
+    "indexed_at": "2026-04-04T23:48:26.417733",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0000.py": {
+    "hash": "b73e14c6baa63e161890454120d4e409",
+    "size": 876,
+    "last_indexed_time": 1775317706.0173647,
+    "indexed_at": "2026-04-04T23:48:26.422334",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0011.py": {
+    "hash": "9a5ad541a4b05ba8e419d956e0029c61",
+    "size": 888,
+    "last_indexed_time": 1775317706.0197206,
+    "indexed_at": "2026-04-04T23:48:26.426872",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0040.py": {
+    "hash": "1440058116e91fb8cfbf275829090378",
+    "size": 888,
+    "last_indexed_time": 1775317706.0259678,
+    "indexed_at": "2026-04-04T23:48:26.431163",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0087.py": {
+    "hash": "659e8721b5c58591f1b002eea68bd7c0",
+    "size": 888,
+    "last_indexed_time": 1775317706.0353112,
+    "indexed_at": "2026-04-04T23:48:26.435604",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0074.py": {
+    "hash": "455962c0620eef85366f3d72c1606526",
+    "size": 888,
+    "last_indexed_time": 1775317706.032958,
+    "indexed_at": "2026-04-04T23:48:26.440435",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0025.py": {
+    "hash": "251f0509109266d9b3be194d3538e447",
+    "size": 888,
+    "last_indexed_time": 1775317706.022707,
+    "indexed_at": "2026-04-04T23:48:26.444983",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0035.py": {
+    "hash": "ea9832baefc72617b4a2057c262d72ff",
+    "size": 888,
+    "last_indexed_time": 1775317706.024922,
+    "indexed_at": "2026-04-04T23:48:26.449558",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0064.py": {
+    "hash": "305b245af167e46f882d99bba43786df",
+    "size": 888,
+    "last_indexed_time": 1775317706.0310533,
+    "indexed_at": "2026-04-04T23:48:26.454183",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0097.py": {
+    "hash": "f7a7314fb8860227fc0337202929d91b",
+    "size": 888,
+    "last_indexed_time": 1775317706.0372753,
+    "indexed_at": "2026-04-04T23:48:26.459915",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0050.py": {
+    "hash": "0b4e94f27a728d742955fe422053760f",
+    "size": 888,
+    "last_indexed_time": 1775317706.0282335,
+    "indexed_at": "2026-04-04T23:48:26.464457",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0001.py": {
+    "hash": "7a7b6778fb2329709ac38126ddcfa746",
+    "size": 876,
+    "last_indexed_time": 1775317706.0176213,
+    "indexed_at": "2026-04-04T23:48:26.468921",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0083.py": {
+    "hash": "dc686c0e220b82a851efa31ef7e8ad81",
+    "size": 888,
+    "last_indexed_time": 1775317706.0345936,
+    "indexed_at": "2026-04-04T23:48:26.473526",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0021.py": {
+    "hash": "fb2dee0e35a969af55988947b46c14fa",
+    "size": 888,
+    "last_indexed_time": 1775317706.0218563,
+    "indexed_at": "2026-04-04T23:48:26.478484",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0070.py": {
+    "hash": "20875b5993c9446881ae3e974e4482cc",
+    "size": 888,
+    "last_indexed_time": 1775317706.0322125,
+    "indexed_at": "2026-04-04T23:48:26.483054",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0044.py": {
+    "hash": "417525a3d3143247dc9593c369d34cef",
+    "size": 888,
+    "last_indexed_time": 1775317706.0268662,
+    "indexed_at": "2026-04-04T23:48:26.487801",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0015.py": {
+    "hash": "374d934967522d1747386eecb0c6099a",
+    "size": 888,
+    "last_indexed_time": 1775317706.0205386,
+    "indexed_at": "2026-04-04T23:48:26.492656",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0005.py": {
+    "hash": "68330026290001be55e7597a37c07de6",
+    "size": 876,
+    "last_indexed_time": 1775317706.0184588,
+    "indexed_at": "2026-04-04T23:48:26.497347",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0054.py": {
+    "hash": "19f045739ecf59bf80a74dfd425b2d64",
+    "size": 888,
+    "last_indexed_time": 1775317706.029048,
+    "indexed_at": "2026-04-04T23:48:26.501966",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0060.py": {
+    "hash": "bc72358d2a524e22a3babf9bd9de51c4",
+    "size": 888,
+    "last_indexed_time": 1775317706.0302756,
+    "indexed_at": "2026-04-04T23:48:26.529272",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0031.py": {
+    "hash": "d6138714c02413658bd35b5f4a8bc048",
+    "size": 888,
+    "last_indexed_time": 1775317706.023993,
+    "indexed_at": "2026-04-04T23:48:26.534057",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0093.py": {
+    "hash": "da605c960762dcc0ecd0333b8965c5ab",
+    "size": 888,
+    "last_indexed_time": 1775317706.0365162,
+    "indexed_at": "2026-04-04T23:48:26.538838",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0043.py": {
+    "hash": "8721be3eaf2898b54edfc548f267bef9",
+    "size": 888,
+    "last_indexed_time": 1775317706.0266025,
+    "indexed_at": "2026-04-04T23:48:26.543915",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0012.py": {
+    "hash": "8748288307258727c8ffef22aca380a4",
+    "size": 888,
+    "last_indexed_time": 1775317706.0199203,
+    "indexed_at": "2026-04-04T23:48:26.548919",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0026.py": {
+    "hash": "9862ad5a2aa7e220dceefb3019501e08",
+    "size": 888,
+    "last_indexed_time": 1775317706.0229278,
+    "indexed_at": "2026-04-04T23:48:26.553968",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0077.py": {
+    "hash": "256932139b8d20f26040a9a18b603e7a",
+    "size": 888,
+    "last_indexed_time": 1775317706.0334954,
+    "indexed_at": "2026-04-04T23:48:26.560002",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0084.py": {
+    "hash": "8579d29cbbca6c18340a0cf5301fd392",
+    "size": 888,
+    "last_indexed_time": 1775317706.0347722,
+    "indexed_at": "2026-04-04T23:48:26.565036",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0094.py": {
+    "hash": "33f98ef103c441dbc1fabebc34d2e392",
+    "size": 888,
+    "last_indexed_time": 1775317706.0367153,
+    "indexed_at": "2026-04-04T23:48:26.569667",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0067.py": {
+    "hash": "554555a024ef55410e92906920f4a401",
+    "size": 888,
+    "last_indexed_time": 1775317706.0316339,
+    "indexed_at": "2026-04-04T23:48:26.574862",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0036.py": {
+    "hash": "dc572f612e6145e9ba056c57ccd023bf",
+    "size": 888,
+    "last_indexed_time": 1775317706.0251365,
+    "indexed_at": "2026-04-04T23:48:26.579699",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0002.py": {
+    "hash": "625642bcb67b46a6dbf9ab2aaad77dcd",
+    "size": 876,
+    "last_indexed_time": 1775317706.0178292,
+    "indexed_at": "2026-04-04T23:48:26.584524",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0053.py": {
+    "hash": "c9aa9dcfc9af9f34de1e3332d9fafb18",
+    "size": 888,
+    "last_indexed_time": 1775317706.0288465,
+    "indexed_at": "2026-04-04T23:48:26.589358",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0073.py": {
+    "hash": "10086e438482f75125f105cbcfb1815a",
+    "size": 888,
+    "last_indexed_time": 1775317706.0327773,
+    "indexed_at": "2026-04-04T23:48:26.594540",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0022.py": {
+    "hash": "72e7c0cdfbadf2758d5c8ceac8ce4cc6",
+    "size": 888,
+    "last_indexed_time": 1775317706.0220733,
+    "indexed_at": "2026-04-04T23:48:26.599452",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0080.py": {
+    "hash": "f758578cd879bcb9d3600886cd853d13",
+    "size": 888,
+    "last_indexed_time": 1775317706.0340354,
+    "indexed_at": "2026-04-04T23:48:26.604372",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0016.py": {
+    "hash": "ea3ad03fe9189b31d46c7b164b81d067",
+    "size": 888,
+    "last_indexed_time": 1775317706.0207624,
+    "indexed_at": "2026-04-04T23:48:26.610894",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0047.py": {
+    "hash": "826b67e6692ed3626d3989b29eff6db7",
+    "size": 888,
+    "last_indexed_time": 1775317706.027598,
+    "indexed_at": "2026-04-04T23:48:26.616258",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0057.py": {
+    "hash": "c57d75c532bb3054ca396d6a03ff8fb9",
+    "size": 888,
+    "last_indexed_time": 1775317706.0296943,
+    "indexed_at": "2026-04-04T23:48:26.621401",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0006.py": {
+    "hash": "3a17a22526a2c314b2fee0e9dfeb3375",
+    "size": 876,
+    "last_indexed_time": 1775317706.0186763,
+    "indexed_at": "2026-04-04T23:48:26.627077",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0090.py": {
+    "hash": "d17935aeb309657a697e543b30df95c0",
+    "size": 888,
+    "last_indexed_time": 1775317706.035932,
+    "indexed_at": "2026-04-04T23:48:26.632018",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0032.py": {
+    "hash": "98c9133d7cbcda43ec97e7534d6266ad",
+    "size": 888,
+    "last_indexed_time": 1775317706.0242002,
+    "indexed_at": "2026-04-04T23:48:26.637061",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0063.py": {
+    "hash": "e2ea9893da9d49af17064c4a690e589a",
+    "size": 888,
+    "last_indexed_time": 1775317706.0308635,
+    "indexed_at": "2026-04-04T23:48:26.644957",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0072.py": {
+    "hash": "4d1d0ede815ae5d517eb8fcbd3471e04",
+    "size": 888,
+    "last_indexed_time": 1775317706.0325925,
+    "indexed_at": "2026-04-04T23:48:26.650047",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0023.py": {
+    "hash": "7e3f656522a7a024cd773106babb4f53",
+    "size": 888,
+    "last_indexed_time": 1775317706.0222862,
+    "indexed_at": "2026-04-04T23:48:26.655123",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0081.py": {
+    "hash": "95387cc17cf46f9c7f6d17b4fc7bfa89",
+    "size": 888,
+    "last_indexed_time": 1775317706.0342267,
+    "indexed_at": "2026-04-04T23:48:26.660308",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0017.py": {
+    "hash": "5b435c3ef0c6490b43fcae677086df22",
+    "size": 888,
+    "last_indexed_time": 1775317706.0209835,
+    "indexed_at": "2026-04-04T23:48:26.665261",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0046.py": {
+    "hash": "46de8cc3d76f2c6c30a3fe97a168efad",
+    "size": 888,
+    "last_indexed_time": 1775317706.0273857,
+    "indexed_at": "2026-04-04T23:48:26.670273",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0056.py": {
+    "hash": "1faf1784fc1bf160d66d2bcece4ae0f1",
+    "size": 888,
+    "last_indexed_time": 1775317706.0294983,
+    "indexed_at": "2026-04-04T23:48:26.675342",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0007.py": {
+    "hash": "5c223b101919280a064328033d72d20b",
+    "size": 876,
+    "last_indexed_time": 1775317706.0188777,
+    "indexed_at": "2026-04-04T23:48:26.680256",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0091.py": {
+    "hash": "2f149e7c6f35d6dbe281016c7d78b4fe",
+    "size": 888,
+    "last_indexed_time": 1775317706.0361404,
+    "indexed_at": "2026-04-04T23:48:26.685417",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0033.py": {
+    "hash": "eed1becf99669ab35c2c76fb8daab7bf",
+    "size": 888,
+    "last_indexed_time": 1775317706.024413,
+    "indexed_at": "2026-04-04T23:48:26.690387",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0062.py": {
+    "hash": "c4c085fd8136283b4596f6ca6c3f7914",
+    "size": 888,
+    "last_indexed_time": 1775317706.0306745,
+    "indexed_at": "2026-04-04T23:48:26.695278",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0042.py": {
+    "hash": "50de6fbb33b983ed0aac7055ac78f4b7",
+    "size": 888,
+    "last_indexed_time": 1775317706.0263937,
+    "indexed_at": "2026-04-04T23:48:26.700158",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0013.py": {
+    "hash": "b2607425899aca32c6dfb02d77aa9956",
+    "size": 888,
+    "last_indexed_time": 1775317706.0201225,
+    "indexed_at": "2026-04-04T23:48:26.705556",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0027.py": {
+    "hash": "7fb0b40e5f12b5b8575e55a4cce34faa",
+    "size": 888,
+    "last_indexed_time": 1775317706.0231528,
+    "indexed_at": "2026-04-04T23:48:26.729001",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0076.py": {
+    "hash": "70d7402edf841e820d09f0940e8c954b",
+    "size": 888,
+    "last_indexed_time": 1775317706.0333142,
+    "indexed_at": "2026-04-04T23:48:26.734134",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0085.py": {
+    "hash": "81f0977f8538e23d6124db14d6bae166",
+    "size": 888,
+    "last_indexed_time": 1775317706.0349529,
+    "indexed_at": "2026-04-04T23:48:26.739315",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0095.py": {
+    "hash": "feec0afe62210a56fff97810ed80698b",
+    "size": 888,
+    "last_indexed_time": 1775317706.0369136,
+    "indexed_at": "2026-04-04T23:48:26.745714",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0066.py": {
+    "hash": "37f5e8cba6e7f107fcb15b5761177095",
+    "size": 888,
+    "last_indexed_time": 1775317706.0314436,
+    "indexed_at": "2026-04-04T23:48:26.751007",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0037.py": {
+    "hash": "99e369d46e8aa472bbe70a8767f0b6f4",
+    "size": 888,
+    "last_indexed_time": 1775317706.0253465,
+    "indexed_at": "2026-04-04T23:48:26.756452",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0003.py": {
+    "hash": "b528f0a186f3c880a537b7d7451d6083",
+    "size": 876,
+    "last_indexed_time": 1775317706.0180361,
+    "indexed_at": "2026-04-04T23:48:26.761691",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0052.py": {
+    "hash": "77e32928c7b5849fd3b577f36e69d5bc",
+    "size": 888,
+    "last_indexed_time": 1775317706.0286424,
+    "indexed_at": "2026-04-04T23:48:26.767075",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0049.py": {
+    "hash": "c06121fbd432dea95cff7cc701b39942",
+    "size": 888,
+    "last_indexed_time": 1775317706.0280263,
+    "indexed_at": "2026-04-04T23:48:26.772257",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0018.py": {
+    "hash": "cf746a5f525da13ed2c50795bd37517e",
+    "size": 888,
+    "last_indexed_time": 1775317706.0211916,
+    "indexed_at": "2026-04-04T23:48:26.777526",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0008.py": {
+    "hash": "2c6100a264edee03327b67afb9accf2e",
+    "size": 876,
+    "last_indexed_time": 1775317706.0190856,
+    "indexed_at": "2026-04-04T23:48:26.782810",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0059.py": {
+    "hash": "9df273023898aafdf3f46ca8c349408b",
+    "size": 888,
+    "last_indexed_time": 1775317706.0300786,
+    "indexed_at": "2026-04-04T23:48:26.788487",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0079.py": {
+    "hash": "f7d66d302d0a1c6ac3711adb7cc30a90",
+    "size": 888,
+    "last_indexed_time": 1775317706.033854,
+    "indexed_at": "2026-04-04T23:48:26.793830",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0028.py": {
+    "hash": "8b78f4b21d2aa869fca7c1200ba0fc20",
+    "size": 888,
+    "last_indexed_time": 1775317706.023353,
+    "indexed_at": "2026-04-04T23:48:26.799364",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0038.py": {
+    "hash": "01821fd97c0ccd4f1fe3047f5e628414",
+    "size": 888,
+    "last_indexed_time": 1775317706.025571,
+    "indexed_at": "2026-04-04T23:48:26.805076",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0069.py": {
+    "hash": "3aaffbb0887d548e8e4fa50f19854df4",
+    "size": 888,
+    "last_indexed_time": 1775317706.0320227,
+    "indexed_at": "2026-04-04T23:48:26.810831",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0078.py": {
+    "hash": "64364c65c4eb3683e5ff6e00ca010bd0",
+    "size": 888,
+    "last_indexed_time": 1775317706.0336738,
+    "indexed_at": "2026-04-04T23:48:26.816165",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0029.py": {
+    "hash": "34cc30a7b7562eb30702feaef8cd6882",
+    "size": 888,
+    "last_indexed_time": 1775317706.0235763,
+    "indexed_at": "2026-04-04T23:48:26.821582",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0039.py": {
+    "hash": "0431a927100ef47a23bbd37e10e063a0",
+    "size": 888,
+    "last_indexed_time": 1775317706.0257704,
+    "indexed_at": "2026-04-04T23:48:26.826959",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0068.py": {
+    "hash": "29500453574d8ca73497b4a54083af9f",
+    "size": 888,
+    "last_indexed_time": 1775317706.0318348,
+    "indexed_at": "2026-04-04T23:48:26.833480",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0048.py": {
+    "hash": "f20a768187e4714d32829616601a7750",
+    "size": 888,
+    "last_indexed_time": 1775317706.0278056,
+    "indexed_at": "2026-04-04T23:48:26.839047",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0019.py": {
+    "hash": "3f5a1bdf21249ebfe31ca7b0cbea1569",
+    "size": 888,
+    "last_indexed_time": 1775317706.0214124,
+    "indexed_at": "2026-04-04T23:48:26.844448",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0009.py": {
+    "hash": "4c7b4ab3edcf18bf8d67e6b2429c41e1",
+    "size": 876,
+    "last_indexed_time": 1775317706.0192976,
+    "indexed_at": "2026-04-04T23:48:26.849801",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/var/folders/z1/vrlbr8m91k98ysr_64ckxv640000gn/T/perf_test_iu4ikzm0/src/test_file_0058.py": {
+    "hash": "e75e206dd88c0157732e134f43df268e",
+    "size": 888,
+    "last_indexed_time": 1775317706.0298862,
+    "indexed_at": "2026-04-04T23:48:26.857592",
+    "chunk_count": 1,
+    "symbol_count": 12
+  }
+}

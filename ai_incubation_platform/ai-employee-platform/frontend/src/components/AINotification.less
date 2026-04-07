@@ -1,0 +1,186 @@
+/* AI Native 通知中心样式 */
+
+.notification-button {
+  border: none;
+  box-shadow: none;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
+}
+
+.notification-dropdown {
+  width: 380px;
+  max-height: 500px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #fafafa;
+  border-radius: 8px 8px 0 0;
+}
+
+.dropdown-content {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 340px;
+}
+
+.dropdown-footer {
+  padding: 12px 16px;
+  background: #fafafa;
+  border-radius: 0 0 8px 8px;
+}
+
+.notification-item {
+  cursor: pointer;
+  padding: 12px 16px !important;
+  position: relative;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
+
+  &.unread {
+    background-color: #f0f7ff;
+
+    &:hover {
+      background-color: #e6f4ff;
+    }
+  }
+}
+
+.notification-content {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.notification-icon {
+  flex-shrink: 0;
+}
+
+.notification-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.notification-title {
+  font-size: 14px;
+}
+
+.notification-tag {
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.notification-text {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+}
+
+.notification-time {
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.unread-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #1890ff;
+  border-radius: 50%;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+/* Drawer 样式 */
+.ai-notification-drawer {
+  .drawer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .all-notifications {
+    flex: 1;
+  }
+}
+
+/* AI 建议卡片 */
+.ai-suggestions-card {
+  margin-bottom: 16px;
+
+  .suggestion-item {
+    padding: 8px 0 !important;
+  }
+
+  .suggestion-content {
+    width: 100%;
+  }
+
+  .suggestion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .suggestion-text {
+    margin: 0 0 8px 0 !important;
+    font-size: 13px;
+  }
+
+  .suggestion-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
+/* 动画效果 */
+.notification-dropdown-wrapper {
+  .ant-dropdown-menu {
+    padding: 0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .notification-dropdown {
+    width: 320px;
+  }
+
+  .ai-notification-drawer {
+    .ant-drawer-body {
+      padding: 16px;
+    }
+  }
+}

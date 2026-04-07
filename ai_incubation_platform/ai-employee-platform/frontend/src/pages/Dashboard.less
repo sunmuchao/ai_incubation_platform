@@ -1,0 +1,341 @@
+/**
+ * Dashboard 页面样式 - Bento Grid
+ */
+@import '../styles/design-tokens.less';
+
+.dashboard-page {
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+/* ============================================
+ * 员工状态图表
+ * ============================================ */
+
+.employee-status-chart {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: var(--spacing-4);
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-3) 0;
+    border-bottom: var(--border-light);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .status-info {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-3);
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: var(--border-radius-full);
+        flex-shrink: 0;
+      }
+
+      .status-label {
+        font-size: var(--font-size-sm);
+        color: var(--text-secondary);
+      }
+    }
+
+    .status-value {
+      display: flex;
+      align-items: baseline;
+      gap: var(--spacing-1);
+
+      .status-count {
+        font-size: var(--font-size-xl);
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-primary);
+      }
+
+      .status-unit {
+        font-size: var(--font-size-xs);
+        color: var(--text-tertiary);
+      }
+    }
+  }
+
+  .status-chart-placeholder {
+    margin-top: var(--spacing-4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}
+
+/* ============================================
+ * 收入趋势图表
+ * ============================================ */
+
+.revenue-chart {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .revenue-highlights {
+    display: flex;
+    gap: var(--spacing-6);
+    margin-bottom: var(--spacing-4);
+    padding: var(--spacing-4);
+    background: var(--bg-tertiary);
+    border-radius: var(--border-radius-lg);
+
+    .highlight-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-1);
+
+      .highlight-label {
+        font-size: var(--font-size-xs);
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .highlight-value {
+        font-size: var(--font-size-lg);
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-primary);
+      }
+    }
+  }
+}
+
+/* ============================================
+ * 热门员工列表
+ * ============================================ */
+
+.top-employees {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+
+  .top-employee-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4);
+    padding: var(--spacing-3);
+    border-radius: var(--border-radius-lg);
+    transition: background var(--transition-base);
+
+    &:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .employee-rank {
+      flex-shrink: 0;
+
+      .rank-badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--border-radius-full);
+        font-size: var(--font-size-sm);
+        font-weight: var(--font-weight-bold);
+        color: white;
+
+        &.rank-1 {
+          background: linear-gradient(135deg, #ffd700, #ffb300);
+        }
+
+        &.rank-2 {
+          background: linear-gradient(135deg, #e0e0e0, #9e9e9e);
+        }
+
+        &.rank-3 {
+          background: linear-gradient(135deg, #cd7f32, #a0522d);
+        }
+
+        &.rank-4,
+        &.rank-5 {
+          background: var(--bg-tertiary);
+          color: var(--text-secondary);
+        }
+      }
+    }
+
+    .employee-info {
+      flex: 1;
+      min-width: 0;
+
+      .employee-name {
+        font-size: var(--font-size-md);
+        font-weight: var(--font-weight-medium);
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-1);
+      }
+
+      .employee-skills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-1);
+      }
+    }
+
+    .employee-metrics {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: var(--spacing-1);
+
+      .employee-rating {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-1);
+        font-size: var(--font-size-sm);
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-primary);
+
+        .rating-icon {
+          color: #ffb300;
+          font-size: 12px;
+        }
+      }
+
+      .employee-revenue {
+        font-size: var(--font-size-sm);
+        font-weight: var(--font-weight-medium);
+        color: var(--color-success);
+      }
+
+      .employee-trend {
+        font-size: var(--font-size-xs);
+      }
+    }
+  }
+}
+
+/* ============================================
+ * 任务完成情况
+ * ============================================ */
+
+.task-completion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+
+  .task-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+
+    .task-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      .task-type {
+        font-size: var(--font-size-sm);
+        font-weight: var(--font-weight-medium);
+        color: var(--text-primary);
+      }
+
+      .task-count {
+        font-size: var(--font-size-xs);
+        color: var(--text-tertiary);
+      }
+    }
+
+    .task-progress {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-2);
+
+      .progress-bar {
+        flex: 1;
+        height: 6px;
+        background: var(--bg-tertiary);
+        border-radius: var(--border-radius-full);
+        overflow: hidden;
+
+        .progress-fill {
+          height: 100%;
+          border-radius: var(--border-radius-full);
+          transition: width var(--transition-slow);
+
+          &.progress-fill--high {
+            background: linear-gradient(90deg, var(--color-success), #69f0ae);
+          }
+
+          &.progress-fill--medium {
+            background: linear-gradient(90deg, #ffb300, #ffd54f);
+          }
+
+          &.progress-fill--low {
+            background: linear-gradient(90deg, var(--color-error), #ff8a80);
+          }
+        }
+      }
+
+      .progress-rate {
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-secondary);
+        min-width: 36px;
+        text-align: right;
+      }
+    }
+  }
+}
+
+/* ============================================
+ * 响应式适配
+ * ============================================ */
+
+@media (max-width: @breakpoint-md) {
+  .employee-status-chart {
+    .status-item {
+      padding: var(--spacing-2) 0;
+    }
+  }
+
+  .top-employees {
+    .top-employee-item {
+      padding: var(--spacing-2);
+
+      .employee-metrics {
+        flex-direction: row;
+        gap: var(--spacing-3);
+      }
+    }
+  }
+}
+
+@media (max-width: @breakpoint-sm) {
+  .revenue-highlights {
+    flex-direction: column;
+    gap: var(--spacing-3);
+  }
+}
+
+/* ============================================
+ * 暗色模式适配
+ * ============================================ */
+
+[data-theme='dark'] {
+  .employee-status-chart {
+    .status-item {
+      border-bottom-color: var(--border-color-dark);
+    }
+  }
+
+  .top-employees {
+    .top-employee-item {
+      &:hover {
+        background: var(--color-neutral-800);
+      }
+    }
+  }
+}

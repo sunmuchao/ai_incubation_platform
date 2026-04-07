@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>红娘 Agent - 项目介绍</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #EC4899;
+            --primary-dark: #DB2777;
+            --secondary: #F472B6;
+            --accent: #FBBF24;
+            --bg-dark: #1F2937;
+            --bg-card: #374151;
+            --text-primary: #F9FAFB;
+            --text-secondary: #9CA3AF;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            padding: 60px 20px;
+            text-align: center;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header .icon {
+            font-size: 3rem;
+        }
+
+        .header .port {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            display: inline-block;
+            font-size: 0.9rem;
+        }
+
+        .header .tagline {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--secondary);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .feature-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        .feature-card h3 {
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .algo-box {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .algo-formula {
+            background: var(--bg-dark);
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            border-left: 4px solid var(--accent);
+        }
+
+        .endpoint-list {
+            list-style: none;
+        }
+
+        .endpoint-item {
+            background: var(--bg-card);
+            margin-bottom: 10px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .method {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .method.get { background: #3B82F6; }
+        .method.post { background: #10B981; }
+        .method.put { background: #F59E0B; }
+        .method.delete { background: #EF4444; }
+
+        .endpoint-path {
+            font-family: 'Courier New', monospace;
+            color: var(--text-primary);
+        }
+
+        .endpoint-desc {
+            color: var(--text-secondary);
+            margin-left: auto;
+        }
+
+        .scenarios {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .scenario-item {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-dark) 100%);
+            padding: 15px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .scenario-item::before {
+            content: '✓';
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary);
+            text-decoration: none;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+
+        .back-link:hover {
+            background: var(--bg-dark);
+        }
+
+        .dimensions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .dimension {
+            background: var(--bg-dark);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .dimension-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .dimension-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--secondary);
+        }
+
+        .dimension-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            <span class="icon">💕</span>
+            红娘 Agent
+        </h1>
+        <div class="port">🚀 端口：8001 | API: http://localhost:8001/docs</div>
+        <p class="tagline">AI 驱动的智能婚恋匹配系统 · 多维度兼容性算法</p>
+    </div>
+
+    <div class="container">
+        <a href="/AI-VENTURES-PROJECTS-INTRODUCTION.html" class="back-link">← 返回项目列表</a>
+
+        <div class="section">
+            <h2 class="section-title">📋 核心功能</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="icon">👤</div>
+                    <h3>用户管理</h3>
+                    <p>注册、登录、个人画像、偏好设置。完整的用户生命周期管理。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">💑</div>
+                    <h3>匹配算法</h3>
+                    <p>兴趣/价值观/年龄/地点多维兼容性计算。科学匹配的 AI 引擎。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🔐</div>
+                    <h3>JWT 认证</h3>
+                    <p>安全的用户认证和 Token 管理。bcrypt 密码加密保护。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">📜</div>
+                    <h3>匹配历史</h3>
+                    <p>记录匹配结果、状态追踪。了解每次匹配的效果。</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">🧮 匹配算法</h2>
+            <div class="algo-box">
+                <p style="margin-bottom: 15px; color: var(--text-secondary);">多维度加权综合匹配度计算：</p>
+                <div class="algo-formula">
+综合匹配度 = 兴趣相似度 × 0.3 + 价值观相似度 × 0.35 +
+            年龄适配度 × 0.15 + 地点适配度 × 0.2
+                </div>
+                <div class="dimensions">
+                    <div class="dimension">
+                        <div class="dimension-icon">🎯</div>
+                        <div class="dimension-value">30%</div>
+                        <div class="dimension-label">兴趣相似度</div>
+                    </div>
+                    <div class="dimension">
+                        <div class="dimension-icon">💎</div>
+                        <div class="dimension-value">35%</div>
+                        <div class="dimension-label">价值观相似度</div>
+                    </div>
+                    <div class="dimension">
+                        <div class="dimension-icon">🎂</div>
+                        <div class="dimension-value">15%</div>
+                        <div class="dimension-label">年龄适配度</div>
+                    </div>
+                    <div class="dimension">
+                        <div class="dimension-icon">📍</div>
+                        <div class="dimension-value">20%</div>
+                        <div class="dimension-label">地点适配度</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">🔌 API 端点</h2>
+            <ul class="endpoint-list">
+                <li class="endpoint-item">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/users/register</span>
+                    <span class="endpoint-desc">用户注册</span>
+                </li>
+                <li class="endpoint-item">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/users/login</span>
+                    <span class="endpoint-desc">用户登录 (JWT)</span>
+                </li>
+                <li class="endpoint-item">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/api/users</span>
+                    <span class="endpoint-desc">获取用户列表</span>
+                </li>
+                <li class="endpoint-item">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/api/users/{id}</span>
+                    <span class="endpoint-desc">获取用户详情</span>
+                </li>
+                <li class="endpoint-item">
+                    <span class="method put">PUT</span>
+                    <span class="endpoint-path">/api/users/{id}</span>
+                    <span class="endpoint-desc">更新用户 (需认证)</span>
+                </li>
+                <li class="endpoint-item">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/api/matching/user/{id}/matches</span>
+                    <span class="endpoint-desc">获取推荐匹配</span>
+                </li>
+                <li class="endpoint-item">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/matching/compare</span>
+                    <span class="endpoint-desc">比较两人匹配度</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">💡 使用场景</h2>
+            <div class="scenarios">
+                <div class="scenario-item">婚恋平台智能推荐</div>
+                <div class="scenario-item">社交网络好友推荐</div>
+                <div class="scenario-item">兴趣社群匹配</div>
+                <div class="scenario-item">价值观驱动的社交</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">✨ 增强特性</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="icon">🔑</div>
+                    <h3>JWT 认证</h3>
+                    <p>HS256 算法，60 分钟有效期</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🔒</div>
+                    <h3>bcrypt 加密</h3>
+                    <p>密码哈希加密保护</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">💾</div>
+                    <h3>SQLite 持久化</h3>
+                    <p>用户数据持久化存储</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

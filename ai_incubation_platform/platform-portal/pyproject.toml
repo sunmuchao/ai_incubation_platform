@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "platform-portal"
+version = "0.1.0"
+description = "AI 孵化平台静态文档门户（FastAPI）"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+]
+
+[project.scripts]
+ai-incubation-docs = "platform_portal.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["platform_portal*"]
+
+[tool.setuptools.package-data]
+platform_portal = ["static/**/*"]

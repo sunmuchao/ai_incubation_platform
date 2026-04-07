@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 商机挖掘 - 可视化仪表板</title>
+
+    <!-- ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 24px 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #1a202c;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .filters {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            color: #718096;
+            font-weight: 500;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            color: #2d3748;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #edf2f7;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .card-subtitle {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 4px;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 350px;
+        }
+
+        .chart-container.large {
+            height: 450px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 10px;
+            padding: 20px;
+            color: white;
+        }
+
+        .stat-card.blue {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .stat-card.green {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .stat-card.purple {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-change.up {
+            color: #c6f6d5;
+        }
+
+        .stat-change.down {
+            color: #fed7d7;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #a0aec0;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .tab-container {
+            margin-bottom: 16px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 0;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #718096;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 500;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .opportunities-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .opportunity-item {
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+
+        .opportunity-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+        }
+
+        .opportunity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .opportunity-title {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .opportunity-score {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .score-high {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .score-medium {
+            background: #fefcbf;
+            color: #744210;
+        }
+
+        .score-low {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .opportunity-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            font-size: 13px;
+            color: #718096;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📊 AI 商机挖掘 - 可视化仪表板</h1>
+            <p>实时监控投资趋势、行业分析和市场机会</p>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters">
+            <div class="filter-group">
+                <label>行业选择</label>
+                <select id="industryFilter">
+                    <option value="all">全部行业</option>
+                    <option value="电商">电商</option>
+                    <option value="本地生活">本地生活</option>
+                    <option value="社交电商">社交电商</option>
+                    <option value="视频娱乐">视频娱乐</option>
+                    <option value="内容科技">内容科技</option>
+                    <option value="新能源汽车">新能源汽车</option>
+                    <option value="生物医药">生物医药</option>
+                    <option value="智能硬件">智能硬件</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>时间范围</label>
+                <select id="timeRangeFilter">
+                    <option value="6m">过去 6 个月</option>
+                    <option value="1y">过去 1 年</option>
+                    <option value="2y">过去 2 年</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>预测周期</label>
+                <select id="forecastPeriod">
+                    <option value="3">3 个月</option>
+                    <option value="6" selected>6 个月</option>
+                    <option value="12">12 个月</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="loadDashboard()">刷新数据</button>
+            <button class="btn btn-secondary" onclick="exportDashboard()">导出报告</button>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalInvestments">-</div>
+                <div class="stat-label">总投资事件</div>
+                <div class="stat-change up" id="investmentsChange">
+                    <span>↑</span> 正在加载...
+                </div>
+            </div>
+            <div class="stat-card blue">
+                <div class="stat-value" id="totalAmount">-</div>
+                <div class="stat-label">总投资金额</div>
+                <div class="stat-change" id="amountChange">
+                    <span>→</span> 正在加载...
+                </div>
+            </div>
+            <div class="stat-card green">
+                <div class="stat-value" id="hotIndustries">-</div>
+                <div class="stat-label">热门行业数</div>
+                <div class="stat-change up" id="industriesChange">
+                    <span>↑</span> 稳定
+                </div>
+            </div>
+            <div class="stat-card purple">
+                <div class="stat-value" id="marketSentiment">-</div>
+                <div class="stat-label">市场情绪</div>
+                <div class="stat-change" id="sentimentChange">
+                    <span>→</span> 正在加载...
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Charts -->
+        <div class="dashboard-grid">
+            <!-- Investment Trend -->
+            <div class="card full-width">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">投资趋势与预测</div>
+                        <div class="card-subtitle">历史投资数据 + 未来 6 个月预测</div>
+                    </div>
+                    <div class="tab-container">
+                        <div class="tabs">
+                            <button class="tab active" onclick="switchTrendTab('all')">全部</button>
+                            <button class="tab" onclick="switchTrendTab('industry')">行业</button>
+                            <button class="tab" onclick="switchTrendTab('investor')">投资人</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="trendChart" class="chart-container large"></div>
+            </div>
+
+            <!-- Investment Network -->
+            <div class="card full-width">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">投资关系网络</div>
+                        <div class="card-subtitle">投资方与被投资方的关系图谱</div>
+                    </div>
+                </div>
+                <div id="networkChart" class="chart-container large"></div>
+            </div>
+
+            <!-- Industry Comparison -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">行业对比分析</div>
+                        <div class="card-subtitle">多维度行业评分</div>
+                    </div>
+                </div>
+                <div id="radarChart" class="chart-container"></div>
+            </div>
+
+            <!-- Investment Flow -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">投资流向桑基图</div>
+                        <div class="card-subtitle">资金流向可视化</div>
+                    </div>
+                </div>
+                <div id="sankeyChart" class="chart-container"></div>
+            </div>
+
+            <!-- Hot Opportunities -->
+            <div class="card full-width">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">🔥 热门投资机会</div>
+                        <div class="card-subtitle">基于 ML 预测的高评分机会</div>
+                    </div>
+                </div>
+                <div id="opportunitiesList" class="opportunities-list">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load local visualization components -->
+    <script src="visualization/echarts_components.js"></script>
+
+    <script>
+        // Global state
+        let currentIndustry = 'all';
+        let forecastMonths = 6;
+        let charts = {};
+
+        // Initialize dashboard
+        async function loadDashboard() {
+            try {
+                // Load stats
+                await loadStats();
+
+                // Load charts
+                await loadTrendChart();
+                await loadNetworkChart();
+                await loadRadarChart();
+                await loadSankeyChart();
+                await loadOpportunities();
+
+                console.log('Dashboard loaded successfully');
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+            }
+        }
+
+        // Load stats overview
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/dashboard/stats');
+                if (!response.ok) throw new Error('Failed to fetch stats');
+                const data = await response.json();
+
+                document.getElementById('totalInvestments').textContent =
+                    data.total_investments || 0;
+                document.getElementById('totalAmount').textContent =
+                    formatAmount(data.total_amount || 0);
+                document.getElementById('hotIndustries').textContent =
+                    data.hot_industries_count || 0;
+
+                const sentimentMap = {
+                    'bullish': '乐观',
+                    'bearish': '悲观',
+                    'neutral': '中性'
+                };
+                document.getElementById('marketSentiment').textContent =
+                    sentimentMap[data.sentiment] || '中性';
+
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+                // Use mock data
+                document.getElementById('totalInvestments').textContent = '18';
+                document.getElementById('totalAmount').textContent = '¥28.4 亿';
+                document.getElementById('hotIndustries').textContent = '8';
+                document.getElementById('marketSentiment').textContent = '乐观';
+            }
+        }
+
+        // Load trend chart
+        async function loadTrendChart() {
+            try {
+                const months = parseInt(document.getElementById('forecastPeriod').value);
+                const response = await fetch(`/api/ml/forecast/industries?forecast_months=${months}`);
+
+                let forecastData = [];
+                if (response.ok) {
+                    const data = await response.json();
+                    forecastData = data.data || [];
+                }
+
+                // Mock historical data
+                const historicalDates = ['2023-07', '2023-08', '2023-09', '2023-10', '2023-11', '2023-12'];
+                const historicalCounts = [5, 8, 6, 10, 9, 12];
+                const historicalAmounts = [500, 800, 600, 1000, 900, 1200];
+
+                // Get forecast for all industries
+                let forecastPoints = [];
+                if (forecastData.length > 0) {
+                    // Aggregate forecasts
+                    const firstForecast = forecastData[0];
+                    if (firstForecast && firstForecast.forecast_data) {
+                        forecastPoints = firstForecast.forecast_data.map(f => ({
+                            date: f.date,
+                            prediction: f.prediction,
+                            lower_bound: f.lower_bound,
+                            upper_bound: f.upper_bound
+                        }));
+                    }
+                }
+
+                const container = document.getElementById('trendChart');
+                if (charts.trend) charts.trend.dispose();
+
+                charts.trend = createInvestmentTrendChart(container, {
+                    dates: historicalDates,
+                    counts: historicalCounts,
+                    amounts: historicalAmounts,
+                    forecast: forecastPoints
+                });
+
+            } catch (error) {
+                console.error('Failed to load trend chart:', error);
+                // Show mock chart
+                const container = document.getElementById('trendChart');
+                if (charts.trend) charts.trend.dispose();
+
+                charts.trend = createInvestmentTrendChart(container, {
+                    dates: ['2023-07', '2023-08', '2023-09', '2023-10', '2023-11', '2023-12'],
+                    counts: [5, 8, 6, 10, 9, 12],
+                    amounts: [500, 800, 600, 1000, 900, 1200],
+                    forecast: [
+                        { date: '2024-01', prediction: 14, lower_bound: 10, upper_bound: 18 },
+                        { date: '2024-02', prediction: 15, lower_bound: 11, upper_bound: 19 },
+                        { date: '2024-03', prediction: 17, lower_bound: 12, upper_bound: 22 },
+                        { date: '2024-04', prediction: 18, lower_bound: 13, upper_bound: 23 },
+                        { date: '2024-05', prediction: 20, lower_bound: 14, upper_bound: 26 },
+                        { date: '2024-06', prediction: 22, lower_bound: 15, upper_bound: 29 }
+                    ]
+                });
+            }
+        }
+
+        // Load network chart
+        async function loadNetworkChart() {
+            try {
+                const response = await fetch('/api/investment-chain/network');
+                let networkData = { nodes: [], edges: [] };
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.data) {
+                        networkData = data.data;
+                    }
+                } else {
+                    // Mock data
+                    networkData = {
+                        nodes: [
+                            { id: '腾讯投资', name: '腾讯投资', type: 'investor', category: 'corporate', size: 25 },
+                            { id: '阿里巴巴战投', name: '阿里巴巴战投', type: 'investor', category: 'corporate', size: 22 },
+                            { id: '红杉资本中国', name: '红杉资本中国', type: 'investor', category: 'vc', size: 20 },
+                            { id: 'IDG 资本', name: 'IDG 资本', type: 'investor', category: 'vc', size: 18 },
+                            { id: '京东集团', name: '京东集团', type: 'investee', category: '电商', size: 15 },
+                            { id: '拼多多', name: '拼多多', type: 'investee', category: '电商', size: 15 },
+                            { id: '美团点评', name: '美团点评', type: 'investee', category: '本地生活', size: 15 },
+                            { id: '字节跳动', name: '字节跳动', type: 'investee', category: '内容科技', size: 18 },
+                            { id: '理想汽车', name: '理想汽车', type: 'investee', category: '新能源汽车', size: 15 },
+                            { id: '小鹏汽车', name: '小鹏汽车', type: 'investee', category: '新能源汽车', size: 15 }
+                        ],
+                        edges: [
+                            { source: '腾讯投资', target: '京东集团', type: 'investment', value: 214000000, label: '战略投资' },
+                            { source: '腾讯投资', target: '拼多多', type: 'investment', value: 300000000, label: 'C 轮' },
+                            { source: '腾讯投资', target: '美团点评', type: 'investment', value: 400000000, label: 'D+ 轮' },
+                            { source: '阿里巴巴战投', target: '小红书', type: 'investment', value: 300000000, label: 'F 轮' },
+                            { source: '阿里巴巴战投', target: '哔哩哔哩', type: 'investment', value: 400000000, label: 'E 轮' },
+                            { source: '红杉资本中国', target: '字节跳动', type: 'investment', value: 5000000, label: 'A 轮' },
+                            { source: '红杉资本中国', target: '美团点评', type: 'investment', value: 20000000, label: 'B 轮' },
+                            { source: '红杉资本中国', target: '理想汽车', type: 'investment', value: 8000000, label: 'A 轮' },
+                            { source: 'IDG 资本', target: '字节跳动', type: 'investment', value: 10000000, label: 'B 轮' },
+                            { source: 'IDG 资本', target: '小鹏汽车', type: 'investment', value: 6000000, label: 'A 轮' }
+                        ]
+                    };
+                }
+
+                const container = document.getElementById('networkChart');
+                if (charts.network) charts.network.dispose();
+
+                charts.network = createInvestmentNetworkChart(
+                    container,
+                    networkData.nodes,
+                    networkData.edges
+                );
+
+            } catch (error) {
+                console.error('Failed to load network chart:', error);
+            }
+        }
+
+        // Load radar chart
+        async function loadRadarChart() {
+            try {
+                const response = await fetch('/api/ml/opportunity-score/电商');
+                let industries = [];
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.data && data.data.factors) {
+                        industries = [{
+                            name: '电商',
+                            scores: {
+                                growth: data.data.factors.industry_growth?.score || 50,
+                                activity: data.data.factors.investment_activity?.score || 50,
+                                diversity: data.data.factors.investor_diversity?.score || 50,
+                                scale: data.data.factors.investment_scale?.score || 50,
+                                sentiment: data.data.factors.market_sentiment?.score || 50
+                            }
+                        }];
+                    }
+                }
+
+                // Add more mock industries
+                industries = [
+                    {
+                        name: '电商',
+                        scores: { growth: 85, activity: 90, diversity: 80, scale: 75, sentiment: 70 }
+                    },
+                    {
+                        name: '新能源汽车',
+                        scores: { growth: 95, activity: 85, diversity: 70, scale: 80, sentiment: 85 }
+                    },
+                    {
+                        name: '内容科技',
+                        scores: { growth: 75, activity: 70, diversity: 85, scale: 65, sentiment: 60 }
+                    }
+                ];
+
+                const container = document.getElementById('radarChart');
+                if (charts.radar) charts.radar.dispose();
+
+                charts.radar = createIndustryRadarChart(container, industries);
+
+            } catch (error) {
+                console.error('Failed to load radar chart:', error);
+                // Mock data
+                const container = document.getElementById('radarChart');
+                if (charts.radar) charts.radar.dispose();
+
+                charts.radar = createIndustryRadarChart(container, [
+                    { name: '电商', scores: { growth: 85, activity: 90, diversity: 80, scale: 75, sentiment: 70 } },
+                    { name: '新能源汽车', scores: { growth: 95, activity: 85, diversity: 70, scale: 80, sentiment: 85 } },
+                    { name: '内容科技', scores: { growth: 75, activity: 70, diversity: 85, scale: 65, sentiment: 60 } }
+                ]);
+            }
+        }
+
+        // Load sankey chart
+        async function loadSankeyChart() {
+            try {
+                const response = await fetch('/api/investment-chain/all');
+                let investments = [];
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.data) {
+                        investments = data.data.map(inv => ({
+                            investor: inv.investor_name,
+                            investee: inv.investee_name,
+                            amount: inv.amount || 1
+                        }));
+                    }
+                }
+
+                if (investments.length === 0) {
+                    // Mock data
+                    investments = [
+                        { investor: '腾讯投资', investee: '京东集团', amount: 214000000 },
+                        { investor: '腾讯投资', investee: '拼多多', amount: 300000000 },
+                        { investor: '腾讯投资', investee: '美团点评', amount: 400000000 },
+                        { investor: '阿里巴巴战投', investee: '小红书', amount: 300000000 },
+                        { investor: '阿里巴巴战投', investee: '哔哩哔哩', amount: 400000000 },
+                        { investor: '红杉资本中国', investee: '字节跳动', amount: 5000000 },
+                        { investor: '红杉资本中国', investee: '美团点评', amount: 20000000 },
+                        { investor: '红杉资本中国', investee: '理想汽车', amount: 8000000 },
+                        { investor: 'IDG 资本', investee: '字节跳动', amount: 10000000 },
+                        { investor: 'IDG 资本', investee: '小鹏汽车', amount: 6000000 }
+                    ];
+                }
+
+                const container = document.getElementById('sankeyChart');
+                if (charts.sankey) charts.sankey.dispose();
+
+                charts.sankey = createInvestmentSankeyChart(container, investments);
+
+            } catch (error) {
+                console.error('Failed to load sankey chart:', error);
+            }
+        }
+
+        // Load opportunities list
+        async function loadOpportunities() {
+            try {
+                const response = await fetch('/api/ml/forecast/hot-industries?top_n=5');
+                let opportunities = [];
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.data) {
+                        opportunities = data.data.map(forecast => ({
+                            industry: forecast.dimension_value,
+                            score: Math.round(forecast.confidence_score * 100),
+                            growth_rate: forecast.growth_rate,
+                            trend: forecast.trend_direction,
+                            model: forecast.model_type
+                        }));
+                    }
+                }
+
+                if (opportunities.length === 0) {
+                    // Mock data
+                    opportunities = [
+                        { industry: '新能源汽车', score: 92, growth_rate: 35.5, trend: 'up', model: 'ensemble' },
+                        { industry: '生物医药', score: 87, growth_rate: 28.2, trend: 'up', model: 'arima' },
+                        { industry: '电商', score: 82, growth_rate: 22.1, trend: 'up', model: 'ensemble' },
+                        { industry: '内容科技', score: 75, growth_rate: 15.3, trend: 'stable', model: 'linear' },
+                        { industry: '智能硬件', score: 71, growth_rate: 12.8, trend: 'stable', model: 'prophet_style' }
+                    ];
+                }
+
+                const container = document.getElementById('opportunitiesList');
+                container.innerHTML = opportunities.map(opp => {
+                    let scoreClass = 'score-high';
+                    if (opp.score < 70) scoreClass = 'score-medium';
+                    if (opp.score < 50) scoreClass = 'score-low';
+
+                    return `
+                        <div class="opportunity-item">
+                            <div class="opportunity-header">
+                                <span class="opportunity-title">${opp.industry}</span>
+                                <span class="opportunity-score ${scoreClass}">评分：${opp.score}</span>
+                            </div>
+                            <div class="opportunity-details">
+                                <div>增长率：${opp.growth_rate > 0 ? '+' : ''}${opp.growth_rate}%</div>
+                                <div>趋势：${opp.trend === 'up' ? '📈 上升' : opp.trend === 'down' ? '📉 下降' : '➡️ 稳定'}</div>
+                                <div>模型：${opp.model}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Failed to load opportunities:', error);
+            }
+        }
+
+        // Switch trend tab
+        function switchTrendTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Reload chart based on tab
+            loadTrendChart();
+        }
+
+        // Export dashboard
+        function exportDashboard() {
+            alert('导出功能开发中...');
+        }
+
+        // Utility functions
+        function formatAmount(amount) {
+            if (amount >= 100000000) {
+                return '¥' + (amount / 100000000).toFixed(1) + '亿';
+            } else if (amount >= 10000) {
+                return '¥' + (amount / 10000).toFixed(0) + '万';
+            }
+            return '¥' + amount.toFixed(0);
+        }
+
+        // Event listeners
+        document.getElementById('industryFilter').addEventListener('change', (e) => {
+            currentIndustry = e.target.value;
+            loadDashboard();
+        });
+
+        document.getElementById('forecastPeriod').addEventListener('change', (e) => {
+            forecastMonths = parseInt(e.target.value);
+            loadDashboard();
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+    </script>
+</body>
+</html>

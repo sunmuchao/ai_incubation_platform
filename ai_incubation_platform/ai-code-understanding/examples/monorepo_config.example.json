@@ -1,0 +1,30 @@
+{
+  "project_name": "my_monorepo",
+  "description": "示例 Monorepo 配置",
+  "repos": [
+    {
+      "name": "api-service",
+      "path": "/path/to/api-service",
+      "description": "API 服务"
+    },
+    {
+      "name": "web-frontend",
+      "path": "/path/to/web-frontend",
+      "description": "Web 前端"
+    },
+    {
+      "name": "common-lib",
+      "path": "/path/to/common-lib",
+      "description": "公共库"
+    }
+  ],
+  "settings": {
+    "incremental_index": true,
+    "exclude_patterns": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.git/**"
+    ]
+  }
+}

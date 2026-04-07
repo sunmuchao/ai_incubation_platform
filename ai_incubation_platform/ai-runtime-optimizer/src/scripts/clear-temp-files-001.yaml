@@ -1,0 +1,100 @@
+# 清理临时文件 - 清理/tmp 目录
+script_id: clear-temp-files-001
+name: 清理临时文件
+description: 清理/tmp 目录释放磁盘空间
+category: maintenance
+target_type: system
+risk_level: low
+timeout_seconds: 120
+
+parameters:
+  - name: temp_dir
+    type: string
+    default: "/tmp"
+    description: 临时文件目录
+  - name: max_age_hours
+    type: integer
+    default: 24
+    description: 文件最大保留小时数
+  - name: min_size_kb
+    type: integer
+    default: 1024
+    description: 最小文件大小 (KB)，小于此大小的文件不清理
+  - name: exclude_pattern
+    type: string
+    default: ""
+    description: 排除的文件模式（逗号分隔）
+
+script_content: |
+  #!/bin/bash
+  set -e
+
+  TEMP_DIR="{{temp_dir}}"
+  MAX_AGE_HOURS="{{max_age_hours}}"
+  MIN_SIZE_KB="{{min_size_kb}}"
+  EXCLUDE_PATTERN="{{exclude_pattern}}"
+
+  echo "=== 清理临时文件 ==="
+  echo "临时目录：$TEMP_DIR"
+  echo "保留时间：$MAX_AGE_HOURS 小时"
+  echo "最小大小：${MIN_SIZE_KB}KB"
+
+  # 检查临时目录
+  if [ ! -d "$TEMP_DIR" ]; then
+    echo "错误：临时目录不存在：$TEMP_DIR"
+    exit 1
+  fi
+
+  # 获取清理前的磁盘使用
+  BEFORE_SIZE=$(du -sh "$TEMP_DIR" 2>/dev/null | cut -f1)
+  BEFORE_COUNT=$(find "$TEMP_DIR" -type f 2>/dev/null | wc -l)
+  echo "清理前：${BEFORE_COUNT} 个文件，大小：$BEFORE_SIZE"
+
+  # 构建排除参数
+  EXCLUDE_ARGS=""
+  if [ -n "$EXCLUDE_PATTERN" ]; then
+    IFS=',' read -ra PATTERNS <<< "$EXCLUDE_PATTERN"
+    for pattern in "${PATTERNS[@]}"; do
+      EXCLUDE_ARGS="$EXCLUDE_ARGS ! -name '$pattern'"
+    done
+  fi
+
+  # 删除旧临时文件
+  echo "删除 ${MAX_AGE_HOURS} 小时前的文件..."
+  find "$TEMP_DIR" -type f -mmin +$((MAX_AGE_HOURS * 60)) -size +${MIN_SIZE_KB}k $EXCLUDE_ARGS -delete 2>/dev/null || true
+
+  # 删除空目录
+  echo "清理空目录..."
+  find "$TEMP_DIR" -type d -empty -delete 2>/dev/null || true
+
+  # 获取清理后的磁盘使用
+  AFTER_SIZE=$(du -sh "$TEMP_DIR" 2>/dev/null | cut -f1)
+  AFTER_COUNT=$(find "$TEMP_DIR" -type f 2>/dev/null | wc -l)
+  echo "清理后：${AFTER_COUNT} 个文件，大小：$AFTER_SIZE"
+
+  echo "=== 临时文件清理完成 ==="
+  echo "清理文件数：$((BEFORE_COUNT - AFTER_COUNT))"
+
+verification_steps:
+  - name: temp_dir_exists
+    check: test -d {{temp_dir}}
+    expected: "true"
+    timeout: 5
+
+  - name: disk_space_check
+    check: df -h {{temp_dir}} | tail -1 | awk '{print $5}' | tr -d '%'
+    expected: "0"
+    timeout: 10
+
+rollback_script: |
+  # 临时文件清理不可回滚
+  echo "Temp file cleanup does not support rollback"
+  echo "Deleted files have been permanently removed"
+
+version: 1.0.0
+author: system
+tags:
+  - temp
+  - cleanup
+  - disk
+enabled: true

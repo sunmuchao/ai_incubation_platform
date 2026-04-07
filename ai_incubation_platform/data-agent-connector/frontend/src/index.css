@@ -1,0 +1,407 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   Design Tokens & Base Styles
+   ============================================ */
+
+:root {
+  /* 字体 */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+
+  /* 颜色变量 - Monochromatic 深蓝灰 */
+  --color-bg-primary: #fafbfc;
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #f6f8fa;
+
+  --color-border-primary: rgba(234, 238, 242, 0.8);
+  --color-border-secondary: rgba(234, 238, 242, 1);
+  --color-border-highlight: rgba(99, 102, 241, 0.2);
+
+  --color-text-primary: #1a1f36;
+  --color-text-secondary: #525c6f;
+  --color-text-tertiary: #8993a3;
+
+  --color-accent: #6366f1;
+  --color-accent-hover: #4f46e5;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ============================================
+   Linear.app 风格卡片
+   ============================================ */
+
+@layer components {
+  /* Bento Grid 卡片基础样式 */
+  .bento-card {
+    @apply bg-white rounded-linear-lg;
+    @apply border border-hairline border-slate-200;
+    @apply shadow-linear;
+    @apply transition-all duration-300 ease-out;
+    backdrop-filter: blur(8px);
+  }
+
+  .bento-card:hover {
+    @apply shadow-linear-md;
+    @apply border-slate-300;
+    transform: translateY(-1px);
+  }
+
+  /* 精选卡片（强调） */
+  .bento-card-featured {
+    @apply bg-gradient-to-br from-slate-50 to-white;
+    @apply border border-hairline border-indigo-100;
+    @apply shadow-linear-md;
+  }
+
+  .bento-card-featured:hover {
+    @apply border-indigo-200;
+    @apply shadow-linear-lg;
+  }
+
+  /* 玻璃态卡片 */
+  .bento-card-glass {
+    @apply bg-white/80 backdrop-blur-xl;
+    @apply border border-hairline border-white/20;
+    @apply shadow-linear;
+  }
+
+  /* 统计卡片 */
+  .stat-card {
+    @apply bento-card;
+    @apply p-5;
+    @apply flex flex-col justify-between;
+  }
+
+  .stat-card-icon {
+    @apply w-10 h-10 rounded-linear;
+    @apply flex items-center justify-center;
+    @apply bg-gradient-to-br from-indigo-50 to-indigo-100;
+    @apply text-indigo-600;
+  }
+
+  /* 按钮样式 */
+  .btn-linear {
+    @apply px-4 py-2 rounded-linear;
+    @apply font-medium text-sm;
+    @apply transition-all duration-200;
+    @apply border border-hairline border-slate-200;
+    @apply bg-white text-slate-700;
+    @apply hover:bg-slate-50 hover:border-slate-300;
+    @apply active:bg-slate-100;
+    @apply shadow-linear-sm;
+  }
+
+  .btn-linear-primary {
+    @apply btn-linear;
+    @apply bg-gradient-to-r from-indigo-500 to-indigo-600;
+    @apply border-transparent text-white;
+    @apply hover:from-indigo-600 hover:to-indigo-700;
+    @apply shadow-linear;
+  }
+
+  /* 输入框样式 */
+  .input-linear {
+    @apply px-3 py-2 rounded-linear;
+    @apply border border-hairline border-slate-200;
+    @apply bg-slate-50/50;
+    @apply text-sm text-slate-900;
+    @apply placeholder-slate-400;
+    @apply transition-all duration-200;
+    @apply focus:outline-none focus:border-indigo-300 focus:bg-white;
+    @apply focus:ring-2 focus:ring-indigo-100;
+  }
+
+  /* 标签样式 */
+  .tag-linear {
+    @apply inline-flex items-center px-2.5 py-1 rounded-md;
+    @apply text-xs font-medium;
+    @apply bg-slate-100 text-slate-600;
+    @apply border border-hairline border-slate-200;
+  }
+
+  .tag-linear-primary {
+    @apply bg-indigo-50 text-indigo-600;
+    @apply border-indigo-100;
+  }
+
+  .tag-linear-success {
+    @apply bg-emerald-50 text-emerald-600;
+    @apply border-emerald-100;
+  }
+
+  .tag-linear-warning {
+    @apply bg-amber-50 text-amber-600;
+    @apply border-amber-100;
+  }
+
+  /* 对话气泡样式 */
+  .chat-bubble-user {
+    @apply bg-gradient-to-br from-indigo-500 to-indigo-600;
+    @apply text-white;
+    @apply rounded-linear-lg rounded-br-sm;
+    @apply shadow-linear;
+  }
+
+  .chat-bubble-ai {
+    @apply bg-white;
+    @apply text-slate-800;
+    @apply rounded-linear-lg rounded-bl-sm;
+    @apply border border-hairline border-slate-200;
+    @apply shadow-linear-sm;
+  }
+}
+
+/* ============================================
+   自定义滚动条样式
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ============================================
+   React Flow 样式覆盖
+   ============================================ */
+
+.react-flow__node {
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.react-flow__handle {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* ============================================
+   Monaco 编辑器容器
+   ============================================ */
+
+.monaco-editor-container {
+  @apply rounded-linear;
+  @apply border border-hairline border-slate-200;
+  @apply overflow-hidden;
+}
+
+/* ============================================
+   数据表格样式
+   ============================================ */
+
+.data-table-container {
+  @apply bg-white rounded-linear-lg;
+  @apply border border-hairline border-slate-200;
+  @apply shadow-linear-sm;
+}
+
+/* ============================================
+   血缘图节点样式
+   ============================================ */
+
+.lineage-node {
+  @apply p-3 rounded-linear;
+  @apply bg-white;
+  @apply border-2 border-indigo-500;
+  @apply shadow-linear;
+  @apply transition-all duration-200;
+}
+
+.lineage-node:hover {
+  @apply shadow-linear-md;
+  transform: scale(1.02);
+}
+
+.lineage-node.table {
+  @apply border-indigo-500;
+}
+
+.lineage-node.column {
+  @apply border-emerald-500;
+}
+
+.lineage-node.view {
+  @apply border-violet-500;
+}
+
+/* ============================================
+   Bento Grid 布局样式
+   ============================================ */
+
+.bento-grid {
+  display: grid;
+  gap: 1rem;
+  grid-auto-flow: dense;
+}
+
+.bento-grid-auto {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+/* Bento 卡片尺寸变体 */
+.bento-sm {
+  grid-column: span 1;
+  grid-row: span 1;
+}
+
+.bento-md {
+  grid-column: span 2;
+  grid-row: span 1;
+}
+
+.bento-lg {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.bento-xl {
+  grid-column: span 3;
+  grid-row: span 2;
+}
+
+.bento-full {
+  grid-column: span 1 / -1;
+  grid-row: span 1;
+}
+
+/* 响应式 */
+@media (max-width: 1024px) {
+  .bento-md,
+  .bento-lg,
+  .bento-xl {
+    grid-column: span 1;
+    grid-row: span 1;
+  }
+}
+
+/* ============================================
+   动画和过渡
+   ============================================ */
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f1f5f9 0%,
+    #e2e8f0 50%,
+    #f1f5f9 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* 骨架屏动画 */
+.skeleton {
+  @apply bg-slate-200;
+  @apply animate-pulse;
+  @apply rounded;
+}
+
+/* ============================================
+   工具类
+   ============================================ */
+
+/* 文本截断 */
+.truncate-2-lines {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.truncate-3-lines {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 隐藏滚动条但保留功能 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* 平滑滚动 */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* 选择样式 */
+::selection {
+  background-color: rgba(99, 102, 241, 0.2);
+  color: var(--color-text-primary);
+}
+
+/* 聚焦可见性 */
+.focus-visible-ring:focus-visible {
+  @apply outline-none ring-2 ring-indigo-500 ring-offset-2;
+}
+
+/* ============================================
+   暗色模式支持（预留）
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg-primary: #0f172a;
+    --color-bg-secondary: #1e293b;
+    --color-bg-tertiary: #334155;
+
+    --color-border-primary: rgba(51, 65, 85, 0.8);
+    --color-border-secondary: rgba(51, 65, 85, 1);
+
+    --color-text-primary: #f1f5f9;
+    --color-text-secondary: #94a3b8;
+    --color-text-tertiary: #64748b;
+  }
+}

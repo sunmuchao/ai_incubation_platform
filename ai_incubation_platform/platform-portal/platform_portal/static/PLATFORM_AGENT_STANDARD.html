@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent 统一标准 — DeerFlow 2.0</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.7; color: #1f2937; }
+    h1 { color: #4f46e5; }
+    a { color: #4f46e5; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+    th { background: #f3f4f6; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+    .back { margin-bottom: 24px; }
+  </style>
+</head>
+<body>
+  <p class="back"><a href="/AI-VENTURES-PROJECTS-INTRODUCTION.html">← 返回项目导航</a></p>
+  <h1>孵化器 Agent 统一标准：DeerFlow 2.0</h1>
+  <p>本工作空间内所有需要 <strong>Agent 通用能力</strong>（规划、工具、多步编排、子 Agent 等）的系统，统一使用 <a href="https://github.com/bytedance/deer-flow" target="_blank" rel="noopener">DeerFlow 2.0</a>，不并行维护第二套自研 Agent 框架。</p>
+  <h2>桥接包</h2>
+  <p>仓库根目录 <code>deerflow-integration/</code> 提供 <code>get_deerflow_client()</code> 与环境约定；各子项目 <code>requirements.txt</code> 已包含 <code>-e ../deerflow-integration</code>。</p>
+  <h2>上游安装</h2>
+  <p>请按官方文档克隆、<code>make config</code>、配置模型与 Key，并安装上游 Python 包以使 <code>from deerflow.client import DeerFlowClient</code> 可用。</p>
+  <h2>环境变量（节选）</h2>
+  <table>
+    <tr><th>变量</th><th>说明</th></tr>
+    <tr><td><code>DEERFLOW_GATEWAY_URL</code></td><td>网关基地址，默认 <code>http://localhost:2026</code></td></tr>
+    <tr><td><code>DEERFLOW_CONFIG_PATH</code></td><td>嵌入式客户端使用的 <code>config.yaml</code></td></tr>
+  </table>
+  <p>全文见仓库根目录 <code>PLATFORM_AGENT_STANDARD.md</code>。</p>
+</body>
+</html>

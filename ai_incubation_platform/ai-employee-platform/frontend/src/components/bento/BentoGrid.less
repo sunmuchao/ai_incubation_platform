@@ -1,0 +1,198 @@
+/**
+ * BentoGrid 样式
+ * 响应式网格布局系统
+ */
+@import '../../styles/design-tokens.less';
+
+.bento-grid-wrapper {
+  width: 100%;
+  max-width: var(--bento-max-width);
+  margin: 0 auto;
+  padding: var(--padding-page);
+}
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns, 4), 1fr);
+  gap: var(--grid-gap);
+  align-items: start;
+
+  /* 间距配置 */
+  &.bento-grid--gap-sm {
+    --grid-gap: var(--spacing-3);
+  }
+
+  &.bento-grid--gap-md {
+    --grid-gap: var(--spacing-4);
+  }
+
+  &.bento-grid--gap-lg {
+    --grid-gap: var(--spacing-6);
+  }
+
+  /* 列数配置 */
+  &.bento-grid--cols-2 {
+    --grid-columns: 2;
+  }
+
+  &.bento-grid--cols-3 {
+    --grid-columns: 3;
+  }
+
+  &.bento-grid--cols-4 {
+    --grid-columns: 4;
+  }
+
+  &.bento-grid--cols-5 {
+    --grid-columns: 5;
+  }
+
+  &.bento-grid--cols-6 {
+    --grid-columns: 6;
+  }
+
+  /* 居中布局 */
+  &.bento-grid--centered {
+    justify-items: center;
+  }
+
+  /* ============================================
+   * 响应式断点
+   * ============================================ */
+
+  /* 大屏桌面 (1536px+) */
+  @media (min-width: @breakpoint-2xl) {
+    &.bento-grid--cols-4 {
+      --grid-columns: 4;
+    }
+  }
+
+  /* 标准桌面 (1280px - 1535px) */
+  @media (max-width: (@breakpoint-2xl - 1px)) {
+    &.bento-grid--cols-5,
+    &.bento-grid--cols-6 {
+      --grid-columns: 4;
+    }
+  }
+
+  /* 小屏笔记本/平板横屏 (1024px - 1279px) */
+  @media (max-width: (@breakpoint-xl - 1px)) {
+    &.bento-grid--cols-4,
+    &.bento-grid--cols-5,
+    &.bento-grid--cols-6 {
+      --grid-columns: 3;
+    }
+  }
+
+  /* 平板竖屏 (768px - 1023px) */
+  @media (max-width: (@breakpoint-lg - 1px)) {
+    &.bento-grid--cols-3,
+    &.bento-grid--cols-4,
+    &.bento-grid--cols-5,
+    &.bento-grid--cols-6 {
+      --grid-columns: 2;
+    }
+  }
+
+  /* 小屏设备 (640px - 767px) */
+  @media (max-width: (@breakpoint-md - 1px)) {
+    --grid-columns: 2;
+  }
+
+  /* 手机竖屏 (< 640px) */
+  @media (max-width: (@breakpoint-sm - 1px)) {
+    --grid-columns: 1;
+    gap: var(--spacing-3);
+  }
+}
+
+/* ============================================
+ * 页面头部样式
+ * ============================================ */
+
+.bento-grid__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-6);
+  margin-bottom: var(--spacing-8);
+  padding-bottom: var(--spacing-6);
+  border-bottom: var(--border-light);
+}
+
+.bento-grid__header-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.bento-grid__title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  line-height: var(--line-height-tight);
+  margin: 0 0 var(--spacing-2) 0;
+  letter-spacing: -0.02em;
+}
+
+.bento-grid__description {
+  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+  margin: 0;
+}
+
+.bento-grid__header-extra {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+/* ============================================
+ * 响应式头部
+ * ============================================ */
+
+@media (max-width: @breakpoint-md) {
+  .bento-grid__header {
+    flex-direction: column;
+    gap: var(--spacing-4);
+  }
+
+  .bento-grid__title {
+    font-size: var(--font-size-2xl);
+  }
+
+  .bento-grid__header-extra {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: @breakpoint-sm) {
+  .bento-grid-wrapper {
+    padding: var(--spacing-4);
+  }
+
+  .bento-grid__header {
+    margin-bottom: var(--spacing-6);
+    padding-bottom: var(--spacing-4);
+  }
+
+  .bento-grid__title {
+    font-size: var(--font-size-xl);
+  }
+
+  .bento-grid__header-extra {
+    justify-content: flex-start;
+  }
+}
+
+/* ============================================
+ * 暗色模式适配
+ * ============================================ */
+
+[data-theme='dark'] .bento-grid {
+  &__header {
+    border-bottom-color: var(--border-color-dark);
+  }
+}

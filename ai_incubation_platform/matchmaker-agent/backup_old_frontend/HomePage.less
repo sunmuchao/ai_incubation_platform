@@ -1,0 +1,151 @@
+// HomePage 样式
+
+.home-layout {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.home-content {
+  padding: 0;
+  overflow: hidden;
+}
+
+.content-wrapper {
+  height: calc(100vh - 130px);
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+}
+
+.chat-view {
+  width: 100%;
+  max-width: 800px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.agent-status-container {
+  flex-shrink: 0;
+}
+
+.chat-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.discover-view {
+  width: 100%;
+  max-width: 800px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.discover-header {
+  text-align: center;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.match-cards-container {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* 底部导航栏 */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: auto;
+  padding: 8px 24px;
+  border-radius: 12px;
+  transition: all 0.3s;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  &.ant-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .home-header {
+    padding: 0 16px;
+  }
+
+  .content-wrapper {
+    padding: 12px;
+    height: calc(100vh - 150px);
+  }
+
+  .bottom-nav {
+    padding: 8px 16px;
+    gap: 8px;
+  }
+
+  .nav-item {
+    padding: 6px 16px;
+    font-size: 12px;
+  }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.content-wrapper {
+  animation: fadeIn 0.3s ease-out;
+}

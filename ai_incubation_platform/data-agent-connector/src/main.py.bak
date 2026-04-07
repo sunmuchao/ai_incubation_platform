@@ -1,0 +1,198 @@
+"""
+数据-Agent 连接器 - 主入口
+"""
+import asyncio
+from fastapi import FastAPI
+from api.query import router as query_router
+from api.connectors import router as connectors_router
+from api.monitoring import router as monitoring_router
+from api.ai_query import router as ai_query_router
+from api.data_transform import router as data_transform_router
+from api.rbac import router as rbac_router
+from connectors.base import register_builtin_connectors
+from core.connection_manager import connection_manager
+from core.audit import audit_logger
+from core.rate_limiter import rate_limiter
+from core.lineage import lineage_manager
+from services.monitoring_service import monitoring_service
+from services.rbac_service import init_rbac
+from config.database import db_manager
+from config.settings import settings
+from utils.logger import logger
+
+app = FastAPI(
+    title="Data-Agent Connector",
+    description="孵化器统一数据出口：多源连接、Schema发现、查询与NL2SQL在安全边界内可审计、可限流",
+    version="0.7.0"
+)
+
+# 注册内置连接器
+register_builtin_connectors()
+
+# 注册路由
+app.include_router(query_router)
+app.include_router(connectors_router)
+app.include_router(monitoring_router)
+app.include_router(ai_query_router)
+app.include_router(data_transform_router)
+app.include_router(rbac_router)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """服务启动事件"""
+    logger.info("Starting Data-Agent Connector service", extra={
+        "environment": settings.environment,
+        "port": settings.port
+    })
+
+    # 初始化数据库
+    await db_manager.init_db()
+
+    # 启动审计日志
+    await audit_logger.start()
+
+    # 启动监控服务
+    await monitoring_service.start()
+
+    # 启动 CDC 服务
+    from services.cdc_service import cdc_service
+    await cdc_service.start()
+
+    # 启动数据转换服务
+    from services.transform_service import start_transform_service
+    await start_transform_service()
+
+    # 启动 dbt 服务
+    from services.dbt_service import start_dbt_service
+    await start_dbt_service()
+
+    # 初始化 RBAC 服务
+    await init_rbac()
+
+    # 启动空闲连接清理任务
+    async def cleanup_idle_connections_loop():
+        while True:
+            try:
+                await connection_manager.cleanup_idle_connections()
+                await asyncio.sleep(60)  # 每分钟清理一次
+            except Exception as e:
+                logger.error("Error in idle connection cleanup", extra={"error": str(e)})
+                await asyncio.sleep(10)
+
+    asyncio.create_task(cleanup_idle_connections_loop())
+
+    # 启动系统健康记录任务
+    async def record_system_health_loop():
+        while True:
+            try:
+                connectors = await connection_manager.list_connectors()
+                await monitoring_service.record_system_health({
+                    "status": "healthy",
+                    "active_connections": len(connectors),
+                    "max_connections": settings.connector.default_max_connections,
+                    "connection_pool_usage": len(connectors) / settings.connector.default_max_connections,
+                    "current_qps": rate_limiter.requests_in_window / 60,
+                    "current_concurrent": rate_limiter.current_concurrent,
+                    "rate_limit_enabled": settings.rate_limit.enabled,
+                    "total_lineage_nodes": lineage_manager.get_lineage_statistics().get("total_nodes", 0),
+                    "total_lineage_edges": lineage_manager.get_lineage_statistics().get("total_edges", 0)
+                })
+                await asyncio.sleep(30)  # 每 30 秒记录一次
+            except Exception as e:
+                logger.error("Error in system health recording", extra={"error": str(e)})
+                await asyncio.sleep(30)
+
+    asyncio.create_task(record_system_health_loop())
+
+    logger.info("Service started successfully")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """服务关闭事件"""
+    logger.info("Shutting down Data-Agent Connector service")
+
+    # 停止 dbt 服务
+    from services.dbt_service import stop_dbt_service
+    await stop_dbt_service()
+
+    # 停止数据转换服务
+    from services.transform_service import stop_transform_service
+    await stop_transform_service()
+
+    # 停止 CDC 服务
+    from services.cdc_service import cdc_service
+    await cdc_service.stop()
+
+    # 停止监控服务
+    await monitoring_service.stop()
+
+    # 关闭所有连接
+    await connection_manager.shutdown()
+
+    # 停止审计日志
+    await audit_logger.stop()
+
+    # 关闭数据库连接
+    await db_manager.close()
+
+    logger.info("Service shutdown completed")
+
+
+@app.get("/")
+async def root():
+    return {
+        "message": "欢迎使用数据-Agent 连接器",
+        "status": "running",
+        "version": "0.7.0",
+        "endpoints": {
+            "query": "/api/query",
+            "connectors": "/api/connectors",
+            "monitoring": "/api/monitoring",
+            "ai-query": "/api/ai",
+            "data-transform": "/api/data",
+            "rbac": "/api/rbac",
+            "docs": "/docs"
+        },
+        "features": [
+            "统一多数据源连接",
+            "SQL安全检查与危险语句拦截",
+            "只读/读写权限控制",
+            "查询审计日志",
+            "请求限流与并发控制",
+            "自然语言转SQL查询"
+        ]
+    }
+
+
+@app.get("/health")
+async def health_check():
+    """健康检查接口"""
+    return {
+        "status": "healthy",
+        "version": "0.6.0",
+        "metrics": {
+            "active_connections": len(await connection_manager.list_connectors()),
+            "current_concurrent_queries": rate_limiter.current_concurrent,
+            "requests_in_current_window": rate_limiter.requests_in_window
+        }
+    }
+
+
+@app.get("/status")
+async def get_status():
+    """获取系统状态"""
+    connectors = await connection_manager.list_connectors()
+    return {
+        "status": "running",
+        "active_connectors_count": len(connectors),
+        "active_connectors": connectors,
+        "current_concurrent_queries": rate_limiter.current_concurrent,
+        "requests_in_current_window": rate_limiter.requests_in_window
+    }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host=settings.host, port=settings.port)

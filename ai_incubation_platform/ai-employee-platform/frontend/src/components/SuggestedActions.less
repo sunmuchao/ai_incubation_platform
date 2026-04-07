@@ -1,0 +1,91 @@
+/* 建议操作组件样式 */
+.suggested-actions-container {
+  align-self: center;
+  width: 100%;
+  max-width: 700px;
+  margin: 8px 0;
+  animation: fadeIn 0.3s ease-out;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .suggested-actions-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding-left: 4px;
+
+    .header-icon {
+      color: #722ed1;
+      font-size: 14px;
+    }
+
+    .header-text {
+      font-size: 12px;
+    }
+  }
+
+  .suggested-actions-list {
+    display: flex;
+    flex-wrap: wrap;
+
+    .action-button {
+      border-radius: 20px;
+      transition: all 0.3s;
+      border: 1px solid #d9d9d9;
+
+      &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(114, 46, 209, 0.2);
+        border-color: #722ed1;
+        color: #722ed1;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      &.opportunity_match {
+        &:hover:not(:disabled) {
+          background: #722ed1;
+          border-color: #722ed1;
+          color: #fff;
+        }
+      }
+
+      &.career_plan {
+        &:hover:not(:disabled) {
+          background: #1890ff;
+          border-color: #1890ff;
+          color: #fff;
+        }
+      }
+
+      &.skill_analysis {
+        &:hover:not(:disabled) {
+          background: #52c41a;
+          border-color: #52c41a;
+          color: #fff;
+        }
+      }
+
+      &.dashboard {
+        &:hover:not(:disabled) {
+          background: #faad14;
+          border-color: #faad14;
+          color: #fff;
+        }
+      }
+    }
+  }
+}

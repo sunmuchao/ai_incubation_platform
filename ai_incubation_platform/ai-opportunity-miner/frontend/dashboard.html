@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 商机挖掘系统 - 可视化仪表板</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419; --surface: #1a2332; --card: #232f3e;
+      --text: #e8ecf1; --muted: #9aa8b8; --accent: #3d9cf5;
+      --border: rgba(255, 255, 255, 0.08);
+      --success: #4caf50; --warning: #ff9800; --error: #f44336;
+      --radius: 12px; --font: system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.65; }
+    .wrap { max-width: 1600px; margin: 0 auto; padding: 1rem 1.25rem 2rem; }
+    header { text-align: center; padding: 1.5rem 0 1rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+    header h1 { font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 700; margin: 0 0 0.5rem; }
+    header p { color: var(--muted); max-width: 42em; margin: 0 auto; }
+    .status-bar { display: flex; gap: 1rem; justify-content: center; align-items: center; padding: 0.5rem 1rem; background: var(--surface); border-radius: var(--radius); margin-top: 1rem; font-size: 0.85rem; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+    .tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+    .tab-btn { padding: 0.5rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); cursor: pointer; transition: all 0.2s; font-size: 0.9rem; }
+    .tab-btn:hover { background: var(--card); border-color: var(--accent); }
+    .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem; }
+    .card h3 { margin: 0 0 0.75rem; font-size: 1rem; color: var(--accent); }
+    .grid { display: grid; gap: 1rem; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+    .stat-card { text-align: center; padding: 1.25rem; }
+    .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--accent); }
+    .stat-label { color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem; }
+    .chart-container { position: relative; height: 300px; }
+    .loading { display: inline-block; width: 1rem; height: 1rem; border: 2px solid var(--muted); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    button { padding: 0.5rem 1rem; border: none; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    input, select { padding: 0.5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.85rem; }
+    .flex { display: flex; gap: 0.5rem; align-items: center; }
+    .flex-between { justify-content: space-between; }
+    .event-item { padding: 0.75rem; border-left: 3px solid var(--accent); background: var(--bg); margin-bottom: 0.5rem; border-radius: 4px; }
+    .event-date { font-size: 0.75rem; color: var(--muted); }
+    .event-title { font-size: 0.9rem; margin: 0.25rem 0; }
+    .event-type { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; background: var(--card); }
+    .word-cloud { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+    .word-tag { padding: 0.4rem 0.8rem; border-radius: 16px; background: var(--card); font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+    .word-tag:hover { background: var(--accent); transform: scale(1.05); }
+    .word-tag.large { font-size: 1.1rem; }
+    .word-tag.medium { font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>AI 商机挖掘系统 - 可视化仪表板</h1>
+      <p>实时市场监控、趋势分析、事件追踪的智能商业情报平台</p>
+      <div class="status-bar">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">检查服务状态...</span>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="overview">概览</button>
+      <button class="tab-btn" data-tab="trend">趋势分析</button>
+      <button class="tab-btn" data-tab="market">市场地图</button>
+      <button class="tab-btn" data-tab="events">事件时间线</button>
+      <button class="tab-btn" data-tab="graph">关系图谱</button>
+      <button class="tab-btn" data-tab="words">热点词云</button>
+    </div>
+
+    <!-- 概览面板 -->
+    <div class="panel active" id="panel-overview">
+      <div class="grid grid-4">
+        <div class="card stat-card">
+          <div class="stat-value" id="stat-opportunities">-</div>
+          <div class="stat-label">总商机数</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value" id="stat-new-week">-</div>
+          <div class="stat-label">本周新增</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value" id="stat-validated">-</div>
+          <div class="stat-label">已验证</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value" id="stat-alerts">-</div>
+          <div class="stat-label">活跃预警</div>
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>数据源状态</h3>
+          <div id="data-sources"></div>
+        </div>
+        <div class="card">
+          <h3>趋势概览</h3>
+          <div class="chart-container">
+            <canvas id="overviewChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 趋势分析面板 -->
+    <div class="panel" id="panel-trend">
+      <div class="card">
+        <div class="flex flex-between">
+          <h3>趋势图表</h3>
+          <div class="flex">
+            <input type="text" id="trend-keyword" placeholder="关键词" value="人工智能" />
+            <select id="trend-days">
+              <option value="7">最近 7 天</option>
+              <option value="30" selected>最近 30 天</option>
+              <option value="90">最近 90 天</option>
+            </select>
+            <button onclick="loadTrendChart()">刷新</button>
+          </div>
+        </div>
+        <div class="chart-container" style="height: 400px;">
+          <canvas id="trendChart"></canvas>
+        </div>
+        <div class="flex" style="margin-top: 1rem; justify-content: center;" id="trend-indicators"></div>
+      </div>
+    </div>
+
+    <!-- 市场地图面板 -->
+    <div class="panel" id="panel-market">
+      <div class="card">
+        <div class="flex flex-between">
+          <h3>市场地图 - 竞争格局</h3>
+          <div class="flex">
+            <input type="text" id="market-industry" placeholder="行业" value="科技" />
+            <button onclick="loadMarketMap()">刷新</button>
+          </div>
+        </div>
+        <div class="grid grid-4" style="margin-top: 1rem;">
+          <div class="card stat-card" style="background: var(--bg);">
+            <div class="stat-value" style="font-size: 1.25rem;" id="market-leaders">-</div>
+            <div class="stat-label">领导者</div>
+          </div>
+          <div class="card stat-card" style="background: var(--bg);">
+            <div class="stat-value" style="font-size: 1.25rem;" id="market-challengers">-</div>
+            <div class="stat-label">挑战者</div>
+          </div>
+          <div class="card stat-card" style="background: var(--bg);">
+            <div class="stat-value" style="font-size: 1.25rem;" id="market-followers">-</div>
+            <div class="stat-label">追随者</div>
+          </div>
+          <div class="card stat-card" style="background: var(--bg);">
+            <div class="stat-value" style="font-size: 1.25rem;" id="market-niche">-</div>
+            <div class="stat-label">补缺者</div>
+          </div>
+        </div>
+        <div class="grid grid-2" style="margin-top: 1rem;">
+          <div>
+            <h4>CR3 集中度</h4>
+            <div class="stat-value" id="market-cr3">-</div>
+          </div>
+          <div>
+            <h4>HHI 指数</h4>
+            <div class="stat-value" id="market-hhi">-</div>
+          </div>
+        </div>
+        <div id="market-companies" class="grid" style="margin-top: 1rem; max-height: 400px; overflow-y: auto;"></div>
+      </div>
+    </div>
+
+    <!-- 事件时间线面板 -->
+    <div class="panel" id="panel-events">
+      <div class="card">
+        <div class="flex flex-between">
+          <h3>事件时间线</h3>
+          <div class="flex">
+            <select id="events-days">
+              <option value="7">最近 7 天</option>
+              <option value="30" selected>最近 30 天</option>
+              <option value="90">最近 90 天</option>
+            </select>
+            <button onclick="loadEvents()">刷新</button>
+          </div>
+        </div>
+        <div id="events-list" style="max-height: 500px; overflow-y: auto;"></div>
+      </div>
+    </div>
+
+    <!-- 关系图谱面板 -->
+    <div class="panel" id="panel-graph">
+      <div class="card">
+        <div class="flex flex-between">
+          <h3>关系图谱</h3>
+          <div class="flex">
+            <input type="text" id="graph-keyword" placeholder="关键词" value="科技" />
+            <button onclick="loadGraph()">刷新</button>
+          </div>
+        </div>
+        <div id="graph-container" style="height: 500px; background: var(--bg); border-radius: 8px; margin-top: 1rem; display: flex; align-items: center; justify-content: center; color: var(--muted);">
+          图谱可视化需要引入 ECharts 等库，当前显示数据 JSON。<br/>
+          可在控制台查看完整数据结构。
+        </div>
+        <pre id="graph-data" style="max-height: 300px; overflow: auto; font-size: 0.75rem;"></pre>
+      </div>
+    </div>
+
+    <!-- 热点词云面板 -->
+    <div class="panel" id="panel-words">
+      <div class="card">
+        <div class="flex flex-between">
+          <h3>热点词云</h3>
+          <div class="flex">
+            <select id="word-industry">
+              <option value="科技">科技</option>
+              <option value="金融">金融</option>
+              <option value="医疗">医疗</option>
+              <option value="零售">零售</option>
+            </select>
+            <button onclick="loadWordCloud()">刷新</button>
+          </div>
+        </div>
+        <div id="word-cloud" class="word-cloud" style="margin-top: 1rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:8006';
+    let overviewChartInstance = null;
+    let trendChartInstance = null;
+
+    // 标签页切换
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+
+        // 加载对应面板数据
+        if (btn.dataset.tab === 'overview') loadOverview();
+        if (btn.dataset.tab === 'trend') loadTrendChart();
+        if (btn.dataset.tab === 'market') loadMarketMap();
+        if (btn.dataset.tab === 'events') loadEvents();
+        if (btn.dataset.tab === 'graph') loadGraph();
+        if (btn.dataset.tab === 'words') loadWordCloud();
+      });
+    });
+
+    // 检查服务状态
+    async function checkStatus() {
+      try {
+        const res = await fetch(`${API_BASE}/health`);
+        if (res.ok) {
+          document.getElementById('statusDot').style.background = 'var(--success)';
+          document.getElementById('statusText').textContent = '服务正常运行 - 端口 8006';
+        } else { throw new Error('服务异常'); }
+      } catch (e) {
+        document.getElementById('statusDot').style.background = 'var(--error)';
+        document.getElementById('statusText').textContent = '服务未启动';
+      }
+    }
+    checkStatus();
+
+    // 通用 API 调用
+    async function fetchApi(endpoint) {
+      const res = await fetch(`${API_BASE}${endpoint}`);
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+
+    // 加载概览数据
+    async function loadOverview() {
+      try {
+        const result = await fetchApi('/api/dashboard/overview');
+        const data = result.data;
+
+        // 更新统计卡片
+        document.getElementById('stat-opportunities').textContent = data.summary.total_opportunities;
+        document.getElementById('stat-new-week').textContent = '+' + data.summary.new_this_week;
+        document.getElementById('stat-validated').textContent = data.summary.validated_opportunities;
+        document.getElementById('stat-alerts').textContent = data.summary.active_alerts;
+
+        // 数据源状态
+        let sourcesHtml = '<div class="grid grid-2">';
+        for (const [name, info] of Object.entries(data.data_sources)) {
+          sourcesHtml += `
+            <div style="padding: 0.5rem; background: var(--bg); border-radius: 8px;">
+              <div class="flex flex-between">
+                <span>${name}</span>
+                <span style="color: ${info.status === 'active' ? 'var(--success)' : 'var(--error)'}">${info.status}</span>
+              </div>
+              <div style="color: var(--muted); font-size: 0.8rem;">数据量：${info.count.toLocaleString()}</div>
+            </div>
+          `;
+        }
+        sourcesHtml += '</div>';
+        document.getElementById('data-sources').innerHTML = sourcesHtml;
+
+        // 趋势图表
+        const ctx = document.getElementById('overviewChart').getContext('2d');
+        if (overviewChartInstance) overviewChartInstance.destroy();
+        overviewChartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.trend_chart.labels,
+            datasets: [
+              {
+                label: '发现商机',
+                data: data.trend_chart.datasets.opportunities_discovered,
+                borderColor: '#3d9cf5',
+                tension: 0.3
+              },
+              {
+                label: '新闻分析',
+                data: data.trend_chart.datasets.news_analyzed,
+                borderColor: '#4caf50',
+                tension: 0.3
+              },
+              {
+                label: '社交提及',
+                data: data.trend_chart.datasets.social_mentions,
+                borderColor: '#ff9800',
+                tension: 0.3
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#9aa8b8' } } },
+            scales: {
+              y: { ticks: { color: '#9aa8b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+              x: { ticks: { color: '#9aa8b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+            }
+          }
+        });
+      } catch (e) {
+        console.error('加载概览数据失败:', e);
+      }
+    }
+    loadOverview();
+
+    // 加载趋势图表
+    async function loadTrendChart() {
+      try {
+        const keyword = document.getElementById('trend-keyword').value;
+        const days = document.getElementById('trend-days').value;
+        const result = await fetchApi(`/api/dashboard/trend-chart?keyword=${encodeURIComponent(keyword)}&days=${days}`);
+        const data = result.data;
+
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        if (trendChartInstance) trendChartInstance.destroy();
+        trendChartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.labels,
+            datasets: [
+              {
+                label: '新闻数量',
+                data: data.datasets.news_count,
+                borderColor: '#3d9cf5',
+                tension: 0.3
+              },
+              {
+                label: '社交提及',
+                data: data.datasets.social_mentions,
+                borderColor: '#ff9800',
+                tension: 0.3
+              },
+              {
+                label: '专利数量',
+                data: data.datasets.patent_count,
+                borderColor: '#4caf50',
+                tension: 0.3
+              },
+              {
+                label: '企业数量',
+                data: data.datasets.enterprise_count,
+                borderColor: '#9c27b0',
+                tension: 0.3
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#9aa8b8' } } },
+            scales: {
+              y: { ticks: { color: '#9aa8b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+              x: { ticks: { color: '#9aa8b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+            }
+          }
+        });
+
+        // 趋势指标
+        const indicators = data.trend_indicators;
+        const directionIcon = indicators.direction === 'up' ? '📈' : (indicators.direction === 'down' ? '📉' : '➡️');
+        document.getElementById('trend-indicators').innerHTML = `
+          <div class="card stat-card" style="flex: 1;">
+            <div class="stat-value">${directionIcon}</div>
+            <div class="stat-label">趋势方向：${indicators.direction === 'up' ? '上升' : (indicators.direction === 'down' ? '下降' : '平稳')}</div>
+          </div>
+          <div class="card stat-card" style="flex: 1;">
+            <div class="stat-value">${indicators.momentum === 'strong' ? '💪' : (indicators.momentum === 'moderate' ? '👍' : '📊')}</div>
+            <div class="stat-label">动量强度：${indicators.momentum === 'strong' ? '强' : (indicators.momentum === 'moderate' ? '中' : '弱')}</div>
+          </div>
+          <div class="card stat-card" style="flex: 1;">
+            <div class="stat-value" style="color: ${indicators.growth_rate > 0 ? 'var(--success)' : 'var(--error)'}">${indicators.growth_rate > 0 ? '+' : ''}${indicators.growth_rate}%</div>
+            <div class="stat-label">增长率</div>
+          </div>
+        `;
+      } catch (e) {
+        console.error('加载趋势图表失败:', e);
+        alert('加载趋势图表失败：' + e.message);
+      }
+    }
+
+    // 加载市场地图
+    async function loadMarketMap() {
+      try {
+        const industry = document.getElementById('market-industry').value;
+        const result = await fetchApi(`/api/dashboard/market-map?industry=${encodeURIComponent(industry)}`);
+        const data = result.data;
+
+        // 更新分类统计
+        document.getElementById('market-leaders').textContent = data.segments['领导者'].length;
+        document.getElementById('market-challengers').textContent = data.segments['挑战者'].length;
+        document.getElementById('market-followers').textContent = data.segments['追随者'].length;
+        document.getElementById('market-niche').textContent = data.segments['补缺者'].length;
+
+        // 更新集中度指标
+        document.getElementById('market-cr3').textContent = data.concentration.cr3 + '%';
+        document.getElementById('market-hhi').textContent = data.concentration.hhi;
+
+        // 显示公司列表
+        let companiesHtml = '<h4>企业列表</h4><div class="grid grid-2">';
+        for (const company of data.companies) {
+          companiesHtml += `
+            <div style="padding: 0.75rem; background: var(--bg); border-radius: 8px;">
+              <div style="font-weight: 600;">${company.name}</div>
+              <div class="flex flex-between" style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--muted);">
+                <span>资本：${company.capital}万</span>
+                <span>成立：${company.years}年</span>
+              </div>
+              <div style="font-size: 0.75rem; color: var(--success); margin-top: 0.25rem;">${company.status}</div>
+            </div>
+          `;
+        }
+        companiesHtml += '</div>';
+        document.getElementById('market-companies').innerHTML = companiesHtml;
+      } catch (e) {
+        console.error('加载市场地图失败:', e);
+        alert('加载市场地图失败：' + e.message);
+      }
+    }
+
+    // 加载事件时间线
+    async function loadEvents() {
+      try {
+        const days = document.getElementById('events-days').value;
+        const result = await fetchApi(`/api/dashboard/event-timeline?days=${days}`);
+        const data = result.data;
+
+        let html = '';
+        for (const event of data.events) {
+          html += `
+            <div class="event-item">
+              <div class="event-date">${event.date}</div>
+              <div class="event-title">${event.icon} ${event.title}</div>
+              <div class="flex" style="margin-top: 0.5rem;">
+                <span class="event-type">${event.type}</span>
+                <span class="event-type" style="margin-left: 0.5rem;">来源：${event.source}</span>
+                <span class="event-type" style="margin-left: 0.5rem;">重要性：${'⭐'.repeat(event.importance)}</span>
+              </div>
+            </div>
+          `;
+        }
+        document.getElementById('events-list').innerHTML = html || '<p style="color: var(--muted);">暂无事件</p>';
+      } catch (e) {
+        console.error('加载事件时间线失败:', e);
+      }
+    }
+
+    // 加载关系图谱
+    async function loadGraph() {
+      try {
+        const keyword = document.getElementById('graph-keyword').value;
+        const result = await fetchApi(`/api/dashboard/knowledge-graph?keyword=${encodeURIComponent(keyword)}`);
+        const data = result.data;
+        document.getElementById('graph-data').textContent = JSON.stringify(data, null, 2);
+        console.log('关系图谱数据:', data);
+      } catch (e) {
+        console.error('加载关系图谱失败:', e);
+      }
+    }
+
+    // 加载词云
+    async function loadWordCloud() {
+      try {
+        const industry = document.getElementById('word-industry').value;
+        const result = await fetchApi(`/api/dashboard/word-cloud?industry=${encodeURIComponent(industry)}`);
+        const data = result.data;
+
+        let html = '';
+        for (const word of data.words) {
+          const sizeClass = word.value >= 80 ? 'large' : (word.value >= 50 ? 'medium' : '');
+          const opacity = 0.6 + (word.value / 100) * 0.4;
+          html += `<span class="word-tag ${sizeClass}" style="opacity: ${opacity};" title="热度：${word.value}">${word.name}</span>`;
+        }
+        document.getElementById('word-cloud').innerHTML = html;
+      } catch (e) {
+        console.error('加载词云失败:', e);
+      }
+    }
+  </script>
+</body>
+</html>

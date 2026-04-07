@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Test results
+test-results/
+playwright-report/
+
+# Exports
+exports/
+
+# Temporary files
+*.tmp
+*.temp
+.pid
+
+# Documentation generated
+COURSE.html
+TEST_REPORT.md
+DEVELOPMENT_REPORT.md
+
+# Old test files
+test_p*.py
+test_v*.py
+verify*.py
+demo*.py

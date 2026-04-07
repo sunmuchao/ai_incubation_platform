@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 流量增益系统</title>
+  <style>
+    :root {
+      --bg: #0f1419; --surface: #1a2332; --card: #232f3e;
+      --text: #e8ecf1; --muted: #9aa8b8; --accent: #3d9cf5;
+      --border: rgba(255, 255, 255, 0.08);
+      --success: #4caf50; --warning: #ff9800; --error: #f44336;
+      --radius: 12px; --font: system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.65; }
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    header { text-align: center; padding: 2.5rem 0 2rem; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+    header h1 { font-size: clamp(1.5rem, 4vw, 2.5rem); font-weight: 700; margin: 0 0 0.75rem; }
+    header p { color: var(--muted); max-width: 42em; margin: 0 auto; }
+    .status-bar { display: flex; gap: 1rem; justify-content: center; align-items: center; padding: 0.75rem 1rem; background: var(--surface); border-radius: var(--radius); margin-top: 1.5rem; font-size: 0.9rem; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+    .tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+    .tab-btn { padding: 0.6rem 1.2rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); cursor: pointer; transition: all 0.2s; }
+    .tab-btn:hover { background: var(--card); border-color: var(--accent); }
+    .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; }
+    .card h3 { margin: 0 0 1rem; font-size: 1.1rem; color: var(--accent); }
+    .grid { display: grid; gap: 1rem; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+    label { display: block; margin-bottom: 0.5rem; color: var(--muted); font-size: 0.9rem; }
+    input, textarea, select { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-family: inherit; font-size: 0.95rem; margin-bottom: 1rem; }
+    input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    button { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer; font-size: 0.95rem; font-weight: 500; transition: all 0.2s; }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .result { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-top: 1rem; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; word-break: break-word; max-height: 400px; overflow-y: auto; }
+    .item-list { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+    .item-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+    .item-card h4 { margin: 0 0 0.5rem; }
+    .metric-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+    .metric-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center; }
+    .metric-value { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    .metric-label { color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem; }
+    .loading { display: inline-block; width: 1rem; height: 1rem; border: 2px solid var(--muted); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .trend-up { color: var(--success); }
+    .trend-down { color: var(--error); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>AI 流量增益系统</h1>
+      <p>智能流量分析、渠道优化和转化率提升系统</p>
+      <div class="status-bar">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">检查服务状态...</span>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="overview">流量概览</button>
+      <button class="tab-btn" data-tab="channels">渠道管理</button>
+      <button class="tab-btn" data-tab="conversion">转化分析</button>
+      <button class="tab-btn" data-tab="optimization">优化建议</button>
+      <button class="tab-btn" data-tab="campaigns">活动管理</button>
+    </div>
+
+    <!-- 流量概览 -->
+    <div class="panel active" id="panel-overview">
+      <div class="card">
+        <h3>实时流量指标</h3>
+        <div class="metric-grid">
+          <div class="metric-card">
+            <div class="metric-value" id="metric-pv">-</div>
+            <div class="metric-label">页面浏览量 (PV)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="metric-uv">-</div>
+            <div class="metric-label">独立访客 (UV)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="metric-bounce">-</div>
+            <div class="metric-label">跳出率</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="metric-session">-</div>
+            <div class="metric-label">平均会话时长</div>
+          </div>
+        </div>
+        <button onclick="loadOverview()" style="margin-top: 1rem;">刷新数据</button>
+      </div>
+    </div>
+
+    <!-- 渠道管理 -->
+    <div class="panel" id="panel-channels">
+      <div class="card">
+        <h3>添加渠道</h3>
+        <div class="grid grid-2">
+          <div>
+            <label>渠道名称</label>
+            <input type="text" id="channel-name" placeholder="Google Ads" />
+          </div>
+          <div>
+            <label>渠道类型</label>
+            <select id="channel-type">
+              <option value="search">搜索引擎</option>
+              <option value="social">社交媒体</option>
+              <option value="display">展示广告</option>
+              <option value="email">邮件营销</option>
+              <option value="direct">直接访问</option>
+            </select>
+          </div>
+        </div>
+        <label>渠道配置 (JSON)</label>
+        <textarea id="channel-config" placeholder='{"campaign_id": "12345"}'></textarea>
+        <button onclick="addChannel()">添加渠道</button>
+      </div>
+      <div class="card">
+        <h3>渠道列表</h3>
+        <div id="channel-list" class="item-list"></div>
+      </div>
+    </div>
+
+    <!-- 转化分析 -->
+    <div class="panel" id="panel-conversion">
+      <div class="card">
+        <h3>转化漏斗分析</h3>
+        <div class="grid grid-2">
+          <div>
+            <label>开始日期</label>
+            <input type="date" id="conversion-start" />
+          </div>
+          <div>
+            <label>结束日期</label>
+            <input type="date" id="conversion-end" />
+          </div>
+        </div>
+        <button onclick="getConversionFunnel()">分析转化漏斗</button>
+        <div id="conversion-result" class="result"></div>
+      </div>
+    </div>
+
+    <!-- 优化建议 -->
+    <div class="panel" id="panel-optimization">
+      <div class="card">
+        <h3>获取优化建议</h3>
+        <label>分析范围</label>
+        <select id="opt-scope">
+          <option value="all">全站分析</option>
+          <option value="landing">落地页</option>
+          <option value="checkout">结账流程</option>
+          <option value="mobile">移动端</option>
+        </select>
+        <button onclick="getOptimizationSuggestions()">获取建议</button>
+        <div id="optimization-result" class="result"></div>
+      </div>
+    </div>
+
+    <!-- 活动管理 -->
+    <div class="panel" id="panel-campaigns">
+      <div class="card">
+        <h3>创建营销活动</h3>
+        <div class="grid grid-2">
+          <div>
+            <label>活动名称</label>
+            <input type="text" id="campaign-name" placeholder="双 11 大促" />
+          </div>
+          <div>
+            <label>活动类型</label>
+            <select id="campaign-type">
+              <option value="promotion">促销</option>
+              <option value="content">内容营销</option>
+              <option value="referral">推荐</option>
+            </select>
+          </div>
+          <div>
+            <label>预算 (元)</label>
+            <input type="number" id="campaign-budget" placeholder="10000" />
+          </div>
+          <div>
+            <label>渠道 ID</label>
+            <select id="campaign-channel"></select>
+          </div>
+        </div>
+        <button onclick="createCampaign()">创建活动</button>
+      </div>
+      <div class="card">
+        <h3>活动列表</h3>
+        <div id="campaign-list" class="item-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:8013';
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+        if (btn.dataset.tab === 'overview') loadOverview();
+        if (btn.dataset.tab === 'channels') loadChannels();
+        if (btn.dataset.tab === 'campaigns') loadCampaignSelect();
+      });
+    });
+
+    async function checkStatus() {
+      try {
+        const res = await fetch(`${API_BASE}/health`);
+        if (res.ok) {
+          document.getElementById('statusDot').style.background = 'var(--success)';
+          document.getElementById('statusText').textContent = '服务正常运行 - 端口 8013';
+        } else { throw new Error('服务异常'); }
+      } catch (e) {
+        document.getElementById('statusDot').style.background = 'var(--error)';
+        document.getElementById('statusText').textContent = '服务未启动';
+      }
+    }
+    checkStatus();
+
+    async function callApi(endpoint, body, method = 'POST') {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method, headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : null
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+
+    async function loadOverview() {
+      try {
+        const metrics = await callApi('/api/traffic/overview', null, 'GET');
+        document.getElementById('metric-pv').textContent = metrics.pv?.toLocaleString() || '0';
+        document.getElementById('metric-uv').textContent = metrics.uv?.toLocaleString() || '0';
+        document.getElementById('metric-bounce').textContent = (metrics.bounce_rate || 0) + '%';
+        document.getElementById('metric-session').textContent = formatDuration(metrics.avg_session_duration || 0);
+      } catch (e) {
+        console.error('加载失败:', e);
+      }
+    }
+
+    function formatDuration(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60);
+      return `${m}分${s}秒`;
+    }
+
+    async function addChannel() {
+      const name = document.getElementById('channel-name').value;
+      const type = document.getElementById('channel-type').value;
+      const configStr = document.getElementById('channel-config').value;
+      let config = {};
+      if (configStr) {
+        try { config = JSON.parse(configStr); } catch (e) { alert('配置 JSON 格式错误'); return; }
+      }
+      if (!name) { alert('请输入渠道名称'); return; }
+      try {
+        await callApi('/api/channels', { name, type, config });
+        alert('渠道添加成功');
+        loadChannels();
+      } catch (e) { alert('添加失败：' + e.message); }
+    }
+
+    async function loadChannels() {
+      const channels = await callApi('/api/channels', null, 'GET');
+      document.getElementById('channel-list').innerHTML = channels.map(c => `
+        <div class="item-card">
+          <h4>${c.name}</h4>
+          <div style="color: var(--muted); font-size: 0.85rem;">类型：${c.type}</div>
+          <div style="color: var(--muted); font-size: 0.85rem;">配置：${JSON.stringify(c.config || {})}</div>
+        </div>
+      `).join('') || '<p style="color: var(--muted);">暂无渠道</p>';
+    }
+
+    async function getConversionFunnel() {
+      const start_date = document.getElementById('conversion-start').value;
+      const end_date = document.getElementById('conversion-end').value;
+      if (!start_date || !end_date) { alert('请选择日期范围'); return; }
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading"></span> 分析中...';
+      try {
+        const result = await callApi('/api/conversion/funnel', { start_date, end_date });
+        document.getElementById('conversion-result').textContent = JSON.stringify(result, null, 2);
+      } catch (e) {
+        document.getElementById('conversion-result').textContent = '错误：' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = '分析转化漏斗';
+    }
+
+    async function getOptimizationSuggestions() {
+      const scope = document.getElementById('opt-scope').value;
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading"></span> 分析中...';
+      try {
+        const result = await callApi('/api/optimization/suggestions', { scope });
+        document.getElementById('optimization-result').textContent = JSON.stringify(result, null, 2);
+      } catch (e) {
+        document.getElementById('optimization-result').textContent = '错误：' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = '获取建议';
+    }
+
+    async function loadCampaignSelect() {
+      const channels = await callApi('/api/channels', null, 'GET');
+      document.getElementById('campaign-channel').innerHTML = channels.map(c =>
+        `<option value="${c.id}">${c.name}</option>`
+      ).join('');
+    }
+
+    async function createCampaign() {
+      const name = document.getElementById('campaign-name').value;
+      const type = document.getElementById('campaign-type').value;
+      const budget = parseFloat(document.getElementById('campaign-budget').value);
+      const channel_id = parseInt(document.getElementById('campaign-channel').value);
+      if (!name || !budget) { alert('请填写必填项'); return; }
+      try {
+        await callApi('/api/campaigns', { name, type, budget, channel_id });
+        alert('活动创建成功');
+        loadCampaigns();
+      } catch (e) { alert('创建失败：' + e.message); }
+    }
+
+    async function loadCampaigns() {
+      const campaigns = await callApi('/api/campaigns', null, 'GET');
+      document.getElementById('campaign-list').innerHTML = campaigns.map(c => `
+        <div class="item-card">
+          <h4>${c.name}</h4>
+          <div style="color: var(--muted); font-size: 0.85rem;">类型：${c.type}</div>
+          <div style="color: var(--muted); font-size: 0.85rem;">预算：¥${c.budget}</div>
+          <div style="color: var(--muted); font-size: 0.85rem;">渠道 ID: ${c.channel_id}</div>
+        </div>
+      `).join('') || '<p style="color: var(--muted);">暂无活动</p>';
+    }
+  </script>
+</body>
+</html>

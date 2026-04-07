@@ -1,0 +1,87 @@
+/**
+ * TrendIndicator 样式
+ */
+@import '../../styles/design-tokens.less';
+
+.trend-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--border-radius-full);
+  font-weight: var(--font-weight-semibold);
+  transition: all var(--transition-base);
+
+  /* 尺寸配置 */
+  &.trend-indicator--sm {
+    gap: var(--spacing-1);
+    padding: 2px var(--spacing-2);
+
+    .trend-indicator__value {
+      font-size: var(--font-size-xs);
+    }
+
+    .trend-indicator__icon {
+      font-size: 10px;
+    }
+  }
+
+  &.trend-indicator--md {
+    gap: var(--spacing-1);
+    padding: var(--spacing-1) var(--spacing-2);
+
+    .trend-indicator__value {
+      font-size: var(--font-size-sm);
+    }
+
+    .trend-indicator__icon {
+      font-size: 12px;
+    }
+  }
+
+  &.trend-indicator--lg {
+    gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-3);
+
+    .trend-indicator__value {
+      font-size: var(--font-size-md);
+    }
+
+    .trend-indicator__icon {
+      font-size: 14px;
+    }
+  }
+
+  /* 趋势类型 */
+  &.trend-indicator--up {
+    color: var(--color-success);
+    background: rgba(0, 200, 83, 0.08);
+  }
+
+  &.trend-indicator--down {
+    color: var(--color-error);
+    background: rgba(255, 82, 82, 0.08);
+  }
+
+  &.trend-indicator--neutral {
+    color: var(--text-tertiary);
+    background: var(--bg-tertiary);
+  }
+
+  &__icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__value {
+    line-height: 1;
+    white-space: nowrap;
+  }
+}

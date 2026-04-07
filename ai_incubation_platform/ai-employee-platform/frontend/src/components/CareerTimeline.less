@@ -1,0 +1,100 @@
+/* 职业时间线样式 */
+.career-timeline-card {
+  .target-role {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    color: #fff;
+
+    .target-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+
+      .target-icon {
+        font-size: 32px;
+        color: #ffd700;
+      }
+
+      .target-info {
+        flex: 1;
+
+        .target-role-name {
+          font-size: 16px;
+          display: block;
+          margin-bottom: 8px;
+          color: #fff;
+        }
+
+        .ant-progress-text {
+          color: #fff;
+        }
+      }
+    }
+
+    .target-timeline {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 13px;
+    }
+  }
+
+  .phases-container {
+    margin: 24px 0;
+
+    .phase-item {
+      .phase-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .phase-focus {
+        margin: 12px 0;
+
+        .focus-label {
+          display: block;
+          margin-bottom: 8px;
+          font-size: 13px;
+        }
+      }
+
+      .phase-milestones {
+        margin-top: 12px;
+        padding-left: 20px;
+
+        .milestones-label {
+          display: block;
+          margin-bottom: 8px;
+          font-size: 13px;
+        }
+
+        .milestone-item {
+          .milestone-date {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 4px;
+            font-size: 12px;
+          }
+        }
+      }
+    }
+  }
+
+  .recommended-actions {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #f0f0f0;
+
+    .action-card {
+      transition: all 0.3s;
+
+      &:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+    }
+  }
+}

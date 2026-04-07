@@ -1,0 +1,233 @@
+/**
+ * Bento Grid 布局 Mixins
+ */
+
+@import './variables.scss';
+
+// ==================== Bento Grid 容器 ====================
+@mixin bento-container {
+  display: grid;
+  gap: $spacing-4;
+  grid-template-columns: repeat(12, 1fr);
+  grid-auto-rows: minmax(100px, auto);
+}
+
+// ==================== Bento 卡片尺寸 ====================
+// 小型卡片 (1x1)
+@mixin bento-sm {
+  grid-column: span 3;
+  grid-row: span 1;
+}
+
+// 中型卡片 (2x1)
+@mixin bento-md {
+  grid-column: span 6;
+  grid-row: span 1;
+}
+
+// 大型卡片 (2x2)
+@mixin bento-lg {
+  grid-column: span 6;
+  grid-row: span 2;
+}
+
+// 超大型卡片 (3x2)
+@mixin bento-xl {
+  grid-column: span 9;
+  grid-row: span 2;
+}
+
+// 全宽卡片 (4x1)
+@mixin bento-full {
+  grid-column: span 12;
+  grid-row: span 1;
+}
+
+// 正方形卡片 (2x2)
+@mixin bento-square {
+  grid-column: span 6;
+  grid-row: span 2;
+  aspect-ratio: 1;
+}
+
+// ==================== Bento 卡片样式 ====================
+@mixin bento-card {
+  background: $bg-primary;
+  border-radius: $radius-lg;
+  border: $border-subtle;
+  box-shadow: $shadow-sm;
+  padding: $spacing-5;
+  transition: all $transition-base $ease-out;
+  overflow: hidden;
+  position: relative;
+
+  &:hover {
+    box-shadow: $shadow-md;
+    border-color: $border-medium;
+    transform: translateY(-2px);
+  }
+
+  // 微妙的光泽效果
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.8) 50%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+}
+
+// ==================== 暗色主题卡片 ====================
+@mixin bento-card-dark {
+  background: $slate-800;
+  border: $border-dark-subtle;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.12);
+
+  &:hover {
+    border-color: $border-dark-default;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.16);
+  }
+
+  &::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.12) 50%,
+      transparent 100%
+    );
+  }
+}
+
+// ==================== 卡片内容区域 ====================
+@mixin bento-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-4;
+  padding-bottom: $spacing-3;
+  border-bottom: $border-subtle;
+}
+
+@mixin bento-card-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+@mixin bento-card-footer {
+  margin-top: $spacing-4;
+  padding-top: $spacing-3;
+  border-top: $border-subtle;
+  display: flex;
+  gap: $spacing-2;
+}
+
+// ==================== 响应式断点 ====================
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == sm {
+    @media (max-width: 640px) { @content; }
+  } @else if $breakpoint == md {
+    @media (max-width: 768px) { @content; }
+  } @else if $breakpoint == lg {
+    @media (max-width: 1024px) { @content; }
+  } @else if $breakpoint == xl {
+    @media (max-width: 1280px) { @content; }
+  }
+}
+
+// ==================== Bento Grid 响应式 ====================
+@mixin bento-responsive {
+  @include respond-to(lg) {
+    grid-template-columns: repeat(6, 1fr);
+
+    > * {
+      grid-column: span 6 !important;
+    }
+  }
+
+  @include respond-to(md) {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+
+    > * {
+      grid-column: span 1 !important;
+      grid-row: auto !important;
+    }
+  }
+}
+
+// ==================== 卡片动画 ====================
+@mixin card-entrance($delay: 0ms) {
+  animation: card-entrance $transition-slow $ease-out $delay forwards;
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+@keyframes card-entrance {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ==================== Hover 效果增强 ====================
+@mixin hover-lift {
+  transition: all $transition-base $ease-out;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: $shadow-lg;
+  }
+}
+
+@mixin hover-glow($color: $indigo-500) {
+  transition: all $transition-base $ease-out;
+
+  &:hover {
+    box-shadow: 0 0 0 1px rgba($color, 0.5),
+                0 4px 12px rgba($color, 0.15),
+                0 0 24px rgba($color, 0.1);
+  }
+}
+
+// ==================== 状态指示器 ====================
+@mixin status-dot($size: 8px) {
+  width: $size;
+  height: $size;
+  border-radius: $radius-full;
+  display: inline-block;
+
+  &.online {
+    background: $success;
+    box-shadow: 0 0 8px rgba($success, 0.5);
+  }
+
+  &.offline {
+    background: $slate-400;
+  }
+
+  &.busy {
+    background: $warning;
+    box-shadow: 0 0 8px rgba($warning, 0.5);
+    animation: pulse 2s infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.1);
+  }
+}

@@ -1,0 +1,451 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===================================
+   Monochromatic 配色方案 - 深蓝灰系
+   =================================== */
+
+:root {
+  /* 主背景色 - 明亮模式 */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8fafc;
+  --color-bg-tertiary: #f1f5f9;
+
+  /* 卡片背景 */
+  --color-bg-card: #ffffff;
+  --color-bg-card-hover: #f8fafc;
+
+  /* 文字颜色 */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #94a3b8;
+  --color-text-inverse: #ffffff;
+
+  /* 边框颜色 */
+  --color-border: rgba(226, 232, 240, 0.8);
+  --color-border-light: rgba(226, 232, 240, 0.5);
+  --color-border-dark: rgba(226, 232, 240, 1);
+
+  /* 主色调 - 深蓝 */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-light: #dbeafe;
+  --color-primary-dark: #1e3a8a;
+
+  /* 强调色 - 红色点缀 (不超过 10%) */
+  --color-accent: #ef4444;
+  --color-accent-hover: #dc2626;
+  --color-accent-light: #fee2e2;
+
+  /* 状态色 */
+  --color-success: #10b981;
+  --color-success-light: #d1fae5;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fef3c7;
+  --color-error: #ef4444;
+  --color-error-light: #fee2e2;
+  --color-info: #3b82f6;
+  --color-info-light: #dbeafe;
+
+  /* Linear 风格阴影 */
+  --shadow-bento: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-bento-hover: 0 2px 4px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-linear-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-linear-md: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-linear-lg: 0 2px 4px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-linear-xl: 0 4px 8px rgba(0, 0, 0, 0.08), 0 16px 48px rgba(0, 0, 0, 0.12);
+
+  /* 统一圆角 */
+  --radius-bento: 12px;
+  --radius-bento-sm: 8px;
+  --radius-bento-lg: 16px;
+  --radius-bento-xl: 20px;
+
+  /* Bento Grid 间距 */
+  --gap-bento: 16px;
+  --gap-bento-sm: 8px;
+  --gap-bento-lg: 24px;
+
+  /* 渐变 - 增加层次感 */
+  --gradient-card: linear-gradient(180deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%);
+  --gradient-card-hover: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(248,250,252,0.8) 100%);
+  --gradient-subtle: linear-gradient(135deg, rgba(37,99,235,0.02) 0%, rgba(37,99,235,0.08) 100%);
+}
+
+/* 黑暗模式 */
+.dark {
+  /* 背景色 */
+  --color-bg-primary: #0f1419;
+  --color-bg-secondary: #1a2332;
+  --color-bg-tertiary: #232f3e;
+
+  /* 卡片背景 */
+  --color-bg-card: #1e293b;
+  --color-bg-card-hover: #334155;
+
+  /* 文字颜色 */
+  --color-text-primary: #e8ecf1;
+  --color-text-secondary: #9aa8b8;
+  --color-text-tertiary: #6b7280;
+  --color-text-inverse: #0f172a;
+
+  /* 边框颜色 */
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-light: rgba(255, 255, 255, 0.05);
+  --color-border-dark: rgba(255, 255, 255, 0.12);
+
+  /* 主色调 */
+  --color-primary: #3b82f6;
+  --color-primary-hover: #60a5fa;
+  --color-primary-light: rgba(59, 130, 246, 0.15);
+  --color-primary-dark: #1e3a8a;
+
+  /* 强调色 */
+  --color-accent: #f87171;
+  --color-accent-hover: #fca5a5;
+  --color-accent-light: rgba(248, 113, 113, 0.15);
+
+  /* 状态色 */
+  --color-success: #34d399;
+  --color-success-light: rgba(52, 211, 153, 0.15);
+  --color-warning: #fbbf24;
+  --color-warning-light: rgba(251, 191, 36, 0.15);
+  --color-error: #f87171;
+  --color-error-light: rgba(248, 113, 113, 0.15);
+  --color-info: #60a5fa;
+  --color-info-light: rgba(96, 165, 250, 0.15);
+
+  /* 阴影 - 暗色模式更柔和 */
+  --shadow-bento: 0 1px 2px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-bento-hover: 0 2px 4px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.35);
+
+  /* 渐变 */
+  --gradient-card: linear-gradient(180deg, rgba(30,41,59,0.9) 0%, rgba(30,41,59,0.6) 100%);
+  --gradient-card-hover: linear-gradient(180deg, rgba(51,65,85,1) 0%, rgba(30,41,59,0.9) 100%);
+  --gradient-subtle: linear-gradient(135deg, rgba(59,130,246,0.05) 0%, rgba(59,130,246,0.12) 100%);
+}
+
+/* ===================================
+   全局重置
+   =================================== */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif, 'Microsoft YaHei', '微软雅黑';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#root {
+  height: 100%;
+}
+
+/* ===================================
+   滚动条美化 - Linear 风格
+   =================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-tertiary);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* ===================================
+   Bento Grid 卡片样式
+   =================================== */
+
+.bento-card {
+  background-color: var(--color-bg-card);
+  border-radius: var(--radius-bento);
+  padding: 20px;
+  box-shadow: var(--shadow-bento);
+  border: 1px solid var(--color-border);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.bento-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  opacity: 0.5;
+}
+
+.bento-card:hover {
+  box-shadow: var(--shadow-bento-hover);
+  border-color: var(--color-border-dark);
+  transform: translateY(-2px);
+}
+
+.bento-card-clickable {
+  cursor: pointer;
+}
+
+.bento-card-clickable:active {
+  transform: scale(0.98);
+}
+
+/* ===================================
+   按钮样式 - Linear 风格
+   =================================== */
+
+.btn-primary {
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+  color: white;
+  padding: 10px 20px;
+  border-radius: var(--radius-bento-sm);
+  border: 1px solid rgba(255,255,255,0.1);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-linear-sm);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(180deg, var(--color-primary-hover) 0%, var(--color-primary-dark) 100%);
+  box-shadow: var(--shadow-linear-md);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-linear-sm);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-secondary {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  padding: 10px 20px;
+  border-radius: var(--radius-bento-sm);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-secondary:hover {
+  background: var(--color-bg-card-hover);
+  border-color: var(--color-border-dark);
+}
+
+/* ===================================
+   文字样式
+   =================================== */
+
+.text-primary {
+  color: var(--color-primary);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.text-tertiary {
+  color: var(--color-text-tertiary);
+}
+
+.text-success {
+  color: var(--color-success);
+}
+
+.text-warning {
+  color: var(--color-warning);
+}
+
+.text-error {
+  color: var(--color-error);
+}
+
+.text-accent {
+  color: var(--color-accent);
+}
+
+/* ===================================
+   动画
+   =================================== */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+.loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-tertiary) 0%,
+    var(--color-bg-card-hover) 50%,
+    var(--color-bg-tertiary) 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* ===================================
+   Bento Grid 容器
+   =================================== */
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--gap-bento);
+}
+
+.bento-grid-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--gap-bento-sm);
+}
+
+.bento-grid-wide {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--gap-bento-lg);
+}
+
+/* ===================================
+   响应式断点
+   =================================== */
+
+@media (max-width: 640px) {
+  .bento-grid,
+  .bento-grid-compact,
+  .bento-grid-wide {
+    grid-template-columns: 1fr;
+  }
+
+  .container {
+    padding: 0 12px;
+  }
+}
+
+/* ===================================
+   工具类
+   =================================== */
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* 玻璃态效果 */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.dark .glass {
+  background: rgba(30, 41, 59, 0.7);
+}
+
+/* 渐变背景 */
+.gradient-subtle {
+  background: var(--gradient-subtle);
+}
+
+/* 分割线 */
+.divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 16px 0;
+}
+
+/* Tag 样式 */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-bento-sm);
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.tag-primary {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.tag-success {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.tag-warning {
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.tag-error {
+  background: var(--color-error-light);
+  color: var(--color-error);
+}
+
+.tag-secondary {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+}

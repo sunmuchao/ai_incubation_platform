@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Traffic Booster - 可视化仪表板</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-color: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        /* 顶部导航栏 */
+        .header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .header nav {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .header nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+
+        .header nav a:hover,
+        .header nav a.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* 主容器 */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* 页面标题 */
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-header h2 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-header p {
+            color: var(--text-muted);
+        }
+
+        /* 指标卡片网格 */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .metric-card .label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .metric-card .change {
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .metric-card .change.positive {
+            color: var(--success-color);
+        }
+
+        .metric-card .change.negative {
+            color: var(--danger-color);
+        }
+
+        /* 图表容器 */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .chart-card h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .chart-card .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        /* 数据表格 */
+        .data-table {
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .data-table h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .data-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .data-table tr:hover {
+            background: var(--bg-color);
+        }
+
+        /* 日期选择器 */
+        .date-range-picker {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .date-range-picker label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .date-range-picker input[type="date"] {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .date-range-picker button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background 0.2s;
+        }
+
+        .date-range-picker button:hover {
+            background: #2563eb;
+        }
+
+        /* 加载状态 */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* 标签页 */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--primary-color);
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="header">
+        <h1>📊 AI Traffic Booster</h1>
+        <nav>
+            <a href="#" class="active">仪表板</a>
+            <a href="/docs">API 文档</a>
+        </nav>
+    </header>
+
+    <!-- 主容器 -->
+    <main class="container">
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <h2>流量分析仪表板</h2>
+            <p>实时监控网站流量、SEO 指标和竞品分析数据</p>
+        </div>
+
+        <!-- 标签页 -->
+        <div class="tabs">
+            <div class="tab active" data-tab="traffic">流量分析</div>
+            <div class="tab" data-tab="seo">SEO 指标</div>
+            <div class="tab" data-tab="competitor">竞品分析</div>
+        </div>
+
+        <!-- 流量分析标签页 -->
+        <div id="traffic-tab" class="tab-content active">
+            <!-- 日期选择器 -->
+            <div class="date-range-picker">
+                <label>开始日期:</label>
+                <input type="date" id="start-date">
+                <label>结束日期:</label>
+                <input type="date" id="end-date">
+                <button onclick="loadTrafficData()">刷新数据</button>
+            </div>
+
+            <!-- 指标卡片 -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="label">总访客数</div>
+                    <div class="value" id="total-visitors">-</div>
+                    <div class="change positive" id="visitors-change">
+                        <span>↑ 0%</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">页面浏览量</div>
+                    <div class="value" id="total-pageviews">-</div>
+                    <div class="change positive" id="pageviews-change">
+                        <span>↑ 0%</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">平均会话时长</div>
+                    <div class="value" id="avg-session">-</div>
+                    <div class="change negative" id="session-change">
+                        <span>↓ 0%</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">跳出率</div>
+                    <div class="value" id="bounce-rate">-</div>
+                    <div class="change positive" id="bounce-change">
+                        <span>↑ 0%</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">转化率</div>
+                    <div class="value" id="conversion-rate">-</div>
+                    <div class="change positive" id="conversion-change">
+                        <span>↑ 0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 图表 -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>流量趋势</h3>
+                    <div class="chart-container">
+                        <canvas id="traffic-trend-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>流量来源分布</h3>
+                    <div class="chart-container">
+                        <canvas id="traffic-sources-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>设备分布</h3>
+                    <div class="chart-container">
+                        <canvas id="device-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Top 页面</h3>
+                    <div class="chart-container">
+                        <canvas id="top-pages-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEO 指标标签页 -->
+        <div id="seo-tab" class="tab-content">
+            <!-- 指标卡片 -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="label">平均排名</div>
+                    <div class="value" id="avg-position">-</div>
+                    <div class="change positive" id="position-change">
+                        <span>↑ 0</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">SEO 总分</div>
+                    <div class="value" id="seo-score">-</div>
+                    <div class="change positive" id="score-change">
+                        <span>↑ 0</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">收录页数</div>
+                    <div class="value" id="indexed-pages">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">反向链接</div>
+                    <div class="value" id="backlinks">-</div>
+                </div>
+            </div>
+
+            <!-- 图表 -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>关键词排名分布</h3>
+                    <div class="chart-container">
+                        <canvas id="ranking-distribution-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Top 关键词</h3>
+                    <div class="chart-container">
+                        <canvas id="top-keywords-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 关键词表格 -->
+            <div class="data-table">
+                <h3>关键词排名详情</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>关键词</th>
+                            <th>当前位置</th>
+                            <th>变化</th>
+                            <th>搜索量</th>
+                            <th>难度</th>
+                            <th>URL</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keywords-table-body">
+                        <tr><td colspan="6" style="text-align:center;">暂无数据</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 竞品分析标签页 -->
+        <div id="competitor-tab" class="tab-content">
+            <div class="date-range-picker">
+                <label>竞品域名:</label>
+                <input type="text" id="competitor-domain" placeholder="example.com" value="example.com">
+                <button onclick="loadCompetitorData()">分析</button>
+            </div>
+
+            <!-- 指标卡片 -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="label">月访问量</div>
+                    <div class="value" id="competitor-visitors">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">页面浏览量</div>
+                    <div class="value" id="competitor-pageviews">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">跳出率</div>
+                    <div class="value" id="competitor-bounce">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">域名评分</div>
+                    <div class="value" id="competitor-score">-</div>
+                </div>
+            </div>
+
+            <!-- 图表 -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>竞品流量对比</h3>
+                    <div class="chart-container">
+                        <canvas id="competitor-comparison-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>竞品流量来源</h3>
+                    <div class="chart-container">
+                        <canvas id="competitor-sources-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 竞品列表 -->
+            <div class="data-table">
+                <h3>主要竞争对手</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>域名</th>
+                            <th>相似度</th>
+                            <th>共同关键词</th>
+                            <th>预估流量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="competitors-table-body">
+                        <tr><td colspan="4" style="text-align:center;">暂无数据</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ==================== 全局变量 ====================
+        let trafficTrendChart = null;
+        let trafficSourcesChart = null;
+        let deviceChart = null;
+        let topPagesChart = null;
+        let rankingDistributionChart = null;
+        let topKeywordsChart = null;
+        let competitorComparisonChart = null;
+        let competitorSourcesChart = null;
+
+        // API 基础 URL
+        const API_BASE = '/api';
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置默认日期范围（最近 30 天）
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+
+            document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+            document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+
+            // 标签页切换
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    document.getElementById(this.dataset.tab + '-tab').classList.add('active');
+                });
+            });
+
+            // 加载初始数据
+            loadTrafficData();
+            loadSeoData();
+        });
+
+        // ==================== 流量分析 ====================
+        async function loadTrafficData() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+
+            try {
+                // 获取流量汇总数据
+                const summaryResponse = await fetch(`${API_BASE}/analytics/traffic/summary`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ start_date: startDate, end_date: endDate })
+                });
+
+                const summaryData = await summaryResponse.json();
+
+                if (summaryData.code === 0 && summaryData.data) {
+                    updateTrafficMetrics(summaryData.data);
+                }
+
+                // 更新图表
+                updateTrafficCharts();
+
+            } catch (error) {
+                console.error('加载流量数据失败:', error);
+                // 使用模拟数据
+                updateTrafficMetrics(getMockTrafficSummary());
+                updateTrafficCharts();
+            }
+        }
+
+        function updateTrafficMetrics(data) {
+            document.getElementById('total-visitors').textContent = formatNumber(data.total_visitors || 0);
+            document.getElementById('total-pageviews').textContent = formatNumber(data.total_page_views || 0);
+            document.getElementById('avg-session').textContent = formatDuration(data.avg_session_duration || 0);
+            document.getElementById('bounce-rate').textContent = ((data.bounce_rate || 0) * 100).toFixed(1) + '%';
+            document.getElementById('conversion-rate').textContent = ((data.conversion_rate || 0) * 100).toFixed(1) + '%';
+        }
+
+        function updateTrafficCharts() {
+            // 流量趋势图表
+            const trafficTrendCtx = document.getElementById('traffic-trend-chart').getContext('2d');
+            if (trafficTrendChart) trafficTrendChart.destroy();
+
+            trafficTrendChart = new Chart(trafficTrendCtx, {
+                type: 'line',
+                data: {
+                    labels: generateDateLabels(30),
+                    datasets: [{
+                        label: '访客数',
+                        data: generateRandomData(30, 1000, 5000),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // 流量来源图表
+            const trafficSourcesCtx = document.getElementById('traffic-sources-chart').getContext('2d');
+            if (trafficSourcesChart) trafficSourcesChart.destroy();
+
+            trafficSourcesChart = new Chart(trafficSourcesCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['自然搜索', '直接访问', '社交媒体', '引荐', '付费广告'],
+                    datasets: [{
+                        data: [45, 25, 15, 10, 5],
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+
+            // 设备分布图表
+            const deviceCtx = document.getElementById('device-chart').getContext('2d');
+            if (deviceChart) deviceChart.destroy();
+
+            deviceChart = new Chart(deviceCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['桌面端', '移动端', '平板'],
+                    datasets: [{
+                        data: [45, 45, 10],
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+
+            // Top 页面图表
+            const topPagesCtx = document.getElementById('top-pages-chart').getContext('2d');
+            if (topPagesChart) topPagesChart.destroy();
+
+            topPagesChart = new Chart(topPagesCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['/home', '/products', '/about', '/blog', '/contact'],
+                    datasets: [{
+                        label: '页面浏览量',
+                        data: [5000, 3500, 2000, 1500, 1000],
+                        backgroundColor: '#3b82f6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // ==================== SEO 指标 ====================
+        function loadSeoData() {
+            // 更新 SEO 指标卡片
+            document.getElementById('avg-position').textContent = '12.5';
+            document.getElementById('seo-score').textContent = '85';
+            document.getElementById('indexed-pages').textContent = formatNumber(1250);
+            document.getElementById('backlinks').textContent = formatNumber(3456);
+
+            // 更新 SEO 图表
+            updateSeoCharts();
+        }
+
+        function updateSeoCharts() {
+            // 关键词排名分布
+            const rankingCtx = document.getElementById('ranking-distribution-chart').getContext('2d');
+            if (rankingDistributionChart) rankingDistributionChart.destroy();
+
+            rankingDistributionChart = new Chart(rankingCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['1-3', '4-10', '11-20', '21-50', '51-100'],
+                    datasets: [{
+                        label: '关键词数量',
+                        data: [25, 80, 150, 200, 180],
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#f97316', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // Top 关键词
+            const keywordsCtx = document.getElementById('top-keywords-chart').getContext('2d');
+            if (topKeywordsChart) topKeywordsChart.destroy();
+
+            topKeywordsChart = new Chart(keywordsCtx, {
+                type: 'horizontalBar',
+                data: {
+                    labels: ['SEO tools', 'keyword research', 'analytics', 'marketing', 'traffic'],
+                    datasets: [{
+                        label: '搜索量',
+                        data: [12000, 8500, 6000, 4500, 3000],
+                        backgroundColor: '#3b82f6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // ==================== 竞品分析 ====================
+        async function loadCompetitorData() {
+            const domain = document.getElementById('competitor-domain').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/data-sources/competitors/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ domain: domain, country: 'us' })
+                });
+
+                const data = await response.json();
+
+                if (data.code === 0 && data.data) {
+                    updateCompetitorMetrics(data.data);
+                    updateCompetitorCharts(data.data);
+                }
+
+            } catch (error) {
+                console.error('加载竞品数据失败:', error);
+                // 使用模拟数据
+                updateCompetitorMetrics(getMockCompetitorData());
+                updateCompetitorCharts(getMockCompetitorData());
+            }
+        }
+
+        function updateCompetitorMetrics(data) {
+            document.getElementById('competitor-visitors').textContent = formatNumber(data.traffic_summary?.total_visitors || 50000);
+            document.getElementById('competitor-pageviews').textContent = formatNumber(data.traffic_summary?.total_page_views || 150000);
+            document.getElementById('competitor-bounce').textContent = ((data.traffic_summary?.bounce_rate || 0.35) * 100).toFixed(1) + '%';
+            document.getElementById('competitor-score').textContent = data.traffic_summary?.domain_rating || 65;
+        }
+
+        function updateCompetitorCharts(data) {
+            // 竞品流量对比
+            const comparisonCtx = document.getElementById('competitor-comparison-chart').getContext('2d');
+            if (competitorComparisonChart) competitorComparisonChart.destroy();
+
+            competitorComparisonChart = new Chart(comparisonCtx, {
+                type: 'line',
+                data: {
+                    labels: generateDateLabels(30),
+                    datasets: [
+                        {
+                            label: '我方',
+                            data: generateRandomData(30, 3000, 5000),
+                            borderColor: '#3b82f6',
+                            tension: 0.4
+                        },
+                        {
+                            label: data.domain || '竞品',
+                            data: generateRandomData(30, 4000, 6000),
+                            borderColor: '#ef4444',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // 竞品流量来源
+            const sourcesCtx = document.getElementById('competitor-sources-chart').getContext('2d');
+            if (competitorSourcesChart) competitorSourcesChart.destroy();
+
+            competitorSourcesChart = new Chart(sourcesCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['自然搜索', '直接访问', '社交媒体', '引荐', '付费广告'],
+                    datasets: [{
+                        data: [40, 30, 12, 10, 8],
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+        }
+
+        // ==================== 工具函数 ====================
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toString();
+        }
+
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function generateDateLabels(days) {
+            const labels = [];
+            const today = new Date();
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                labels.push(date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }));
+            }
+            return labels;
+        }
+
+        function generateRandomData(count, min, max) {
+            return Array.from({ length: count }, () => Math.floor(Math.random() * (max - min + 1)) + min);
+        }
+
+        function getMockTrafficSummary() {
+            return {
+                total_visitors: 45230,
+                total_page_views: 125680,
+                avg_session_duration: 245,
+                bounce_rate: 0.35,
+                conversion_rate: 0.032
+            };
+        }
+
+        function getMockCompetitorData() {
+            return {
+                domain: 'example.com',
+                traffic_summary: {
+                    total_visitors: 50000,
+                    total_page_views: 150000,
+                    bounce_rate: 0.35,
+                    domain_rating: 65
+                }
+            };
+        }
+    </script>
+</body>
+</html>

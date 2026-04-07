@@ -1,0 +1,97 @@
+# 重启服务 - 安全重启指定服务，支持优雅关闭
+script_id: restart-service-001
+name: 重启服务
+description: 安全重启指定服务，支持优雅关闭
+category: restart_service
+target_type: service
+risk_level: low
+timeout_seconds: 120
+
+parameters:
+  - name: graceful
+    type: boolean
+    default: true
+    description: 是否优雅关闭
+  - name: timeout
+    type: integer
+    default: 30
+    description: 等待服务停止的超时时间（秒）
+  - name: port
+    type: integer
+    default: 8080
+    description: 服务健康检查端口
+
+script_content: |
+  #!/bin/bash
+  set -e
+
+  SERVICE_NAME="{{target_service}}"
+  GRACEFUL="{{graceful}}"
+  TIMEOUT="{{timeout}}"
+  PORT="{{port}}"
+
+  echo "=== 重启服务：$SERVICE_NAME ==="
+  echo "优雅关闭：$GRACEFUL, 超时时间：${TIMEOUT}s"
+
+  # 检查服务是否存在
+  if ! systemctl list-units --type=service --all | grep -q "$SERVICE_NAME"; then
+    echo "警告：服务 $SERVICE_NAME 不存在，跳过重启"
+    exit 0
+  fi
+
+  # 停止服务
+  echo "停止服务：$SERVICE_NAME"
+  if [ "$GRACEFUL" = "true" ]; then
+    systemctl stop "$SERVICE_NAME" --timeout="${TIMEOUT}s"
+  else
+    systemctl stop "$SERVICE_NAME"
+  fi
+
+  # 等待服务完全停止
+  sleep 2
+
+  # 启动服务
+  echo "启动服务：$SERVICE_NAME"
+  systemctl start "$SERVICE_NAME"
+
+  # 等待服务启动
+  sleep 3
+
+  # 检查服务状态
+  echo "检查服务状态..."
+  systemctl status "$SERVICE_NAME" --no-pager
+
+  # 健康检查
+  echo "执行健康检查..."
+  if curl -sf "http://localhost:${PORT}/health" > /dev/null 2>&1; then
+    echo "健康检查通过"
+  else
+    echo "警告：健康检查可能失败，但服务已启动"
+  fi
+
+  echo "=== 服务重启完成 ==="
+
+verification_steps:
+  - name: service_active
+    check: systemctl is-active {{target_service}}
+    expected: active
+    timeout: 10
+
+  - name: health_check
+    check: curl -sf http://localhost:{{port}}/health
+    expected: "true"
+    timeout: 30
+
+rollback_script: |
+  # 重启操作通常不需要回滚
+  # 如果服务无法启动，记录日志
+  echo "Restart operation does not support rollback"
+  echo "Please check service logs manually"
+
+version: 1.0.0
+author: system
+tags:
+  - restart
+  - service
+  - maintenance
+enabled: true

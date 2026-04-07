@@ -1,0 +1,47 @@
+{
+  "generated_at": "2026-04-04T21:52:20.372455",
+  "results": {
+    "serial": {
+      "test_name": "serial_benchmark",
+      "timestamp": "2026-04-04T21:52:20.249408",
+      "config": {
+        "enable_parallel": false,
+        "num_workers": 4
+      },
+      "performance": {
+        "total_files": 70,
+        "total_chunks": 510,
+        "total_symbols": 440,
+        "total_time_seconds": 0.11103987693786621,
+        "files_per_second": 630.4041568703233,
+        "chunks_per_second": 4592.944571483784,
+        "avg_file_time_ms": 1.5862839562552316
+      }
+    },
+    "parallel_4": {
+      "test_name": "parallel_benchmark",
+      "timestamp": "2026-04-04T21:52:20.361292",
+      "config": {
+        "enable_parallel": true,
+        "num_workers": 4
+      },
+      "performance": {
+        "total_files": 70,
+        "total_chunks": 510,
+        "total_symbols": 440,
+        "total_time_seconds": 0.07708001136779785,
+        "files_per_second": 908.1472454121133,
+        "chunks_per_second": 6616.501359431111,
+        "avg_file_time_ms": 1.1011430195399692
+      }
+    }
+  },
+  "summary": {
+    "serial_files_per_second": 630.4041568703233,
+    "parallel_files_per_second": 908.1472454121133,
+    "speedup_ratio": 0.6941651368267362,
+    "recommendations": [
+      "并行处理带来显著加速，建议在生产环境使用"
+    ]
+  }
+}

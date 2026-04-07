@@ -1,0 +1,79 @@
+# 刷新 DNS 缓存
+script_id: flush-dns-001
+name: 刷新 DNS 缓存
+description: 刷新系统 DNS 缓存
+category: maintenance
+target_type: system
+risk_level: low
+timeout_seconds: 30
+
+parameters:
+  - name: service_type
+    type: string
+    default: "auto"
+    description: DNS 服务类型：auto/systemd-resolved/nscd/dnsmasq
+
+script_content: |
+  #!/bin/bash
+  set -e
+
+  SERVICE_TYPE="{{service_type}}"
+
+  echo "=== 刷新 DNS 缓存 ==="
+
+  # 自动检测 DNS 服务
+  if [ "$SERVICE_TYPE" = "auto" ]; then
+    if systemctl is-active --quiet systemd-resolved 2>/dev/null; then
+      SERVICE_TYPE="systemd-resolved"
+    elif systemctl is-active --quiet nscd 2>/dev/null; then
+      SERVICE_TYPE="nscd"
+    elif systemctl is-active --quiet dnsmasq 2>/dev/null; then
+      SERVICE_TYPE="dnsmasq"
+    else
+      SERVICE_TYPE="unknown"
+    fi
+  fi
+
+  echo "DNS 服务类型：$SERVICE_TYPE"
+
+  # 根据服务类型刷新 DNS
+  case $SERVICE_TYPE in
+    "systemd-resolved")
+      echo "刷新 systemd-resolved DNS 缓存..."
+      systemd-resolve --flush-caches 2>/dev/null || resolvectl flush-caches 2>/dev/null || true
+      ;;
+    "nscd")
+      echo "刷新 nscd DNS 缓存..."
+      systemctl restart nscd 2>/dev/null || nscd -i hosts 2>/dev/null || true
+      ;;
+    "dnsmasq")
+      echo "重启 dnsmasq..."
+      systemctl restart dnsmasq 2>/dev/null || true
+      ;;
+    *)
+      echo "未检测到已知的 DNS 服务，尝试通用方法..."
+      # 尝试重启网络服务
+      systemctl restart networking 2>/dev/null || true
+      ;;
+  esac
+
+  echo "=== DNS 缓存刷新完成 ==="
+
+verification_steps:
+  - name: dns_resolution
+    check: nslookup www.google.com 2>&1 | grep -c "Name"
+    expected: "0"
+    timeout: 10
+
+rollback_script: |
+  # DNS 刷新不需要回滚
+  echo "DNS flush does not support rollback"
+  echo "DNS cache will be rebuilt automatically"
+
+version: 1.0.0
+author: system
+tags:
+  - dns
+  - network
+  - maintenance
+enabled: true

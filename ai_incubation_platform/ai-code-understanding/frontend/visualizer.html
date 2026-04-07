@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 代码理解助手 - 可视化中心</title>
+  <!-- Cytoscape.js for graph visualization -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+  <!-- Cytoscape.js 布局扩展 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape-fcose/2.2.0/cytoscape-fcose.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --card: #232f3e;
+      --text: #e8ecf1;
+      --muted: #9aa8b8;
+      --accent: #3d9cf5;
+      --accent-soft: rgba(61, 156, 245, 0.15);
+      --border: rgba(255, 255, 255, 0.08);
+      --success: #4caf50;
+      --warning: #ff9800;
+      --error: #f44336;
+      --radius: 12px;
+      --font: "SF Pro Text", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    header {
+      text-align: center;
+      padding: 2.5rem 0 2rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+    header h1 { font-size: clamp(1.5rem, 4vw, 2.5rem); font-weight: 700; margin: 0 0 0.75rem; }
+    header p { color: var(--muted); max-width: 42em; margin: 0 auto; }
+    .status-bar {
+      display: flex; gap: 1rem; justify-content: center; align-items: center;
+      padding: 0.75rem 1rem; background: var(--surface); border-radius: var(--radius);
+      margin-top: 1.5rem; font-size: 0.9rem;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+    .nav-tabs {
+      display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;
+      margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;
+    }
+    .nav-tab {
+      padding: 0.6rem 1.2rem; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--surface); color: var(--text); cursor: pointer;
+      transition: all 0.2s; font-size: 0.95rem; text-decoration: none; display: inline-block;
+    }
+    .nav-tab:hover { background: var(--card); border-color: var(--accent); }
+    .nav-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .tabs {
+      display: flex; gap: 0.5rem; flex-wrap: wrap;
+      margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;
+    }
+    .tab-btn {
+      padding: 0.6rem 1.2rem; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--surface); color: var(--text); cursor: pointer;
+      transition: all 0.2s; font-size: 0.95rem;
+    }
+    .tab-btn:hover { background: var(--card); border-color: var(--accent); }
+    .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem;
+    }
+    .card h3 { margin: 0 0 1rem; font-size: 1.1rem; color: var(--accent); }
+    label { display: block; margin-bottom: 0.5rem; color: var(--muted); font-size: 0.9rem; }
+    input, textarea, select {
+      width: 100%; padding: 0.75rem; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--bg); color: var(--text);
+      font-family: inherit; font-size: 0.95rem; margin-bottom: 1rem;
+    }
+    input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    textarea { min-height: 120px; resize: vertical; font-family: "Consolas", "Monaco", monospace; }
+    button {
+      padding: 0.75rem 1.5rem; border: none; border-radius: 8px;
+      background: var(--accent); color: #fff; cursor: pointer;
+      font-size: 0.95rem; font-weight: 500; transition: all 0.2s;
+    }
+    button:hover { opacity: 0.9; transform: translateY(-1px); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .result {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 1rem; margin-top: 1rem;
+      font-family: "Consolas", "Monaco", monospace; font-size: 0.85rem;
+      white-space: pre-wrap; word-break: break-word; max-height: 400px; overflow-y: auto;
+    }
+    .result.json { background: #1e1e1e; }
+    .result.markdown { background: #1e1e1e; }
+    .loading { display: inline-block; width: 1rem; height: 1rem; border: 2px solid var(--muted); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .grid { display: grid; gap: 1rem; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+    .hint { font-size: 0.85rem; color: var(--muted); margin-top: -0.5rem; margin-bottom: 1rem; }
+    .badge {
+      display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px;
+      font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem;
+    }
+    .badge-success { background: rgba(76, 175, 80, 0.2); color: var(--success); }
+    .badge-warning { background: rgba(255, 152, 0, 0.2); color: var(--warning); }
+    .badge-error { background: rgba(244, 67, 54, 0.2); color: var(--error); }
+
+    /* 可视化特定样式 */
+    .graph-container {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      min-height: 400px;
+      overflow: auto;
+    }
+    .graph-node {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      margin: 0.25rem;
+      background: var(--card);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .graph-node:hover {
+      background: var(--accent);
+      transform: scale(1.05);
+    }
+    .graph-node.core {
+      background: rgba(61, 156, 245, 0.3);
+      border-color: var(--success);
+    }
+    .graph-node.entry {
+      background: rgba(255, 152, 0, 0.3);
+      border-color: var(--warning);
+    }
+    .graph-edge {
+      color: var(--muted);
+      font-size: 0.75rem;
+      margin: 0.25rem 0.5rem;
+    }
+    .metric-card {
+      background: linear-gradient(135deg, var(--surface), var(--card));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 0.5rem 0;
+    }
+    .metric-label {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .confidence-bar {
+      display: inline-block;
+      width: 100%;
+      height: 24px;
+      background: var(--bg);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    .confidence-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--error), var(--warning), var(--success));
+      transition: width 0.3s ease;
+    }
+    .confidence-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .citation-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      font-size: 0.85rem;
+    }
+    .citation-item:hover {
+      border-color: var(--accent);
+    }
+    .citation-path {
+      color: var(--accent);
+      font-family: monospace;
+    }
+    .tree-node {
+      padding: 0.25rem 0.5rem;
+      margin: 0.25rem 0;
+      background: var(--bg);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .tree-node:hover {
+      background: var(--card);
+    }
+    .tree-children {
+      margin-left: 1.5rem;
+      border-left: 1px solid var(--border);
+      padding-left: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>AI 代码理解助手 - 可视化中心</h1>
+      <p>代码地图、依赖关系、任务引导、监控指标的可视化展示</p>
+      <div class="status-bar">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">检查服务状态...</span>
+      </div>
+    </header>
+
+    <div class="nav-tabs">
+      <a href="index.html" class="nav-tab">API 调试</a>
+      <a href="visualizer.html" class="nav-tab active">可视化中心</a>
+      <a href="metrics.html" class="nav-tab">监控指标</a>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="dep-graph">依赖关系图</button>
+      <button class="tab-btn" data-tab="kg-viz">知识图谱</button>
+      <button class="tab-btn" data-tab="global-map-viz">全局地图</button>
+      <button class="tab-btn" data-tab="task-guide-viz">任务引导</button>
+      <button class="tab-btn" data-tab="citation-viz">引用溯源</button>
+    </div>
+
+    <!-- 依赖关系图 -->
+    <div class="panel active" id="panel-dep-graph">
+      <div class="card">
+        <h3>依赖关系图可视化</h3>
+        <div class="grid-2">
+          <div>
+            <label for="dep-project">项目名称</label>
+            <input type="text" id="dep-project" placeholder="my-project" />
+            <label for="dep-repo">仓库路径</label>
+            <input type="text" id="dep-repo" placeholder="/path/to/repo" />
+            <button onclick="loadDependencyGraph()">加载依赖图</button>
+          </div>
+          <div>
+            <label>图例</label>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem;">
+              <div><span class="graph-node core">核心模块</span> 高入度</div>
+              <div><span class="graph-node entry">入口点</span> 高出度</div>
+              <div><span class="graph-node">普通模块</span></div>
+            </div>
+          </div>
+        </div>
+        <div id="dep-graph-viz" class="graph-container" style="margin-top: 1rem;">
+          <p style="color: var(--muted); text-align: center;">点击"加载依赖图"开始</p>
+        </div>
+        <div id="dep-graph-text" class="result" style="margin-top: 1rem;"></div>
+      </div>
+    </div>
+
+    <!-- 知识图谱可视化 (P7 新增) -->
+    <div class="panel" id="panel-kg-viz">
+      <div class="card">
+        <h3>知识图谱可视化 <span class="badge badge-success">P7</span></h3>
+        <p style="color: var(--muted); margin-bottom: 1rem;">
+          交互式展示代码库的完整知识结构，支持节点拖拽、缩放、点击查看详情
+        </p>
+        <div class="grid-2">
+          <div>
+            <label for="kg-project">项目名称</label>
+            <input type="text" id="kg-project" placeholder="my-project" />
+            <label for="kg-repo">仓库路径</label>
+            <input type="text" id="kg-repo" placeholder="/path/to/repo" />
+            <label for="kg-layout">布局算法</label>
+            <select id="kg-layout">
+              <option value="force">力导向布局 (推荐)</option>
+              <option value="dag">有向图布局</option>
+              <option value="circular">环形布局</option>
+            </select>
+            <button onclick="loadKnowledgeGraphViz()">加载知识图谱</button>
+          </div>
+          <div>
+            <label>图例</label>
+            <div id="kg-legend" style="margin-top: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin: 0.25rem 0;">
+                <span style="width: 16px; height: 16px; background: #FF6B6B; border-radius: 50%; display: inline-block;"></span>
+                <span>项目 (Project)</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin: 0.25rem 0;">
+                <span style="width: 16px; height: 16px; background: #4ECDC4; border-radius: 4px; display: inline-block;"></span>
+                <span>包 (Package)</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin: 0.25rem 0;">
+                <span style="width: 16px; height: 16px; background: #45B7D1; border-radius: 50%; display: inline-block;"></span>
+                <span>模块 (Module)</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin: 0.25rem 0;">
+                <span style="width: 16px; height: 16px; background: #96CEB4; border-radius: 50%; display: inline-block;"></span>
+                <span>类 (Class)</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin: 0.25rem 0;">
+                <span style="width: 16px; height: 16px; background: #FFEAA7; border-radius: 50%; display: inline-block;"></span>
+                <span>函数 (Function)</span>
+              </div>
+            </div>
+            <label style="margin-top: 1rem;">操作说明</label>
+            <div style="font-size: 0.85rem; color: var(--muted);">
+              <div>• 拖拽节点可调整位置</div>
+              <div>• 滚轮缩放画布</div>
+              <div>• 点击节点查看详情</div>
+              <div>• 双击空白处重置视图</div>
+            </div>
+          </div>
+        </div>
+        <div id="kg-viz-container" class="graph-container" style="margin-top: 1rem; min-height: 600px; position: relative;">
+          <div id="kg-viz-status" style="position: absolute; top: 1rem; left: 1rem; z-index: 10; background: var(--surface); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border);">
+            <span id="kg-node-count">0</span> 节点 | <span id="kg-edge-count">0</span> 边
+          </div>
+          <div id="kg-viz" style="width: 100%; height: 100%;"></div>
+        </div>
+        <div id="kg-node-detail" class="card" style="margin-top: 1rem; display: none;">
+          <h4>节点详情</h4>
+          <div id="kg-node-detail-content"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 全局地图可视化 -->
+    <div class="panel" id="panel-global-map-viz">
+      <div class="card">
+        <h3>全局代码地图</h3>
+        <div class="grid-2">
+          <div>
+            <label for="map-viz-project">项目名称</label>
+            <input type="text" id="map-viz-project" placeholder="my-project" />
+            <label for="map-viz-repo">仓库路径</label>
+            <input type="text" id="map-viz-repo" placeholder="/path/to/repo" />
+            <button onclick="loadGlobalMapViz()">加载地图</button>
+          </div>
+          <div>
+            <label>架构分层</label>
+            <div id="map-layers" style="margin-top: 0.5rem;"></div>
+          </div>
+        </div>
+        <div id="map-viz-content" class="result" style="margin-top: 1rem;"></div>
+      </div>
+    </div>
+
+    <!-- 任务引导可视化 -->
+    <div class="panel" id="panel-task-guide-viz">
+      <div class="card">
+        <h3>任务引导路径</h3>
+        <label for="task-viz-desc">任务描述</label>
+        <textarea id="task-viz-desc" placeholder="修复用户登录失败的 bug" style="min-height: 80px;"></textarea>
+        <label for="task-viz-project">项目名称 (可选)</label>
+        <input type="text" id="task-viz-project" placeholder="my-project" />
+        <button onclick="loadTaskGuideViz()">生成引导路径</button>
+        <div id="task-guide-viz-content" style="margin-top: 1rem;"></div>
+      </div>
+    </div>
+
+    <!-- 引用溯源可视化 -->
+    <div class="panel" id="panel-citation-viz">
+      <div class="card">
+        <h3>引用溯源查看器</h3>
+        <p style="color: var(--muted); margin-bottom: 1rem;">
+          展示代码解释、模块摘要等功能的引用来源，支持置信度可视化
+        </p>
+        <label for="citation-demo-select">选择示例</label>
+        <select id="citation-demo-select" onchange="loadCitationDemo()">
+          <option value="">-- 选择示例 --</option>
+          <option value="explain">代码解释示例</option>
+          <option value="summarize">模块摘要示例</option>
+          <option value="ask">代码问答示例</option>
+        </select>
+        <div id="citation-viz-content" style="margin-top: 1rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:8011';
+
+    // Tab 切换
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // 检查服务状态
+    async function checkStatus() {
+      try {
+        const res = await fetch(`${API_BASE}/health`);
+        if (res.ok) {
+          document.getElementById('statusDot').style.background = 'var(--success)';
+          document.getElementById('statusText').textContent = '服务正常运行 - 端口 8011';
+        } else {
+          throw new Error('服务异常');
+        }
+      } catch (e) {
+        document.getElementById('statusDot').style.background = 'var(--error)';
+        document.getElementById('statusText').textContent = '服务未启动 - 请运行 python src/main.py';
+      }
+    }
+    checkStatus();
+
+    // 通用 API 调用
+    async function callApi(endpoint, body) {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      return res.json();
+    }
+
+    // 置信度条可视化
+    function createConfidenceBar(confidence, width = 200) {
+      const percentage = Math.round(confidence * 100);
+      let status = '低可信';
+      let color = 'var(--error)';
+      if (confidence >= 0.8) {
+        status = '高可信';
+        color = 'var(--success)';
+      } else if (confidence >= 0.6) {
+        status = '中可信';
+        color = 'var(--warning)';
+      }
+      return `
+        <div style="display: inline-block; width: ${width}px; vertical-align: middle;">
+          <div class="confidence-bar">
+            <div class="confidence-fill" style="width: ${percentage}%; background: ${color};"></div>
+            <span class="confidence-text">${percentage}% ${status}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // 引用列表可视化
+    function renderCitations(citations) {
+      if (!citations || citations.length === 0) {
+        return '<p style="color: var(--muted);">暂无引用</p>';
+      }
+      return citations.map((cit, i) => `
+        <div class="citation-item">
+          <div><strong>引用 ${i + 1}:</strong> <span class="citation-path">${cit.file_path}:${cit.start_line}-${cit.end_line}</span></div>
+          <div style="margin-top: 0.5rem; color: var(--muted);">相似度：${(cit.similarity * 100).toFixed(1)}%</div>
+          ${cit.content ? `<div style="margin-top: 0.5rem; font-family: monospace; font-size: 0.75rem; white-space: pre-wrap; max-height: 100px; overflow: auto;">${cit.content.substring(0, 300)}${cit.content.length > 300 ? '...' : ''}</div>` : ''}
+        </div>
+      `).join('');
+    }
+
+    // 加载依赖关系图
+    async function loadDependencyGraph() {
+      const project = document.getElementById('dep-project').value;
+      const repo = document.getElementById('dep-repo').value;
+      if (!project.trim() || !repo.trim()) {
+        alert('请输入项目名称和仓库路径');
+        return;
+      }
+
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading"></span> 加载中...';
+
+      try {
+        const data = await callApi('/api/understanding/dependency-graph', {
+          project_name: project,
+          repo_path: repo,
+          output_format: 'json'
+        });
+
+        // 渲染文本视图
+        renderDependencyGraphText(data);
+        // 渲染可视化图
+        renderDependencyGraphViz(data);
+      } catch (e) {
+        document.getElementById('dep-graph-text').textContent = '加载失败：' + e.message;
+      }
+
+      btn.disabled = false;
+      btn.textContent = '加载依赖图';
+    }
+
+    // 渲染依赖图文本
+    function renderDependencyGraphText(data) {
+      const lines = ['🔗 依赖关系图\n'];
+      const nodes = data.nodes || [];
+      const edges = data.edges || [];
+
+      // 统计入度出度
+      const nodeInfo = {};
+      nodes.forEach(node => {
+        nodeInfo[node.id] = { name: node.name || node.id, inDegree: 0, outDegree: 0 };
+      });
+      edges.forEach(edge => {
+        if (nodeInfo[edge.target]) nodeInfo[edge.target].inDegree++;
+        if (nodeInfo[edge.source]) nodeInfo[edge.source].outDegree++;
+      });
+
+      // 核心模块
+      lines.push('\n## 核心模块 (高入度)\n');
+      const coreModules = Object.entries(nodeInfo)
+        .filter(([_, info]) => info.inDegree > 0)
+        .sort((a, b) => b[1].inDegree - a[1].inDegree)
+        .slice(0, 10);
+
+      coreModules.forEach(([id, info]) => {
+        lines.push(`### ${info.name}`);
+        lines.push(`   入度：${info.inDegree} | 出度：${info.outDegree}\n`);
+      });
+
+      document.getElementById('dep-graph-text').textContent = lines.join('\n');
+    }
+
+    // 渲染依赖图可视化
+    function renderDependencyGraphViz(data) {
+      const container = document.getElementById('dep-graph-viz');
+      const nodes = data.nodes || [];
+      const edges = data.edges || [];
+
+      // 计算入度出度
+      const nodeInfo = {};
+      nodes.forEach(node => {
+        nodeInfo[node.id] = {
+          name: node.name || node.id,
+          inDegree: 0,
+          outDegree: 0,
+          type: node.type || 'normal'
+        };
+      });
+      edges.forEach(edge => {
+        if (nodeInfo[edge.target]) nodeInfo[edge.target].inDegree++;
+        if (nodeInfo[edge.source]) nodeInfo[edge.source].outDegree++;
+      });
+
+      // 生成节点 HTML
+      let html = '<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center;">';
+
+      // 核心模块（高入度）
+      const coreModules = Object.entries(nodeInfo)
+        .filter(([_, info]) => info.inDegree >= 3)
+        .sort((a, b) => b[1].inDegree - a[1].inDegree);
+
+      if (coreModules.length > 0) {
+        html += '<div style="width: 100%; margin: 0.5rem 0; color: var(--success);">=== 核心模块 ===</div>';
+        coreModules.forEach(([id, info]) => {
+          html += `<div class="graph-node core" title="入度：${info.inDegree}, 出度：${info.outDegree}">${info.name}</div>`;
+        });
+      }
+
+      // 入口点（高出度低入度）
+      const entryModules = Object.entries(nodeInfo)
+        .filter(([_, info]) => info.outDegree > 0 && info.inDegree <= 1);
+
+      if (entryModules.length > 0) {
+        html += '<div style="width: 100%; margin: 1rem 0 0.5rem; color: var(--warning);">=== 潜在入口点 ===</div>';
+        entryModules.forEach(([id, info]) => {
+          html += `<div class="graph-node entry" title="入度：${info.inDegree}, 出度：${info.outDegree}">${info.name}</div>`;
+        });
+      }
+
+      // 普通模块
+      const normalModules = Object.entries(nodeInfo)
+        .filter(([_, info]) => info.inDegree > 0 && info.inDegree < 3 && info.type !== 'entry');
+
+      if (normalModules.length > 0) {
+        html += '<div style="width: 100%; margin: 1rem 0 0.5rem; color: var(--muted);">=== 其他模块 ===</div>';
+        normalModules.slice(0, 20).forEach(([id, info]) => {
+          html += `<div class="graph-node" title="入度：${info.inDegree}, 出度：${info.outDegree}">${info.name}</div>`;
+        });
+      }
+
+      html += '</div>';
+      container.innerHTML = html || '<p style="color: var(--muted); text-align: center;">无数据</p>';
+    }
+
+    // 加载全局地图
+    async function loadGlobalMapViz() {
+      const project = document.getElementById('map-viz-project').value;
+      const repo = document.getElementById('map-viz-repo').value;
+      if (!project.trim()) {
+        alert('请输入项目名称');
+        return;
+      }
+
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading"></span> 加载中...';
+
+      try {
+        const data = await callApi('/api/understanding/global-map', {
+          project_name: project,
+          repo_hint: repo,
+          format: 'json'
+        });
+
+        // 渲染架构分层
+        const layersContainer = document.getElementById('map-layers');
+        const layers = data.layers || [];
+        layersContainer.innerHTML = layers.map(layer => `
+          <div style="margin: 0.5rem 0; padding: 0.5rem; background: var(--bg); border-radius: 6px;">
+            <strong style="color: var(--accent);">${layer.name}</strong>
+            <div style="font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem;">
+              ${layer.files ? layer.files.length : 0} 个文件
+            </div>
+          </div>
+        `).join('') || '<p style="color: var(--muted);">无分层数据</p>';
+
+        // 渲染详细内容
+        const contentEl = document.getElementById('map-viz-content');
+        let content = `# ${data.project || project}\n\n`;
+
+        if (data.stack) {
+          content += `**技术栈**: ${data.stack.languages?.join(', ') || '未知'} | ${data.stack.frameworks?.join(', ') || '未知'}\n\n`;
+        }
+
+        if (data.entrypoints && data.entrypoints.length > 0) {
+          content += '## 入口点\n';
+          data.entrypoints.forEach(ep => {
+            content += `- ${ep.path} (${ep.type})\n`;
+          });
+          content += '\n';
+        }
+
+        contentEl.textContent = content || '无数据';
+      } catch (e) {
+        document.getElementById('map-viz-content').textContent = '加载失败：' + e.message;
+      }
+
+      btn.disabled = false;
+      btn.textContent = '加载地图';
+    }
+
+    // 加载任务引导
+    async function loadTaskGuideViz() {
+      const taskDesc = document.getElementById('task-viz-desc').value;
+      const project = document.getElementById('task-viz-project').value;
+      if (!taskDesc.trim()) {
+        alert('请输入任务描述');
+        return;
+      }
+
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading"></span> 生成中...';
+
+      try {
+        const data = await callApi('/api/understanding/task-guide', {
+          task_description: taskDesc,
+          project_name: project || null
+        });
+
+        const container = document.getElementById('task-guide-viz-content');
+        let html = `<h4>任务：${data.task || taskDesc}</h4>`;
+
+        if (data.task_type) {
+          html += `<p style="color: var(--muted);">类型：${data.task_type}</p>`;
+        }
+
+        if (data.suggested_reading_order && data.suggested_reading_order.length > 0) {
+          html += '<h4>建议阅读顺序</h4><div style="display: flex; flex-direction: column; gap: 0.5rem;">';
+          data.suggested_reading_order.forEach((item, i) => {
+            const path = item.file_path || item.path || item;
+            const relevance = item.relevance || 0;
+            html += `<div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="color: var(--accent); font-weight: 600;">${i + 1}.</span>
+              <span class="citation-path">${path}</span>
+              ${relevance ? createConfidenceBar(relevance, 100) : ''}
+            </div>`;
+          });
+          html += '</div>';
+        }
+
+        if (data.questions_to_clarify && data.questions_to_clarify.length > 0) {
+          html += '<h4 style="margin-top: 1rem;">需要明确的问题</h4><ul>';
+          data.questions_to_clarify.forEach(q => {
+            html += `<li>${q}</li>`;
+          });
+          html += '</ul>';
+        }
+
+        container.innerHTML = html;
+      } catch (e) {
+        document.getElementById('task-guide-viz-content').innerHTML =
+          `<p style="color: var(--error);">加载失败：${e.message}</p>`;
+      }
+
+      btn.disabled = false;
+      btn.textContent = '生成引导路径';
+    }
+
+    // 加载引用示例
+    async function loadCitationDemo() {
+      const demoType = document.getElementById('citation-demo-select').value;
+      if (!demoType) return;
+
+      const container = document.getElementById('citation-viz-content');
+      container.innerHTML = '<p style="color: var(--muted);">加载中...</p>';
+
+      // 使用示例数据演示
+      const demoData = {
+        explain: {
+          title: '代码解释示例',
+          citations: [
+            { file_path: 'src/api/understanding.py', start_line: 1, end_line: 50, similarity: 0.85, content: 'def explain_code(request):\n    """解释代码片段"""\n    ...' },
+            { file_path: 'src/services/understanding_service.py', start_line: 100, end_line: 150, similarity: 0.72, content: 'def explain(self, code, language):\n    ...' }
+          ],
+          validation: { confidence: 0.82, is_valid: true }
+        },
+        summarize: {
+          title: '模块摘要示例',
+          citations: [
+            { file_path: 'src/core/global_map/generator.py', start_line: 1, end_line: 100, similarity: 0.91, content: 'class GlobalMapGenerator:\n    """全局地图生成器"""\n    ...' }
+          ],
+          validation: { confidence: 0.91, is_valid: true }
+        },
+        ask: {
+          title: '代码问答示例',
+          citations: [
+            { file_path: 'src/core/indexer/pipeline.py', start_line: 50, end_line: 80, similarity: 0.78, content: 'def search_code(self, query, top_k):\n    ...' },
+            { file_path: 'src/core/indexer/vector_stores/chroma_store.py', start_line: 30, end_line: 60, similarity: 0.65, content: 'def query(self, query_text, n_results):\n    ...' }
+          ],
+          validation: { confidence: 0.71, is_valid: true }
+        }
+      };
+
+      const data = demoData[demoType];
+      let html = `
+        <div class="card">
+          <h4>${data.title}</h4>
+          <div style="margin: 1rem 0;">
+            <strong>置信度:</strong> ${createConfidenceBar(data.validation.confidence)}
+          </div>
+          <div style="margin: 1rem 0;">
+            <strong>状态:</strong>
+            <span class="badge ${data.validation.is_valid ? 'badge-success' : 'badge-error'}">
+              ${data.validation.is_valid ? '验证通过' : '需要关注'}
+            </span>
+          </div>
+          <h5>引用溯源</h5>
+          ${renderCitations(data.citations)}
+        </div>
+      `;
+      container.innerHTML = html;
+    }
+
+    // ========== 知识图谱可视化 (P7 新增) ==========
+    let kgCytoInstance = null;
+
+    async function loadKnowledgeGraphViz() {
+      const project = document.getElementById('kg-project').value;
+      const repo = document.getElementById('kg-repo').value;
+      const layout = document.getElementById('kg-layout').value;
+
+      if (!project.trim()) {
+        alert('请输入项目名称');
+        return;
+      }
+
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading"></span> 加载中...';
+
+      try {
+        const data = await callApi('/api/understanding/knowledge-graph-viz', {
+          project_name: project,
+          repo_path: repo || '.',
+          layout: layout,
+          max_nodes: 100
+        });
+
+        if (data.error) {
+          alert('加载失败：' + data.error);
+          return;
+        }
+
+        // 更新统计
+        document.getElementById('kg-node-count').textContent = data.node_count || 0;
+        document.getElementById('kg-edge-count').textContent = data.edge_count || 0;
+
+        // 渲染图谱
+        renderKnowledgeGraph(data);
+
+      } catch (e) {
+        alert('加载失败：' + e.message);
+      }
+
+      btn.disabled = false;
+      btn.textContent = '加载知识图谱';
+    }
+
+    function renderKnowledgeGraph(data) {
+      const container = document.getElementById('kg-viz');
+      const nodes = data.nodes || [];
+      const edges = data.edges || [];
+
+      // 转换为 Cytoscape.js 数据格式
+      const elements = [];
+
+      // 添加节点
+      nodes.forEach(node => {
+        elements.push({
+          data: {
+            id: node.id,
+            label: node.name || node.display_name || node.id,
+            type: node.node_type || 'unknown',
+            file_path: node.file_path || '',
+            start_line: node.start_line || 0,
+            end_line: node.end_line || 0,
+            in_degree: node.in_degree || 0,
+            out_degree: node.out_degree || 0,
+            is_core: node.is_core || false
+          }
+        });
+      });
+
+      // 添加边
+      edges.forEach(edge => {
+        elements.push({
+          data: {
+            source: edge.source,
+            target: edge.target,
+            label: edge.edge_type || '',
+            edge_type: edge.edge_type || 'unknown'
+          }
+        });
+      });
+
+      // 初始化 Cytoscape
+      if (kgCytoInstance) {
+        kgCytoInstance.destroy();
+      }
+
+      kgCytoInstance = cytoscape({
+        container: container,
+        elements: elements,
+
+        style: [
+          // 节点样式
+          {
+            selector: 'node',
+            style: {
+              'label': 'data(label)',
+              'text-valign': 'center',
+              'text-halign': 'center',
+              'text-wrap': 'wrap',
+              'text-max-width': '100px',
+              'font-size': '10px',
+              'color': '#e8ecf1',
+              'text-outline-color': '#0f1419',
+              'text-outline-width': 2
+            }
+          },
+          // 根据节点类型设置颜色
+          {
+            selector: 'node[node_type = "PROJECT"]',
+            style: {
+              'background-color': '#FF6B6B',
+              'width': 60,
+              'height': 60,
+              'shape': 'diamond'
+            }
+          },
+          {
+            selector: 'node[node_type = "PACKAGE"]',
+            style: {
+              'background-color': '#4ECDC4',
+              'width': 40,
+              'height': 40,
+              'shape': 'rectangle'
+            }
+          },
+          {
+            selector: 'node[node_type = "MODULE"]',
+            style: {
+              'background-color': '#45B7D1',
+              'width': 35,
+              'height': 35,
+              'shape': 'ellipse'
+            }
+          },
+          {
+            selector: 'node[node_type = "CLASS"]',
+            style: {
+              'background-color': '#96CEB4',
+              'width': 30,
+              'height': 30,
+              'shape': 'ellipse'
+            }
+          },
+          {
+            selector: 'node[node_type = "FUNCTION"]',
+            style: {
+              'background-color': '#FFEAA7',
+              'width': 20,
+              'height': 20,
+              'shape': 'ellipse'
+            }
+          },
+          {
+            selector: 'node[is_core = true]',
+            style: {
+              'border-width': 3,
+              'border-color': '#4caf50'
+            }
+          },
+          // 边样式
+          {
+            selector: 'edge',
+            style: {
+              'width': 1,
+              'line-color': '#666',
+              'target-arrow-color': '#666',
+              'target-arrow-shape': 'triangle',
+              'curve-style': 'bezier',
+              'arrow-scale': 0.8
+            }
+          },
+          {
+            selector: 'edge[edge_type = "CALLS"]',
+            style: {
+              'width': 2,
+              'line-color': '#87CEEB',
+              'target-arrow-color': '#87CEEB'
+            }
+          },
+          {
+            selector: 'edge[edge_type = "IMPORTS"]',
+            style: {
+              'width': 2,
+              'line-color': '#FFA07A',
+              'target-arrow-color': '#FFA07A',
+              'line-style': 'dashed'
+            }
+          },
+          {
+            selector: 'edge[edge_type = "EXTENDS"]',
+            style: {
+              'width': 2,
+              'line-color': '#98FB98',
+              'target-arrow-color': '#98FB98'
+            }
+          },
+          {
+            selector: 'edge[edge_type = "CONTAINS"]',
+            style: {
+              'width': 1,
+              'line-color': '#CCCCCC',
+              'target-arrow-color': '#CCCCCC',
+              'line-style': 'solid'
+            }
+          }
+        ],
+
+        layout: {
+          name: 'fcose',
+          animate: true,
+          animationDuration: 1000,
+          randomize: true,
+          nodeRepulsion: 4500,
+          idealEdgeLength: 100,
+          edgeElasticity: 0.45,
+          numIter: 2500
+        },
+
+        userZoomingEnabled: true,
+        userPanningEnabled: true,
+        boxSelectionEnabled: true,
+        autolock: false,
+        autoungrabify: false
+      });
+
+      // 节点点击事件
+      kgCytoInstance.on('tap', 'node', function(evt) {
+        const node = evt.target;
+        const data = node.data();
+        showNodeDetail(data);
+      });
+
+      // 双击空白处重置视图
+      kgCytoInstance.on('dblclick', function() {
+        kgCytoInstance.fit();
+        kgCytoInstance.zoom({ level: 1 });
+      });
+    }
+
+    function showNodeDetail(data) {
+      const detailPanel = document.getElementById('kg-node-detail');
+      const contentEl = document.getElementById('kg-node-detail-content');
+
+      detailPanel.style.display = 'block';
+
+      let html = `
+        <div class="grid-2">
+          <div>
+            <p><strong>名称:</strong> ${data.label}</p>
+            <p><strong>类型:</strong> ${data.type || 'unknown'}</p>
+            <p><strong>文件:</strong> ${data.file_path || 'N/A'}</p>
+          </div>
+          <div>
+            <p><strong>行号:</strong> ${data.start_line || 'N/A'} - ${data.end_line || 'N/A'}</p>
+            <p><strong>入度:</strong> ${data.in_degree} (被引用次数)</p>
+            <p><strong>出度:</strong> ${data.out_degree} (引用其他)</p>
+            <p><strong>核心节点:</strong> ${data.is_core ? '✅ 是' : '❌ 否'}</p>
+          </div>
+        </div>
+      `;
+
+      if (data.file_path) {
+        html += `
+          <div style="margin-top: 1rem;">
+            <button onclick="copyToClipboard('${data.file_path}')">复制文件路径</button>
+          </div>
+        `;
+      }
+
+      contentEl.innerHTML = html;
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('已复制到剪贴板：' + text);
+      }).catch(err => {
+        console.error('复制失败:', err);
+      });
+    }
+  </script>
+</body>
+</html>

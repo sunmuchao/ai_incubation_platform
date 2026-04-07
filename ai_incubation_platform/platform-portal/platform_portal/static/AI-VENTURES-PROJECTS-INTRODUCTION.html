@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Ventures Incubator - 项目导航</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #6366F1; --primary-dark: #4F46E5; --secondary: #818CF8;
+            --accent: #F59E0B; --bg-dark: #1F2937; --bg-card: #374151;
+            --text-primary: #F9FAFB; --text-secondary: #9CA3AF;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #1F2937 0%, #111827 100%); color: var(--text-primary); min-height: 100vh; }
+        .header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); padding: 80px 20px; text-align: center; box-shadow: 0 4px 30px rgba(0,0,0,0.3); }
+        .header h1 { font-size: 3rem; margin-bottom: 15px; }
+        .header .subtitle { font-size: 1.3rem; color: rgba(255,255,255,0.9); max-width: 600px; margin: 0 auto; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 60px 20px; }
+        .projects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; }
+        .project-card { background: var(--bg-card); border-radius: 16px; padding: 30px; border: 1px solid rgba(255,255,255,0.1); transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s; cursor: pointer; text-decoration: none; color: inherit; display: block; }
+        .project-card:hover { transform: translateY(-8px); box-shadow: 0 20px 60px rgba(0,0,0,0.4); border-color: var(--secondary); }
+        .project-card .icon { font-size: 3.5rem; margin-bottom: 15px; }
+        .project-card h3 { font-size: 1.4rem; margin-bottom: 10px; color: var(--text-primary); }
+        .project-card .port { display: inline-block; background: rgba(99, 102, 241, 0.2); color: var(--secondary); padding: 4px 12px; border-radius: 12px; font-size: 0.85rem; margin-bottom: 15px; }
+        .project-card p { color: var(--text-secondary); line-height: 1.7; margin-bottom: 15px; }
+        .project-card .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag { background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; color: var(--text-secondary); }
+        .tag.enhanced { background: rgba(16, 185, 129, 0.2); color: #10B981; }
+        .stats { display: flex; justify-content: space-around; margin-top: 40px; padding: 30px; background: var(--bg-card); border-radius: 16px; }
+        .stat-item { text-align: center; }
+        .stat-value { font-size: 2.5rem; font-weight: bold; color: var(--secondary); }
+        .stat-label { color: var(--text-secondary); margin-top: 5px; }
+        .footer { text-align: center; padding: 40px 20px; color: var(--text-secondary); border-top: 1px solid rgba(255,255,255,0.1); margin-top: 60px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 AI Ventures Incubator</h1>
+        <p class="subtitle">11 个独立的 AI 创业项目 · 从组织协作到运行态优化 · 打造完整的 AI 商业生态系统</p>
+        <p class="subtitle" style="margin-top:16px;font-size:1rem;opacity:0.95;">
+            <strong>Agent 统一运行时：</strong>
+            <a href="/PLATFORM_AGENT_STANDARD.html" style="color:#fff;text-decoration:underline;">DeerFlow 2.0</a>
+            （<code style="background:rgba(0,0,0,0.2);padding:2px 8px;border-radius:6px;">deerflow-integration</code> 桥接）
+        </p>
+    </div>
+    <div class="container">
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value">11</div>
+                <div class="stat-label">个项目</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">4</div>
+                <div class="stat-label">个增强项目</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">100%</div>
+                <div class="stat-label">核心功能完成</div>
+            </div>
+        </div>
+        <br><br>
+        <h2 style="color: var(--secondary); margin-bottom: 30px;">📁 项目列表</h2>
+        <div class="projects-grid">
+            <a href="org-collab-ai.html" class="project-card">
+                <div class="icon">🤝</div>
+                <h3>组织协作 AI</h3>
+                <div class="port">端口 8000</div>
+                <p>AI 原生的组织协作管理平台，智能任务分配、成员能力评估、团队高效协作</p>
+                <div class="tags">
+                    <span class="tag">任务管理</span>
+                    <span class="tag">AI 分配</span>
+                    <span class="tag enhanced">✓ SQLite</span>
+                </div>
+            </a>
+            <a href="matchmaker-agent.html" class="project-card">
+                <div class="icon">💕</div>
+                <h3>红娘 Agent</h3>
+                <div class="port">端口 8001</div>
+                <p>AI 驱动的智能婚恋匹配系统，多维度兼容性算法帮助用户找到合适伴侣</p>
+                <div class="tags">
+                    <span class="tag">匹配算法</span>
+                    <span class="tag">用户画像</span>
+                    <span class="tag enhanced">✓ JWT</span>
+                    <span class="tag enhanced">✓ SQLite</span>
+                </div>
+            </a>
+            <a href="ai-employee-platform.html" class="project-card">
+                <div class="icon">🤖</div>
+                <h3>AI 员工出租平台</h3>
+                <div class="port">端口 8003</div>
+                <p>创建、训练、出租 AI 员工的市场平台，让 AI 成为可租赁的服务</p>
+                <div class="tags">
+                    <span class="tag">AI 员工</span>
+                    <span class="tag">租赁市场</span>
+                    <span class="tag">训练系统</span>
+                </div>
+            </a>
+            <a href="ai-hires-human.html" class="project-card">
+                <div class="icon">👤</div>
+                <h3>AI 雇佣真人平台</h3>
+                <div class="port">端口 8004</div>
+                <p>AI 发布任务雇佣真人完成工作的反向雇佣平台，人机协作新模式</p>
+                <div class="tags">
+                    <span class="tag">任务发布</span>
+                    <span class="tag">AI 决策</span>
+                    <span class="tag">真人接单</span>
+                </div>
+            </a>
+            <a href="ai-community-buying.html" class="project-card">
+                <div class="icon">🛒</div>
+                <h3>AI 社区团购</h3>
+                <div class="port">端口 8005</div>
+                <p>AI 优化选品、定价、团购组织的社区电商平台</p>
+                <div class="tags">
+                    <span class="tag">商品管理</span>
+                    <span class="tag">团购系统</span>
+                    <span class="tag">AI 选品</span>
+                </div>
+            </a>
+            <a href="ai-opportunity-miner.html" class="project-card">
+                <div class="icon">💎</div>
+                <h3>AI 商机挖掘</h3>
+                <div class="port">端口 8006</div>
+                <p>分析市场数据发现商业机会的智能系统，趋势预测和风险评估</p>
+                <div class="tags">
+                    <span class="tag">趋势分析</span>
+                    <span class="tag">商机发现</span>
+                    <span class="tag">报告生成</span>
+                </div>
+            </a>
+            <a href="human-ai-community.html" class="project-card">
+                <div class="icon">🌐</div>
+                <h3>人 AI 共建社区</h3>
+                <div class="port">端口 8007</div>
+                <p>AI 作为平等成员参与的混合社区平台，人机协作内容创作</p>
+                <div class="tags">
+                    <span class="tag">成员管理</span>
+                    <span class="tag">内容发布</span>
+                    <span class="tag">AI 生成</span>
+                </div>
+            </a>
+            <a href="ai-traffic-booster.html" class="project-card">
+                <div class="icon">🚀</div>
+                <h3>AI 流量曝光</h3>
+                <div class="port">端口 8008</div>
+                <p>用 AI 解决流量和曝光问题的优化平台，SEO 和内容智能优化</p>
+                <div class="tags">
+                    <span class="tag">SEO 分析</span>
+                    <span class="tag">内容优化</span>
+                    <span class="tag">A/B 测试</span>
+                </div>
+            </a>
+            <a href="data-agent-connector.html" class="project-card">
+                <div class="icon">🔗</div>
+                <h3>数据-Agent 连接器</h3>
+                <div class="port">端口 8009</div>
+                <p>连接各种数据源和 Agent 的桥梁工具，支持 NL2SQL 自然语言查询</p>
+                <div class="tags">
+                    <span class="tag">多数据源</span>
+                    <span class="tag">NL2SQL</span>
+                    <span class="tag enhanced">✓ MongoDB</span>
+                    <span class="tag enhanced">✓ Redis</span>
+                </div>
+            </a>
+            <a href="ai-code-understanding.html" class="project-card">
+                <div class="icon">📖</div>
+                <h3>AI 代码理解助手</h3>
+                <div class="port">端口 8011</div>
+                <p>帮助更好理解系统代码：片段解释、模块摘要、代码库语义问答（可对接 RAG）</p>
+                <div class="tags">
+                    <span class="tag">代码解释</span>
+                    <span class="tag">模块摘要</span>
+                    <span class="tag">RAG 问答</span>
+                </div>
+            </a>
+            <a href="ai-runtime-optimizer.html" class="project-card">
+                <div class="icon">⚡</div>
+                <h3>AI 运行态优化器</h3>
+                <div class="port">端口 8012</div>
+                <p>指标 + 用户使用行为综合分析，输出改进建议与代码变更草案（评审/CI 后合入）</p>
+                <div class="tags">
+                    <span class="tag">指标分析</span>
+                    <span class="tag">瓶颈诊断</span>
+                    <span class="tag">优化建议</span>
+                </div>
+            </a>
+        </div>
+    </div>
+    <div class="footer">
+        <p>AI Ventures Incubator © 2026-03-31</p>
+        <p style="margin-top: 10px;">11 个独立项目 · 11 个 AI 创业梦想</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,110 @@
+# 重置数据库连接池 - 重置数据库连接池
+script_id: restart-db-pool-001
+name: 重置数据库连接池
+description: 重置数据库连接池，解决连接泄漏问题
+category: database_optimization
+target_type: database
+risk_level: medium
+timeout_seconds: 60
+
+parameters:
+  - name: db_host
+    type: string
+    default: "localhost"
+    description: 数据库主机
+  - name: db_port
+    type: integer
+    default: 5432
+    description: 数据库端口
+  - name: db_name
+    type: string
+    default: "postgres"
+    description: 数据库名称
+  - name: pool_name
+    type: string
+    default: ""
+    description: 连接池名称（可选）
+
+script_content: |
+  #!/bin/bash
+  set -e
+
+  DB_HOST="{{db_host}}"
+  DB_PORT="{{db_port}}"
+  DB_NAME="{{db_name}}"
+  POOL_NAME="{{pool_name}}"
+
+  echo "=== 重置数据库连接池 ==="
+  echo "数据库：${DB_HOST}:${DB_PORT}/${DB_NAME}"
+
+  # 检查数据库连接
+  echo "检查数据库连接..."
+  if ! psql -h "$DB_HOST" -p "$DB_PORT" -U postgres -d "$DB_NAME" -c "SELECT 1" > /dev/null 2>&1; then
+    echo "错误：无法连接到数据库"
+    exit 1
+  fi
+
+  # 获取当前连接数
+  BEFORE_CONNECTIONS=$(psql -h "$DB_HOST" -p "$DB_PORT" -U postgres -d "$DB_NAME" -t -c "SELECT count(*) FROM pg_stat_activity WHERE datname = '$DB_NAME'" 2>/dev/null | tr -d ' ')
+  echo "当前连接数：$BEFORE_CONNECTIONS"
+
+  # 终止空闲连接
+  echo "终止空闲连接..."
+  psql -h "$DB_HOST" -p "$DB_PORT" -U postgres -d "$DB_NAME" -c "
+    SELECT pg_terminate_backend(pid)
+    FROM pg_stat_activity
+    WHERE datname = '$DB_NAME'
+    AND state = 'idle'
+    AND pid <> pg_backend_pid()
+  " 2>/dev/null || true
+
+  # 终止超过 30 分钟的连接
+  echo "终止超时连接..."
+  psql -h "$DB_HOST" -p "$DB_PORT" -U postgres -d "$DB_NAME" -c "
+    SELECT pg_terminate_backend(pid)
+    FROM pg_stat_activity
+    WHERE datname = '$DB_NAME'
+    AND state != 'idle'
+    AND query_start < NOW() - INTERVAL '30 minutes'
+    AND pid <> pg_backend_pid()
+  " 2>/dev/null || true
+
+  # 如果是特定连接池，重启连接池
+  if [ -n "$POOL_NAME" ]; then
+    echo "重启连接池：$POOL_NAME"
+    # 这里需要根据具体连接池实现重启逻辑
+    # 例如 PgBouncer、HikariCP 等
+    echo "请手动重启连接池服务：$POOL_NAME"
+  fi
+
+  # 获取新的连接数
+  sleep 2
+  AFTER_CONNECTIONS=$(psql -h "$DB_HOST" -p "$DB_PORT" -U postgres -d "$DB_NAME" -t -c "SELECT count(*) FROM pg_stat_activity WHERE datname = '$DB_NAME'" 2>/dev/null | tr -d ' ')
+  echo "新的连接数：$AFTER_CONNECTIONS"
+
+  echo "=== 数据库连接池重置完成 ==="
+  echo "减少连接数：$((BEFORE_CONNECTIONS - AFTER_CONNECTIONS))"
+
+verification_steps:
+  - name: db_connection
+    check: psql -h {{db_host}} -p {{db_port}} -U postgres -d {{db_name}} -c "SELECT 1"
+    expected: "1"
+    timeout: 10
+
+  - name: connection_count_check
+    check: psql -h {{db_host}} -p {{db_port}} -U postgres -d {{db_name}} -t -c "SELECT count(*) FROM pg_stat_activity WHERE datname = '{{db_name}}'" | tr -d '
+    expected: "0"
+    timeout: 10
+
+rollback_script: |
+  # 数据库连接池重置不需要回滚
+  echo "Database connection pool reset does not support rollback"
+  echo "Connections will be re-established automatically by the application"
+
+version: 1.0.0
+author: system
+tags:
+  - database
+  - postgresql
+  - connection_pool
+enabled: true

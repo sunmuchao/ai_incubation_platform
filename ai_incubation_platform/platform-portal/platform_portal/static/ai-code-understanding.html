@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 代码理解助手 - 项目介绍</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #0D9488; --primary-dark: #0F766E; --secondary: #2DD4BF;
+            --accent: #F59E0B; --bg-dark: #1F2937; --bg-card: #374151;
+            --text-primary: #F9FAFB; --text-secondary: #9CA3AF;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #1F2937 0%, #111827 100%); color: var(--text-primary); min-height: 100vh; }
+        .header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); padding: 60px 20px; text-align: center; box-shadow: 0 4px 30px rgba(0,0,0,0.3); }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .header .icon { font-size: 3rem; }
+        .header .port { background: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 20px; display: inline-block; font-size: 0.9rem; }
+        .header .tagline { margin-top: 20px; font-size: 1.2rem; color: rgba(255,255,255,0.9); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+        .section { margin-bottom: 40px; }
+        .section-title { font-size: 1.5rem; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: var(--secondary); }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .feature-card { background: var(--bg-card); border-radius: 12px; padding: 25px; border: 1px solid rgba(255,255,255,0.1); transition: transform 0.3s, box-shadow 0.3s; }
+        .feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+        .feature-card .icon { font-size: 2.5rem; margin-bottom: 15px; }
+        .feature-card h3 { margin-bottom: 10px; color: var(--text-primary); }
+        .feature-card p { color: var(--text-secondary); line-height: 1.6; }
+        .endpoint-list { list-style: none; }
+        .endpoint-item { background: var(--bg-card); margin-bottom: 10px; padding: 15px 20px; border-radius: 8px; display: flex; align-items: center; gap: 15px; border: 1px solid rgba(255,255,255,0.1); }
+        .method { padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; }
+        .method.get { background: #3B82F6; } .method.post { background: #10B981; }
+        .endpoint-path { font-family: 'Courier New', monospace; color: var(--text-primary); }
+        .endpoint-desc { color: var(--text-secondary); margin-left: auto; }
+        .scenarios { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .scenario-item { background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-dark) 100%); padding: 15px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.1); }
+        .scenario-item::before { content: '✓'; color: var(--secondary); font-weight: bold; }
+        .back-link { display: inline-flex; align-items: center; gap: 8px; color: var(--primary); text-decoration: none; margin-bottom: 20px; padding: 10px 20px; background: var(--bg-card); border-radius: 8px; }
+        .back-link:hover { background: var(--bg-dark); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><span class="icon">📖</span>AI 代码理解助手</h1>
+        <div class="port">🚀 端口：8011 | API: http://localhost:8011/docs</div>
+        <p class="tagline">缓解大项目黑盒 · 全局地图 · 任务阅读路径 · 与 Cursor/Claude 配合</p>
+    </div>
+    <div class="container">
+        <a href="/AI-VENTURES-PROJECTS-INTRODUCTION.html" class="back-link">← 返回项目列表</a>
+        <div class="section">
+            <h2 class="section-title">📋 核心功能</h2>
+            <div class="features-grid">
+                <div class="feature-card"><div class="icon">🔍</div><h3>片段解释</h3><p>对选中代码生成结构化说明，可对接大模型与 LSP/树解析补充符号信息。</p></div>
+                <div class="feature-card"><div class="icon">🗂️</div><h3>模块摘要</h3><p>从包与模块视角总结职责、对外 API 与依赖，便于新人上手与评审。</p></div>
+                <div class="feature-card"><div class="icon">💬</div><h3>语义问答</h3><p>在限定路径内回答「这段逻辑做什么」「改动影响范围」，依赖向量索引 + RAG。</p></div>
+                <div class="feature-card"><div class="icon">🗺️</div><h3>全局地图</h3><p>分层、入口、约定，对抗「只会改局部、不懂整体」的黑盒感（可接仓库扫描）。</p></div>
+                <div class="feature-card"><div class="icon">🧭</div><h3>任务阅读路径</h3><p>描述要做的任务，得到建议阅读顺序与自检问题，再和 IDE 里 AI 配合。</p></div>
+            </div>
+        </div>
+        <div class="section">
+            <h2 class="section-title">🔌 API 端点</h2>
+            <ul class="endpoint-list">
+                <li class="endpoint-item"><span class="method post">POST</span><span class="endpoint-path">/api/understanding/explain</span><span class="endpoint-desc">解释代码片段</span></li>
+                <li class="endpoint-item"><span class="method post">POST</span><span class="endpoint-path">/api/understanding/summarize</span><span class="endpoint-desc">模块摘要</span></li>
+                <li class="endpoint-item"><span class="method post">POST</span><span class="endpoint-path">/api/understanding/ask</span><span class="endpoint-desc">代码库问答</span></li>
+                <li class="endpoint-item"><span class="method post">POST</span><span class="endpoint-path">/api/understanding/global-map</span><span class="endpoint-desc">全局地图（反黑盒）</span></li>
+                <li class="endpoint-item"><span class="method post">POST</span><span class="endpoint-path">/api/understanding/task-guide</span><span class="endpoint-desc">任务级阅读路径</span></li>
+            </ul>
+        </div>
+        <div class="section">
+            <h2 class="section-title">💡 使用场景</h2>
+            <div class="scenarios">
+                <div class="scenario-item">新人阅读大型遗留系统</div>
+                <div class="scenario-item">Code Review 前快速建立上下文</div>
+                <div class="scenario-item">重构前评估影响面</div>
+                <div class="scenario-item">与文档门户、AI Agent 联动</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,242 @@
+{
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/p0_demo.py": {
+    "hash": "36addd4a9d993fca8c9b968bdfc82b09",
+    "size": 3251,
+    "last_indexed_time": 1775136214.998573,
+    "indexed_at": "2026-04-03T16:15:35.372291",
+    "chunk_count": 1,
+    "symbol_count": 1
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/p1_verify.py": {
+    "hash": "f87bada251ac2d69fcad836f0273561c",
+    "size": 6681,
+    "last_indexed_time": 1775204120.4378805,
+    "indexed_at": "2026-04-03T16:15:35.381418",
+    "chunk_count": 1,
+    "symbol_count": 4
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/ci/generate_global_map.py": {
+    "hash": "1ad14aceca648eecc4ca9f655adae9df",
+    "size": 6273,
+    "last_indexed_time": 1775203990.4799228,
+    "indexed_at": "2026-04-03T16:15:35.390725",
+    "chunk_count": 1,
+    "symbol_count": 3
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/main.py": {
+    "hash": "e12a7a6a93962d8dd5983fc386eeeb48",
+    "size": 1665,
+    "last_indexed_time": 1775136214.9945927,
+    "indexed_at": "2026-04-03T16:15:35.396651",
+    "chunk_count": 1,
+    "symbol_count": 2
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/__init__.py": {
+    "hash": "710c57b353d76289a1a363a2bc179382",
+    "size": 30,
+    "last_indexed_time": 1775110039.5264075,
+    "indexed_at": "2026-04-03T16:15:35.400977",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/halucination_control/validator.py": {
+    "hash": "574a1604faf94ef373574eaf46ce9ed2",
+    "size": 24925,
+    "last_indexed_time": 1775136214.998112,
+    "indexed_at": "2026-04-03T16:15:35.418965",
+    "chunk_count": 1,
+    "symbol_count": 17
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/halucination_control/__init__.py": {
+    "hash": "3d7bd7c5271775c455ddc1bb27f41930",
+    "size": 169,
+    "last_indexed_time": 1775110106.4670215,
+    "indexed_at": "2026-04-03T16:15:35.423865",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/global_map/__init__.py": {
+    "hash": "6f1c06fc5f10eb61ea96f81579257ba8",
+    "size": 167,
+    "last_indexed_time": 1775110088.0394802,
+    "indexed_at": "2026-04-03T16:15:35.428623",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/global_map/generator.py": {
+    "hash": "f75ea09cc16b8d7272a8aef98ab8d88b",
+    "size": 30784,
+    "last_indexed_time": 1775204023.963594,
+    "indexed_at": "2026-04-03T16:15:35.454696",
+    "chunk_count": 1,
+    "symbol_count": 25
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/task_guide/__init__.py": {
+    "hash": "6114f9f64934131cab915dac7ad696a7",
+    "size": 107,
+    "last_indexed_time": 1775110095.7984002,
+    "indexed_at": "2026-04-03T16:15:35.459725",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/task_guide/guide_generator.py": {
+    "hash": "e77808ccb0ddc666e179785c024ad718",
+    "size": 26316,
+    "last_indexed_time": 1775136214.9979105,
+    "indexed_at": "2026-04-03T16:15:35.497337",
+    "chunk_count": 1,
+    "symbol_count": 18
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/indexer/__init__.py": {
+    "hash": "bc6411273670d8a823a50e90dc49ac41",
+    "size": 326,
+    "last_indexed_time": 1775110053.2252247,
+    "indexed_at": "2026-04-03T16:15:35.503192",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/indexer/pipeline.py": {
+    "hash": "a07d6dad1f8972606662b4bfb58e1901",
+    "size": 14698,
+    "last_indexed_time": 1775136214.8422184,
+    "indexed_at": "2026-04-03T16:15:35.536771",
+    "chunk_count": 1,
+    "symbol_count": 16
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/indexer/base.py": {
+    "hash": "f6a057a78f883468b699ca36d6dc64fb",
+    "size": 3704,
+    "last_indexed_time": 1775136214.9987032,
+    "indexed_at": "2026-04-03T16:15:35.544491",
+    "chunk_count": 1,
+    "symbol_count": 17
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/indexer/vector_stores/chroma_store.py": {
+    "hash": "c6c336223621c6dabcc9815392cc7070",
+    "size": 8670,
+    "last_indexed_time": 1775136214.8449917,
+    "indexed_at": "2026-04-03T16:15:35.554294",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/indexer/vector_stores/__init__.py": {
+    "hash": "3e28f4495076e358c69d83ac0e825308",
+    "size": 102,
+    "last_indexed_time": 1775110080.6144755,
+    "indexed_at": "2026-04-03T16:15:35.560046",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/indexer/parsers/tree_sitter_parser.py": {
+    "hash": "874f1dc88282edeeefde10f5d95487a6",
+    "size": 21903,
+    "last_indexed_time": 1775136214.9986248,
+    "indexed_at": "2026-04-03T16:15:35.579242",
+    "chunk_count": 1,
+    "symbol_count": 16
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/indexer/parsers/__init__.py": {
+    "hash": "ef27bee22071dc222af140370fb1b169",
+    "size": 109,
+    "last_indexed_time": 1775110064.7100677,
+    "indexed_at": "2026-04-03T16:15:35.584917",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/indexer/embeddings/hash_embedding.py": {
+    "hash": "9a5e3cdffa6bc60c0bf2f9d6d5ee302b",
+    "size": 2251,
+    "last_indexed_time": 1775136214.995712,
+    "indexed_at": "2026-04-03T16:15:35.593392",
+    "chunk_count": 1,
+    "symbol_count": 6
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/indexer/embeddings/__init__.py": {
+    "hash": "131241a1ec4eee04d77cd347038717d7",
+    "size": 330,
+    "last_indexed_time": 1775136214.994883,
+    "indexed_at": "2026-04-03T16:15:35.598849",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/indexer/embeddings/resilient_embedding.py": {
+    "hash": "5f29cc03ede9b22e5a42efa5aaa2a41d",
+    "size": 1469,
+    "last_indexed_time": 1775136214.997822,
+    "indexed_at": "2026-04-03T16:15:35.604271",
+    "chunk_count": 1,
+    "symbol_count": 5
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/core/indexer/embeddings/bge_embedding.py": {
+    "hash": "a92a7e78ad4c8ad65aa72b1901b799dc",
+    "size": 5550,
+    "last_indexed_time": 1775109394.832384,
+    "indexed_at": "2026-04-03T16:15:35.628640",
+    "chunk_count": 1,
+    "symbol_count": 13
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/agent/deerflow_runtime.py": {
+    "hash": "efded27c6fa80fa00d3036b7aa444c2f",
+    "size": 460,
+    "last_indexed_time": 1775136214.9971273,
+    "indexed_at": "2026-04-03T16:15:35.633782",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/agent/tools.py": {
+    "hash": "2820c8f2c2d343cc25ef8893bf8289f1",
+    "size": 12510,
+    "last_indexed_time": 1775204061.4609337,
+    "indexed_at": "2026-04-03T16:15:35.644457",
+    "chunk_count": 1,
+    "symbol_count": 16
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/agent/__init__.py": {
+    "hash": "cfdaf98accff724eed9d5b31bc6c49de",
+    "size": 89,
+    "last_indexed_time": 1775136214.9986973,
+    "indexed_at": "2026-04-03T16:15:35.649387",
+    "chunk_count": 1,
+    "symbol_count": 0
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/agent/agent_orchestration.py": {
+    "hash": "8cb16b48dd4520796e6a82e4c58f71f2",
+    "size": 9381,
+    "last_indexed_time": 1775204200.1352458,
+    "indexed_at": "2026-04-03T16:17:01.483494",
+    "chunk_count": 1,
+    "symbol_count": 6
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/api/understanding.py": {
+    "hash": "5dcd592a98680dfccbb850f2ee0399c1",
+    "size": 4861,
+    "last_indexed_time": 1775214057.129591,
+    "indexed_at": "2026-04-03T19:10:08.096882",
+    "chunk_count": 1,
+    "symbol_count": 13
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/services/understanding_service.py": {
+    "hash": "ed38dbe532aa6b9c720ba9f228e9ed42",
+    "size": 28566,
+    "last_indexed_time": 1775204155.4468665,
+    "indexed_at": "2026-04-03T16:16:20.648172",
+    "chunk_count": 1,
+    "symbol_count": 12
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/p2_verify.py": {
+    "hash": "3dfb1ae8e363bdcf831a6ea86018af05",
+    "size": 7476,
+    "last_indexed_time": 1775204392.7059033,
+    "indexed_at": "2026-04-03T16:22:43.606557",
+    "chunk_count": 1,
+    "symbol_count": 4
+  },
+  "/Users/sunmuchao/Downloads/ai_incubation_platform/ai-code-understanding/src/tools/monorepo_indexer.py": {
+    "hash": "987927a8c864cf7ae601e9d5ea7af5b7",
+    "size": 15041,
+    "last_indexed_time": 1775204359.5624132,
+    "indexed_at": "2026-04-03T16:22:43.627668",
+    "chunk_count": 1,
+    "symbol_count": 15
+  }
+}

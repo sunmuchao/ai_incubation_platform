@@ -1,0 +1,43 @@
+# 基础框架
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+
+# 数据处理
+jinja2>=3.1.0
+python-multipart>=0.0.6
+
+# 数据库（可选）
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+redis>=5.0.0
+
+# 数据采集（可选）
+selenium>=4.15.0
+playwright>=1.40.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+
+# AI 相关（可选）
+httpx>=0.25.0  # HTTP 客户端（LLM 和 IP 地理查询）
+# langchain>=0.1.0
+
+# 统计分析
+numpy>=1.24.0
+scipy>=1.10.0
+pandas>=2.0.0
+openpyxl>=3.1.0  # Excel 导出支持 (v1.6+)
+
+# 工具库
+python-dateutil>=2.8.0
+typing-extensions>=4.8.0
+
+# 数据源 API 客户端 (v1.6+)
+# google-api-python-client>=2.100.0  # Google Search Console (可选)
+# google-auth-httplib2>=0.1.0        # Google 认证 (可选)
+# google-auth-oauthlib>=1.1.0        # Google OAuth (可选)
+
+# 孵化器统一 Agent 运行时（DeerFlow 2.0）— 见 PLATFORM_AGENT_STANDARD.md
+# -e ../deerflow-integration

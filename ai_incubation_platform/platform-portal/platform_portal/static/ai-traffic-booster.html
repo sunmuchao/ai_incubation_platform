@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 流量曝光 - 项目介绍</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #EF4444; --primary-dark: #DC2626; --secondary: #F87171;
+            --accent: #F59E0B; --bg-dark: #1F2937; --bg-card: #374151;
+            --text-primary: #F9FAFB; --text-secondary: #9CA3AF;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #1F2937 0%, #111827 100%); color: var(--text-primary); min-height: 100vh; }
+        .header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); padding: 60px 20px; text-align: center; box-shadow: 0 4px 30px rgba(0,0,0,0.3); }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .header .icon { font-size: 3rem; }
+        .header .port { background: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 20px; display: inline-block; font-size: 0.9rem; }
+        .header .tagline { margin-top: 20px; font-size: 1.2rem; color: rgba(255,255,255,0.9); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+        .section { margin-bottom: 40px; }
+        .section-title { font-size: 1.5rem; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: var(--secondary); }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .feature-card { background: var(--bg-card); border-radius: 12px; padding: 25px; border: 1px solid rgba(255,255,255,0.1); transition: transform 0.3s, box-shadow 0.3s; }
+        .feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+        .feature-card .icon { font-size: 2.5rem; margin-bottom: 15px; }
+        .feature-card h3 { margin-bottom: 10px; color: var(--text-primary); }
+        .feature-card p { color: var(--text-secondary); line-height: 1.6; }
+        .endpoint-list { list-style: none; }
+        .endpoint-item { background: var(--bg-card); margin-bottom: 10px; padding: 15px 20px; border-radius: 8px; display: flex; align-items: center; gap: 15px; border: 1px solid rgba(255,255,255,0.1); }
+        .method { padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; }
+        .method.get { background: #3B82F6; } .method.post { background: #10B981; }
+        .endpoint-path { font-family: 'Courier New', monospace; color: var(--text-primary); }
+        .endpoint-desc { color: var(--text-secondary); margin-left: auto; }
+        .scenarios { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .scenario-item { background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-dark) 100%); padding: 15px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.1); }
+        .scenario-item::before { content: '✓'; color: var(--secondary); font-weight: bold; }
+        .back-link { display: inline-flex; align-items: center; gap: 8px; color: var(--primary); text-decoration: none; margin-bottom: 20px; padding: 10px 20px; background: var(--bg-card); border-radius: 8px; }
+        .back-link:hover { background: var(--bg-dark); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><span class="icon">🚀</span>AI 流量曝光</h1>
+        <div class="port">🚀 端口：8008 | API: http://localhost:8008/docs</div>
+        <p class="tagline">用 AI 解决流量和曝光问题 · 智能优化平台</p>
+    </div>
+    <div class="container">
+        <a href="/AI-VENTURES-PROJECTS-INTRODUCTION.html" class="back-link">← 返回项目列表</a>
+        <div class="section">
+            <h2 class="section-title">📋 核心功能</h2>
+            <div class="features-grid">
+                <div class="feature-card"><div class="icon">🔍</div><h3>SEO 分析</h3><p>关键词优化、元标签建议。提升搜索排名。</p></div>
+                <div class="feature-card"><div class="icon">✍️</div><h3>内容优化</h3><p>标题、摘要、正文优化。提高内容质量。</p></div>
+                <div class="feature-card"><div class="icon">📊</div><h3>渠道分析</h3><p>流量来源、转化率。了解用户来源。</p></div>
+                <div class="feature-card"><div class="icon">🧪</div><h3>A/B 测试</h3><p>多版本对比、效果追踪。数据驱动优化。</p></div>
+            </div>
+        </div>
+        <div class="section">
+            <h2 class="section-title">🔌 API 端点</h2>
+            <ul class="endpoint-list">
+                <li class="endpoint-item"><span class="method post">POST</span><span class="endpoint-path">/api/seo/analyze</span><span class="endpoint-desc">SEO 分析</span></li>
+                <li class="endpoint-item"><span class="method post">POST</span><span class="endpoint-path">/api/content/optimize</span><span class="endpoint-desc">内容优化</span></li>
+                <li class="endpoint-item"><span class="method get">GET</span><span class="endpoint-path">/api/analytics/traffic</span><span class="endpoint-desc">流量分析</span></li>
+                <li class="endpoint-item"><span class="method post">POST</span><span class="endpoint-path">/api/ab-tests</span><span class="endpoint-desc">创建 A/B 测试</span></li>
+                <li class="endpoint-item"><span class="method get">GET</span><span class="endpoint-path">/api/ab-tests/{id}/results</span><span class="endpoint-desc">测试结果</span></li>
+            </ul>
+        </div>
+        <div class="section">
+            <h2 class="section-title">💡 使用场景</h2>
+            <div class="scenarios">
+                <div class="scenario-item">网站 SEO 优化</div>
+                <div class="scenario-item">社交媒体内容优化</div>
+                <div class="scenario-item">广告投放优化</div>
+                <div class="scenario-item">落地页转化率提升</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

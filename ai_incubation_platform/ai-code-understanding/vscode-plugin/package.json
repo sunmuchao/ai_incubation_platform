@@ -1,0 +1,147 @@
+{
+  "name": "ai-code-understanding",
+  "displayName": "AI Code Understanding",
+  "description": "全局代码地图、任务引导阅读路径、带引用的代码问答",
+  "version": "0.1.0",
+  "publisher": "ai-code-understanding",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Machine Learning",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage",
+    "onView:aiCodeMap"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ai-code-understanding",
+          "title": "AI Code Understanding",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "ai-code-understanding": [
+        {
+          "type": "webview",
+          "id": "aiCodeMap",
+          "name": "全局地图",
+          "icon": "resources/map-icon.svg",
+          "contextualTitle": "AI Code Understanding"
+        },
+        {
+          "type": "webview",
+          "id": "aiTaskGuide",
+          "name": "任务引导",
+          "icon": "resources/guide-icon.svg",
+          "contextualTitle": "AI Code Understanding"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "aiCodeUnderstanding.showGlobalMap",
+        "title": "显示全局地图",
+        "category": "AI Code Understanding"
+      },
+      {
+        "command": "aiCodeUnderstanding.showTaskGuide",
+        "title": "显示任务引导",
+        "category": "AI Code Understanding"
+      },
+      {
+        "command": "aiCodeUnderstanding.indexProject",
+        "title": "索引项目",
+        "category": "AI Code Understanding"
+      },
+      {
+        "command": "aiCodeUnderstanding.explainCode",
+        "title": "解释选中代码",
+        "category": "AI Code Understanding"
+      },
+      {
+        "command": "aiCodeUnderstanding.findReadingPath",
+        "title": "查找阅读路径",
+        "category": "AI Code Understanding"
+      },
+      {
+        "command": "aiCodeUnderstanding.analyzeDependency",
+        "title": "分析依赖关系",
+        "category": "AI Code Understanding"
+      },
+      {
+        "command": "aiCodeUnderstanding.showSymbolReferences",
+        "title": "显示符号引用",
+        "category": "AI Code Understanding"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "editorHasSelection",
+          "command": "aiCodeUnderstanding.explainCode",
+          "group": "aiCodeUnderstanding@1"
+        },
+        {
+          "when": "editorHasSelection",
+          "command": "aiCodeUnderstanding.showSymbolReferences",
+          "group": "aiCodeUnderstanding@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "aiCodeUnderstanding.analyzeDependency",
+          "group": "aiCodeUnderstanding@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "AI Code Understanding",
+      "properties": {
+        "aiCodeUnderstanding.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "AI Code Understanding 服务地址"
+        },
+        "aiCodeUnderstanding.autoIndex": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否在打开项目时自动索引"
+        },
+        "aiCodeUnderstanding.enableCache": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否启用嵌入缓存"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/glob": "^8.1.0",
+    "@types/node": "20.x",
+    "@typescript-eslint/eslint-plugin": "^6.13.1",
+    "@typescript-eslint/parser": "^6.13.1",
+    "eslint": "^8.54.0",
+    "glob": "^10.3.10",
+    "typescript": "^5.3.2",
+    "@vscode/test-electron": "^2.3.8"
+  },
+  "dependencies": {
+    "axios": "^1.6.2"
+  }
+}

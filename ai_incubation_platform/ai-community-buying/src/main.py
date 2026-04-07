@@ -2,6 +2,8 @@
 AI 社区团购 - 主入口
 
 版本历史:
+- v4.0.0: AI Native 转型 - DeerFlow 2.0 Agent 框架/对话式交互/自主团购/智能选品/主动邀请
+- v3.0.0: P10 项目总结与商业化就绪 - 10 轮迭代完成/商业化路线图/技术债务清单/竞品对标总结
 - v2.8.0: P8 智能风控/信用体系 - 用户信用评分/欺诈检测/订单风控/黑名单管理/风控规则引擎
 - v2.7.0: P7 游戏化运营 - 成就系统/排行榜/砍价玩法
 - v2.6.0: P6 数据分析增强 - 销售报表/用户行为分析/商品分析/预测分析/自定义报表
@@ -91,6 +93,9 @@ from api.p8_features import router as p8_router
 # 导入 P9 智能履约调度系统路由
 from api.fulfillment_scheduling import router as fulfillment_scheduling_router
 
+# 导入 P9 多平台集成路由
+from api.p9_platform import router as p9_platform_router
+
 # 导入 P1 动态定价引擎路由
 from api.dynamic_pricing import router as dynamic_pricing_router
 
@@ -115,7 +120,7 @@ from api.p4_supply_chain import router as p4_supply_chain_router
 from middleware.rate_limiter import RateLimitMiddleware, RateLimiter, get_ip_key
 
 # 导入数据库
-from config.database import Base, engine
+from config.database import Base, engine, DATABASE_URL
 
 # 导入实体模型（确保所有表都被注册）
 from models.entities import (
@@ -212,6 +217,14 @@ from models.fulfillment_scheduling_entities import (
     # 配送异常
     DeliveryExceptionEntity
 )
+# 导入 P9 多平台集成新增实体
+from models.p9_entities import (
+    PlatformAccountEntity,
+    PlatformOrderEntity,
+    PlatformNotificationEntity,
+    PlatformConfigEntity,
+    PlatformSyncLogEntity
+)
 # 导入 P4 供应链与履约优化新增实体
 from models.p4_entities import (
     # 库存预警
@@ -257,13 +270,43 @@ from models.p5_entities import (
 # 导入增强模块
 from core.exceptions import register_exception_handlers
 from core.logging_config import setup_logging, get_logger
-
-# 创建数据库表
-Base.metadata.create_all(bind=engine)
+from contextlib import asynccontextmanager
 
 # 初始化日志系统
 setup_logging()
 logger = get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理"""
+    # 启动时初始化
+    logger.info("正在初始化数据库表...")
+    # 使用异步方式创建数据库表
+    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+    from sqlalchemy.orm import sessionmaker
+
+    # 构建异步数据库 URL
+    async_db_url = DATABASE_URL
+    if async_db_url.startswith("sqlite:///"):
+        async_db_url = async_db_url.replace("sqlite:///", "sqlite+aiosqlite:///")
+    elif async_db_url.startswith("postgresql://"):
+        async_db_url = async_db_url.replace("postgresql://", "postgresql+asyncpg://")
+
+    async_engine = create_async_engine(async_db_url, echo=False)
+
+    try:
+        async with async_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("数据库表初始化完成")
+    except Exception as e:
+        logger.error(f"数据库表初始化失败：{e}")
+
+    yield
+
+    # 关闭时清理
+    await async_engine.dispose()
+    logger.info("应用已关闭")
 
 
 # 初始化通知适配器
@@ -292,11 +335,12 @@ def init_notification_adapters():
 
 # 创建 FastAPI 应用
 app = FastAPI(
-    title="AI Community Buying",
-    description="AI 驱动的社区团购平台 - P0 AI 选品顾问 (协同过滤/社区画像/季节性因子) + P1 动态定价引擎 + P1 需求预测 (Prophet+LSTM) + P2 个性化推荐 (Wide&Deep 深度排序) + P3 用户增长与运营工具 + P4 供应链与履约优化 + P5 营销自动化系统 + P6 数据分析增强 + P7 游戏化运营 + P8 智能风控/信用体系 + P9 智能履约调度系统",
-    version="2.8.0",
+    title="AI Community Buying - AI Native 版",
+    description="AI 驱动的社区团购平台 - P10+AI Native 转型 (DeerFlow 2.0 Agent/对话式交互/自主团购) + P9 智能履约调度系统 + P8 智能风控/信用体系 + P7 游戏化运营 + P6 数据分析增强 + P5 营销自动化系统 + P4 供应链与履约优化 + P3 用户增长与运营工具 + P2 个性化推荐 (Wide&Deep 深度排序) + P1 动态定价引擎 + P1 需求预测 (Prophet+LSTM) + P0 AI 选品顾问",
+    version="4.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # 注册全局异常处理器
@@ -359,6 +403,8 @@ app.include_router(bargain_router)
 app.include_router(p8_router)
 # P9 智能履约调度系统路由
 app.include_router(fulfillment_scheduling_router)
+# P9 多平台集成路由
+app.include_router(p9_platform_router)
 # P1 动态定价引擎路由
 app.include_router(dynamic_pricing_router)
 # P0 AI 选品顾问增强路由
@@ -397,17 +443,23 @@ app.include_router(product_analytics_router)
 app.include_router(prediction_router)
 app.include_router(custom_report_router)
 
-logger.info("所有路由注册完成（含 P3 邀请裂变/任务中心/会员成长/运营活动/P4 供应链与履约优化/P5 营销自动化/P6 数据分析增强/P7 游戏化运营/P8 智能风控）")
+# AI Native 对话式交互路由（P10+ 智能团购管家）
+from api.chat import router as chat_router
+app.include_router(chat_router)
+
+logger.info("所有路由注册完成（含 P3 邀请裂变/任务中心/会员成长/运营活动/P4 供应链与履约优化/P5 营销自动化/P6 数据分析增强/P7 游戏化运营/P8 智能风控/P9 多平台集成/P10+AI Native 对话式交互）")
 
 
 @app.get("/")
 async def root():
     return {
-        "message": "欢迎使用 AI 社区团购平台",
+        "message": "欢迎使用 AI 社区团购平台 - AI Native 版",
         "status": "running",
-        "version": "2.8.0",
-        "stage": "P8 智能风控/信用体系",
+        "version": "4.0.0",
+        "stage": "P10+ AI Native 转型 (DeerFlow 2.0 Agent)",
         "endpoints": {
+            "AI 对话交互": "/api/chat",
+            "快捷发起团购": "/api/chat/quick-start",
             "商品管理": "/api/products",
             "团购管理": "/api/groups",
             "订单管理": "/api/orders",
@@ -461,6 +513,7 @@ async def root():
             "黑名单管理": "/api/p8/blacklist",
             "订单风控": "/api/p8/order-risk",
             "动态定价": "/api/dynamic-pricing",
+            "多平台/小程序集成": "/api/platform",
             "接口文档": "/docs",
             "健康检查": "/health"
         },
@@ -474,7 +527,8 @@ async def root():
             "P6": "数据分析增强 (销售报表/用户行为分析/商品分析/预测分析) + 团长考核/售后流程/签到积分",
             "P7": "游戏化运营 (成就/排行榜)、砍价玩法",
             "P8": "智能风控/信用体系 (用户信用评分/欺诈检测/订单风控/黑名单管理/风控规则引擎)",
-            "P9": "智能履约调度系统 (路径优化/人流预测/时间窗口推荐)"
+            "P9": "智能履约调度系统 (路径优化/人流预测/时间窗口推荐) + 多平台/小程序集成 (微信/支付宝小程序/账号同步/跨平台订单)",
+            "P10+": "AI Native 转型 - DeerFlow 2.0 Agent 框架/对话式交互/自主团购/智能选品/主动邀请"
         }
     }
 

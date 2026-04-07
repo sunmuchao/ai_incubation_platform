@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Traffic Booster - 可视化仪表板 v1.7</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-color: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        /* 顶部导航栏 */
+        .header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .header nav {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .header nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+
+        .header nav a:hover,
+        .header nav a.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* 主容器 */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* 页面标题 */
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header h2 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-header p {
+            color: var(--text-muted);
+        }
+
+        /* AI 洞察卡片 */
+        .insights-section {
+            margin-bottom: 2rem;
+        }
+
+        .insights-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .insights-header h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .ai-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .insight-card {
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .insight-card.opportunity {
+            border-left-color: var(--success-color);
+        }
+
+        .insight-card.risk {
+            border-left-color: var(--warning-color);
+        }
+
+        .insight-card.alert {
+            border-left-color: var(--danger-color);
+        }
+
+        .insight-card .insight-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .insight-card .insight-type {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        .insight-card .insight-type.opportunity {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .insight-card .insight-type.risk {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        .insight-card .insight-type.alert {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+        }
+
+        .insight-card .confidence {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .insight-card .title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .insight-card .description {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .insight-card .suggestion {
+            font-size: 0.875rem;
+            background: var(--bg-color);
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+        }
+
+        .insight-card .impact {
+            display: inline-block;
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            padding: 0.125rem 0.5rem;
+            border-radius: 0.25rem;
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary-color);
+        }
+
+        /* 指标卡片网格 */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .metric-card .label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .metric-card .change {
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .metric-card .change.positive {
+            color: var(--success-color);
+        }
+
+        .metric-card .change.negative {
+            color: var(--danger-color);
+        }
+
+        /* 图表容器 */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .chart-card h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .chart-card .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        /* 数据表格 */
+        .data-table {
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .data-table h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .data-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .data-table tr:hover {
+            background: var(--bg-color);
+        }
+
+        /* 日期选择器 */
+        .date-range-picker {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .date-range-picker label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .date-range-picker input[type="date"] {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .date-range-picker button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background 0.2s;
+        }
+
+        .date-range-picker button:hover {
+            background: #2563eb;
+        }
+
+        /* 标签页 */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--primary-color);
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 关键词热力图 */
+        .heatmap-container {
+            overflow-x: auto;
+        }
+
+        .heatmap-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .heatmap-table th,
+        .heatmap-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        .heatmap-table th {
+            background: var(--bg-color);
+            font-weight: 600;
+        }
+
+        .heatmap-cell {
+            text-align: center;
+            font-weight: 600;
+            min-width: 60px;
+        }
+
+        .heat-high-positive {
+            background: rgba(16, 185, 129, 0.8);
+            color: white;
+        }
+
+        .heat-medium-positive {
+            background: rgba(16, 185, 129, 0.5);
+            color: white;
+        }
+
+        .heat-low-positive {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .heat-neutral {
+            background: rgba(107, 114, 128, 0.2);
+        }
+
+        .heat-low-negative {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .heat-medium-negative {
+            background: rgba(239, 68, 68, 0.5);
+            color: white;
+        }
+
+        .heat-high-negative {
+            background: rgba(239, 68, 68, 0.8);
+            color: white;
+        }
+
+        /* 导出按钮 */
+        .export-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            margin-left: auto;
+        }
+
+        .export-btn:hover {
+            background: #2563eb;
+        }
+
+        /* 异常标注 */
+        .anomaly-marker {
+            position: relative;
+        }
+
+        .anomaly-tooltip {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text-color);
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .anomaly-marker:hover .anomaly-tooltip {
+            display: block;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 加载状态 */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="header">
+        <h1>AI Traffic Booster v1.7</h1>
+        <nav>
+            <a href="#" class="active">仪表板</a>
+            <a href="/docs">API 文档</a>
+        </nav>
+        <button class="export-btn" onclick="exportDashboard()">导出报告</button>
+    </header>
+
+    <!-- 主容器 -->
+    <main class="container">
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <h2>AI 驱动流量分析仪表板</h2>
+            <p>实时监控、AI 洞察、可执行建议</p>
+        </div>
+
+        <!-- AI 洞察部分 -->
+        <section class="insights-section">
+            <div class="insights-header">
+                <h3>AI 关键发现</h3>
+                <span class="ai-badge">AI Powered</span>
+            </div>
+            <div id="insights-grid" class="insights-grid">
+                <!-- AI 洞察卡片将通过 JS 动态加载 -->
+            </div>
+        </section>
+
+        <!-- 标签页 -->
+        <div class="tabs">
+            <div class="tab active" data-tab="traffic">流量分析</div>
+            <div class="tab" data-tab="seo">SEO 指标</div>
+            <div class="tab" data-tab="heatmap">关键词热力图</div>
+            <div class="tab" data-tab="competitor">竞品分析</div>
+        </div>
+
+        <!-- 流量分析标签页 -->
+        <div id="traffic-tab" class="tab-content active">
+            <!-- 日期选择器 -->
+            <div class="date-range-picker">
+                <label>开始日期:</label>
+                <input type="date" id="start-date">
+                <label>结束日期:</label>
+                <input type="date" id="end-date">
+                <button onclick="loadAllData()">刷新数据</button>
+            </div>
+
+            <!-- 指标卡片 -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="label">总访客数</div>
+                    <div class="value" id="total-visitors">-</div>
+                    <div class="change positive" id="visitors-change">
+                        <span>↑ 0%</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">页面浏览量</div>
+                    <div class="value" id="total-pageviews">-</div>
+                    <div class="change positive" id="pageviews-change">
+                        <span>↑ 0%</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">平均会话时长</div>
+                    <div class="value" id="avg-session">-</div>
+                    <div class="change negative" id="session-change">
+                        <span>↓ 0%</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">跳出率</div>
+                    <div class="value" id="bounce-rate">-</div>
+                    <div class="change positive" id="bounce-change">
+                        <span>↑ 0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 图表 -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>流量趋势（含异常标注）</h3>
+                    <div class="chart-container">
+                        <canvas id="traffic-trend-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>流量来源分布</h3>
+                    <div class="chart-container">
+                        <canvas id="traffic-sources-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEO 指标标签页 -->
+        <div id="seo-tab" class="tab-content">
+            <!-- 指标卡片 -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="label">平均排名</div>
+                    <div class="value" id="avg-position">-</div>
+                    <div class="change positive" id="position-change">
+                        <span>↑ 0</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">SEO 总分</div>
+                    <div class="value" id="seo-score">-</div>
+                    <div class="change positive" id="score-change">
+                        <span>↑ 0</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">收录页数</div>
+                    <div class="value" id="indexed-pages">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">反向链接</div>
+                    <div class="value" id="backlinks">-</div>
+                </div>
+            </div>
+
+            <!-- 图表 -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>关键词排名分布</h3>
+                    <div class="chart-container">
+                        <canvas id="ranking-distribution-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Top 关键词</h3>
+                    <div class="chart-container">
+                        <canvas id="top-keywords-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 关键词热力图标签页 -->
+        <div id="heatmap-tab" class="tab-content">
+            <div class="data-table">
+                <h3>关键词排名变化热力图</h3>
+                <div class="heatmap-container">
+                    <table class="heatmap-table">
+                        <thead>
+                            <tr>
+                                <th>关键词</th>
+                                <th>当前位置</th>
+                                <th>变化</th>
+                                <th>搜索量</th>
+                                <th>难度</th>
+                                <th>热度</th>
+                            </tr>
+                        </thead>
+                        <tbody id="heatmap-body">
+                            <!-- 通过 JS 动态加载 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 竞品分析标签页 -->
+        <div id="competitor-tab" class="tab-content">
+            <div class="date-range-picker">
+                <label>对比域名:</label>
+                <input type="text" id="competitor-domains" placeholder="mydomain.com, competitor1.com, competitor2.com" value="mydomain.com, semrush.com, ahrefs.com">
+                <button onclick="loadCompetitorRadar()">分析对比</button>
+            </div>
+
+            <!-- 指标卡片 -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="label">我方月访问量</div>
+                    <div class="value" id="my-visitors">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">竞品平均访问量</div>
+                    <div class="value" id="competitor-avg-visitors">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">流量差距</div>
+                    <div class="value" id="traffic-gap">-</div>
+                </div>
+            </div>
+
+            <!-- 雷达图 -->
+            <div class="charts-grid">
+                <div class="chart-card" style="grid-column: span 2;">
+                    <h3>多维度竞品对比</h3>
+                    <div class="chart-container">
+                        <canvas id="competitor-radar-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 竞品列表 -->
+            <div class="data-table">
+                <h3>主要竞争对手</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>域名</th>
+                            <th>相似度</th>
+                            <th>共同关键词</th>
+                            <th>预估流量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="competitors-table-body">
+                        <tr><td colspan="4" style="text-align:center;">暂无数据</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ==================== 全局变量 ====================
+        let trafficTrendChart = null;
+        let trafficSourcesChart = null;
+        let rankingDistributionChart = null;
+        let topKeywordsChart = null;
+        let competitorRadarChart = null;
+        let keywordHeatmapData = [];
+
+        // API 基础 URL
+        const API_BASE = '/api';
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置默认日期范围（最近 30 天）
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+
+            document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+            document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+
+            // 标签页切换
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    document.getElementById(this.dataset.tab + '-tab').classList.add('active');
+
+                    // 加载对应标签页数据
+                    if (this.dataset.tab === 'heatmap') {
+                        loadKeywordHeatmap();
+                    }
+                });
+            });
+
+            // 加载初始数据
+            loadAllData();
+        });
+
+        // ==================== 数据加载函数 ====================
+        async function loadAllData() {
+            await loadAIInsights();
+            await loadTrafficData();
+            await loadSeoData();
+        }
+
+        // ==================== AI 洞察 ====================
+        async function loadAIInsights() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/dashboard/insights?start_date=${startDate}&end_date=${endDate}`);
+                const data = await response.json();
+
+                if (data.code === 0 && data.data.insights) {
+                    renderInsights(data.data.insights);
+                }
+            } catch (error) {
+                console.error('加载 AI 洞察失败:', error);
+                // 使用模拟数据
+                renderInsights(getMockInsights());
+            }
+        }
+
+        function renderInsights(insights) {
+            const container = document.getElementById('insights-grid');
+
+            if (!insights || insights.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted);">暂无 AI 洞察</p>';
+                return;
+            }
+
+            container.innerHTML = insights.map(insight => `
+                <div class="insight-card ${insight.type}">
+                    <div class="insight-header">
+                        <span class="insight-type ${insight.type}">${getTypeLabel(insight.type)}</span>
+                        <span class="confidence">置信度：${(insight.confidence * 100).toFixed(0)}%</span>
+                    </div>
+                    <div class="title">${insight.title}</div>
+                    <div class="description">${insight.description}</div>
+                    <div class="suggestion">💡 ${insight.suggestion}</div>
+                    <span class="impact">影响程度：${insight.impact}</span>
+                </div>
+            `).join('');
+        }
+
+        function getTypeLabel(type) {
+            const labels = {
+                'opportunity': '机会',
+                'risk': '风险',
+                'alert': '告警'
+            };
+            return labels[type] || type;
+        }
+
+        // ==================== 流量分析 ====================
+        async function loadTrafficData() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+
+            try {
+                // 获取流量汇总数据
+                const summaryResponse = await fetch(`${API_BASE}/dashboard/traffic/summary`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ start_date: startDate, end_date: endDate })
+                });
+
+                const summaryData = await summaryResponse.json();
+
+                if (summaryData.code === 0 && summaryData.data) {
+                    updateTrafficMetrics(summaryData.data);
+                }
+
+                // 获取增强流量趋势（含异常标注）
+                const trendResponse = await fetch(`${API_BASE}/dashboard/traffic/trend/enhanced?start_date=${startDate}&end_date=${endDate}`);
+                const trendData = await trendResponse.json();
+
+                if (trendData.code === 0 && trendData.data.trend) {
+                    updateTrafficTrendChart(trendData.data.trend);
+                }
+
+                // 流量来源
+                updateTrafficSourcesChart();
+
+            } catch (error) {
+                console.error('加载流量数据失败:', error);
+                // 使用模拟数据
+                updateTrafficMetrics(getMockTrafficSummary());
+                updateTrafficTrendChart(generateMockTrendData());
+                updateTrafficSourcesChart();
+            }
+        }
+
+        function updateTrafficMetrics(data) {
+            document.getElementById('total-visitors').textContent = formatNumber(data.total_visitors || 0);
+            document.getElementById('total-pageviews').textContent = formatNumber(data.total_page_views || 0);
+            document.getElementById('avg-session').textContent = formatDuration(data.avg_session_duration || 0);
+            document.getElementById('bounce-rate').textContent = ((data.bounce_rate || 0) * 100).toFixed(1) + '%';
+        }
+
+        function updateTrafficTrendChart(trendData) {
+            const ctx = document.getElementById('traffic-trend-chart').getContext('2d');
+
+            if (trafficTrendChart) trafficTrendChart.destroy();
+
+            const labels = trendData.map(d => d.date.slice(5)); // MM-DD
+            const visitors = trendData.map(d => d.visitors);
+
+            // 标注异常点
+            const anomalyPoints = trendData
+                .map((d, i) => d.is_anomaly ? { index: i, value: d.visitors, type: d.anomaly_type, cause: d.root_cause } : null)
+                .filter(p => p !== null);
+
+            trafficTrendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '访客数',
+                        data: visitors,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const index = context.dataIndex;
+                                    const point = anomalyPoints.find(p => p.index === index);
+                                    if (point) {
+                                        return [`异常：${point.type === 'spike' ? '上升' : '下降'}`, `可能原因：${point.cause}`];
+                                    }
+                                    return [];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function updateTrafficSourcesChart() {
+            const ctx = document.getElementById('traffic-sources-chart').getContext('2d');
+
+            if (trafficSourcesChart) trafficSourcesChart.destroy();
+
+            trafficSourcesChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['自然搜索', '直接访问', '社交媒体', '引荐', '付费广告'],
+                    datasets: [{
+                        data: [45, 25, 15, 10, 5],
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+        }
+
+        // ==================== SEO 指标 ====================
+        async function loadSeoData() {
+            try {
+                const response = await fetch(`${API_BASE}/dashboard/seo/summary`);
+                const data = await response.json();
+
+                if (data.code === 0 && data.data) {
+                    updateSeoMetrics(data.data);
+                    updateSeoCharts();
+                }
+            } catch (error) {
+                console.error('加载 SEO 数据失败:', error);
+                updateSeoMetrics(getMockSeoSummary());
+                updateSeoCharts();
+            }
+        }
+
+        function updateSeoMetrics(data) {
+            document.getElementById('avg-position').textContent = data.avg_position?.toFixed(1) || '-';
+            document.getElementById('seo-score').textContent = data.seo_score || '-';
+            document.getElementById('indexed-pages').textContent = formatNumber(data.indexed_pages || 0);
+            document.getElementById('backlinks').textContent = formatNumber(data.backlinks || 0);
+        }
+
+        function updateSeoCharts() {
+            // 排名分布
+            const rankingCtx = document.getElementById('ranking-distribution-chart').getContext('2d');
+            if (rankingDistributionChart) rankingDistributionChart.destroy();
+
+            rankingDistributionChart = new Chart(rankingCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['1-3', '4-10', '11-20', '21-50', '51-100'],
+                    datasets: [{
+                        label: '关键词数量',
+                        data: [25, 80, 150, 200, 180],
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#f97316', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // Top 关键词
+            const keywordsCtx = document.getElementById('top-keywords-chart').getContext('2d');
+            if (topKeywordsChart) topKeywordsChart.destroy();
+
+            topKeywordsChart = new Chart(keywordsCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['SEO tools', 'keyword research', 'analytics', 'marketing', 'traffic'],
+                    datasets: [{
+                        label: '搜索量',
+                        data: [12000, 8500, 6000, 4500, 3000],
+                        backgroundColor: '#3b82f6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // ==================== 关键词热力图 ====================
+        async function loadKeywordHeatmap() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/dashboard/heatmap/keywords?start_date=${startDate}&end_date=${endDate}&limit=30`);
+                const data = await response.json();
+
+                if (data.code === 0 && data.data.keywords) {
+                    renderKeywordHeatmap(data.data.keywords);
+                }
+            } catch (error) {
+                console.error('加载热力图失败:', error);
+                renderKeywordHeatmap(generateMockHeatmapData());
+            }
+        }
+
+        function renderKeywordHeatmap(keywords) {
+            const tbody = document.getElementById('heatmap-body');
+
+            tbody.innerHTML = keywords.map(kw => {
+                const heatClass = getHeatClass(kw.change, kw.heat);
+                const changeIcon = kw.change > 0 ? '↑' : kw.change < 0 ? '↓' : '-';
+                const changeClass = kw.change > 0 ? 'positive' : kw.change < 0 ? 'negative' : '';
+
+                return `
+                    <tr>
+                        <td>${kw.keyword}</td>
+                        <td>${kw.position}</td>
+                        <td class="${changeClass}">${changeIcon} ${Math.abs(kw.change)}</td>
+                        <td>${formatNumber(kw.search_volume)}</td>
+                        <td>${kw.difficulty}</td>
+                        <td class="heatmap-cell ${heatClass}">${kw.heat.toFixed(2)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getHeatClass(change, heat) {
+            if (change > 0) {
+                if (heat > 0.7) return 'heat-high-positive';
+                if (heat > 0.4) return 'heat-medium-positive';
+                return 'heat-low-positive';
+            } else if (change < 0) {
+                if (heat > 0.7) return 'heat-high-negative';
+                if (heat > 0.4) return 'heat-medium-negative';
+                return 'heat-low-negative';
+            }
+            return 'heat-neutral';
+        }
+
+        // ==================== 竞品分析 ====================
+        async function loadCompetitorRadar() {
+            const domains = document.getElementById('competitor-domains').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/dashboard/competitors/radar?domains=${encodeURIComponent(domains)}`);
+                const data = await response.json();
+
+                if (data.code === 0 && data.data.competitors) {
+                    updateCompetitorRadarChart(data.data.competitors, data.data.dimension_labels);
+                }
+            } catch (error) {
+                console.error('加载竞品数据失败:', error);
+                updateCompetitorRadarChart(generateMockCompetitorRadar(), ['流量规模', '域名权威', '内容质量', '外链数量', '关键词覆盖', '社交媒体']);
+            }
+        }
+
+        function updateCompetitorRadarChart(competitors, dimensions) {
+            const ctx = document.getElementById('competitor-radar-chart').getContext('2d');
+
+            if (competitorRadarChart) competitorRadarChart.destroy();
+
+            const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
+
+            competitorRadarChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: dimensions,
+                    datasets: competitors.map((comp, i) => ({
+                        label: comp.domain,
+                        data: dimensions.map(d => comp.metrics[d.toLowerCase().replace(/_/g, '')] || 50),
+                        borderColor: colors[i % colors.length],
+                        backgroundColor: colors[i % colors.length] + '20',
+                        fill: true
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' }
+                    },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==================== 导出功能 ====================
+        async function exportDashboard() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/dashboard/export/enhanced`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        export_type: 'dashboard',
+                        format: 'pdf',
+                        start_date: startDate,
+                        end_date: endDate,
+                        include_charts: true,
+                        include_insights: true
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.code === 0) {
+                    alert(`报告已生成：${data.data.file_name}\n大小：${data.data.file_size}\n\n（实际使用时将自动下载文件）`);
+                }
+            } catch (error) {
+                console.error('导出失败:', error);
+                alert('导出失败，请稍后重试');
+            }
+        }
+
+        // ==================== 工具函数 ====================
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(0) + 'K';
+            }
+            return num.toString();
+        }
+
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // ==================== Mock 数据 ====================
+        function getMockInsights() {
+            return [
+                {
+                    type: 'opportunity',
+                    title: '发现流量增长机会',
+                    description: '关键词\'SEO tools\'搜索量上升 25%，当前排名有提升空间',
+                    suggestion: '优化相关页面的标题和描述，增加内部链接',
+                    impact: '高',
+                    confidence: 0.85
+                },
+                {
+                    type: 'risk',
+                    title: '竞品流量接近超越',
+                    description: '竞品 semrush.com 近 7 天流量增长 15%，差距正在缩小',
+                    suggestion: '加强核心关键词内容质量，考虑增加付费推广',
+                    impact: '中',
+                    confidence: 0.78
+                }
+            ];
+        }
+
+        function getMockTrafficSummary() {
+            return {
+                total_visitors: 45230,
+                total_page_views: 125680,
+                avg_session_duration: 245,
+                bounce_rate: 0.35
+            };
+        }
+
+        function getMockSeoSummary() {
+            return {
+                avg_position: 12.5,
+                seo_score: 85,
+                indexed_pages: 1250,
+                backlinks: 3456
+            };
+        }
+
+        function generateMockTrendData() {
+            const data = [];
+            const today = new Date();
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                data.push({
+                    date: date.toISOString().split('T')[0],
+                    visitors: Math.floor(Math.random() * 2000) + 1000,
+                    is_anomaly: Math.random() > 0.9,
+                    anomaly_type: Math.random() > 0.5 ? 'spike' : 'drop'
+                });
+            }
+            return data;
+        }
+
+        function generateMockHeatmapData() {
+            const keywords = ['SEO tools', 'keyword research', 'analytics', 'marketing', 'traffic'];
+            return keywords.map(kw => ({
+                keyword: kw,
+                position: Math.floor(Math.random() * 30) + 1,
+                previous_position: Math.floor(Math.random() * 30) + 1,
+                change: Math.floor(Math.random() * 10) - 5,
+                search_volume: Math.floor(Math.random() * 10000) + 1000,
+                difficulty: Math.floor(Math.random() * 70) + 20,
+                heat: Math.random()
+            }));
+        }
+
+        function generateMockCompetitorRadar() {
+            return [
+                {
+                    domain: 'mydomain.com',
+                    metrics: {
+                        traffic_volume: 60,
+                        domain_authority: 55,
+                        content_quality: 70,
+                        backlinks: 45,
+                        keyword_coverage: 50,
+                        social_presence: 40
+                    }
+                },
+                {
+                    domain: 'semrush.com',
+                    metrics: {
+                        traffic_volume: 90,
+                        domain_authority: 85,
+                        content_quality: 80,
+                        backlinks: 75,
+                        keyword_coverage: 85,
+                        social_presence: 70
+                    }
+                }
+            ];
+        }
+    </script>
+</body>
+</html>

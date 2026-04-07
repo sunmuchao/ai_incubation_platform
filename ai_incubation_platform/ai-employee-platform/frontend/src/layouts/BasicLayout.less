@@ -1,0 +1,242 @@
+/**
+ * BasicLayout 样式 - Bento Grid 风格
+ * Linear.app 设计语言
+ */
+@import '../styles/design-tokens.less';
+
+.basic-layout {
+  min-height: 100vh;
+}
+
+/* ============================================
+ * 侧边栏
+ * ============================================ */
+
+.layout-sider {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: var(--z-fixed);
+  background: linear-gradient(180deg, #001529 0%, #002140 100%);
+
+  .sider-logo {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all var(--transition-base);
+  }
+
+  .sider-menu {
+    border-right: none;
+    background: transparent;
+
+    .ant-menu-item {
+      margin: var(--spacing-2) var(--spacing-3);
+      border-radius: var(--border-radius-lg);
+      transition: all var(--transition-base);
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      &-selected {
+        background: rgba(124, 58, 237, 0.2);
+        color: white;
+
+        &:hover {
+          background: rgba(124, 58, 237, 0.3);
+        }
+      }
+    }
+
+    .ant-menu-item-divider {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+}
+
+/* ============================================
+ * 主布局区
+ * ============================================ */
+
+.layout-main {
+  margin-left: 256px;
+  transition: margin-left var(--transition-base);
+}
+
+.layout-sider-collapsed + .layout-main {
+  margin-left: 80px;
+}
+
+/* ============================================
+ * 顶部栏
+ * ============================================ */
+
+.layout-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  padding: 0 var(--spacing-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-secondary);
+  border-bottom: var(--border-light);
+  box-shadow: var(--shadow-xs);
+  height: 64px;
+
+  .header-start {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4);
+
+    .header-collapse-btn {
+      font-size: 18px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: var(--spacing-2);
+      border-radius: var(--border-radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-base);
+
+      &:hover {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+      }
+    }
+  }
+
+  .header-end {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+  }
+
+  .header-icon-btn {
+    font-size: 18px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: var(--spacing-2);
+    border-radius: var(--border-radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-base);
+
+    &:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+  }
+
+  .header-notification {
+    .ant-badge-count {
+      background: var(--color-accent);
+    }
+  }
+
+  .header-user {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    padding: var(--spacing-2) var(--spacing-3);
+    border-radius: var(--border-radius-lg);
+    cursor: pointer;
+    transition: all var(--transition-base);
+
+    &:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .header-user-name {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+  }
+}
+
+/* ============================================
+ * 内容区
+ * ============================================ */
+
+.layout-content {
+  margin: var(--spacing-6);
+  min-height: calc(100vh - 128px);
+  background: var(--bg-primary);
+  border-radius: var(--border-radius-2xl);
+  border: var(--border-light);
+}
+
+.content-inner {
+  height: 100%;
+}
+
+/* ============================================
+ * 响应式适配
+ * ============================================ */
+
+@media (max-width: @breakpoint-lg) {
+  .layout-main {
+    margin-left: 80px;
+  }
+}
+
+@media (max-width: @breakpoint-md) {
+  .layout-header {
+    padding: 0 var(--spacing-4);
+  }
+
+  .layout-content {
+    margin: var(--spacing-4);
+    border-radius: var(--border-radius-xl);
+  }
+
+  .header-user-name {
+    display: none;
+  }
+}
+
+@media (max-width: @breakpoint-sm) {
+  .layout-header {
+    height: 56px;
+
+    .header-end {
+      gap: var(--spacing-1);
+    }
+  }
+}
+
+/* ============================================
+ * 暗色模式适配
+ * ============================================ */
+
+[data-theme='dark'] {
+  .layout-header {
+    background: var(--bg-secondary);
+    border-bottom-color: var(--border-color-dark);
+  }
+
+  .layout-content {
+    background: var(--bg-primary);
+    border-color: var(--border-color-dark);
+  }
+
+  .sider-menu {
+    .ant-menu-item {
+      &-selected {
+        background: rgba(124, 58, 237, 0.25);
+      }
+    }
+  }
+}

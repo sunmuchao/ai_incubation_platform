@@ -20,6 +20,10 @@ class TaskService:
     def __init__(self) -> None:
         self._tasks: Dict[str, Task] = {}
 
+    def reset_state(self) -> None:
+        """Reset in-memory tasks (used by internal test endpoints)."""
+        self._tasks.clear()
+
     def create_task(self, data: TaskCreate) -> Task:
         """AI / Agent 因能力缺口发布任务。"""
         payload = data.model_dump(exclude={"publish_immediately"})
@@ -183,7 +187,9 @@ class TaskService:
                 continue
 
             # 地点筛选（模糊匹配）
-            if location and task.location_hint:
+            if location:
+                if not task.location_hint:
+                    continue
                 if location.lower() not in task.location_hint.lower():
                     continue
 
@@ -223,14 +229,23 @@ class TaskService:
             results.append(task)
 
         # 排序
+        priority_rank = {
+            # 数值越大优先级越高；配合 sort_order desc/asc 做反转排序
+            "low": 1,
+            "medium": 2,
+            "high": 3,
+            "urgent": 4,
+        }
+        sort_by_normalized = sort_by.lower().strip()
+        sort_order_normalized = sort_order.lower().strip()
         sort_key_map = {
             "created_at": lambda t: t.created_at,
             "reward": lambda t: t.reward_amount,
-            "priority": lambda t: t.priority,
+            "priority": lambda t: priority_rank.get(t.priority.value, 0),
             "deadline": lambda t: t.deadline or datetime.max,
         }
-        key_func = sort_key_map.get(sort_by, lambda t: t.created_at)
-        reverse = sort_order.lower() == "desc"
+        key_func = sort_key_map.get(sort_by_normalized, lambda t: t.created_at)
+        reverse = sort_order_normalized == "desc"
         results.sort(key=key_func, reverse=reverse)
 
         return results

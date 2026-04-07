@@ -1,0 +1,107 @@
+# 重载配置 - 热重载服务配置
+script_id: reload-config-001
+name: 重载配置
+description: 热重载服务配置，无需重启
+category: config_adjustment
+target_type: service
+risk_level: low
+timeout_seconds: 30
+
+parameters:
+  - name: service_name
+    type: string
+    default: ""
+    description: 服务名称
+  - name: config_type
+    type: string
+    default: "all"
+    description: 配置类型：all/database/cache/logging
+
+script_content: |
+  #!/bin/bash
+  set -e
+
+  SERVICE_NAME="{{service_name}}"
+  CONFIG_TYPE="{{config_type}}"
+
+  echo "=== 重载配置 ==="
+  echo "服务：$SERVICE_NAME"
+  echo "配置类型：$CONFIG_TYPE"
+
+  # 检查服务是否存在
+  if ! systemctl list-units --type=service --all | grep -q "$SERVICE_NAME"; then
+    echo "错误：服务 $SERVICE_NAME 不存在"
+    exit 1
+  fi
+
+  # 检查服务状态
+  if ! systemctl is-active --quiet "$SERVICE_NAME"; then
+    echo "错误：服务 $SERVICE_NAME 未运行"
+    exit 1
+  fi
+
+  # 检查服务是否有 Actuator 端点
+  if curl -sf "http://localhost/actuator" > /dev/null 2>&1; then
+    echo "检测到 Spring Boot Actuator，使用 Actuator 重载配置"
+
+    # 重载所有配置
+    if [ "$CONFIG_TYPE" = "all" ]; then
+      echo "重载所有配置..."
+      curl -X POST "http://localhost/actuator/refresh" 2>/dev/null && echo "配置重载成功" || echo "配置重载失败"
+    else
+      # 重载特定配置
+      echo "重载 $CONFIG_TYPE 配置..."
+      curl -X POST "http://localhost/actuator/refresh" \
+        -H "Content-Type: application/json" \
+        -d "{\"type\": \"$CONFIG_TYPE\"}" 2>/dev/null && echo "配置重载成功" || echo "配置重载失败"
+    fi
+  else
+    echo "未检测到 Actuator，尝试 SIGHUP 信号重载"
+
+    # 获取服务 PID
+    PID=$(pgrep -f "$SERVICE_NAME" | head -1)
+
+    if [ -n "$PID" ]; then
+      echo "发送 SIGHUP 信号到进程 $PID..."
+      kill -HUP "$PID"
+      echo "配置重载信号已发送"
+    else
+      echo "错误：无法获取服务进程 ID"
+      exit 1
+    fi
+  fi
+
+  # 检查服务状态
+  sleep 2
+  if systemctl is-active --quiet "$SERVICE_NAME"; then
+    echo "服务运行正常"
+  else
+    echo "警告：服务可能重启中"
+  fi
+
+  echo "=== 配置重载完成 ==="
+
+verification_steps:
+  - name: service_active
+    check: systemctl is-active {{service_name}}
+    expected: active
+    timeout: 10
+
+  - name: health_check
+    check: curl -sf http://localhost/health
+    expected: "UP"
+    timeout: 30
+
+rollback_script: |
+  # 配置重载通常不需要回滚
+  echo "Config reload does not support rollback"
+  echo "Previous configuration has been overwritten"
+  echo "Please restore from backup if needed"
+
+version: 1.0.0
+author: system
+tags:
+  - config
+  - reload
+  - hot_update
+enabled: true

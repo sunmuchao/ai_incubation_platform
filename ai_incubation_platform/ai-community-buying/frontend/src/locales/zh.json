@@ -1,0 +1,151 @@
+{
+  "app": {
+    "name": "AI 社区团购",
+    "slogan": "AI 驱动的社区购物新体验",
+    "description": "基于 AI 智能选品和动态定价的社区团购系统，支持团购管理、订单跟踪和库存预警"
+  },
+  "nav": {
+    "home": "首页",
+    "products": "商品",
+    "groups": "团购",
+    "orders": "订单",
+    "cart": "购物车",
+    "profile": "我的",
+    "organizer": "团长中心",
+    "admin": "运营后台",
+    "settings": "设置"
+  },
+  "home": {
+    "title": "欢迎使用 AI 社区团购",
+    "featuredGroups": "热门团购",
+    "recommendProducts": "为您推荐",
+    "hotProducts": "热销榜",
+    "newArrivals": "新品上架"
+  },
+  "product": {
+    "list": "商品列表",
+    "detail": "商品详情",
+    "name": "商品名称",
+    "price": "价格",
+    "originalPrice": "原价",
+    "stock": "库存",
+    "sold": "已售",
+    "category": "分类",
+    "description": "商品描述",
+    "addToCart": "加入购物车",
+    "buyNow": "立即购买",
+    "joinGroup": "参与团购",
+    "groupPrice": "团购价",
+    "minGroupSize": "成团人数",
+    "timeLeft": "剩余时间",
+    "outOfStock": "售罄",
+    "status": "状态",
+    "active": "在售",
+    "inactive": "下架"
+  },
+  "group": {
+    "list": "团购列表",
+    "detail": "团购详情",
+    "create": "发起团购",
+    "targetQuantity": "目标数量",
+    "currentCount": "已参团",
+    "deadline": "截止时间",
+    "leader": "团长",
+    "status": "状态",
+    "open": "进行中",
+    "success": "已成团",
+    "failed": "已失败",
+    "expired": "已过期",
+    "joinGroup": "参与团购",
+    "progress": "进度"
+  },
+  "order": {
+    "list": "订单列表",
+    "detail": "订单详情",
+    "id": "订单编号",
+    "status": "订单状态",
+    "createTime": "创建时间",
+    "totalAmount": "订单金额",
+    "items": "商品明细",
+    "pending": "待支付",
+    "paid": "已支付",
+    "shipped": "已发货",
+    "completed": "已完成",
+    "cancelled": "已取消",
+    "refund": "退款"
+  },
+  "cart": {
+    "title": "购物车",
+    "empty": "购物车空空如也",
+    "checkout": "去结算",
+    "total": "合计",
+    "selected": "已选",
+    "items": "件商品"
+  },
+  "profile": {
+    "title": "个人中心",
+    "nickname": "昵称",
+    "avatar": "头像",
+    "phone": "手机号",
+    "email": "邮箱",
+    "address": "收货地址",
+    "orders": "我的订单",
+    "favorites": "我的收藏",
+    "coupons": "优惠券",
+    "points": "积分",
+    "level": "会员等级",
+    "settings": "账户设置"
+  },
+  "organizer": {
+    "dashboard": "团长看板",
+    "totalGroups": "团购总数",
+    "successRate": "成团率",
+    "totalOrders": "订单总数",
+    "totalCommission": "佣金总额",
+    "pendingOrders": "待处理订单",
+    "groups": "我的团购",
+    "commission": "佣金管理",
+    "withdraw": "提现",
+    "assessments": "团长考核"
+  },
+  "admin": {
+    "dashboard": "运营看板",
+    "productManagement": "商品管理",
+    "userManagement": "用户管理",
+    "orderManagement": "订单管理",
+    "activityManagement": "活动管理",
+    "analytics": "数据分析",
+    "salesReport": "销售报表",
+    "userAnalysis": "用户分析",
+    "productAnalysis": "商品分析"
+  },
+  "common": {
+    "loading": "加载中...",
+    "submit": "提交",
+    "cancel": "取消",
+    "confirm": "确认",
+    "delete": "删除",
+    "edit": "编辑",
+    "save": "保存",
+    "search": "搜索",
+    "filter": "筛选",
+    "sort": "排序",
+    "noData": "暂无数据",
+    "success": "成功",
+    "failed": "失败",
+    "error": "错误",
+    "deleteConfirm": "确定要删除吗？",
+    "operationSuccess": "操作成功",
+    "operationFailed": "操作失败"
+  },
+  "theme": {
+    "light": "明亮模式",
+    "dark": "黑暗模式",
+    "toggle": "切换主题"
+  },
+  "lang": {
+    "zh": "中文",
+    "en": "English",
+    "toggle": "切换语言"
+  }
+}

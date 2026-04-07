@@ -1,0 +1,47 @@
+{
+  "generated_at": "2026-04-04T21:52:37.998846",
+  "results": {
+    "serial": {
+      "test_name": "serial_benchmark",
+      "timestamp": "2026-04-04T21:52:37.748151",
+      "config": {
+        "enable_parallel": false,
+        "num_workers": 4
+      },
+      "performance": {
+        "total_files": 48,
+        "total_chunks": 698,
+        "total_symbols": 650,
+        "total_time_seconds": 0.21784281730651855,
+        "files_per_second": 220.34235782243385,
+        "chunks_per_second": 3204.1451200012257,
+        "avg_file_time_ms": 4.538392027219136
+      }
+    },
+    "parallel_4": {
+      "test_name": "parallel_benchmark",
+      "timestamp": "2026-04-04T21:52:37.994392",
+      "config": {
+        "enable_parallel": true,
+        "num_workers": 4
+      },
+      "performance": {
+        "total_files": 48,
+        "total_chunks": 698,
+        "total_symbols": 650,
+        "total_time_seconds": 0.2359941005706787,
+        "files_per_second": 203.39491488951145,
+        "chunks_per_second": 2957.7010540183123,
+        "avg_file_time_ms": 4.91654376188914
+      }
+    }
+  },
+  "summary": {
+    "serial_files_per_second": 220.34235782243385,
+    "parallel_files_per_second": 203.39491488951145,
+    "speedup_ratio": 1.083322844831832,
+    "recommendations": [
+      "并行处理未带来加速，可能由于：1) 任务本身较轻量 2) I/O 瓶颈 3) 锁竞争"
+    ]
+  }
+}

@@ -1,0 +1,151 @@
+{
+  "app": {
+    "name": "AI Community Buying",
+    "slogan": "AI-Driven Community Shopping Experience",
+    "description": "AI-powered community group buying system with intelligent product selection and dynamic pricing"
+  },
+  "nav": {
+    "home": "Home",
+    "products": "Products",
+    "groups": "Group Buy",
+    "orders": "Orders",
+    "cart": "Cart",
+    "profile": "Profile",
+    "organizer": "Organizer",
+    "admin": "Admin",
+    "settings": "Settings"
+  },
+  "home": {
+    "title": "Welcome to AI Community Buying",
+    "featuredGroups": "Featured Groups",
+    "recommendProducts": "Recommended",
+    "hotProducts": "Hot Products",
+    "newArrivals": "New Arrivals"
+  },
+  "product": {
+    "list": "Product List",
+    "detail": "Product Detail",
+    "name": "Product Name",
+    "price": "Price",
+    "originalPrice": "Original Price",
+    "stock": "Stock",
+    "sold": "Sold",
+    "category": "Category",
+    "description": "Description",
+    "addToCart": "Add to Cart",
+    "buyNow": "Buy Now",
+    "joinGroup": "Join Group",
+    "groupPrice": "Group Price",
+    "minGroupSize": "Min Group Size",
+    "timeLeft": "Time Left",
+    "outOfStock": "Out of Stock",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "group": {
+    "list": "Group List",
+    "detail": "Group Detail",
+    "create": "Create Group",
+    "targetQuantity": "Target Quantity",
+    "currentCount": "Joined",
+    "deadline": "Deadline",
+    "leader": "Leader",
+    "status": "Status",
+    "open": "Open",
+    "success": "Success",
+    "failed": "Failed",
+    "expired": "Expired",
+    "joinGroup": "Join Group",
+    "progress": "Progress"
+  },
+  "order": {
+    "list": "Order List",
+    "detail": "Order Detail",
+    "id": "Order ID",
+    "status": "Status",
+    "createTime": "Create Time",
+    "totalAmount": "Total Amount",
+    "items": "Items",
+    "pending": "Pending",
+    "paid": "Paid",
+    "shipped": "Shipped",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "refund": "Refund"
+  },
+  "cart": {
+    "title": "Shopping Cart",
+    "empty": "Your cart is empty",
+    "checkout": "Checkout",
+    "total": "Total",
+    "selected": "Selected",
+    "items": "items"
+  },
+  "profile": {
+    "title": "Profile",
+    "nickname": "Nickname",
+    "avatar": "Avatar",
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "orders": "My Orders",
+    "favorites": "Favorites",
+    "coupons": "Coupons",
+    "points": "Points",
+    "level": "Member Level",
+    "settings": "Account Settings"
+  },
+  "organizer": {
+    "dashboard": "Organizer Dashboard",
+    "totalGroups": "Total Groups",
+    "successRate": "Success Rate",
+    "totalOrders": "Total Orders",
+    "totalCommission": "Total Commission",
+    "pendingOrders": "Pending Orders",
+    "groups": "My Groups",
+    "commission": "Commission",
+    "withdraw": "Withdraw",
+    "assessments": "Assessments"
+  },
+  "admin": {
+    "dashboard": "Admin Dashboard",
+    "productManagement": "Product Management",
+    "userManagement": "User Management",
+    "orderManagement": "Order Management",
+    "activityManagement": "Activity Management",
+    "analytics": "Analytics",
+    "salesReport": "Sales Report",
+    "userAnalysis": "User Analysis",
+    "productAnalysis": "Product Analysis"
+  },
+  "common": {
+    "loading": "Loading...",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "save": "Save",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "noData": "No Data",
+    "success": "Success",
+    "failed": "Failed",
+    "error": "Error",
+    "deleteConfirm": "Are you sure you want to delete?",
+    "operationSuccess": "Operation successful",
+    "operationFailed": "Operation failed"
+  },
+  "theme": {
+    "light": "Light Mode",
+    "dark": "Dark Mode",
+    "toggle": "Toggle Theme"
+  },
+  "lang": {
+    "zh": "中文",
+    "en": "English",
+    "toggle": "Toggle Language"
+  }
+}

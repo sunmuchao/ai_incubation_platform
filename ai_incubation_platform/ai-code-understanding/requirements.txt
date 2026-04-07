@@ -1,0 +1,27 @@
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.0.0
+
+# 代码解析
+tree-sitter>=0.20.0
+tree-sitter-languages>=1.10.0
+
+# 向量检索与 Embedding - LlamaIndex 框架
+llama-index>=0.10.0
+llama-index-vector-stores-chroma>=0.1.0
+llama-index-core>=0.10.0
+llama-index-llms-openai>=0.1.0
+llama-index-embeddings-openai>=0.1.0
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
+numpy>=1.24.0
+
+# 孵化器统一 Agent 运行时（DeerFlow 2.0）— 见 PLATFORM_AGENT_STANDARD.md
+-e ../deerflow-integration
+
+# CLI 工具依赖
+click>=8.1.0
+requests>=2.31.0
+
+# 可观测性依赖
+python-json-logger>=2.0.0

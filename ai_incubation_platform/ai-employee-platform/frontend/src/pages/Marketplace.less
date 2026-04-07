@@ -1,0 +1,234 @@
+/**
+ * Marketplace 页面样式 - Bento Grid
+ */
+@import '../styles/design-tokens.less';
+
+.marketplace-page {
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+/* ============================================
+ * 筛选面板样式
+ * ============================================ */
+
+.marketplace-filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+  height: 100%;
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+
+    .filter-label {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+    }
+  }
+
+  .filter-range-text,
+  .filter-rating-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+  }
+
+  .filter-checkbox-group {
+    padding: var(--spacing-3) 0;
+  }
+
+  .filter-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+    margin-top: auto;
+  }
+}
+
+/* ============================================
+ * 员工网格布局
+ * ============================================ */
+
+.employee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--spacing-4);
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--spacing-2);
+}
+
+/* ============================================
+ * 员工卡片 Bento 风格
+ * ============================================ */
+
+.employee-card-bento {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border: var(--border-light);
+  border-radius: var(--border-radius-xl);
+  padding: var(--spacing-4);
+  transition: all var(--transition-base);
+
+  &:hover {
+    border-color: var(--border-color-base);
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-2px);
+  }
+
+  &-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-3);
+
+    .employee-card-avatar {
+      position: relative;
+      display: flex;
+      align-items: center;
+
+      .employee-status-tag {
+        position: absolute;
+        bottom: -4px;
+        right: -4px;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: var(--border-radius-sm);
+      }
+    }
+
+    .employee-card-rating {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-1);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+
+      .rating-star {
+        color: #ffb300;
+      }
+    }
+  }
+
+  &-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+    min-width: 0;
+
+    .employee-card-name {
+      font-size: var(--font-size-md);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .employee-card-desc {
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      line-height: var(--line-height-relaxed);
+      margin: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .employee-card-skills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-1);
+
+      .skill-tag {
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: var(--border-radius-sm);
+      }
+    }
+  }
+
+  &-footer {
+    display: flex;
+    gap: var(--spacing-4);
+    padding: var(--spacing-3) 0;
+    margin-top: var(--spacing-3);
+    border-top: var(--border-light);
+
+    .employee-metric {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-1);
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+
+      .metric-icon {
+        font-size: 12px;
+        color: var(--text-tertiary);
+      }
+    }
+  }
+
+  &-actions {
+    padding-top: var(--spacing-3);
+    border-top: var(--border-light);
+  }
+}
+
+/* ============================================
+ * 响应式适配
+ * ============================================ */
+
+@media (max-width: @breakpoint-lg) {
+  .employee-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: @breakpoint-md) {
+  .employee-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--spacing-3);
+  }
+
+  .employee-card-bento {
+    padding: var(--spacing-3);
+  }
+}
+
+@media (max-width: @breakpoint-sm) {
+  .employee-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+
+  .marketplace-filters {
+    gap: var(--spacing-4);
+  }
+}
+
+/* ============================================
+ * 暗色模式适配
+ * ============================================ */
+
+[data-theme='dark'] {
+  .employee-card-bento {
+    background: var(--bg-secondary);
+    border-color: var(--border-color-dark);
+
+    &:hover {
+      border-color: var(--border-color-base);
+    }
+
+    &-footer,
+    &-actions {
+      border-top-color: var(--border-color-dark);
+    }
+  }
+}

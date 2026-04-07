@@ -1,0 +1,224 @@
+/**
+ * 全局样式 - Bento Grid 版本
+ * Linear.app 风格设计语言
+ */
+@import './styles/design-tokens.less';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body,
+#root {
+  height: 100%;
+  font-family: var(--font-family);
+  color: var(--text-primary);
+  background: var(--gradient-page);
+}
+
+/* ============================================
+ * 滚动条样式 - 精致设计
+ * ============================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-neutral-100);
+  border-radius: var(--border-radius-full);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-300);
+  border-radius: var(--border-radius-full);
+  transition: background var(--transition-base);
+
+  &:hover {
+    background: var(--color-neutral-400);
+  }
+}
+
+[data-theme='dark'] {
+  ::-webkit-scrollbar-track {
+    background: var(--color-neutral-800);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-neutral-600);
+
+    &:hover {
+      background: var(--color-neutral-500);
+    }
+  }
+}
+
+/* ============================================
+ * 通用动画
+ * ============================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.35s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.25s ease-out;
+}
+
+/* ============================================
+ * 通用工具类
+ * ============================================ */
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.gap-1 { gap: var(--spacing-1); }
+.gap-2 { gap: var(--spacing-2); }
+.gap-3 { gap: var(--spacing-3); }
+.gap-4 { gap: var(--spacing-4); }
+.gap-6 { gap: var(--spacing-6); }
+.gap-8 { gap: var(--spacing-8); }
+
+/* ============================================
+ * 链接样式
+ * ============================================ */
+
+a {
+  color: var(--text-link);
+  text-decoration: none;
+  transition: color var(--transition-base);
+
+  &:hover {
+    color: var(--color-accent-light);
+  }
+}
+
+/* ============================================
+ * 卡片悬停效果 - 通用
+ * ============================================ */
+
+.card-hover {
+  transition: all var(--transition-base);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+  }
+}
+
+/* ============================================
+ * 响应式断点
+ * ============================================ */
+
+@media (max-width: @breakpoint-sm) {
+  .mobile-hidden {
+    display: none !important;
+  }
+}
+
+@media (min-width: @breakpoint-sm) {
+  .desktop-hidden {
+    display: none !important;
+  }
+}
+
+/* ============================================
+ * 页面布局容器
+ * ============================================ */
+
+.page-container {
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+.page-content {
+  padding: var(--spacing-6);
+  max-width: var(--bento-max-width);
+  margin: 0 auto;
+}
+
+@media (max-width: @breakpoint-sm) {
+  .page-content {
+    padding: var(--spacing-4);
+  }
+}
+
+/* ============================================
+ * 暗色模式平滑过渡
+ * ============================================ */
+
+html {
+  color-scheme: light;
+  transition: background-color var(--transition-slow), color var(--transition-slow);
+}
+
+[data-theme='dark'] {
+  html {
+    color-scheme: dark;
+  }
+}

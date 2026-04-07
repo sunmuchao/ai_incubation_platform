@@ -1,0 +1,100 @@
+# 扩容副本 - Kubernetes 扩容
+script_id: scale-replicas-001
+name: 扩容副本
+description: Kubernetes 扩容服务副本数
+category: scale_resource
+target_type: kubernetes
+risk_level: medium
+timeout_seconds: 120
+
+parameters:
+  - name: namespace
+    type: string
+    default: "default"
+    description: Kubernetes 命名空间
+  - name: deployment_name
+    type: string
+    default: ""
+    description: Deployment 名称
+  - name: replicas
+    type: integer
+    default: 2
+    description: 目标副本数
+  - name: max_surge
+    type: integer
+    default: 1
+    description: 最大 surge 数量
+
+script_content: |
+  #!/bin/bash
+  set -e
+
+  NAMESPACE="{{namespace}}"
+  DEPLOYMENT_NAME="{{deployment_name}}"
+  REPLICAS="{{replicas}}"
+  MAX_SURGE="{{max_surge}}"
+
+  echo "=== Kubernetes 扩容 ==="
+  echo "命名空间：$NAMESPACE"
+  echo "Deployment: $DEPLOYMENT_NAME"
+  echo "目标副本数：$REPLICAS"
+
+  # 检查 kubectl
+  if ! command -v kubectl &> /dev/null; then
+    echo "错误：kubectl 未安装"
+    exit 1
+  fi
+
+  # 检查 Deployment 是否存在
+  if ! kubectl get deployment -n "$NAMESPACE" "$DEPLOYMENT_NAME" &> /dev/null; then
+    echo "错误：Deployment 不存在：$DEPLOYMENT_NAME"
+    exit 1
+  fi
+
+  # 获取当前副本数
+  CURRENT_REPLICAS=$(kubectl get deployment -n "$NAMESPACE" "$DEPLOYMENT_NAME" -o jsonpath='{.spec.replicas}')
+  echo "当前副本数：$CURRENT_REPLICAS"
+
+  # 设置更新策略
+  echo "设置更新策略..."
+  kubectl patch deployment -n "$NAMESPACE" "$DEPLOYMENT_NAME" -p "{\"spec\":{\"strategy\":{\"rollingUpdate\":{\"maxSurge\":${MAX_SURGE}}}}}"
+
+  # 扩容
+  echo "扩容到 $REPLICAS 副本..."
+  kubectl scale deployment -n "$NAMESPACE" "$DEPLOYMENT_NAME" --replicas=$REPLICAS
+
+  # 等待扩容完成
+  echo "等待扩容完成..."
+  kubectl rollout status deployment -n "$NAMESPACE" "$DEPLOYMENT_NAME" --timeout=60s
+
+  # 获取 Pod 状态
+  echo "Pod 状态:"
+  kubectl get pods -n "$NAMESPACE" -l app="$DEPLOYMENT_NAME"
+
+  echo "=== 扩容完成 ==="
+
+verification_steps:
+  - name: deployment_exists
+    check: kubectl get deployment -n {{namespace}} {{deployment_name}}
+    expected: "deployment"
+    timeout: 10
+
+  - name: replicas_ready
+    check: kubectl get deployment -n {{namespace}} {{deployment_name}} -o jsonpath='{.status.readyReplicas}'
+    expected: "{{replicas}}"
+    timeout: 60
+
+rollback_script: |
+  #!/bin/bash
+  # 回滚到上一个版本
+  kubectl rollout undo deployment -n {{namespace}} {{deployment_name}}
+  kubectl rollout status deployment -n {{namespace}} {{deployment_name}}
+  echo "已回滚到上一个版本"
+
+version: 1.0.0
+author: system
+tags:
+  - kubernetes
+  - scaling
+  - deployment
+enabled: true

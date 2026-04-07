@@ -1,0 +1,103 @@
+# 日志轮转 - 执行日志轮转释放磁盘空间
+script_id: rotate-logs-001
+name: 日志轮转
+description: 执行日志轮转，释放磁盘空间
+category: maintenance
+target_type: service
+risk_level: low
+timeout_seconds: 120
+
+parameters:
+  - name: service_name
+    type: string
+    default: ""
+    description: 服务名称，为空则轮转所有服务
+  - name: log_dir
+    type: string
+    default: "/var/log"
+    description: 日志目录
+  - name: max_age_days
+    type: integer
+    default: 7
+    description: 日志保留天数
+  - name: compress
+    type: boolean
+    default: true
+    description: 是否压缩旧日志
+
+script_content: |
+  #!/bin/bash
+  set -e
+
+  SERVICE_NAME="{{service_name}}"
+  LOG_DIR="{{log_dir}}"
+  MAX_AGE_DAYS="{{max_age_days}}"
+  COMPRESS="{{compress}}"
+
+  echo "=== 日志轮转 ==="
+  echo "日志目录：$LOG_DIR"
+  echo "保留天数：$MAX_AGE_DAYS 天"
+
+  # 检查日志目录
+  if [ ! -d "$LOG_DIR" ]; then
+    echo "错误：日志目录不存在：$LOG_DIR"
+    exit 1
+  fi
+
+  # 获取清理前的磁盘使用
+  BEFORE_SIZE=$(du -sh "$LOG_DIR" 2>/dev/null | cut -f1)
+  echo "清理前日志大小：$BEFORE_SIZE"
+
+  # 轮转指定服务的日志
+  if [ -n "$SERVICE_NAME" ]; then
+    echo "轮转服务 $SERVICE_NAME 的日志..."
+    if command -v logrotate &> /dev/null; then
+      logrotate -f /etc/logrotate.d/$SERVICE_NAME 2>/dev/null || true
+    fi
+  else
+    echo "轮转所有服务的日志..."
+    if command -v logrotate &> /dev/null; then
+      logrotate -f /etc/logrotate.conf 2>/dev/null || true
+    fi
+  fi
+
+  # 删除旧日志
+  echo "删除 ${MAX_AGE_DAYS} 天前的日志..."
+  find "$LOG_DIR" -type f -name "*.log.*" -mtime +$MAX_AGE_DAYS -delete 2>/dev/null || true
+  find "$LOG_DIR" -type f -name "*.gz" -mtime +$MAX_AGE_DAYS -delete 2>/dev/null || true
+
+  # 压缩旧日志
+  if [ "$COMPRESS" = "true" ]; then
+    echo "压缩旧日志..."
+    find "$LOG_DIR" -type f -name "*.log" -mtime +1 -exec gzip {} \; 2>/dev/null || true
+  fi
+
+  # 获取清理后的磁盘使用
+  AFTER_SIZE=$(du -sh "$LOG_DIR" 2>/dev/null | cut -f1)
+  echo "清理后日志大小：$AFTER_SIZE"
+
+  echo "=== 日志轮转完成 ==="
+
+verification_steps:
+  - name: log_dir_exists
+    check: test -d {{log_dir}}
+    expected: "true"
+    timeout: 5
+
+  - name: disk_space_check
+    check: df -h {{log_dir}} | tail -1 | awk '{print $5}' | tr -d '%'
+    expected: "0"
+    timeout: 10
+
+rollback_script: |
+  # 日志轮转不可回滚
+  echo "Log rotation does not support rollback"
+  echo "Old logs have been permanently deleted"
+
+version: 1.0.0
+author: system
+tags:
+  - logs
+  - maintenance
+  - disk
+enabled: true

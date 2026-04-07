@@ -1,0 +1,125 @@
+# 重启 Sidecar - 重启 Envoy/Service Mesh Sidecar
+script_id: restart-sidecar-001
+name: 重启 Sidecar
+description: 重启 Envoy/Service Mesh Sidecar 代理
+category: restart_service
+target_type: kubernetes
+risk_level: low
+timeout_seconds: 60
+
+parameters:
+  - name: namespace
+    type: string
+    default: "default"
+    description: Kubernetes 命名空间
+  - name: pod_name
+    type: string
+    default: ""
+    description: Pod 名称
+  - name: sidecar_type
+    type: string
+    default: "envoy"
+    description: Sidecar 类型：envoy/linkerd
+  - name: graceful
+    type: boolean
+    default: true
+    description: 是否优雅重启
+
+script_content: |
+  #!/bin/bash
+  set -e
+
+  NAMESPACE="{{namespace}}"
+  POD_NAME="{{pod_name}}"
+  SIDECAR_TYPE="{{sidecar_type}}"
+  GRACEFUL="{{graceful}}"
+
+  echo "=== 重启 Sidecar ==="
+  echo "命名空间：$NAMESPACE"
+  echo "Pod: $POD_NAME"
+  echo "Sidecar 类型：$SIDECAR_TYPE"
+
+  # 检查 kubectl
+  if ! command -v kubectl &> /dev/null; then
+    echo "错误：kubectl 未安装"
+    exit 1
+  fi
+
+  # 检查 Pod 是否存在
+  if ! kubectl get pod -n "$NAMESPACE" "$POD_NAME" &> /dev/null; then
+    echo "错误：Pod 不存在：$POD_NAME"
+    exit 1
+  fi
+
+  # 获取 Sidecar 容器名
+  case $SIDECAR_TYPE in
+    "envoy")
+      SIDECAR_CONTAINER="istio-proxy"
+      ;;
+    "linkerd")
+      SIDECAR_CONTAINER="linkerd-proxy"
+      ;;
+    *)
+      SIDECAR_CONTAINER="sidecar"
+      ;;
+  esac
+
+  echo "Sidecar 容器：$SIDECAR_CONTAINER"
+
+  # 检查 Sidecar 容器是否存在
+  if ! kubectl get pod -n "$NAMESPACE" "$POD_NAME" -o jsonpath='{.spec.containers[*].name}' | grep -q "$SIDECAR_CONTAINER"; then
+    echo "警告：未找到 Sidecar 容器 $SIDECAR_CONTAINER"
+    echo "可用容器："
+    kubectl get pod -n "$NAMESPACE" "$POD_NAME" -o jsonpath='{.spec.containers[*].name}'
+    exit 0
+  fi
+
+  # 优雅重启 Sidecar
+  if [ "$GRACEFUL" = "true" ]; then
+    echo "优雅重启 Sidecar..."
+
+    # 对于 Istio，可以通过 envoy_admin 端点触发重启
+    kubectl exec -n "$NAMESPACE" "$POD_NAME" -c "$SIDECAR_CONTAINER" -- \
+      curl -s -X POST http://localhost:15000/quitquitquit 2>/dev/null || \
+      echo "Envoy admin 端点不可用，使用 kubectl delete pod"
+  fi
+
+  # 使用 kubectl restart（Kubernetes 1.27+）
+  if kubectl rollout restart pod -n "$NAMESPACE" "$POD_NAME" 2>/dev/null; then
+    echo "Pod 重启已触发"
+  else
+    # 回退方法：删除 Pod 让控制器重新创建
+    echo "删除 Pod 触发重建..."
+    kubectl delete pod -n "$NAMESPACE" "$POD_NAME" --grace-period=30
+  fi
+
+  # 等待 Pod 恢复
+  echo "等待 Pod 恢复..."
+  kubectl wait --for=condition=Ready pod -n "$NAMESPACE" "$POD_NAME" --timeout=60s
+
+  echo "=== Sidecar 重启完成 ==="
+
+verification_steps:
+  - name: pod_ready
+    check: kubectl get pod -n {{namespace}} {{pod_name}} -o jsonpath='{.status.phase}'
+    expected: Running
+    timeout: 60
+
+  - name: sidecar_ready
+    check: kubectl get pod -n {{namespace}} {{pod_name}} -o jsonpath='{.status.containerStatuses[?(@.name=="{{sidecar_type}}-proxy")].ready}'
+    expected: "true"
+    timeout: 30
+
+rollback_script: |
+  # Sidecar 重启通常不需要回滚
+  echo "Sidecar restart does not support rollback"
+  echo "The sidecar will be restored to its previous state automatically"
+
+version: 1.0.0
+author: system
+tags:
+  - sidecar
+  - envoy
+  - service_mesh
+  - kubernetes
+enabled: true

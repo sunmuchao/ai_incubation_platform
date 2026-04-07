@@ -46,6 +46,9 @@ class GroupBuyService:
     def create_product(self, data: ProductCreate) -> Product:
         """创建商品"""
         product = Product(**data.model_dump())
+        # stock 为 0 时应视为售罄，保证后续 status 过滤与创建后行为一致
+        if product.stock <= 0:
+            product.status = ProductStatus.SOLD_OUT
         self._products[product.id] = product
         logger.info(f"商品创建成功: {product.id} - {product.name}")
         return product
@@ -125,8 +128,17 @@ class GroupBuyService:
 
         product.locked_stock -= quantity
         product.sold_stock += quantity
+        product.stock -= quantity
+        if product.stock <= 0 and product.status == ProductStatus.ACTIVE:
+            product.status = ProductStatus.SOLD_OUT
+            logger.info(f"商品 {product_id} 已售罄")
+        elif product.stock > 0 and product.status == ProductStatus.SOLD_OUT:
+            product.status = ProductStatus.ACTIVE
         product.updated_at = datetime.now()
-        logger.info(f"库存扣减成功: 商品 {product_id}, 扣减 {quantity} 件, 已售: {product.sold_stock}")
+        logger.info(
+            f"库存扣减成功: 商品 {product_id}, 扣减 {quantity} 件, "
+            f"已售: {product.sold_stock}, 剩余: {product.stock}"
+        )
         return True
 
     # ========== 团购管理 ==========
@@ -172,9 +184,14 @@ class GroupBuyService:
     def get_group_buy(self, group_buy_id: str) -> Optional[GroupBuy]:
         """获取团购详情"""
         gb = self._group_buys.get(group_buy_id)
-        if gb and not gb.product:
-            # 补充商品信息
-            gb.product = self.get_product(gb.product_id)
+        if gb:
+            # 过期后必须立刻解锁库存并更新状态，避免“只尝试 join/查询但不列表”的场景漏处理
+            if gb.status == GroupBuyStatus.OPEN and gb.is_expired():
+                self._handle_group_failure(gb, reason="expired")
+
+            if not gb.product:
+                # 补充商品信息
+                gb.product = self.get_product(gb.product_id)
         return gb
 
     def list_active_group_buys(self, product_id: Optional[str] = None) -> List[GroupBuy]:
@@ -195,6 +212,8 @@ class GroupBuyService:
 
     def list_group_buys_by_status(self, status: GroupBuyStatus) -> List[GroupBuy]:
         """按状态获取团购列表"""
+        # 确保列表查询时不会漏掉到期团购的状态迁移/库存回滚
+        self._cleanup_expired_groups()
         groups = [gb for gb in self._group_buys.values() if gb.status == status]
         for gb in groups:
             if not gb.product:
@@ -210,8 +229,18 @@ class GroupBuyService:
         # 检查团购状态
         if not group_buy.can_join(user_id):
             if group_buy.status != GroupBuyStatus.OPEN:
+                if group_buy.status == GroupBuyStatus.EXPIRED:
+                    raise GroupBuyNotOpenError(f"团购 {group_buy_id} 已过期")
+                if group_buy.status == GroupBuyStatus.CANCELLED:
+                    raise GroupBuyNotOpenError(f"团购 {group_buy_id} 已取消")
+                if group_buy.status == GroupBuyStatus.FAILED:
+                    raise GroupBuyNotOpenError(f"团购 {group_buy_id} 成团失败")
+                if group_buy.status == GroupBuyStatus.SUCCESS:
+                    raise GroupBuyNotOpenError(f"团购 {group_buy_id} 已成团")
                 raise GroupBuyNotOpenError(f"团购 {group_buy_id} 已关闭")
+
             if group_buy.is_expired():
+                # 理论上不会触发：get_group_buy 已经处理过期并落库/解锁库存
                 raise GroupBuyNotOpenError(f"团购 {group_buy_id} 已过期")
             if user_id in group_buy.members:
                 raise UserAlreadyJoinedError(f"用户 {user_id} 已加入该团购")
@@ -274,8 +303,16 @@ class GroupBuyService:
         """处理团购失败逻辑"""
         if reason == "expired":
             group_buy.status = GroupBuyStatus.EXPIRED
+            record_status = "expired"
+        elif reason == "cancelled":
+            group_buy.status = GroupBuyStatus.CANCELLED
+            record_status = "cancelled"
+        elif reason == "failed":
+            group_buy.status = GroupBuyStatus.FAILED
+            record_status = "failed"
         else:
             group_buy.status = GroupBuyStatus.FAILED
+            record_status = "failed"
 
         group_buy.updated_at = datetime.now()
 
@@ -286,7 +323,7 @@ class GroupBuyService:
         # 更新参团记录状态
         for record in self._join_records.values():
             if record.group_buy_id == group_buy.id:
-                record.status = "cancelled"
+                record.status = record_status
 
         logger.info(f"团购 {group_buy.id} {reason}, 已解锁 {len(group_buy.members)} 件库存")
 
