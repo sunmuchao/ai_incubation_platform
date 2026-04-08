@@ -306,6 +306,20 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
         </Drawer>
       )}
 
+      {/* AI 悬浮球 */}
+      <AgentFloatingBall
+        visible={true}
+        unreadCount={unreadCount}
+        onQuickChat={() => {
+          // 快速回到 AI 对话
+          setChatRoomMatch(null)
+        }}
+        onBackToMain={() => {
+          // 返回主页
+        }}
+        hasNewMessage={hasNewMessage}
+      />
+
       {/* PWA 安装提示 */}
       <PWAInstallPrompt />
     </Layout>
