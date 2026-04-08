@@ -7,10 +7,11 @@ import type { WebSocketMessage, WebSocketStatus } from '../types'
 
 type MessageHandler = (message: WebSocketMessage) => void
 
-// 生产环境禁用日志
+// 生产环境也打印日志，用于调试
 const isDev = process.env.NODE_ENV === 'development'
-const log = (...args: unknown[]) => { isDev && console.log('[WebSocket]', ...args) }
-const error = (...args: unknown[]) => { isDev && console.error('[WebSocket]', ...args) }
+const log = (...args: unknown[]) => { console.log('[WebSocket]', ...args) }
+const error = (...args: unknown[]) => { console.error('[WebSocket]', ...args) }
+const info = (...args: unknown[]) => { console.info('[WebSocket] INFO:', ...args) }
 
 class WebSocketService {
   private ws: WebSocket | null = null
@@ -38,13 +39,17 @@ class WebSocketService {
     this.customUrl = customUrl || null
     const wsUrl = customUrl || this.buildDefaultUrl(userId)
 
-    log('Connecting to:', wsUrl)
+    log('=== Connection Start ===')
+    log('userId:', userId)
+    log('WebSocket URL:', wsUrl)
 
     try {
       this.ws = new WebSocket(wsUrl)
+      log('WebSocket instance created, readyState:', this.ws.readyState)
 
       this.ws.onopen = () => {
-        log('Connected')
+        log('=== Connected ===')
+        log('Connection successful for user:', userId)
         this.reconnectAttempts = 0
         this.updateStatus({ connected: true, reconnecting: false })
         this.startHeartbeat()
@@ -52,9 +57,12 @@ class WebSocketService {
       }
 
       this.ws.onmessage = (event) => {
+        log('=== Message Received ===')
+        log('Raw data:', event.data)
         try {
           const message: WebSocketMessage = JSON.parse(event.data)
-          log('Message received:', message.type)
+          log('Parsed message type:', message.type)
+          log('Parsed message payload:', message.payload)
           this.messageHandlers.forEach(handler => handler(message))
         } catch (e) {
           error('Failed to parse message:', e)
@@ -62,17 +70,20 @@ class WebSocketService {
       }
 
       this.ws.onclose = (event) => {
-        log('Closed:', event.code, event.reason)
+        log('=== Connection Closed ===')
+        log('Code:', event.code, 'Reason:', event.reason || 'No reason provided')
         this.updateStatus({ connected: false })
         this.stopHeartbeat()
         this.attemptReconnect()
       }
 
-      this.ws.onerror = () => {
+      this.ws.onerror = (e) => {
+        log('=== Connection Error ===')
+        error('WebSocket error:', e)
         this.updateStatus({ connected: false, error: '连接失败' })
       }
     } catch (e) {
-      error('Failed to create connection:', e)
+      error('Failed to create WebSocket connection:', e)
       this.updateStatus({ connected: false, error: '无法创建连接' })
     }
   }

@@ -62,24 +62,39 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
 
   // 连接 WebSocket 接收实时消息
   useEffect(() => {
-    if (!currentUserId) return
+    if (!currentUserId) {
+      console.log('[ChatRoom] Skip WebSocket connection - no currentUserId')
+      return
+    }
 
-    console.log(`[ChatRoom] Connecting WebSocket for user: ${currentUserId}`)
+    console.log('[ChatRoom] === useEffect Start ===')
+    console.log('[ChatRoom] currentUserId:', currentUserId)
+    console.log('[ChatRoom] actualPartnerId:', actualPartnerId)
 
     // 连接 WebSocket - 使用路径参数方式，与后端 /api/chat/ws/{user_id} 匹配
     websocketService.connect(currentUserId)
 
-    console.log(`[ChatRoom] WebSocket connected`)
+    console.log('[ChatRoom] WebSocket connection initiated')
 
     // 订阅新消息
     const unsubscribe = websocketService.onMessage((message) => {
+      console.log('[ChatRoom] === onMessage Callback ===')
+      console.log('[ChatRoom] message.type:', message.type)
+      console.log('[ChatRoom] message.payload:', message.payload)
+
       if (message.type === 'new_message' && message.payload) {
         const payload = message.payload as any
+        console.log('[ChatRoom] payload.sender_id:', payload.sender_id)
+        console.log('[ChatRoom] actualPartnerId:', actualPartnerId)
+        console.log('[ChatRoom] sender matches partner:', payload.sender_id === actualPartnerId)
+
         // 只添加来自当前聊天对象的消息
         if (payload.sender_id === actualPartnerId) {
+          console.log('[ChatRoom] Adding message to state')
           setMessages(prev => {
             // 避免重复添加
             const exists = prev.some(m => m.id === payload.id)
+            console.log('[ChatRoom] Message exists:', exists)
             if (exists) return prev
             // 转换后端消息格式为前端 Message 类型
             const newMessage: Message = {
@@ -92,13 +107,19 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
               created_at: payload.created_at || payload.timestamp || new Date().toISOString(),
               status: 'delivered'
             }
+            console.log('[ChatRoom] New message created:', newMessage.id)
             return [...prev, newMessage]
           })
+        } else {
+          console.log('[ChatRoom] Skipping message - sender_id does not match actualPartnerId')
         }
       }
     })
 
+    console.log('[ChatRoom] Message subscription registered')
+
     return () => {
+      console.log('[ChatRoom] Cleanup - unsubscribing from messages')
       unsubscribe()
     }
   }, [currentUserId, actualPartnerId])
