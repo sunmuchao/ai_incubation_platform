@@ -12,6 +12,7 @@ import { Input, Button, Avatar, Typography, Space, Empty, Tooltip } from 'antd'
 import { SendOutlined, LeftOutlined, PictureOutlined, SmileOutlined, MoreOutlined } from '@ant-design/icons'
 import type { MatchCandidate } from '../types'
 import { chatApi } from '../api'
+import { websocketService } from '../services/websocket'
 import './ChatRoom.less'
 
 const { Text } = Typography
@@ -58,6 +59,45 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
   const currentUserId = localStorage.getItem('user_info')
     ? JSON.parse(localStorage.getItem('user_info') || '{}')?.username
     : 'user-anonymous-dev'
+
+  // 连接 WebSocket 接收实时消息
+  useEffect(() => {
+    if (!currentUserId) return
+
+    // 连接 WebSocket
+    websocketService.connect(currentUserId)
+
+    // 订阅新消息
+    const unsubscribe = websocketService.onMessage((message) => {
+      if (message.type === 'new_message' && message.payload) {
+        const payload = message.payload as any
+        // 只添加来自当前聊天对象的消息
+        if (payload.sender_id === actualPartnerId) {
+          setMessages(prev => {
+            // 避免重复添加
+            const exists = prev.some(m => m.id === payload.id)
+            if (exists) return prev
+            // 转换后端消息格式为前端 Message 类型
+            const newMessage: Message = {
+              id: payload.id || `ws-${Date.now()}`,
+              sender_id: payload.sender_id,
+              receiver_id: payload.receiver_id || actualPartnerId,
+              message_type: payload.message_type || 'text',
+              content: payload.content,
+              is_read: payload.is_read || false,
+              created_at: payload.created_at || payload.timestamp || new Date().toISOString(),
+              status: 'delivered'
+            }
+            return [...prev, newMessage]
+          })
+        }
+      }
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [currentUserId, actualPartnerId])
 
   // 滚动到底部 - 优化性能
   const scrollToBottom = () => {
