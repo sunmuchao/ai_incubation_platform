@@ -1,0 +1,178 @@
+/**
+ * WebSocket 服务 - 实时通信
+ * 替代轮询，提供低延迟双向通信
+ */
+
+import type { WebSocketMessage, WebSocketStatus } from '../types'
+
+type MessageHandler = (message: WebSocketMessage) => void
+
+// 生产环境禁用日志
+const isDev = process.env.NODE_ENV === 'development'
+const log = (...args: unknown[]) => { isDev && console.log('[WebSocket]', ...args) }
+const error = (...args: unknown[]) => { isDev && console.error('[WebSocket]', ...args) }
+
+class WebSocketService {
+  private ws: WebSocket | null = null
+  private userId: string | null = null
+  private customUrl: string | null = null
+  private reconnectAttempts = 0
+  private maxReconnectAttempts = 5
+  private reconnectDelay = 1000
+  private heartbeatInterval: number | null = null
+  private messageHandlers: Set<MessageHandler> = new Set()
+  private statusHandlers: Set<(status: WebSocketStatus) => void> = new Set()
+  private messageQueue: WebSocketMessage[] = []
+  private status: WebSocketStatus = {
+    connected: false,
+    reconnecting: false,
+  }
+
+  connect(userId: string, customUrl?: string) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      log('Already connected')
+      return
+    }
+
+    this.userId = userId
+    this.customUrl = customUrl || null
+    const wsUrl = customUrl || this.buildDefaultUrl(userId)
+
+    log('Connecting to:', wsUrl)
+
+    try {
+      this.ws = new WebSocket(wsUrl)
+
+      this.ws.onopen = () => {
+        log('Connected')
+        this.reconnectAttempts = 0
+        this.updateStatus({ connected: true, reconnecting: false })
+        this.startHeartbeat()
+        this.flushMessageQueue()
+      }
+
+      this.ws.onmessage = (event) => {
+        try {
+          const message: WebSocketMessage = JSON.parse(event.data)
+          log('Message received:', message.type)
+          this.messageHandlers.forEach(handler => handler(message))
+        } catch (e) {
+          error('Failed to parse message:', e)
+        }
+      }
+
+      this.ws.onclose = (event) => {
+        log('Closed:', event.code, event.reason)
+        this.updateStatus({ connected: false })
+        this.stopHeartbeat()
+        this.attemptReconnect()
+      }
+
+      this.ws.onerror = () => {
+        this.updateStatus({ connected: false, error: '连接失败' })
+      }
+    } catch (e) {
+      error('Failed to create connection:', e)
+      this.updateStatus({ connected: false, error: '无法创建连接' })
+    }
+  }
+
+  private buildDefaultUrl(userId: string): string {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    // 使用路径参数格式，与后端 /api/chat/ws/{user_id} 匹配
+    return `${protocol}//${window.location.host}/api/chat/ws/${userId}`
+  }
+
+  private attemptReconnect() {
+    if (!this.userId) return
+
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      log('Max reconnect attempts reached')
+      this.updateStatus({ connected: false, reconnecting: false })
+      return
+    }
+
+    this.reconnectAttempts++
+    this.updateStatus({ connected: false, reconnecting: true })
+
+    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1)
+    log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`)
+
+    setTimeout(() => {
+      if (this.customUrl) {
+        this.connect(this.userId!, this.customUrl)
+      } else {
+        this.connect(this.userId!)
+      }
+    }, delay)
+  }
+
+  private startHeartbeat() {
+    this.stopHeartbeat()
+    this.heartbeatInterval = window.setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: 'ping', timestamp: new Date().toISOString() }))
+      }
+    }, 30000) // 30 秒心跳
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval)
+      this.heartbeatInterval = null
+    }
+  }
+
+  private flushMessageQueue() {
+    while (this.messageQueue.length > 0 && this.ws?.readyState === WebSocket.OPEN) {
+      const message = this.messageQueue.shift()
+      this.ws.send(JSON.stringify(message))
+    }
+  }
+
+  send(type: string, payload: WebSocketMessage['payload']) {
+    const message = { type, payload, timestamp: new Date().toISOString() }
+
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message))
+    } else {
+      // 队列缓存，等待连接后发送
+      if (this.messageQueue.length < 50) {
+        this.messageQueue.push(message)
+      }
+    }
+  }
+
+  onMessage(handler: MessageHandler) {
+    this.messageHandlers.add(handler)
+    return () => this.messageHandlers.delete(handler)
+  }
+
+  onStatusChange(handler: (status: WebSocketStatus) => void) {
+    this.statusHandlers.add(handler)
+    handler(this.status) // 立即触发一次当前状态
+    return () => this.statusHandlers.delete(handler)
+  }
+
+  private updateStatus(newStatus: Partial<WebSocketStatus>) {
+    this.status = { ...this.status, ...newStatus }
+    this.statusHandlers.forEach(handler => handler(this.status))
+  }
+
+  disconnect() {
+    this.stopHeartbeat()
+    this.ws?.close()
+    this.ws = null
+    this.messageHandlers.clear()
+    this.statusHandlers.clear()
+    this.messageQueue = []
+    this.updateStatus({ connected: false, reconnecting: false })
+  }
+
+  isConnected() {
+    return this.ws?.readyState === WebSocket.OPEN
+  }
+}
+
+// 单例模式
+export const websocketService = new WebSocketService()

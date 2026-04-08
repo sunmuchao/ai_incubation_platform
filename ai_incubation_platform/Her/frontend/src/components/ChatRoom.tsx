@@ -57,15 +57,19 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
   const inputRef = useRef<HTMLInputElement>(null)
 
   const currentUserId = localStorage.getItem('user_info')
-    ? JSON.parse(localStorage.getItem('user_info') || '{}')?.username
+    ? JSON.parse(localStorage.getItem('user_info') || '{}')?.id || JSON.parse(localStorage.getItem('user_info') || '{}')?.username
     : 'user-anonymous-dev'
 
   // 连接 WebSocket 接收实时消息
   useEffect(() => {
     if (!currentUserId) return
 
-    // 连接 WebSocket
+    console.log(`[ChatRoom] Connecting WebSocket for user: ${currentUserId}`)
+
+    // 连接 WebSocket - 使用路径参数方式，与后端 /api/chat/ws/{user_id} 匹配
     websocketService.connect(currentUserId)
+
+    console.log(`[ChatRoom] WebSocket connected`)
 
     // 订阅新消息
     const unsubscribe = websocketService.onMessage((message) => {
