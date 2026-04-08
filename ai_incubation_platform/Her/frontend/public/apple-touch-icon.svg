@@ -1,0 +1,18 @@
+<svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="appleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#D4A59A"/>
+      <stop offset="50%" style="stop-color:#C88B8B"/>
+      <stop offset="100%" style="stop-color:#FF8FAB"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 背景圆角矩形（iOS 图标形状） -->
+  <rect x="0" y="0" width="180" height="180" rx="40" fill="url(#appleGradient)"/>
+
+  <!-- Her 文字 -->
+  <text x="90" y="105" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif" font-size="72" font-weight="700" fill="white" text-anchor="middle" letter-spacing="4">Her</text>
+
+  <!-- 装饰性光晕 -->
+  <circle cx="90" cy="90" r="70" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+</svg>
