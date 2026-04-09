@@ -225,8 +225,10 @@ Her/
 │   │   ├── matching.py         # 匹配接口
 │   │   ├── safety.py           # 安全风控接口 (P7)
 │   │   ├── conversations_v2.py # 对话分析接口
+│   │   ├── errors.py           # 统一错误处理 (P20 新增)
 │   │   └── ...
 │   ├── services/               # 业务逻辑层
+│   │   ├── base_service.py     # 服务基类 (P20 增强：通用 CRUD 方法)
 │   │   ├── safety_ai_service.py    # 安全风控 AI (P7)
 │   │   ├── conversation_analysis_service.py  # 对话分析
 │   │   ├── behavior_learning_service.py      # 行为学习
@@ -297,7 +299,7 @@ Her/
 当前测试覆盖情况：
 
 ```
-总计：300+ 测试用例
+总计：1184 测试用例
 
 # AI Native Skills 测试 (v1.28.0)
 pytest tests/test_skills.py -v

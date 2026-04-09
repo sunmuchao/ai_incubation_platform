@@ -23,7 +23,7 @@ from db.models import UserProfileUpdateDB, UserDB, BehaviorEventDB, Conversation
 from services.behavior_tracking_service import behavior_service
 from services.conversation_analysis_service import conversation_analyzer
 from utils.logger import logger
-from utils.db_session_manager import db_session, db_session_readonly, BaseService
+from utils.db_session_manager import db_session, db_session_readonly
 
 
 class DynamicUserProfileService:

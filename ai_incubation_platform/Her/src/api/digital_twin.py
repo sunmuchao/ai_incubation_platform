@@ -244,6 +244,7 @@ async def run_simulation(
 @router.get("/simulation/{simulation_id}", response_model=SimulationResponse)
 async def get_simulation_status(
     simulation_id: int,
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
     service: DigitalTwinService = Depends(get_twin_service)
 ):
@@ -252,7 +253,6 @@ async def get_simulation_status(
 
     返回模拟的当前状态和进度
     """
-    db = SessionLocal()
     from models.p2_digital_twin_models import DigitalTwinSimulation
 
     simulation = db.query(DigitalTwinSimulation).filter(
@@ -346,6 +346,7 @@ async def get_report(
 async def get_my_simulations(
     limit: int = Query(default=10, ge=1, le=50, description="返回数量"),
     offset: int = Query(default=0, ge=0, description="偏移量"),
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
     service: DigitalTwinService = Depends(get_twin_service)
 ):
@@ -355,7 +356,6 @@ async def get_my_simulations(
     返回当前用户参与的所有模拟会话
     """
     user_id = current_user.get("user_id")
-    db = SessionLocal()
 
     from models.p2_digital_twin_models import DigitalTwinSimulation
 

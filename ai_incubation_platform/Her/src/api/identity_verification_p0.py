@@ -10,11 +10,12 @@ P0 功能接口：
 - 查看信任分
 """
 from fastapi import APIRouter, HTTPException, Depends, Body, Query
+from sqlalchemy.orm import Session
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel, Field
 from utils.logger import logger
 from auth.jwt import get_current_user
-from db.database import SessionLocal
+from db.database import get_db, SessionLocal
 from services.identity_verification_service import IdentityVerificationService
 
 router = APIRouter(prefix="/api/identity", tags=["identity-verification"])
@@ -63,9 +64,8 @@ class VerificationResponse(BaseModel):
 
 # ============= 辅助函数 =============
 
-def get_identity_service() -> IdentityVerificationService:
-    """获取身份验证服务实例"""
-    db = SessionLocal()
+def get_identity_service(db: Session = Depends(get_db)) -> IdentityVerificationService:
+    """获取身份验证服务实例（依赖注入）"""
     return IdentityVerificationService(db)
 
 
@@ -207,6 +207,7 @@ async def submit_occupation_verification(
 
 @router.get("/verifications")
 async def get_user_verifications(
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -215,8 +216,6 @@ async def get_user_verifications(
     返回所有类型的身份验证记录
     """
     user_id = current_user.get("user_id")
-    service = get_identity_service()
-    db = SessionLocal()
 
     try:
         from db.models import IdentityVerificationDB
