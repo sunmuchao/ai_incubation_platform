@@ -3,6 +3,30 @@
 
 所有模型按领域分类注册，避免重复定义和循环导入问题。
 测试环境只需导入此模块即可获得所有模型定义。
+
+## 领域映射表（P系列 → 功能领域）
+
+| P系列 | 领域 | 文件 |
+|-------|------|------|
+| P0 | 身份认证 | p0_identity_models.py |
+| P1 | 冲突/感知/价值观 | p1_conflict_models.py, p1_perception_models.py, p1_values_models.py |
+| P2 | 数字孪生 | p2_digital_twin_models.py |
+| P8 | 企业管理 | p8_models.py |
+| P9 | 通知分享 | p9_models.py |
+| P10 | 关系里程碑/约会建议 | p10_models.py |
+| P11 | 情感分析/安全守护 | p11_models.py |
+| P12 | 行为实验室 | p12_models.py |
+| P13 | 爱之语/预警响应 | p13_models.py |
+| P14 | 约会模拟沙盒 | p14_models.py |
+| P15 | 自主约会策划 | p15_models.py |
+| P16 | 部落匹配/数字小家 | p16_models.py |
+| P17 | 压力测试/成长计划 | p17_models.py |
+| P18 | 关系状态管理 | p18_models.py |
+| P18-P22 | AI预沟通/消费画像 | p18_p22_models.py |
+| P20 | 智能聊天助手 | p20_models.py |
+| L4 | AI持续学习 | l4_learning_models.py |
+
+详细文档见: models/README.md
 """
 from db.database import Base
 
