@@ -5,7 +5,7 @@
  * P17: 终极共振 - 压力测试、成长计划、信任背书
  */
 
-import axios from 'axios'
+import { apiClientClient } from './apiClientClient'
 import type {
   // P15
   AutonomousDatePlan,
@@ -40,24 +40,6 @@ import type {
   TrustScoreComparison,
 } from '../types/p15_p16_p17_types'
 
-const API_BASE_URL = ''
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
-// 请求拦截器 - 添加 JWT token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('jwt_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
 // ==================== P15: 虚实结合 ====================
 
 // --- 自主约会策划 API ---
@@ -68,7 +50,7 @@ export const datePlanApi = {
   async createDatePlan(
     request: CreateDatePlanRequest
   ): Promise<{ success: boolean; plan: AutonomousDatePlan }> {
-    const response = await api.post('/api/p15/date-plan/create', request)
+    const response = await apiClient.post('/apiClient/p15/date-plan/create', request)
     return response.data
   },
 
@@ -76,7 +58,7 @@ export const datePlanApi = {
    * 获取约会计划详情
    */
   async getDatePlan(plan_id: string): Promise<{ success: boolean; plan: AutonomousDatePlan }> {
-    const response = await api.get(`/api/p15/date-plan/${plan_id}`)
+    const response = await apiClient.get(`/apiClient/p15/date-plan/${plan_id}`)
     return response.data
   },
 
@@ -86,7 +68,7 @@ export const datePlanApi = {
   async approveDatePlan(
     request: ApproveDatePlanRequest
   ): Promise<{ success: boolean; plan: AutonomousDatePlan }> {
-    const response = await api.post('/api/p15/date-plan/approve', request)
+    const response = await apiClient.post('/apiClient/p15/date-plan/approve', request)
     return response.data
   },
 
@@ -98,7 +80,7 @@ export const datePlanApi = {
     status?: string,
     limit = 10
   ): Promise<{ success: boolean; plans: AutonomousDatePlan[] }> {
-    const response = await api.get(`/api/p15/date-plan/list/${user_id}`, {
+    const response = await apiClient.get(`/apiClient/p15/date-plan/list/${user_id}`, {
       params: { status, limit },
     })
     return response.data
@@ -112,7 +94,7 @@ export const datePlanApi = {
     user_id: string,
     reason?: string
   ): Promise<{ success: boolean }> {
-    const response = await api.post('/api/p15/date-plan/cancel', {
+    const response = await apiClient.post('/apiClient/p15/date-plan/cancel', {
       plan_id,
       user_id,
       reason,
@@ -129,7 +111,7 @@ export const albumApi = {
   async generateAlbum(
     request: GenerateAlbumRequest
   ): Promise<{ success: boolean; album: RelationshipAlbum }> {
-    const response = await api.post('/api/p15/album/generate', request)
+    const response = await apiClient.post('/apiClient/p15/album/generate', request)
     return response.data
   },
 
@@ -137,7 +119,7 @@ export const albumApi = {
    * 获取纪念册详情
    */
   async getAlbum(album_id: string): Promise<{ success: boolean; album: RelationshipAlbum }> {
-    const response = await api.get(`/api/p15/album/${album_id}`)
+    const response = await apiClient.get(`/apiClient/p15/album/${album_id}`)
     return response.data
   },
 
@@ -148,7 +130,7 @@ export const albumApi = {
     user_id: string,
     limit = 10
   ): Promise<{ success: boolean; albums: RelationshipAlbum[] }> {
-    const response = await api.get(`/api/p15/album/list/${user_id}`, {
+    const response = await apiClient.get(`/apiClient/p15/album/list/${user_id}`, {
       params: { limit },
     })
     return response.data
@@ -160,7 +142,7 @@ export const albumApi = {
   async addMemory(
     request: AddMemoryRequest
   ): Promise<{ success: boolean; memory_id: string }> {
-    const response = await api.post('/api/p15/album/memory/add', request)
+    const response = await apiClient.post('/apiClient/p15/album/memory/add', request)
     return response.data
   },
 
@@ -172,7 +154,7 @@ export const albumApi = {
     user_b_id: string,
     limit = 20
   ): Promise<{ success: boolean; footprints: CoupleFootprint[] }> {
-    const response = await api.get(`/api/p15/album/footprints/${user_a_id}/${user_b_id}`, {
+    const response = await apiClient.get(`/apiClient/p15/album/footprints/${user_a_id}/${user_b_id}`, {
       params: { limit },
     })
     return response.data
@@ -186,7 +168,7 @@ export const albumApi = {
     user_b_id: string,
     footprint: Omit<CoupleFootprint, 'id'>
   ): Promise<{ success: boolean; footprint_id: string }> {
-    const response = await api.post('/api/p15/album/footprints/add', {
+    const response = await apiClient.post('/apiClient/p15/album/footprints/add', {
       user_a_id,
       user_b_id,
       footprint,
@@ -206,7 +188,7 @@ export const tribeApi = {
     user_id: string,
     lifestyle_data: AnalyzeTribeFitRequest['lifestyle_data']
   ): Promise<{ success: boolean; tribes: LifestyleTribe[]; fit_scores: any[] }> {
-    const response = await api.post('/api/p16/tribe/analyze-fit', {
+    const response = await apiClient.post('/apiClient/p16/tribe/analyze-fit', {
       user_id,
       lifestyle_data,
     })
@@ -217,7 +199,7 @@ export const tribeApi = {
    * 获取用户的部落成员关系
    */
   async getUserTribes(user_id: string): Promise<{ success: boolean; memberships: any[] }> {
-    const response = await api.get(`/api/p16/tribe/memberships/${user_id}`)
+    const response = await apiClient.get(`/apiClient/p16/tribe/memberships/${user_id}`)
     return response.data
   },
 
@@ -228,7 +210,7 @@ export const tribeApi = {
     user_a_id: string,
     user_b_id: string
   ): Promise<{ success: boolean; compatibility: TribeCompatibilityAnalysis }> {
-    const response = await api.get(`/api/p16/tribe/compatibility/${user_a_id}/${user_b_id}`)
+    const response = await apiClient.get(`/apiClient/p16/tribe/compatibility/${user_a_id}/${user_b_id}`)
     return response.data
   },
 
@@ -236,7 +218,7 @@ export const tribeApi = {
    * 获取所有部落列表
    */
   async getAllTribes(): Promise<{ success: boolean; tribes: LifestyleTribe[] }> {
-    const response = await api.get('/api/p16/tribe/list')
+    const response = await apiClient.get('/apiClient/p16/tribe/list')
     return response.data
   },
 
@@ -247,7 +229,7 @@ export const tribeApi = {
     user_id: string,
     tribe_id: string
   ): Promise<{ success: boolean; membership_id: string }> {
-    const response = await api.post('/api/p16/tribe/join', { user_id, tribe_id })
+    const response = await apiClient.post('/apiClient/p16/tribe/join', { user_id, tribe_id })
     return response.data
   },
 }
@@ -260,7 +242,7 @@ export const digitalHomeApi = {
   async createDigitalHome(
     request: CreateDigitalHomeRequest
   ): Promise<{ success: boolean; home: DigitalHome }> {
-    const response = await api.post('/api/p16/digital-home/create', request)
+    const response = await apiClient.post('/apiClient/p16/digital-home/create', request)
     return response.data
   },
 
@@ -268,7 +250,7 @@ export const digitalHomeApi = {
    * 获取数字小家详情
    */
   async getDigitalHome(home_id: string): Promise<{ success: boolean; home: DigitalHome }> {
-    const response = await api.get(`/api/p16/digital-home/${home_id}`)
+    const response = await apiClient.get(`/apiClient/p16/digital-home/${home_id}`)
     return response.data
   },
 
@@ -276,7 +258,7 @@ export const digitalHomeApi = {
    * 获取用户的数字小家
    */
   async getUserDigitalHomes(user_id: string): Promise<{ success: boolean; homes: DigitalHome[] }> {
-    const response = await api.get(`/api/p16/digital-home/list/${user_id}`)
+    const response = await apiClient.get(`/apiClient/p16/digital-home/list/${user_id}`)
     return response.data
   },
 
@@ -286,7 +268,7 @@ export const digitalHomeApi = {
   async createCoupleGoal(
     request: CreateCoupleGoalRequest
   ): Promise<{ success: boolean; goal: CoupleGoal }> {
-    const response = await api.post('/api/p16/digital-home/goal/create', request)
+    const response = await apiClient.post('/apiClient/p16/digital-home/goal/create', request)
     return response.data
   },
 
@@ -296,7 +278,7 @@ export const digitalHomeApi = {
   async goalCheckin(
     request: GoalCheckinRequest
   ): Promise<{ success: boolean; goal: CoupleGoal }> {
-    const response = await api.post('/api/p16/digital-home/goal/checkin', request)
+    const response = await apiClient.post('/apiClient/p16/digital-home/goal/checkin', request)
     return response.data
   },
 
@@ -304,7 +286,7 @@ export const digitalHomeApi = {
    * 获取目标详情
    */
   async getGoalDetails(goal_id: string): Promise<{ success: boolean; goal: CoupleGoal }> {
-    const response = await api.get(`/api/p16/digital-home/goal/${goal_id}`)
+    const response = await apiClient.get(`/apiClient/p16/digital-home/goal/${goal_id}`)
     return response.data
   },
 
@@ -315,7 +297,7 @@ export const digitalHomeApi = {
     goal_id: string,
     updates: Partial<CoupleGoal>
   ): Promise<{ success: boolean; goal: CoupleGoal }> {
-    const response = await api.put(`/api/p16/digital-home/goal/${goal_id}`, updates)
+    const response = await apiClient.put(`/apiClient/p16/digital-home/goal/${goal_id}`, updates)
     return response.data
   },
 }
@@ -329,7 +311,7 @@ export const familySimApi = {
     user_id: string,
     request: StartFamilySimulationRequest
   ): Promise<{ success: boolean; simulation: FamilyMeetingSimulation }> {
-    const response = await api.post('/api/p16/family-sim/start', {
+    const response = await apiClient.post('/apiClient/p16/family-sim/start', {
       user_id,
       ...request,
     })
@@ -346,7 +328,7 @@ export const familySimApi = {
     simulation: FamilyMeetingSimulation
     turn_result: { impression_score: number; feedback: string }
   }> {
-    const response = await api.post('/api/p16/family-sim/submit-turn', request)
+    const response = await apiClient.post('/apiClient/p16/family-sim/submit-turn', request)
     return response.data
   },
 
@@ -356,7 +338,7 @@ export const familySimApi = {
   async getFamilySimulationDetails(
     simulation_id: string
   ): Promise<{ success: boolean; simulation: FamilyMeetingSimulation }> {
-    const response = await api.get(`/api/p16/family-sim/${simulation_id}`)
+    const response = await apiClient.get(`/apiClient/p16/family-sim/${simulation_id}`)
     return response.data
   },
 
@@ -371,7 +353,7 @@ export const familySimApi = {
     feedback: any
     ai_summary: string
   }> {
-    const response = await api.get(`/api/p16/family-sim/${simulation_id}/feedback`)
+    const response = await apiClient.get(`/apiClient/p16/family-sim/${simulation_id}/feedback`)
     return response.data
   },
 
@@ -382,7 +364,7 @@ export const familySimApi = {
     user_id: string,
     limit = 10
   ): Promise<{ success: boolean; simulations: FamilyMeetingSimulation[] }> {
-    const response = await api.get(`/api/p16/family-sim/list/${user_id}`, {
+    const response = await apiClient.get(`/apiClient/p16/family-sim/list/${user_id}`, {
       params: { limit },
     })
     return response.data
@@ -401,7 +383,7 @@ export const stressTestApi = {
     user_b_id: string,
     scenario_type: string
   ): Promise<{ success: boolean; test: StressTest }> {
-    const response = await api.post('/api/p17/stress-test/start', {
+    const response = await apiClient.post('/apiClient/p17/stress-test/start', {
       user_a_id,
       user_b_id,
       scenario_type,
@@ -415,7 +397,7 @@ export const stressTestApi = {
   async submitStressResponse(
     request: SubmitStressResponseRequest
   ): Promise<{ success: boolean; test: StressTest }> {
-    const response = await api.post('/api/p17/stress-test/submit', request)
+    const response = await apiClient.post('/apiClient/p17/stress-test/submit', request)
     return response.data
   },
 
@@ -423,7 +405,7 @@ export const stressTestApi = {
    * 获取压力测试详情
    */
   async getStressTestDetails(test_id: string): Promise<{ success: boolean; test: StressTest }> {
-    const response = await api.get(`/api/p17/stress-test/${test_id}`)
+    const response = await apiClient.get(`/apiClient/p17/stress-test/${test_id}`)
     return response.data
   },
 
@@ -438,7 +420,7 @@ export const stressTestApi = {
     recommendations: string[]
     ai_summary: string
   }> {
-    const response = await api.get(`/api/p17/stress-test/${test_id}/results`)
+    const response = await apiClient.get(`/apiClient/p17/stress-test/${test_id}/results`)
     return response.data
   },
 
@@ -449,7 +431,7 @@ export const stressTestApi = {
     user_id: string,
     limit = 10
   ): Promise<{ success: boolean; tests: StressTest[] }> {
-    const response = await api.get(`/api/p17/stress-test/list/${user_id}`, {
+    const response = await apiClient.get(`/apiClient/p17/stress-test/list/${user_id}`, {
       params: { limit },
     })
     return response.data
@@ -464,7 +446,7 @@ export const growthPlanApi = {
   async createGrowthPlan(
     request: CreateGrowthPlanRequest
   ): Promise<{ success: boolean; plan: GrowthPlan }> {
-    const response = await api.post('/api/p17/growth-plan/create', request)
+    const response = await apiClient.post('/apiClient/p17/growth-plan/create', request)
     return response.data
   },
 
@@ -472,7 +454,7 @@ export const growthPlanApi = {
    * 获取成长计划详情
    */
   async getGrowthPlan(plan_id: string): Promise<{ success: boolean; plan: GrowthPlan }> {
-    const response = await api.get(`/api/p17/growth-plan/${plan_id}`)
+    const response = await apiClient.get(`/apiClient/p17/growth-plan/${plan_id}`)
     return response.data
   },
 
@@ -484,7 +466,7 @@ export const growthPlanApi = {
     status?: string,
     limit = 10
   ): Promise<{ success: boolean; plans: GrowthPlan[] }> {
-    const response = await api.get(`/api/p17/growth-plan/list/${user_id}`, {
+    const response = await apiClient.get(`/apiClient/p17/growth-plan/list/${user_id}`, {
       params: { status, limit },
     })
     return response.data
@@ -496,7 +478,7 @@ export const growthPlanApi = {
   async growthPlanCheckin(
     request: GrowthPlanCheckinRequest
   ): Promise<{ success: boolean; plan: GrowthPlan }> {
-    const response = await api.post('/api/p17/growth-plan/checkin', request)
+    const response = await apiClient.post('/apiClient/p17/growth-plan/checkin', request)
     return response.data
   },
 
@@ -507,7 +489,7 @@ export const growthPlanApi = {
     plan_id: string,
     category?: string
   ): Promise<{ success: boolean; resources: any[] }> {
-    const response = await api.get(`/api/p17/growth-plan/${plan_id}/resources`, {
+    const response = await apiClient.get(`/apiClient/p17/growth-plan/${plan_id}/resources`, {
       params: { category },
     })
     return response.data
@@ -520,7 +502,7 @@ export const growthPlanApi = {
     plan_id: string,
     updates: Partial<GrowthPlan>
   ): Promise<{ success: boolean; plan: GrowthPlan }> {
-    const response = await api.put(`/api/p17/growth-plan/${plan_id}`, updates)
+    const response = await apiClient.put(`/apiClient/p17/growth-plan/${plan_id}`, updates)
     return response.data
   },
 }
@@ -531,7 +513,7 @@ export const trustApi = {
    * 获取用户信任分
    */
   async getUserTrustScore(user_id: string): Promise<{ success: boolean; trust_score: TrustScore }> {
-    const response = await api.get(`/api/p17/trust/score/${user_id}`)
+    const response = await apiClient.get(`/apiClient/p17/trust/score/${user_id}`)
     return response.data
   },
 
@@ -541,7 +523,7 @@ export const trustApi = {
   async submitTrustEndorsement(
     request: TrustEndorsementRequest
   ): Promise<{ success: boolean; endorsement_id: string }> {
-    const response = await api.post('/api/p17/trust/endorse', request)
+    const response = await apiClient.post('/apiClient/p17/trust/endorse', request)
     return response.data
   },
 
@@ -552,7 +534,7 @@ export const trustApi = {
     user_id: string,
     limit = 10
   ): Promise<{ success: boolean; endorsements: any[] }> {
-    const response = await api.get(`/api/p17/trust/endorsements/${user_id}`, {
+    const response = await apiClient.get(`/apiClient/p17/trust/endorsements/${user_id}`, {
       params: { limit },
     })
     return response.data
@@ -564,7 +546,7 @@ export const trustApi = {
   async verifyClaim(
     request: VerifyClaimRequest
   ): Promise<{ success: boolean; claim_id: string }> {
-    const response = await api.post('/api/p17/trust/verify', request)
+    const response = await apiClient.post('/apiClient/p17/trust/verify', request)
     return response.data
   },
 
@@ -575,7 +557,7 @@ export const trustApi = {
     user_a_id: string,
     user_b_id: string
   ): Promise<{ success: boolean; comparison: TrustScoreComparison }> {
-    const response = await api.get(`/api/p17/trust/compare/${user_a_id}/${user_b_id}`)
+    const response = await apiClient.get(`/apiClient/p17/trust/compare/${user_a_id}/${user_b_id}`)
     return response.data
   },
 
@@ -583,7 +565,7 @@ export const trustApi = {
    * 获取用户的验证声明列表
    */
   async getUserVerifiedClaims(user_id: string): Promise<{ success: boolean; claims: any[] }> {
-    const response = await api.get(`/api/p17/trust/claims/${user_id}`)
+    const response = await apiClient.get(`/apiClient/p17/trust/claims/${user_id}`)
     return response.data
   },
 }

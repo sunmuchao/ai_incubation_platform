@@ -3,7 +3,7 @@
  * 包含：约会模拟沙盒、约会辅助、多代理协作
  */
 
-import axios from 'axios'
+import { apiClientClient } from './apiClientClient'
 import type {
   AIDateAvatar,
   CreateAIDateAvatarRequest,
@@ -19,24 +19,6 @@ import type {
   MultiAgentSession,
 } from '../types/p14_types'
 
-const API_BASE_URL = ''
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
-// 请求拦截器 - 添加 JWT token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('jwt_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
 // ==================== AI 分身 API ====================
 
 export const avatarApi = {
@@ -47,7 +29,7 @@ export const avatarApi = {
     user_id: string,
     request: CreateAIDateAvatarRequest
   ): Promise<{ success: boolean; avatar: AIDateAvatar }> {
-    const response = await api.post('/api/p14/avatar/create', {
+    const response = await apiClient.post('/apiClient/p14/avatar/create', {
       user_id,
       ...request,
     })
@@ -58,7 +40,7 @@ export const avatarApi = {
    * 获取用户的 AI 分身列表
    */
   async getUserAvatars(user_id: string): Promise<{ success: boolean; avatars: AIDateAvatar[] }> {
-    const response = await api.get(`/api/p14/avatar/list/${user_id}`)
+    const response = await apiClient.get(`/apiClient/p14/avatar/list/${user_id}`)
     return response.data
   },
 
@@ -66,7 +48,7 @@ export const avatarApi = {
    * 获取 AI 分身详情
    */
   async getAvatarDetails(avatar_id: string): Promise<{ success: boolean; avatar: AIDateAvatar }> {
-    const response = await api.get(`/api/p14/avatar/${avatar_id}`)
+    const response = await apiClient.get(`/apiClient/p14/avatar/${avatar_id}`)
     return response.data
   },
 
@@ -77,7 +59,7 @@ export const avatarApi = {
     avatar_id: string,
     updates: Partial<AIDateAvatar>
   ): Promise<{ success: boolean; avatar: AIDateAvatar }> {
-    const response = await api.put(`/api/p14/avatar/${avatar_id}`, updates)
+    const response = await apiClient.put(`/apiClient/p14/avatar/${avatar_id}`, updates)
     return response.data
   },
 
@@ -85,7 +67,7 @@ export const avatarApi = {
    * 删除 AI 分身
    */
   async deleteAvatar(avatar_id: string): Promise<{ success: boolean }> {
-    const response = await api.delete(`/api/p14/avatar/${avatar_id}`)
+    const response = await apiClient.delete(`/apiClient/p14/avatar/${avatar_id}`)
     return response.data
   },
 }
@@ -100,7 +82,7 @@ export const simulationApi = {
     user_id: string,
     request: StartSimulationRequest
   ): Promise<{ success: boolean; simulation: DateSimulation }> {
-    const response = await api.post('/api/p14/simulation/start', {
+    const response = await apiClient.post('/apiClient/p14/simulation/start', {
       user_id,
       ...request,
     })
@@ -117,7 +99,7 @@ export const simulationApi = {
     simulation: DateSimulation
     turn_result: { feedback: string; score: number; suggestion: string }
   }> {
-    const response = await api.post('/api/p14/simulation/submit-turn', request)
+    const response = await apiClient.post('/apiClient/p14/simulation/submit-turn', request)
     return response.data
   },
 
@@ -125,7 +107,7 @@ export const simulationApi = {
    * 获取模拟详情
    */
   async getSimulationDetails(simulation_id: string): Promise<{ success: boolean; simulation: DateSimulation }> {
-    const response = await api.get(`/api/p14/simulation/${simulation_id}`)
+    const response = await apiClient.get(`/apiClient/p14/simulation/${simulation_id}`)
     return response.data
   },
 
@@ -137,7 +119,7 @@ export const simulationApi = {
     status?: string,
     limit = 10
   ): Promise<{ success: boolean; simulations: DateSimulation[] }> {
-    const response = await api.get(`/api/p14/simulation/list/${user_id}`, {
+    const response = await apiClient.get(`/apiClient/p14/simulation/list/${user_id}`, {
       params: { status, limit },
     })
     return response.data
@@ -153,7 +135,7 @@ export const simulationApi = {
     ai_summary: string
     improvement_suggestions: string[]
   }> {
-    const response = await api.get(`/api/p14/simulation/${simulation_id}/feedback`)
+    const response = await apiClient.get(`/apiClient/p14/simulation/${simulation_id}/feedback`)
     return response.data
   },
 }
@@ -168,7 +150,7 @@ export const outfitApi = {
     user_id: string,
     request: GetOutfitRecommendationRequest
   ): Promise<{ success: boolean; recommendation: OutfitRecommendation }> {
-    const response = await api.post('/api/p14/outfit/recommend', {
+    const response = await apiClient.post('/apiClient/p14/outfit/recommend', {
       user_id,
       ...request,
     })
@@ -182,7 +164,7 @@ export const outfitApi = {
     user_id: string,
     limit = 10
   ): Promise<{ success: boolean; recommendations: OutfitRecommendation[] }> {
-    const response = await api.get(`/api/p14/outfit/history/${user_id}`, {
+    const response = await apiClient.get(`/apiClient/p14/outfit/history/${user_id}`, {
       params: { limit },
     })
     return response.data
@@ -195,7 +177,7 @@ export const outfitApi = {
     user_id: string,
     recommendation: Omit<OutfitRecommendation, 'id' | 'created_at'>
   ): Promise<{ success: boolean; recommendation_id: string }> {
-    const response = await api.post('/api/p14/outfit/save', {
+    const response = await apiClient.post('/apiClient/p14/outfit/save', {
       user_id,
       recommendation,
     })
@@ -212,7 +194,7 @@ export const venueApi = {
   async getVenueStrategy(
     request: GetVenueStrategyRequest
   ): Promise<{ success: boolean; strategy: VenueStrategy }> {
-    const response = await api.post('/api/p14/venue/strategy', request)
+    const response = await apiClient.post('/apiClient/p14/venue/strategy', request)
     return response.data
   },
 
@@ -224,7 +206,7 @@ export const venueApi = {
     venue_type?: string,
     limit = 20
   ): Promise<{ success: boolean; venues: any[] }> {
-    const response = await api.get('/api/p14/venue/list', {
+    const response = await apiClient.get('/apiClient/p14/venue/list', {
       params: { city, venue_type, limit },
     })
     return response.data
@@ -241,7 +223,7 @@ export const topicApi = {
     user_id: string,
     request: GetTopicKitRequest
   ): Promise<{ success: boolean; topic_kit: TopicKit }> {
-    const response = await api.post('/api/p14/topic/kit', {
+    const response = await apiClient.post('/apiClient/p14/topic/kit', {
       user_id,
       ...request,
     })
@@ -255,7 +237,7 @@ export const topicApi = {
     user_id: string,
     context: 'awkward_silence' | 'conversation_stuck' | 'need_deepening'
   ): Promise<{ success: boolean; topics: any[] }> {
-    const response = await api.get(`/api/p14/topic/emergency/${user_id}`, {
+    const response = await apiClient.get(`/apiClient/p14/topic/emergency/${user_id}`, {
       params: { context },
     })
     return response.data
@@ -268,7 +250,7 @@ export const topicApi = {
     user_id: string,
     target_user_id: string
   ): Promise<{ success: boolean; topics: any[] }> {
-    const response = await api.get(`/api/p14/topic/personalized/${user_id}`, {
+    const response = await apiClient.get(`/apiClient/p14/topic/personalized/${user_id}`, {
       params: { target_user_id },
     })
     return response.data
@@ -286,7 +268,7 @@ export const multiAgentApi = {
     session_type: 'date_coaching' | 'relationship_analysis' | 'safety_review',
     session_data: any
   ): Promise<{ success: boolean; session: MultiAgentSession }> {
-    const response = await api.post('/api/p14/agent/session/start', {
+    const response = await apiClient.post('/apiClient/p14/agent/session/start', {
       user_id,
       session_type,
       session_data,
@@ -300,7 +282,7 @@ export const multiAgentApi = {
   async getMultiAgentSessionResult(
     session_id: string
   ): Promise<{ success: boolean; session: MultiAgentSession }> {
-    const response = await api.get(`/api/p14/agent/session/${session_id}`)
+    const response = await apiClient.get(`/apiClient/p14/agent/session/${session_id}`)
     return response.data
   },
 
@@ -311,7 +293,7 @@ export const multiAgentApi = {
     user_id: string,
     limit = 10
   ): Promise<{ success: boolean; sessions: MultiAgentSession[] }> {
-    const response = await api.get(`/api/p14/agent/session/list/${user_id}`, {
+    const response = await apiClient.get(`/apiClient/p14/agent/session/list/${user_id}`, {
       params: { limit },
     })
     return response.data

@@ -2,7 +2,7 @@
 
 // ==================== 核心 API ====================
 
-import axios from 'axios'
+import { apiClientClient } from './apiClientClient'
 import type {
   ConversationMatchRequest,
   ConversationMatchResponse,
@@ -16,57 +16,12 @@ import type {
   StreamChunk,
 } from '../types'
 
-const API_BASE_URL = ''
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
-// 请求拦截器 - 添加 JWT token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('jwt_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  } else if (process.env.NODE_ENV === 'development') {
-    // 开发环境：使用默认测试用户（后端配置了匿名访问白名单）
-    // 注意：这只用于本地开发测试
-    const testUserId = localStorage.getItem('test_user_id') || 'user-test-001'
-    localStorage.setItem('test_user_id', testUserId)
-    // 添加一个简单的 header 标识开发模式
-    config.headers['X-Dev-User-Id'] = testUserId
-  }
-  return config
-})
-
-// 响应拦截器 - 统一错误处理
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // 生产环境不打印详细错误
-    const isDev = process.env.NODE_ENV === 'development'
-    if (isDev) {
-      console.error('API Error:', error.response?.data || error.message)
-    }
-    // 包装错误信息，确保 detail 可以被访问
-    const wrappedError = new Error(
-      error.response?.data?.detail || error.message || '请求失败'
-    ) as any
-    wrappedError.detail = error.response?.data?.detail
-    wrappedError.status = error.response?.status
-    wrappedError.data = error.response?.data
-    throw wrappedError
-  }
-)
-
 export const conversationMatchingApi = {
   /**
    * 对话式匹配 - 用户通过自然语言表达匹配需求
    */
   async match(request: ConversationMatchRequest): Promise<ConversationMatchResponse> {
-    const response = await api.post('/api/conversation-matching/match', request)
+    const response = await apiClient.post('/apiClient/conversation-matching/match', request)
     return response.data
   },
 
@@ -80,7 +35,7 @@ export const conversationMatchingApi = {
     const token = localStorage.getItem('jwt_token')
     const testUserId = localStorage.getItem('test_user_id') || 'user-test-001'
 
-    const response = await fetch('/api/conversation-matching/match-stream', {
+    const response = await fetch('/apiClient/conversation-matching/match-stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -126,7 +81,7 @@ export const conversationMatchingApi = {
    * 每日自主推荐 - AI 主动分析用户状态，推送每日匹配
    */
   async dailyRecommend(): Promise<DailyRecommendResponse> {
-    const response = await api.get('/api/conversation-matching/daily-recommend')
+    const response = await apiClient.get('/apiClient/conversation-matching/daily-recommend')
     return response.data
   },
 
@@ -136,7 +91,7 @@ export const conversationMatchingApi = {
   async analyzeRelationship(
     request: RelationshipAnalysisRequest
   ): Promise<RelationshipAnalysisResponse> {
-    const response = await api.post('/api/conversation-matching/relationship/analyze', request)
+    const response = await apiClient.post('/apiClient/conversation-matching/relationship/analyze', request)
     return response.data
   },
 
@@ -144,7 +99,7 @@ export const conversationMatchingApi = {
    * 获取关系状态
    */
   async getRelationshipStatus(matchId: string) {
-    const response = await api.get(`/api/conversation-matching/relationship/${matchId}/status`)
+    const response = await apiClient.get(`/apiClient/conversation-matching/relationship/${matchId}/status`)
     return response.data
   },
 
@@ -152,7 +107,7 @@ export const conversationMatchingApi = {
    * 智能话题推荐
    */
   async suggestTopics(request: TopicSuggestionRequest): Promise<TopicSuggestionResponse> {
-    const response = await api.post('/api/conversation-matching/topics/suggest', request)
+    const response = await apiClient.post('/apiClient/conversation-matching/topics/suggest', request)
     return response.data
   },
 
@@ -160,7 +115,7 @@ export const conversationMatchingApi = {
    * 兼容性分析
    */
   async getCompatibility(targetUserId: string): Promise<CompatibilityAnalysis> {
-    const response = await api.get(`/api/conversation-matching/compatibility/${targetUserId}`)
+    const response = await apiClient.get(`/apiClient/conversation-matching/compatibility/${targetUserId}`)
     return response.data
   },
 
@@ -168,7 +123,7 @@ export const conversationMatchingApi = {
    * 获取 AI 主动推送
    */
   async getAiPushRecommendations() {
-    const response = await api.get('/api/conversation-matching/ai/push/recommendations')
+    const response = await apiClient.get('/apiClient/conversation-matching/ai/push/recommendations')
     return response.data
   },
 }
@@ -179,7 +134,7 @@ export const aiAwarenessApi = {
    * 获取 AI 全知感知数据
    */
   async getOmniscientAwareness(userId: string) {
-    const response = await api.get(`/api/ai/awareness?user_id=${userId}`)
+    const response = await apiClient.get(`/apiClient/ai/awareness?user_id=${userId}`)
     return response.data
   },
 
@@ -187,7 +142,7 @@ export const aiAwarenessApi = {
    * 获取主动洞察
    */
   async getActiveInsights(userId: string) {
-    const response = await api.get(`/api/ai/awareness/insights?user_id=${userId}`)
+    const response = await apiClient.get(`/apiClient/ai/awareness/insights?user_id=${userId}`)
     return response.data
   },
 
@@ -195,7 +150,7 @@ export const aiAwarenessApi = {
    * 获取 AI 主动建议
    */
   async getProactiveSuggestion(userId: string) {
-    const response = await api.get(`/api/ai/awareness/suggestion?user_id=${userId}`)
+    const response = await apiClient.get(`/apiClient/ai/awareness/suggestion?user_id=${userId}`)
     return response.data
   },
 
@@ -203,7 +158,7 @@ export const aiAwarenessApi = {
    * 获取行为模式
    */
   async getBehaviorPatterns(userId: string) {
-    const response = await api.get(`/api/ai/awareness/patterns?user_id=${userId}`)
+    const response = await apiClient.get(`/apiClient/ai/awareness/patterns?user_id=${userId}`)
     return response.data
   },
 
@@ -211,7 +166,7 @@ export const aiAwarenessApi = {
    * 获取 AI 旁白
    */
   async getAiCommentary(userId: string) {
-    const response = await api.get(`/api/ai/awareness/commentary?user_id=${userId}`)
+    const response = await apiClient.get(`/apiClient/ai/awareness/commentary?user_id=${userId}`)
     return response.data
   },
 
@@ -224,8 +179,8 @@ export const aiAwarenessApi = {
     targetId?: string,
     eventData?: Record<string, any>
   ) {
-    const response = await api.post(
-      `/api/ai/awareness/track?user_id=${userId}&event_type=${eventType}${targetId ? `&target_id=${targetId}` : ''}`,
+    const response = await apiClient.post(
+      `/apiClient/ai/awareness/track?user_id=${userId}&event_type=${eventType}${targetId ? `&target_id=${targetId}` : ''}`,
       eventData || {}
     )
     return response.data
@@ -235,8 +190,8 @@ export const aiAwarenessApi = {
    * 追踪查看资料
    */
   async trackProfileView(viewerId: string, profileId: string) {
-    const response = await api.post(
-      `/api/ai/awareness/track/profile-view?user_id=${viewerId}&profile_id=${profileId}`
+    const response = await apiClient.post(
+      `/apiClient/ai/awareness/track/profile-view?user_id=${viewerId}&profile_id=${profileId}`
     )
     return response.data
   },
@@ -245,8 +200,8 @@ export const aiAwarenessApi = {
    * 追踪滑动行为
    */
   async trackSwipe(userId: string, targetId: string, action: 'like' | 'pass' | 'super_like') {
-    const response = await api.post(
-      `/api/ai/awareness/track/swipe?user_id=${userId}&target_id=${targetId}&action=${action}`
+    const response = await apiClient.post(
+      `/apiClient/ai/awareness/track/swipe?user_id=${userId}&target_id=${targetId}&action=${action}`
     )
     return response.data
   },
@@ -255,8 +210,8 @@ export const aiAwarenessApi = {
    * 追踪聊天消息
    */
   async trackChatMessage(senderId: string, receiverId: string, contentLength: number) {
-    const response = await api.post(
-      `/api/ai/awareness/track/chat-message?sender_id=${senderId}&receiver_id=${receiverId}&content_length=${contentLength}`
+    const response = await apiClient.post(
+      `/apiClient/ai/awareness/track/chat-message?sender_id=${senderId}&receiver_id=${receiverId}&content_length=${contentLength}`
     )
     return response.data
   },
@@ -275,7 +230,7 @@ export const matchingApi = {
     if (filters?.age_max) params.append('age_max', filters.age_max.toString())
     if (filters?.distance) params.append('distance', filters.distance.toString())
 
-    const response = await api.get(`/api/matching/recommend`, { params })
+    const response = await apiClient.get(`/apiClient/matching/recommend`, { params })
     return response.data
   },
 
@@ -283,7 +238,7 @@ export const matchingApi = {
    * 滑动操作
    */
   async swipe(targetUserId: string, action: 'like' | 'pass' | 'super_like') {
-    const response = await api.post('/api/matching/swipe', {
+    const response = await apiClient.post('/apiClient/matching/swipe', {
       target_user_id: targetUserId,
       action,
     })
@@ -294,7 +249,7 @@ export const matchingApi = {
    * 获取匹配列表
    */
   async getMatches(userId: string, limit = 10) {
-    const response = await api.get(`/api/matching/${userId}/matches`, {
+    const response = await apiClient.get(`/apiClient/matching/${userId}/matches`, {
       params: { limit },
     })
     return response.data
@@ -306,7 +261,7 @@ export const chatApi = {
    * 获取会话列表
    */
   async getConversations() {
-    const response = await api.get('/api/chat/conversations')
+    const response = await apiClient.get('/apiClient/chat/conversations')
     return response.data
   },
 
@@ -314,7 +269,7 @@ export const chatApi = {
    * 获取聊天历史
    */
   async getHistory(otherUserId: string, limit = 50, offset = 0) {
-    const response = await api.get(`/api/chat/history/${otherUserId}`, {
+    const response = await apiClient.get(`/apiClient/chat/history/${otherUserId}`, {
       params: { limit, offset },
     })
     return response.data
@@ -324,7 +279,7 @@ export const chatApi = {
    * 发送消息
    */
   async sendMessage(data: { receiver_id: string; content: string; message_type?: string }) {
-    const response = await api.post('/api/chat/send', data)
+    const response = await apiClient.post('/apiClient/chat/send', data)
     return response.data
   },
 
@@ -332,7 +287,7 @@ export const chatApi = {
    * 模拟回复 (开发环境)
    */
   async simulateReply(conversationId: string, userMessage: string) {
-    const response = await api.post('/api/chat/simulate-reply', {}, {
+    const response = await apiClient.post('/apiClient/chat/simulate-reply', {}, {
       params: {
         conversation_id: conversationId,
         user_message: userMessage,
@@ -345,7 +300,7 @@ export const chatApi = {
    * 标记消息已读
    */
   async markMessageRead(messageId: string) {
-    const response = await api.post(`/api/chat/read/message/${messageId}`)
+    const response = await apiClient.post(`/apiClient/chat/read/message/${messageId}`)
     return response.data
   },
 }
@@ -355,7 +310,7 @@ export const userApi = {
    * 登录
    */
   async login(username: string, password: string) {
-    const response = await api.post('/api/users/login', {
+    const response = await apiClient.post('/apiClient/users/login', {
       username,
       password,
     })
@@ -376,7 +331,7 @@ export const userApi = {
     bio: string
     interests: string[]
   }) {
-    const response = await api.post('/api/users/register', userData)
+    const response = await apiClient.post('/apiClient/users/register', userData)
     return response.data
   },
 
@@ -384,7 +339,7 @@ export const userApi = {
    * 获取当前用户信息
    */
   async getCurrentUser() {
-    const response = await api.get('/api/users/me')
+    const response = await apiClient.get('/apiClient/users/me')
     return response.data
   },
 }
@@ -394,7 +349,7 @@ export const registrationConversationApi = {
    * 开始注册对话
    */
   async startConversation(userId: string, userName: string) {
-    const response = await api.post('/api/registration-conversation/start', {
+    const response = await apiClient.post('/apiClient/registration-conversation/start', {
       user_id: userId,
       user_name: userName,
     })
@@ -405,7 +360,7 @@ export const registrationConversationApi = {
    * 发送对话消息
    */
   async sendMessage(userId: string, message: string) {
-    const response = await api.post('/api/registration-conversation/message', {
+    const response = await apiClient.post('/apiClient/registration-conversation/message', {
       user_id: userId,
       message,
     })
@@ -416,7 +371,7 @@ export const registrationConversationApi = {
    * 获取会话状态
    */
   async getSession(userId: string) {
-    const response = await api.get(`/api/registration-conversation/session/${userId}`)
+    const response = await apiClient.get(`/apiClient/registration-conversation/session/${userId}`)
     return response.data
   },
 
@@ -424,7 +379,7 @@ export const registrationConversationApi = {
    * 完成对话
    */
   async completeConversation(userId: string) {
-    const response = await api.post(`/api/registration-conversation/complete/${userId}`)
+    const response = await apiClient.post(`/apiClient/registration-conversation/complete/${userId}`)
     return response.data
   },
 }
@@ -432,13 +387,13 @@ export const registrationConversationApi = {
 // ==================== P10-P17 API 导出 ====================
 
 // P10: 关系里程碑、约会建议、双人互动游戏
-export * from './p10_api'
+export * from './p10_apiClient'
 
 // P13: 情感调解增强
-export * from './p13_api'
+export * from './p13_apiClient'
 
 // P14: 实战演习
-export * from './p14_api'
+export * from './p14_apiClient'
 
 // P15-P17: 虚实结合、圈子融合、终极共振
-export * from './p15_p16_p17_api'
+export * from './p15_p16_p17_apiClient'

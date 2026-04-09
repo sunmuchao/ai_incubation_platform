@@ -2,7 +2,7 @@
  * P10 API 服务 - 关系里程碑、约会建议、双人互动游戏
  */
 
-import axios from 'axios'
+import { apiClientClient } from './apiClientClient'
 import type {
   Milestone,
   MilestoneTimeline,
@@ -19,24 +19,6 @@ import type {
   GameInsights,
 } from '../types/p10_types'
 
-const API_BASE_URL = ''
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
-// 请求拦截器 - 添加 JWT token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('jwt_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
 // ==================== 关系里程碑 API ====================
 
 export const milestoneApi = {
@@ -44,7 +26,7 @@ export const milestoneApi = {
    * 记录关系里程碑
    */
   async recordMilestone(request: RecordMilestoneRequest): Promise<{ milestone_id: string; status: string }> {
-    const response = await api.post('/api/milestones/record', request)
+    const response = await apiClient.post('/apiClient/milestones/record', request)
     return response.data
   },
 
@@ -56,7 +38,7 @@ export const milestoneApi = {
     user_id_2: string,
     include_private = false
   ): Promise<MilestoneTimeline> {
-    const response = await api.get(`/api/milestones/timeline/${user_id_1}/${user_id_2}`, {
+    const response = await apiClient.get(`/apiClient/milestones/timeline/${user_id_1}/${user_id_2}`, {
       params: { include_private },
     })
     return response.data
@@ -66,7 +48,7 @@ export const milestoneApi = {
    * 获取里程碑详情
    */
   async getMilestoneDetails(milestone_id: string): Promise<Milestone> {
-    const response = await api.get(`/api/milestones/${milestone_id}`)
+    const response = await apiClient.get(`/apiClient/milestones/${milestone_id}`)
     return response.data
   },
 
@@ -77,7 +59,7 @@ export const milestoneApi = {
     milestone_id: string,
     request: UpdateMilestoneRequest
   ): Promise<{ milestone_id: string; status: string }> {
-    const response = await api.put(`/api/milestones/${milestone_id}`, request)
+    const response = await apiClient.put(`/apiClient/milestones/${milestone_id}`, request)
     return response.data
   },
 
@@ -88,7 +70,7 @@ export const milestoneApi = {
     milestone_id: string,
     celebration_type: 'card' | 'gift' | 'activity' = 'card'
   ): Promise<{ milestone_id: string; celebration_type: string; status: string }> {
-    const response = await api.post(`/api/milestones/${milestone_id}/celebrate`, null, {
+    const response = await apiClient.post(`/apiClient/milestones/${milestone_id}/celebrate`, null, {
       params: { celebration_type },
     })
     return response.data
@@ -101,7 +83,7 @@ export const milestoneApi = {
     user_id_1: string,
     user_id_2: string
   ): Promise<MilestoneStatistics> {
-    const response = await api.get(`/api/milestones/stats/${user_id_1}/${user_id_2}`)
+    const response = await apiClient.get(`/apiClient/milestones/stats/${user_id_1}/${user_id_2}`)
     return response.data
   },
 
@@ -118,7 +100,7 @@ export const milestoneApi = {
     priority?: string
     expires_hours?: number
   }): Promise<{ insight_id: string; status: string }> {
-    const response = await api.post('/api/milestones/insights/generate', request)
+    const response = await apiClient.post('/apiClient/milestones/insights/generate', request)
     return response.data
   },
 
@@ -130,7 +112,7 @@ export const milestoneApi = {
     unread_only = false,
     limit = 20
   ): Promise<{ insights: any[] }> {
-    const response = await api.get(`/api/milestones/insights/${user_id}`, {
+    const response = await apiClient.get(`/apiClient/milestones/insights/${user_id}`, {
       params: { unread_only, limit },
     })
     return response.data
@@ -143,7 +125,7 @@ export const milestoneApi = {
     insight_id: string,
     user_id: string
   ): Promise<{ status: string }> {
-    const response = await api.post(`/api/milestones/insights/${insight_id}/read`, {
+    const response = await apiClient.post(`/apiClient/milestones/insights/${insight_id}/read`, {
       user_id,
     })
     return response.data
@@ -162,7 +144,7 @@ export const dateSuggestionApi = {
     date_type: string,
     preferences?: Record<string, any>
   ): Promise<{ suggestion_id: string; status: string; suggestion?: DateSuggestion }> {
-    const response = await api.post('/api/date-suggestions/generate', {
+    const response = await apiClient.post('/apiClient/date-suggestions/generate', {
       user_id,
       target_user_id,
       date_type,
@@ -179,7 +161,7 @@ export const dateSuggestionApi = {
     status?: string,
     limit = 10
   ): Promise<{ suggestions: DateSuggestion[] }> {
-    const response = await api.get(`/api/date-suggestions/list/${user_id}`, {
+    const response = await apiClient.get(`/apiClient/date-suggestions/list/${user_id}`, {
       params: { status, limit },
     })
     return response.data
@@ -192,7 +174,7 @@ export const dateSuggestionApi = {
     suggestion_id: string,
     request: RespondToDateSuggestionRequest
   ): Promise<{ status: string; action: string }> {
-    const response = await api.post(`/api/date-suggestions/${suggestion_id}/respond`, request)
+    const response = await apiClient.post(`/apiClient/date-suggestions/${suggestion_id}/respond`, request)
     return response.data
   },
 
@@ -205,7 +187,7 @@ export const dateSuggestionApi = {
     price_level?: number,
     limit = 20
   ): Promise<{ venues: DateVenue[] }> {
-    const response = await api.get('/api/date-suggestions/venues', {
+    const response = await apiClient.get('/apiClient/date-suggestions/venues', {
       params: { city, venue_type, price_level, limit },
     })
     return response.data
@@ -215,7 +197,7 @@ export const dateSuggestionApi = {
    * 添加约会地点
    */
   async addDateVenue(venue: Omit<DateVenue, 'id'>): Promise<{ venue_id: string; status: string }> {
-    const response = await api.post('/api/date-suggestions/venues', venue)
+    const response = await apiClient.post('/apiClient/date-suggestions/venues', venue)
     return response.data
   },
 }
@@ -233,7 +215,7 @@ export const coupleGameApi = {
     game_config?: Record<string, any>,
     difficulty: 'easy' | 'normal' | 'hard' = 'normal'
   ): Promise<{ game_id: string; status: string; game: CoupleGame }> {
-    const response = await api.post('/api/couple-games/create', {
+    const response = await apiClient.post('/apiClient/couple-games/create', {
       user_id_1,
       user_id_2,
       game_type,
@@ -251,7 +233,7 @@ export const coupleGameApi = {
     status?: string,
     limit = 10
   ): Promise<{ games: CoupleGame[] }> {
-    const response = await api.get(`/api/couple-games/list/${user_id}`, {
+    const response = await apiClient.get(`/apiClient/couple-games/list/${user_id}`, {
       params: { status, limit },
     })
     return response.data
@@ -261,7 +243,7 @@ export const coupleGameApi = {
    * 获取游戏详情
    */
   async getGameDetails(game_id: string): Promise<{ game: CoupleGame }> {
-    const response = await api.get(`/api/couple-games/${game_id}`)
+    const response = await apiClient.get(`/apiClient/couple-games/${game_id}`)
     return response.data
   },
 
@@ -272,7 +254,7 @@ export const coupleGameApi = {
     game_id: string,
     user_id: string
   ): Promise<{ status: string; game_id: string }> {
-    const response = await api.post(`/api/couple-games/${game_id}/start`, { user_id })
+    const response = await apiClient.post(`/apiClient/couple-games/${game_id}/start`, { user_id })
     return response.data
   },
 
@@ -280,7 +262,7 @@ export const coupleGameApi = {
    * 提交游戏轮次回答
    */
   async submitGameRound(request: SubmitGameRoundRequest): Promise<{ status: string; round_result: any }> {
-    const response = await api.post(`/api/couple-games/${request.game_id}/round`, request)
+    const response = await apiClient.post(`/apiClient/couple-games/${request.game_id}/round`, request)
     return response.data
   },
 
@@ -291,7 +273,7 @@ export const coupleGameApi = {
     game_id: string,
     user_id: string
   ): Promise<{ status: string; game: CoupleGame; insights: GameInsights }> {
-    const response = await api.post(`/api/couple-games/${game_id}/complete`, { user_id })
+    const response = await apiClient.post(`/apiClient/couple-games/${game_id}/complete`, { user_id })
     return response.data
   },
 
@@ -299,7 +281,7 @@ export const coupleGameApi = {
    * 获取游戏结果洞察
    */
   async getGameInsights(game_id: string): Promise<{ insights: GameInsights }> {
-    const response = await api.get(`/api/couple-games/${game_id}/insights`)
+    const response = await apiClient.get(`/apiClient/couple-games/${game_id}/insights`)
     return response.data
   },
 }
