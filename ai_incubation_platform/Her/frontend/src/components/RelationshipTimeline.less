@@ -1,0 +1,160 @@
+.relationship-timeline {
+  padding: 24px;
+}
+
+.timeline-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.timeline-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+}
+
+.timeline-statistics {
+  margin-bottom: 24px;
+}
+
+.stats-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+
+    .anticon {
+      font-size: 24px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    strong {
+      color: white;
+      font-size: 20px;
+    }
+
+    .ant-typography-secondary {
+      color: rgba(255, 255, 255, 0.7) !important;
+      font-size: 12px;
+    }
+  }
+}
+
+.milestone-timeline {
+  padding: 24px 0;
+
+  .ant-timeline-item-content {
+    position: relative;
+    top: -4px;
+  }
+}
+
+.milestone-card {
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+  }
+
+  .milestone-card-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+
+    .milestone-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .milestone-info {
+      flex: 1;
+      min-width: 0;
+
+      .milestone-title {
+        display: block;
+        font-size: 16px;
+        margin-bottom: 4px;
+      }
+
+      .milestone-date {
+        font-size: 13px;
+      }
+    }
+  }
+
+  .milestone-description {
+    margin-bottom: 16px;
+    color: rgba(0, 0, 0, 0.65);
+  }
+
+  .milestone-rating {
+    margin-bottom: 12px;
+  }
+}
+
+.milestone-modal-content {
+  .milestone-detail-section {
+    margin-bottom: 20px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .ant-typography-secondary {
+      display: block;
+      margin-bottom: 8px;
+    }
+  }
+
+  .ai-analysis-card {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border: none;
+
+    .ai-significance {
+      margin-bottom: 12px;
+    }
+
+    .ai-stage {
+      margin-bottom: 12px;
+    }
+
+    .ai-suggestions {
+      ul {
+        margin: 8px 0 0 20px;
+        padding: 0;
+
+        li {
+          margin-bottom: 4px;
+          color: rgba(0, 0, 0, 0.65);
+        }
+      }
+    }
+  }
+
+  .user-note {
+    background: #fffbe6;
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 3px solid #faad14;
+  }
+}

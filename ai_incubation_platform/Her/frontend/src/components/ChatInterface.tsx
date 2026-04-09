@@ -1,9 +1,9 @@
 // AI Native Chat 组件 - 对话式交互核心
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Input, Button, Card, Avatar, Spin, Tag, Space, Typography, Divider, Collapse, Progress, Alert, Empty, Timeline } from 'antd'
+import { Input, Button, Card, Avatar, Spin, Tag, Space, Typography, Divider, Progress, Empty, Timeline } from 'antd'
 import { UserOutlined, ThunderboltOutlined, HeartOutlined, GiftOutlined, CheckCircleOutlined, CloseCircleOutlined, MessageOutlined, RobotOutlined, SendOutlined } from '@ant-design/icons'
-import type { ConversationMatchResponse, MatchCandidate, AIPreCommunicationSession } from '../types'
+import type { MatchCandidate, AIPreCommunicationSession } from '../types'
 import { conversationMatchingApi, aiAwarenessApi } from '../api'
 import {
   getMyPreCommunicationSessions,

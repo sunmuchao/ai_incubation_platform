@@ -320,11 +320,15 @@ class AutoMatchRecommendWorkflow:
             if "error" not in compat_result:
                 candidate["compatibility_analysis"] = compat_result
                 # 使用深度分析分数覆盖原始分数
-                candidate["score"] = compat_result.get("overall_score", candidate.get("score", 0.5))
+                old_score = candidate.get("score", 0)
+                new_score = compat_result.get("overall_score", candidate.get("score", 0.5))
+                logger.info(f"_deep_compatibility_analysis: user={candidate_user_id}, old_score={old_score}, new_score={new_score}, overall_score_exists={compat_result.get('overall_score')}")
+                candidate["score"] = new_score
                 candidate["confidence"] = compat_result.get("confidence", 0.5)
                 analyzed.append(candidate)
             else:
                 # 分析失败，保留原始数据
+                logger.info(f"_deep_compatibility_analysis: user={candidate_user_id}, error={compat_result.get('error')}, keeping original score={candidate.get('score')}")
                 candidate["confidence"] = 0.5
                 analyzed.append(candidate)
 
@@ -332,11 +336,18 @@ class AutoMatchRecommendWorkflow:
 
     def _rank_matches(self, candidates: List[dict], min_score: float) -> List[dict]:
         """Step 4: 匹配度排序"""
+        # 调试日志：记录输入数据
+        logger.info(f"_rank_matches: input candidates={len(candidates)}, min_score={min_score}")
+        for i, c in enumerate(candidates[:3]):  # 只记录前 3 个
+            logger.info(f"_rank_matches: candidate[{i}] user_id={c.get('user_id')}, score={c.get('score')}, keys={list(c.keys())[:5]}")
+
         # 过滤低于阈值的候选
         filtered = [
             c for c in candidates
             if c.get("score", 0) >= min_score
         ]
+
+        logger.info(f"_rank_matches: filtered count={len(filtered)}, min_score={min_score}")
 
         # 按分数降序排序
         filtered.sort(key=lambda x: x.get("score", 0), reverse=True)

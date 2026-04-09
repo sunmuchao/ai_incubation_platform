@@ -1,0 +1,976 @@
+"""
+P12 行为实验室服务层 - 时机感知破冰模块
+
+包含：
+1. 共同经历检测服务
+2. 尴尬沉默识别服务
+3. 情境话题生成服务
+"""
+from typing import Dict, List, Optional, Any, Tuple
+from datetime import datetime, timedelta
+from collections import defaultdict
+import json
+import re
+from sqlalchemy.orm import Session
+
+from db.database import SessionLocal
+from db.models import ConversationDB, ChatMessageDB, UserDB
+from models.p12_models import (
+    SharedExperienceDB,
+    SilenceEventDB,
+    IcebreakerTopicDB,
+    GeneratedIcebreakerDB
+)
+from services.p12_behavior_lab_types import (
+    ExperienceReferenceData,
+    ExperienceSignificanceConfig,
+    SilenceEventConfig,
+    SilenceContext,
+    GeneratedTopic,
+    ConversationContext,
+    UserInterestProfile,
+    TopicRecommendation
+)
+from utils.logger import logger
+
+
+class SharedExperienceService:
+    """共同经历检测服务"""
+
+    # 经历类型常量
+    TYPE_CONVERSATION = "conversation"
+    TYPE_ACTIVITY = "activity"
+    TYPE_LOCATION = "location"
+    TYPE_EVENT = "event"
+    TYPE_MEDIA = "media"  # 共同观看的电影、音乐等
+
+    def __init__(self):
+        # 显著性阈值配置
+        self.significance_threshold = {
+            "duration_minutes": 30,  # 持续时间超过 30 分钟
+            "message_count": 20,  # 消息数量超过 20 条
+            "emotional_intensity": 0.7,  # 情感强度超过 0.7
+        }
+
+    def detect_shared_experience(
+        self,
+        user_a_id: str,
+        user_b_id: str,
+        experience_type: str,
+        reference_data: ExperienceReferenceData,
+        db_session: Optional[Session] = None
+    ) -> Optional[str]:
+        """
+        检测并记录共同经历
+
+        Args:
+            user_a_id: 用户 A ID
+            user_b_id: 用户 B ID
+            experience_type: 经历类型
+            reference_data: 相关数据（如对话 ID、活动数据等）
+            db_session: 可选的数据库会话
+
+        Returns:
+            经历 ID，如果创建成功；否则 None
+        """
+        db = db_session if db_session else SessionLocal()
+        should_close = db_session is None
+
+        try:
+            # 生成经历 ID
+            experience_id = f"exp_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{user_a_id[:4]}{user_b_id[:4]}"
+
+            # 提取时间和地点信息
+            start_time = reference_data.get("start_time", datetime.utcnow())
+            end_time = reference_data.get("end_time")
+            location = reference_data.get("location")
+            description = reference_data.get("description", "")
+
+            # 计算情感评分
+            sentiment_score = self._calculate_experience_sentiment(db, reference_data)
+
+            # 判断是否显著
+            is_significant = self._evaluate_significance(
+                experience_type, reference_data, sentiment_score
+            )
+
+            # 创建记录
+            experience = SharedExperienceDB(
+                id=experience_id,
+                user_a_id=user_a_id,
+                user_b_id=user_b_id,
+                experience_type=experience_type,
+                description=description,
+                start_time=start_time if isinstance(start_time, datetime) else datetime.fromisoformat(start_time),
+                end_time=end_time if isinstance(end_time, datetime) else (datetime.fromisoformat(end_time) if end_time else None),
+                location=location,
+                reference_data=reference_data,
+                sentiment_score=sentiment_score,
+                is_significant=is_significant
+            )
+
+            db.add(experience)
+            if should_close:
+                db.commit()
+
+            logger.info(f"Detected shared experience: {experience_id}, type={experience_type}, significant={is_significant}")
+            return experience_id
+
+        except Exception as e:
+            logger.error(f"Error detecting shared experience: {e}")
+            if should_close:
+                db.rollback()
+            return None
+        finally:
+            if should_close:
+                db.close()
+
+    def get_shared_experiences(
+        self,
+        user_a_id: str,
+        user_b_id: str,
+        experience_type: Optional[str] = None,
+        days: int = 30,
+        only_significant: bool = False,
+        db_session: Optional[Session] = None
+    ) -> List[Dict]:
+        """
+        获取双方的共同经历
+
+        Args:
+            user_a_id: 用户 A ID
+            user_b_id: 用户 B ID
+            experience_type: 可选的经历类型过滤
+            days: 查询天数范围
+            only_significant: 是否只返回显著经历
+            db_session: 可选的数据库会话
+
+        Returns:
+            经历列表
+        """
+        db = db_session if db_session else SessionLocal()
+        should_close = db_session is None
+
+        try:
+            since = datetime.utcnow() - timedelta(days=days)
+
+            query = db.query(SharedExperienceDB).filter(
+                SharedExperienceDB.user_a_id == user_a_id,
+                SharedExperienceDB.user_b_id == user_b_id,
+                SharedExperienceDB.start_time >= since
+            )
+
+            if experience_type:
+                query = query.filter(SharedExperienceDB.experience_type == experience_type)
+
+            if only_significant:
+                query = query.filter(SharedExperienceDB.is_significant == True)
+
+            experiences = query.order_by(SharedExperienceDB.start_time.desc()).all()
+
+            return [self._experience_to_dict(exp) for exp in experiences]
+
+        except Exception as e:
+            logger.error(f"Error getting shared experiences: {e}")
+            return []
+        finally:
+            if should_close:
+                db.close()
+
+    def get_significant_memories(
+        self,
+        user_a_id: str,
+        user_b_id: str,
+        limit: int = 10,
+        db_session: Optional[Session] = None
+    ) -> List[Dict]:
+        """
+        获取重要回忆（显著经历）
+
+        Args:
+            user_a_id: 用户 A ID
+            user_b_id: 用户 B ID
+            limit: 返回数量限制
+            db_session: 可选的数据库会话
+
+        Returns:
+            重要回忆列表
+        """
+        db = db_session if db_session else SessionLocal()
+        should_close = db_session is None
+
+        try:
+            experiences = db.query(SharedExperienceDB).filter(
+                SharedExperienceDB.user_a_id == user_a_id,
+                SharedExperienceDB.user_b_id == user_b_id,
+                SharedExperienceDB.is_significant == True
+            ).order_by(
+                SharedExperienceDB.sentiment_score.desc(),
+                SharedExperienceDB.start_time.desc()
+            ).limit(limit).all()
+
+            return [self._experience_to_dict(exp) for exp in experiences]
+
+        except Exception as e:
+            logger.error(f"Error getting significant memories: {e}")
+            return []
+        finally:
+            if should_close:
+                db.close()
+
+    def _calculate_experience_sentiment(
+        self,
+        db: Any,
+        reference_data: Dict
+    ) -> float:
+        """计算经历的情感评分"""
+        # 如果有对话 ID，分析对话情感
+        if "conversation_id" in reference_data:
+            conv_id = reference_data["conversation_id"]
+            messages = db.query(ChatMessageDB).filter(
+                ChatMessageDB.conversation_id == conv_id
+            ).all()
+
+            if messages:
+                # 简单的情感分析：基于积极/消极关键词
+                positive_words = ["开心", "喜欢", "爱", "高兴", "愉快", "有趣", "美好", "温暖"]
+                negative_words = ["难过", "生气", "讨厌", "无聊", "失望", "伤心", "烦躁"]
+
+                sentiment_sum = 0
+                for msg in messages:
+                    text = msg.content.lower()
+                    pos_count = sum(1 for word in positive_words if word in text)
+                    neg_count = sum(1 for word in negative_words if word in text)
+                    if pos_count + neg_count > 0:
+                        sentiment_sum += (pos_count - neg_count) / (pos_count + neg_count)
+
+                return max(-1, min(1, sentiment_sum / len(messages))) if messages else 0.0
+
+        # 默认中性评分
+        return reference_data.get("sentiment_score", 0.0)
+
+    def _evaluate_significance(
+        self,
+        experience_type: str,
+        reference_data: Dict,
+        sentiment_score: float
+    ) -> bool:
+        """评估经历是否显著"""
+        # 情感强度过高（正向或负向）
+        if abs(sentiment_score) >= self.significance_threshold["emotional_intensity"]:
+            return True
+
+        # 持续时间过长
+        if "duration_minutes" in reference_data:
+            if reference_data["duration_minutes"] >= self.significance_threshold["duration_minutes"]:
+                return True
+
+        # 消息数量过多
+        if "message_count" in reference_data:
+            if reference_data["message_count"] >= self.significance_threshold["message_count"]:
+                return True
+
+        # 特殊类型总是显著的（如第一次约会）
+        if reference_data.get("is_milestone", False):
+            return True
+
+        return False
+
+    def _experience_to_dict(self, experience: SharedExperienceDB) -> Dict:
+        """将经历对象转换为字典"""
+        return {
+            "id": experience.id,
+            "user_a_id": experience.user_a_id,
+            "user_b_id": experience.user_b_id,
+            "experience_type": experience.experience_type,
+            "description": experience.description,
+            "start_time": experience.start_time.isoformat() if experience.start_time else None,
+            "end_time": experience.end_time.isoformat() if experience.end_time else None,
+            "location": experience.location,
+            "reference_data": experience.reference_data,
+            "sentiment_score": experience.sentiment_score,
+            "is_significant": experience.is_significant,
+            "created_at": experience.created_at.isoformat() if experience.created_at else None
+        }
+
+
+class SilenceDetectionService:
+    """尴尬沉默识别服务"""
+
+    # 沉默阈值配置（秒）
+    SILENCE_THRESHOLD_AWKWARD = 120  # 2 分钟 - 尴尬沉默
+    SILENCE_THRESHOLD_WAITING = 300  # 5 分钟 - 等待回复
+    SILENCE_THRESHOLD_CRITICAL = 1800  # 30 分钟 - 严重冷场
+
+    def __init__(self):
+        # 沉默类型
+        self.TYPE_AWKWARD = "awkward"
+        self.TYPE_COMFORTABLE = "comfortable"
+        self.TYPE_WAITING_RESPONSE = "waiting_response"
+
+    def detect_silence(
+        self,
+        conversation_id: str,
+        user_a_id: str,
+        user_b_id: str,
+        db_session: Optional[Session] = None
+    ) -> Optional[Dict]:
+        """
+        检测对话中的沉默
+
+        Args:
+            conversation_id: 对话 ID
+            user_a_id: 用户 A ID
+            user_b_id: 用户 B ID
+            db_session: 可选的数据库会话
+
+        Returns:
+            沉默事件详情，如果没有沉默则返回 None
+        """
+        db = db_session if db_session else SessionLocal()
+        should_close = db_session is None
+
+        try:
+            # 获取最后一条消息
+            last_message = db.query(ChatMessageDB).filter(
+                ChatMessageDB.conversation_id == conversation_id
+            ).order_by(ChatMessageDB.created_at.desc()).first()
+
+            if not last_message:
+                return None
+
+            # 计算沉默时长
+            now = datetime.utcnow()
+            silence_duration = (now - last_message.created_at).total_seconds()
+
+            # 判断是否达到沉默阈值
+            if silence_duration < self.SILENCE_THRESHOLD_AWKWARD:
+                return None
+
+            # 确定沉默类型
+            silence_type = self._classify_silence(
+                silence_duration, conversation_id, db
+            )
+
+            # 获取上下文摘要
+            context_summary = self._generate_context_summary(
+                last_message, conversation_id, db
+            )
+
+            # 生成破冰建议
+            icebreaker_suggestions = self._generate_icebreaker_suggestions(
+                user_a_id, user_b_id, context_summary, db
+            )
+
+            # 创建沉默事件记录
+            silence_id = f"silence_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{conversation_id[:8]}"
+
+            silence_event = SilenceEventDB(
+                id=silence_id,
+                conversation_id=conversation_id,
+                user_a_id=user_a_id,
+                user_b_id=user_b_id,
+                duration_seconds=int(silence_duration),
+                last_message_time=last_message.created_at,
+                silence_type=silence_type,
+                context_summary=context_summary,
+                icebreaker_suggestions=icebreaker_suggestions,
+                is_resolved=False
+            )
+
+            db.add(silence_event)
+            if should_close:
+                db.commit()
+
+            logger.info(f"Detected silence in conversation {conversation_id}: {silence_type}, {silence_duration}s")
+
+            return {
+                "id": silence_id,
+                "conversation_id": conversation_id,
+                "duration_seconds": int(silence_duration),
+                "silence_type": silence_type,
+                "context_summary": context_summary,
+                "icebreaker_suggestions": icebreaker_suggestions,
+                "last_message_time": last_message.created_at.isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Error detecting silence: {e}")
+            if should_close:
+                db.rollback()
+            return None
+        finally:
+            if should_close:
+                db.close()
+
+    def resolve_silence(
+        self,
+        silence_id: str,
+        resolution_method: str,
+        db_session: Optional[Session] = None
+    ) -> bool:
+        """
+        解决沉默事件
+
+        Args:
+            silence_id: 沉默事件 ID
+            resolution_method: 解决方式
+            db_session: 可选的数据库会话
+
+        Returns:
+            是否成功解决
+        """
+        db = db_session if db_session else SessionLocal()
+        should_close = db_session is None
+
+        try:
+            silence_event = db.query(SilenceEventDB).filter(
+                SilenceEventDB.id == silence_id
+            ).first()
+
+            if not silence_event:
+                logger.warning(f"Silence event not found: {silence_id}")
+                return False
+
+            silence_event.is_resolved = True
+            silence_event.resolution_method = resolution_method
+
+            if should_close:
+                db.commit()
+
+            logger.info(f"Resolved silence event: {silence_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error resolving silence: {e}")
+            if should_close:
+                db.rollback()
+            return False
+        finally:
+            if should_close:
+                db.close()
+
+    def _classify_silence(
+        self,
+        duration: float,
+        conversation_id: str,
+        db: Any
+    ) -> str:
+        """分类沉默类型"""
+        # 获取对话历史
+        conversation = db.query(ConversationDB).filter(
+            ConversationDB.id == conversation_id
+        ).first()
+
+        if not conversation:
+            return self.TYPE_AWKWARD
+
+        # 基于关系阶段判断
+        relationship_stage = getattr(conversation, "relationship_stage", "unknown")
+
+        # 初期关系更容易产生尴尬沉默
+        if relationship_stage in ["strangers", "acquaintances"]:
+            if duration >= self.SILENCE_THRESHOLD_CRITICAL:
+                return self.TYPE_AWKWARD
+            elif duration >= self.SILENCE_THRESHOLD_AWKWARD:
+                return self.TYPE_AWKWARD
+        else:
+            # 稳定关系中的沉默更可能是舒适的
+            if duration < self.SILENCE_THRESHOLD_WAITING:
+                return self.TYPE_COMFORTABLE
+
+        # 长时间未回复
+        if duration >= self.SILENCE_THRESHOLD_WAITING:
+            return self.TYPE_WAITING_RESPONSE
+
+        return self.TYPE_AWKWARD
+
+    def _generate_context_summary(
+        self,
+        last_message: ChatMessageDB,
+        conversation_id: str,
+        db: Any
+    ) -> str:
+        """生成沉默前的上下文摘要"""
+        # 获取最后几条消息
+        recent_messages = db.query(ChatMessageDB).filter(
+            ChatMessageDB.conversation_id == conversation_id
+        ).order_by(ChatMessageDB.created_at.desc()).limit(5).all()
+
+        if not recent_messages:
+            return "无上下文信息"
+
+        # 提取最后话题
+        last_topics = []
+        for msg in recent_messages[:3]:
+            # 简单提取关键词
+            text = msg.content[:50]
+            last_topics.append(f"{msg.sender_id[:4]}: {text}")
+
+        return f"最后话题：{' | '.join(last_topics)}"
+
+    def _generate_icebreaker_suggestions(
+        self,
+        user_a_id: str,
+        user_b_id: str,
+        context_summary: str,
+        db: Any
+    ) -> List[Dict]:
+        """生成破冰建议"""
+        suggestions = []
+
+        # 基于上下文的建议
+        suggestions.append({
+            "type": "context_based",
+            "text": "看起来刚才的话题很有趣，你们是怎么想到这个的？",
+            "confidence": 0.7
+        })
+
+        # 轻松话题
+        suggestions.append({
+            "type": "light_topic",
+            "text": "对了，最近有看什么好看的电影/剧吗？",
+            "confidence": 0.8
+        })
+
+        # 关心式提问
+        suggestions.append({
+            "type": "caring_question",
+            "text": "你今天过得怎么样？",
+            "confidence": 0.75
+        })
+
+        return suggestions
+
+
+class IcebreakerTopicService:
+    """情境话题生成服务"""
+
+    def __init__(self):
+        self._initialize_default_topics()
+
+    def _initialize_default_topics(self, db_session: Optional[Session] = None):
+        """初始化默认话题库"""
+        db = db_session if db_session else SessionLocal()
+        should_close = db_session is None
+
+        try:
+            # 检查是否已有话题
+            existing_count = db.query(IcebreakerTopicDB).count()
+            if existing_count > 0:
+                return
+
+            # 默认话题库
+            default_topics = [
+                # 共同经历相关
+                {
+                    "category": "shared_experience",
+                    "topic_text": "还记得我们第一次{activity}吗？那时候真的很{emotion}",
+                    "applicable_scenarios": ["nostalgia", "bonding"],
+                    "required_experience_type": "activity",
+                    "depth_level": 3
+                },
+                {
+                    "category": "shared_experience",
+                    "topic_text": "上次一起去{location}真的很有趣，你最难忘的是什么？",
+                    "applicable_scenarios": ["nostalgia", "conversation_restart"],
+                    "required_experience_type": "location",
+                    "depth_level": 2
+                },
+                # 当前事件相关
+                {
+                    "category": "current_event",
+                    "topic_text": "今天发生的{event}你有关注吗？你怎么看？",
+                    "applicable_scenarios": ["small_talk", "opinion_exchange"],
+                    "required_experience_type": None,
+                    "depth_level": 2
+                },
+                {
+                    "category": "current_event",
+                    "topic_text": "最近天气变化好大，你有什么应对秘诀吗？",
+                    "applicable_scenarios": ["small_talk", "daily_care"],
+                    "required_experience_type": None,
+                    "depth_level": 1
+                },
+                # 兴趣相关
+                {
+                    "category": "interest_based",
+                    "topic_text": "你最近有尝试什么新的{hobby}吗？",
+                    "applicable_scenarios": ["hobby_discussion", "bonding"],
+                    "required_experience_type": None,
+                    "depth_level": 2
+                },
+                {
+                    "category": "interest_based",
+                    "topic_text": "我最近发现了一个很不错的{interest}推荐，想听听你的想法",
+                    "applicable_scenarios": ["recommendation", "sharing"],
+                    "required_experience_type": None,
+                    "depth_level": 2
+                },
+                # 季节性话题
+                {
+                    "category": "seasonal",
+                    "topic_text": "这个季节最适合去{seasonal_activity}了，你有计划吗？",
+                    "applicable_scenarios": ["planning", "invitation"],
+                    "required_experience_type": None,
+                    "depth_level": 2
+                },
+                # 破冰专用
+                {
+                    "category": "icebreaker",
+                    "topic_text": "如果可以选择一个超能力，你想要什么？为什么？",
+                    "applicable_scenarios": ["first_date", "awkward_silence"],
+                    "required_experience_type": None,
+                    "depth_level": 1
+                },
+                {
+                    "category": "icebreaker",
+                    "topic_text": "你小时候最难忘的回忆是什么？",
+                    "applicable_scenarios": ["deep_conversation", "bonding"],
+                    "required_experience_type": None,
+                    "depth_level": 4
+                },
+                # 关系升温
+                {
+                    "category": "relationship",
+                    "topic_text": "和你在一起的时候，我觉得最特别的时刻是...",
+                    "applicable_scenarios": ["confession", "bonding"],
+                    "required_experience_type": None,
+                    "depth_level": 5
+                },
+            ]
+
+            for topic_data in default_topics:
+                topic = IcebreakerTopicDB(
+                    id=f"topic_{topic_data['category']}_{len(default_topics)}",
+                    **topic_data
+                )
+                db.add(topic)
+
+            if should_close:
+                db.commit()
+
+            logger.info(f"Initialized {len(default_topics)} default icebreaker topics")
+
+        except Exception as e:
+            logger.error(f"Error initializing default topics: {e}")
+            if should_close:
+                db.rollback()
+        finally:
+            if should_close:
+                db.close()
+
+    def get_topics(
+        self,
+        category: Optional[str] = None,
+        scenario: Optional[str] = None,
+        experience_type: Optional[str] = None,
+        depth_level: Optional[int] = None,
+        limit: int = 10,
+        db_session: Optional[Session] = None
+    ) -> List[Dict]:
+        """
+        获取话题
+
+        Args:
+            category: 话题分类
+            scenario: 适用场景
+            experience_type: 关联的经历类型
+            depth_level: 深度等级
+            limit: 返回数量限制
+            db_session: 可选的数据库会话
+
+        Returns:
+            话题列表
+        """
+        db = db_session if db_session else SessionLocal()
+        should_close = db_session is None
+
+        try:
+            query = db.query(IcebreakerTopicDB)
+
+            if category:
+                query = query.filter(IcebreakerTopicDB.category == category)
+
+            if experience_type:
+                query = query.filter(IcebreakerTopicDB.required_experience_type == experience_type)
+
+            if depth_level:
+                query = query.filter(IcebreakerTopicDB.depth_level == depth_level)
+
+            # 按使用次数和成功率排序
+            topics = query.order_by(
+                IcebreakerTopicDB.success_rate.desc(),
+                IcebreakerTopicDB.usage_count.desc()
+            ).limit(limit).all()
+
+            return [self._topic_to_dict(topic) for topic in topics]
+
+        except Exception as e:
+            logger.error(f"Error getting topics: {e}")
+            return []
+        finally:
+            if should_close:
+                db.close()
+
+    def generate_personalized_icebreaker(
+        self,
+        conversation_id: str,
+        user_a_id: str,
+        user_b_id: str,
+        context: Dict,
+        db_session: Optional[Session] = None
+    ) -> Optional[Dict]:
+        """
+        生成个性化的破冰话题
+
+        Args:
+            conversation_id: 对话 ID
+            user_a_id: 用户 A ID
+            user_b_id: 用户 B ID
+            context: 上下文信息（包含共同经历、当前场景等）
+            db_session: 可选的数据库会话
+
+        Returns:
+            生成的破冰话题
+        """
+        db = db_session if db_session else SessionLocal()
+        should_close = db_session is None
+
+        try:
+            # 获取共同经历
+            shared_exp_service = SharedExperienceService()
+            experiences = shared_exp_service.get_shared_experiences(
+                user_a_id, user_b_id, days=30, db_session=db
+            )
+
+            # 确定话题分类
+            category = self._determine_category(context, experiences)
+
+            # 获取合适的话题模板
+            scenario = context.get("scenario", "general")
+            topics = self.get_topics(
+                category=category,
+                scenario=scenario,
+                limit=5,
+                db_session=db
+            )
+
+            if not topics:
+                topics = self.get_topics(limit=5, db_session=db)
+
+            if not topics:
+                logger.warning("No icebreaker topics available")
+                return None
+
+            # 选择最佳话题
+            selected_topic = topics[0]
+
+            # 个性化填充
+            personalized_text = self._personalize_topic(
+                selected_topic["topic_text"],
+                experiences,
+                context
+            )
+
+            # 生成推荐理由
+            recommendation_reason = self._generate_recommendation_reason(
+                selected_topic, experiences, context
+            )
+
+            # 创建生成记录
+            generated_id = f"ice_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{conversation_id[:8]}"
+
+            based_on_exp_ids = [exp["id"] for exp in experiences if exp.get("is_significant")]
+
+            generated_icebreaker = GeneratedIcebreakerDB(
+                id=generated_id,
+                conversation_id=conversation_id,
+                topic_text=personalized_text,
+                source_topic_id=selected_topic.get("id"),
+                based_on_experience_ids=based_on_exp_ids,
+                recommendation_reason=recommendation_reason
+            )
+
+            db.add(generated_icebreaker)
+            if should_close:
+                db.commit()
+
+            logger.info(f"Generated personalized icebreaker: {generated_id}")
+
+            return {
+                "id": generated_id,
+                "conversation_id": conversation_id,
+                "topic_text": personalized_text,
+                "recommendation_reason": recommendation_reason,
+                "category": selected_topic.get("category"),
+                "depth_level": selected_topic.get("depth_level"),
+                "based_on_experiences": experiences[:3] if based_on_exp_ids else []
+            }
+
+        except Exception as e:
+            logger.error(f"Error generating icebreaker: {e}")
+            if should_close:
+                db.rollback()
+            return None
+        finally:
+            if should_close:
+                db.close()
+
+    def record_icebreaker_feedback(
+        self,
+        icebreaker_id: str,
+        is_used: bool,
+        effectiveness_score: Optional[float] = None,
+        response_summary: Optional[str] = None,
+        db_session: Optional[Session] = None
+    ) -> bool:
+        """
+        记录破冰话题的反馈
+
+        Args:
+            icebreaker_id: 破冰话题 ID
+            is_used: 是否被使用
+            effectiveness_score: 效果评分
+            response_summary: 回应摘要
+            db_session: 可选的数据库会话
+
+        Returns:
+            是否成功记录
+        """
+        db = db_session if db_session else SessionLocal()
+        should_close = db_session is None
+
+        try:
+            icebreaker = db.query(GeneratedIcebreakerDB).filter(
+                GeneratedIcebreakerDB.id == icebreaker_id
+            ).first()
+
+            if not icebreaker:
+                logger.warning(f"Icebreaker not found: {icebreaker_id}")
+                return False
+
+            icebreaker.is_used = is_used
+            if effectiveness_score:
+                icebreaker.effectiveness_score = effectiveness_score
+            if response_summary:
+                icebreaker.response_summary = response_summary
+
+            # 更新源话题的统计数据
+            if icebreaker.source_topic_id:
+                source_topic = db.query(IcebreakerTopicDB).filter(
+                    IcebreakerTopicDB.id == icebreaker.source_topic_id
+                ).first()
+                if source_topic:
+                    source_topic.usage_count += 1
+                    # 更新成功率
+                    if effectiveness_score:
+                        total = source_topic.usage_count
+                        source_topic.success_rate = (
+                            (source_topic.success_rate * (total - 1) + effectiveness_score) / total
+                        )
+
+            if should_close:
+                db.commit()
+
+            logger.info(f"Recorded feedback for icebreaker: {icebreaker_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error recording icebreaker feedback: {e}")
+            if should_close:
+                db.rollback()
+            return False
+        finally:
+            if should_close:
+                db.close()
+
+    def _determine_category(
+        self,
+        context: Dict,
+        experiences: List[Dict]
+    ) -> str:
+        """确定话题分类"""
+        scenario = context.get("scenario", "general")
+
+        if scenario == "awkward_silence":
+            return "icebreaker"
+        elif scenario == "first_date":
+            return "icebreaker"
+        elif scenario == "nostalgia":
+            return "shared_experience"
+        elif scenario == "deep_conversation":
+            return "relationship"
+        elif experiences and any(exp.get("is_significant") for exp in experiences):
+            return "shared_experience"
+        else:
+            return "current_event"
+
+    def _personalize_topic(
+        self,
+        topic_template: str,
+        experiences: List[Dict],
+        context: Dict
+    ) -> str:
+        """个性化填充话题模板"""
+        # 替换占位符
+        if experiences:
+            latest_exp = experiences[0]
+            topic_template = topic_template.replace(
+                "{activity}",
+                latest_exp.get("experience_type", "一起做的事")
+            )
+            topic_template = topic_template.replace(
+                "{location}",
+                latest_exp.get("location", "那个地方")
+            )
+            topic_template = topic_template.replace(
+                "{emotion}",
+                "开心" if latest_exp.get("sentiment_score", 0) > 0 else "难忘"
+            )
+
+        # 替换通用占位符
+        topic_template = topic_template.replace("{hobby}", "爱好")
+        topic_template = topic_template.replace("{interest}", "东西")
+        topic_template = topic_template.replace("{event}", "事情")
+        topic_template = topic_template.replace("{seasonal_activity}", "活动")
+
+        return topic_template
+
+    def _generate_recommendation_reason(
+        self,
+        topic: Dict,
+        experiences: List[Dict],
+        context: Dict
+    ) -> str:
+        """生成推荐理由"""
+        category = topic.get("category", "general")
+
+        if category == "shared_experience" and experiences:
+            return "基于你们最近的共同经历，这个话题可能会唤起美好的回忆"
+        elif category == "icebreaker":
+            return "这是一个轻松有趣的话题，适合打破沉默"
+        elif category == "relationship":
+            return "这个话题有助于加深彼此的了解和情感连接"
+        else:
+            return "这是一个适合当前情境的话题，希望能帮助你们更好地交流"
+
+    def _topic_to_dict(self, topic: IcebreakerTopicDB) -> Dict:
+        """将话题对象转换为字典"""
+        return {
+            "id": topic.id,
+            "category": topic.category,
+            "topic_text": topic.topic_text,
+            "applicable_scenarios": topic.applicable_scenarios,
+            "required_experience_type": topic.required_experience_type,
+            "depth_level": topic.depth_level,
+            "usage_count": topic.usage_count,
+            "success_rate": topic.success_rate,
+            "created_at": topic.created_at.isoformat() if topic.created_at else None
+        }
+
+
+# 全局服务实例
+shared_experience_service = SharedExperienceService()
+silence_detection_service = SilenceDetectionService()
+icebreaker_topic_service = IcebreakerTopicService()

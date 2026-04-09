@@ -1,0 +1,828 @@
+/* Generative UI 组件样式 - AI Native 完整版 */
+
+.generative-ui-container {
+  margin: 16px 0;
+  animation: fadeIn 0.3s ease-in-out;
+
+  /* 匹配聚焦卡片 */
+  .match-spotlight-card {
+    text-align: center;
+    padding: 24px;
+
+    .match-avatar-section {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 24px;
+
+      .match-score-badge {
+        position: absolute;
+        bottom: -8px;
+        right: -8px;
+        background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+      }
+    }
+
+    .match-info-section {
+      margin-bottom: 24px;
+
+      .match-reasoning {
+        color: #666;
+        font-size: 14px;
+        margin: 16px 0;
+      }
+
+      .common-interests {
+        margin-top: 12px;
+      }
+    }
+
+    .match-actions {
+      margin-top: 24px;
+    }
+  }
+
+  /* 匹配轮播 */
+  .match-carousel {
+    .match-carousel-card {
+      border-radius: 16px;
+
+      .match-carousel-content {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        padding: 24px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-radius: 12px;
+        margin-bottom: 16px;
+      }
+
+      .match-carousel-nav {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .match-carousel-actions {
+        text-align: center;
+      }
+    }
+  }
+
+  /* 匹配列表项 */
+  .match-list-item {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .match-list-info {
+      flex: 1;
+    }
+
+    .match-list-score {
+      margin-right: 16px;
+    }
+  }
+
+  /* 礼物卡片 */
+  .gift-card {
+    text-align: center;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(255, 105, 180, 0.3);
+    }
+
+    .gift-image {
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #ffe6fa 0%, #ffb3c6 100%);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .gift-info {
+      margin-bottom: 16px;
+
+      .gift-price {
+        font-size: 18px;
+        color: #ff69b4;
+        font-weight: bold;
+      }
+
+      .gift-reason {
+        font-size: 12px;
+        color: #666;
+        margin-top: 8px;
+      }
+    }
+
+    .gift-actions {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+  }
+
+  .gift-carousel-card {
+    border-radius: 16px;
+
+    .gift-carousel-content {
+      text-align: center;
+      padding: 24px;
+      background: linear-gradient(135deg, #ffe6fa 0%, #ffb3c6 100%);
+      border-radius: 12px;
+      margin-bottom: 16px;
+
+      .gift-carousel-image {
+        margin-bottom: 24px;
+      }
+
+      .gift-carousel-info {
+        .gift-carousel-price {
+          font-size: 24px;
+          color: #ff69b4;
+          font-weight: bold;
+          display: block;
+          margin: 12px 0;
+        }
+      }
+    }
+
+    .gift-carousel-nav {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .gift-carousel-actions {
+      padding: 0 16px 16px;
+    }
+  }
+
+  /* 消费画像 */
+  .consumption-profile-card {
+    border-radius: 16px;
+
+    .profile-header {
+      text-align: center;
+      margin-bottom: 24px;
+
+      .profile-level-tag {
+        font-size: 16px;
+        padding: 8px 24px;
+      }
+    }
+
+    .profile-stats {
+      margin-bottom: 24px;
+
+      .ant-statistic {
+        text-align: center;
+
+        .ant-statistic-label {
+          font-size: 12px;
+          color: #666;
+          margin-bottom: 4px;
+        }
+
+        .ant-statistic-content {
+          font-size: 16px;
+        }
+      }
+    }
+
+    .profile-categories {
+      .category-tags {
+        margin-top: 12px;
+      }
+    }
+  }
+
+  /* 约会地点 */
+  .date-spot-card {
+    border-radius: 12px;
+    margin-bottom: 16px;
+
+    .date-spot-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .date-spot-content {
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    .date-spot-reason {
+      font-size: 12px;
+      margin-top: 8px;
+      color: #999;
+    }
+  }
+
+  /* 约会计划轮播 */
+  .date-plan-carousel {
+    border-radius: 16px;
+
+    .date-plan-content {
+      padding: 16px;
+      background: linear-gradient(135deg, #fff1eb 0%, #ace0f9 100%);
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .date-plan-nav {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .date-plan-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+    }
+  }
+
+  /* 健康报告 */
+  .health-report-card {
+    border-radius: 16px;
+
+    .health-score-display {
+      text-align: center;
+      padding: 24px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      border-radius: 12px;
+      margin-bottom: 24px;
+
+      .ant-statistic {
+        display: inline-block;
+        margin-right: 16px;
+      }
+    }
+
+    .report-issues {
+      margin-bottom: 24px;
+
+      .ant-list-item {
+        padding: 8px 0;
+        border-bottom: 1px solid #f0f0f0;
+
+        .ant-tag {
+          margin-right: 12px;
+        }
+      }
+    }
+
+    .report-recommendations {
+      .ant-list-item {
+        padding: 8px 0;
+        color: #52c41a;
+      }
+    }
+  }
+
+  /* 情感雷达 */
+  .emotion-radar-card {
+    border-radius: 16px;
+
+    .emotion-summary {
+      margin-bottom: 24px;
+
+      .emotion-dominant {
+        margin-bottom: 16px;
+
+        .ant-tag {
+          margin-left: 8px;
+          font-size: 14px;
+          padding: 4px 12px;
+        }
+      }
+
+      .emotion-intensity {
+        .ant-progress {
+          margin-top: 8px;
+        }
+      }
+    }
+
+    .emotion-chart {
+      .emotion-bar {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        .ant-progress {
+          margin-top: 4px;
+        }
+      }
+    }
+  }
+
+  .emotion-empty-card {
+    border-radius: 12px;
+    text-align: center;
+    padding: 24px 0;
+  }
+
+  /* 爱之语卡片 */
+  .love-language-card {
+    border-radius: 16px;
+
+    .love-language-profile {
+      .primary-love-language {
+        font-size: 16px;
+        padding: 8px 16px;
+        margin: 12px 0;
+      }
+
+      .love-language-score {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+
+        .ant-progress {
+          flex: 1;
+          margin-left: 16px;
+        }
+      }
+    }
+  }
+
+  .love-language-translation-card {
+    border-radius: 12px;
+
+    .translation-content {
+      .translation-original {
+        margin-bottom: 16px;
+        padding: 12px;
+        background: #f5f5f5;
+        border-radius: 8px;
+      }
+
+      .translation-arrow {
+        text-align: center;
+        margin: 16px 0;
+      }
+
+      .translation-translated {
+        .translated-text {
+          font-size: 16px;
+          color: #ff69b4;
+          font-weight: 500;
+          margin: 12px 0;
+        }
+      }
+
+      .translation-explanation {
+        margin-top: 16px;
+        padding: 12px;
+        background: #fff7e6;
+        border-radius: 8px;
+      }
+    }
+  }
+
+  /* 预测空状态 */
+  .prediction-empty-card {
+    border-radius: 12px;
+    text-align: center;
+    padding: 24px 0;
+  }
+
+  /* 关系天气 */
+  .relationship-weather-card {
+    border-radius: 16px;
+    text-align: center;
+
+    .weather-display {
+      .weather-icon {
+        margin-bottom: 16px;
+      }
+
+      .weather-forecast {
+        margin-top: 24px;
+      }
+    }
+  }
+
+  /* 沉默状态 */
+  .silence-status-card {
+    border-radius: 12px;
+
+    .silence-indicator {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+
+      .silence-icon {
+        flex-shrink: 0;
+      }
+
+      .silence-info {
+        flex: 1;
+
+        .silence-level {
+          margin-left: 12px;
+        }
+      }
+    }
+
+    .ant-alert {
+      margin-top: 16px;
+    }
+  }
+
+  /* 话题工具包 */
+  .topic-kit-card {
+    border-radius: 16px;
+
+    .topic-detail {
+      .ant-space {
+        margin-top: 12px;
+      }
+    }
+  }
+
+  .topic-suggestions-card {
+    border-radius: 16px;
+
+    .ant-list-item {
+      padding: 12px 0;
+    }
+  }
+
+  /* 关系策展 */
+  .relationship-curator-card {
+    border-radius: 16px;
+
+    .ant-descriptions {
+      margin-bottom: 16px;
+    }
+  }
+
+  /* 里程碑时间轴 */
+  .milestone-timeline-card {
+    border-radius: 16px;
+
+    .milestone-item {
+      .ant-timeline-item-content {
+        margin-top: 8px;
+      }
+    }
+  }
+
+  /* 约会助手 */
+  .date-assistant-card {
+    border-radius: 12px;
+
+    .date-suggestion {
+      .date-actions {
+        margin-top: 16px;
+        display: flex;
+        gap: 12px;
+      }
+    }
+  }
+
+  .date-review-card {
+    border-radius: 16px;
+
+    .date-review-summary {
+      text-align: center;
+      padding: 16px;
+      background: linear-gradient(135deg, #fff1eb 0%, #ace0f9 100%);
+      border-radius: 12px;
+
+      .date-review-rating {
+        margin-top: 12px;
+      }
+    }
+  }
+
+  /* 视频约会教练 */
+  .video-date-coach-dashboard {
+    border-radius: 16px;
+
+    .outfit-section {
+      .ant-alert {
+        margin-top: 12px;
+      }
+    }
+
+    .icebreaker-section {
+      .ant-list-item {
+        padding: 12px 0;
+      }
+    }
+  }
+
+  .date-simulation-feedback {
+    border-radius: 16px;
+
+    .simulation-score {
+      text-align: center;
+      padding: 24px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      border-radius: 12px;
+      margin-bottom: 24px;
+    }
+
+    .simulation-details {
+      .ant-list-item {
+        padding: 8px 0;
+      }
+    }
+  }
+
+  /* 绩效教练 */
+  .performance-coach-dashboard {
+    border-radius: 16px;
+
+    .milestones-section {
+      margin-bottom: 24px;
+    }
+
+    .suggestions-section {
+      .ant-list-item {
+        padding: 8px 0;
+      }
+    }
+  }
+
+  .coach-empty-card {
+    border-radius: 12px;
+    text-align: center;
+    padding: 24px 0;
+  }
+
+  /* 准备清单 */
+  .prep-checklist-card {
+    border-radius: 16px;
+
+    .checklist-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+
+      .ant-tag {
+        margin-left: 8px;
+      }
+    }
+
+    .ant-btn {
+      margin-top: 16px;
+    }
+  }
+
+  .outfit-recommendations {
+    border-radius: 16px;
+
+    .outfit-item {
+      .ant-tag {
+        margin-top: 8px;
+      }
+    }
+  }
+
+  /* 安全组件 */
+  .safety-alert {
+    border-radius: 12px;
+    margin: 16px 0;
+  }
+
+  .safety-status-card {
+    border-radius: 16px;
+
+    .safety-indicator {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      margin-bottom: 16px;
+
+      .status-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+
+        &.safe {
+          background: #52c41a;
+        }
+
+        &.warning {
+          background: #faad14;
+        }
+
+        &.danger {
+          background: #ff4d4f;
+        }
+      }
+    }
+  }
+
+  .safety-emergency {
+    border-radius: 12px;
+    margin: 16px 0;
+  }
+
+  /* 风控组件 */
+  .risk-control-dashboard {
+    border-radius: 16px;
+
+    .risks-section {
+      .ant-list-item {
+        padding: 8px 0;
+      }
+    }
+  }
+
+  .risk-assessment-dashboard {
+    border-radius: 16px;
+
+    .risk-score {
+      text-align: center;
+      padding: 24px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      border-radius: 12px;
+      margin-bottom: 24px;
+
+      .ant-progress-text {
+        margin-top: 16px;
+        display: block;
+      }
+    }
+
+    .risk-factors {
+      .ant-list-item {
+        padding: 8px 0;
+      }
+    }
+  }
+
+  /* 分享增长 */
+  .share-growth-dashboard {
+    border-radius: 16px;
+
+    .invites-section {
+      .ant-list-item {
+        padding: 8px 0;
+
+        .ant-tag {
+          margin-left: 12px;
+        }
+      }
+    }
+  }
+
+  /* 活动导演 */
+  .activity-director-dashboard {
+    border-radius: 16px;
+
+    .recommendations-section {
+      margin-bottom: 24px;
+    }
+
+    .activities-section {
+      .ant-list-item {
+        display: flex;
+        justify-content: space-between;
+      }
+    }
+  }
+
+  /* 场地推荐 */
+  .venue-recommendations {
+    border-radius: 16px;
+
+    .ant-list-item {
+      padding: 12px 0;
+    }
+  }
+
+  /* 关系趋势 */
+  .relationship-trend-chart {
+    border-radius: 16px;
+
+    .trend-placeholder {
+      text-align: center;
+      padding: 48px 0;
+
+      .anticon {
+        margin-bottom: 16px;
+      }
+    }
+  }
+
+  /* 冲突计量器 */
+  .conflict-meter-card {
+    border-radius: 16px;
+    text-align: center;
+
+    .meter-display {
+      padding: 24px;
+
+      .ant-progress {
+        margin: 16px 0;
+      }
+    }
+  }
+
+  /* 调解空状态 */
+  .mediation-empty-card {
+    border-radius: 12px;
+    text-align: center;
+    padding: 24px 0;
+  }
+
+  /* 对话匹配仪表板 */
+  .conversation-matchmaker-dashboard {
+    border-radius: 16px;
+
+    .intents-section {
+      margin-bottom: 24px;
+
+      .ant-list-item {
+        padding: 8px 0;
+
+        .ant-tag {
+          margin-right: 12px;
+        }
+      }
+    }
+
+    .matches-section {
+      .ant-list-item {
+        padding: 12px 0;
+      }
+    }
+  }
+
+  /* 空状态 */
+  .empty-state {
+    padding: 48px 0;
+    text-align: center;
+  }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .generative-ui-container {
+    .match-spotlight-card {
+      padding: 16px;
+    }
+
+    .gift-grid {
+      .ant-col {
+        width: 50% !important;
+      }
+    }
+
+    /* 移动端优化 */
+    .ant-col {
+      &.ant-col-12 {
+        width: 100% !important;
+        margin-bottom: 16px;
+      }
+    }
+  }
+}

@@ -64,11 +64,42 @@ class UserRepository:
         return self.db.query(UserDB).filter(UserDB.name == username).first()
 
     def get_by_phone(self, phone: str) -> Optional[UserDB]:
-        """根据手机号获取用户
-        注：当前版本不支持手机号登录，返回 None
-        """
-        # TODO: 未来添加 phone 字段后实现
-        return None
+        """根据手机号获取用户"""
+        return self.db.query(UserDB).filter(UserDB.phone == phone).first()
+
+    def update_phone_verification_code(
+        self,
+        user_id: str,
+        verification_code: str,
+        expires_at: datetime
+    ) -> bool:
+        """更新用户手机验证码"""
+        user = self.get_by_id(user_id)
+        if not user:
+            return False
+
+        user.phone_verification_code = verification_code
+        user.phone_verification_expires_at = expires_at
+        self.db.commit()
+        return True
+
+    def verify_phone(self, user_id: str, verification_code: str) -> bool:
+        """验证手机号验证码"""
+        user = self.get_by_id(user_id)
+        if not user:
+            return False
+
+        from datetime import datetime
+        # 检查验证码是否匹配且未过期
+        if (user.phone_verification_code == verification_code and
+            user.phone_verification_expires_at and
+            user.phone_verification_expires_at > datetime.now()):
+            user.phone_verified = True
+            user.phone_verification_code = None
+            user.phone_verification_expires_at = None
+            self.db.commit()
+            return True
+        return False
 
     def list_all(self, is_active: bool = True) -> List[UserDB]:
         """获取用户列表"""

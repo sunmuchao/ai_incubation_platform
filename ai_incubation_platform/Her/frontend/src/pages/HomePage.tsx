@@ -306,22 +306,21 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
         </Drawer>
       )}
 
-      {/* AI 悬浮球 */}
-      <AgentFloatingBall
-        visible={true}
-        unreadCount={unreadCount}
-        onQuickChat={() => {
-          // 快速回到 AI 对话
-          setChatRoomMatch(null)
-        }}
-        onBackToMain={() => {
-          // 返回主页
-        }}
-        hasNewMessage={hasNewMessage}
-      />
+      {/* PWA 安装提示 - 临时禁用，方便调试 */}
+      {/* <PWAInstallPrompt /> */}
 
-      {/* PWA 安装提示 */}
-      <PWAInstallPrompt />
+      {/* 悬浮球 - 快速对话入口（只在聊天室模式显示） */}
+      {chatRoomMatch && (
+        <AgentFloatingBall
+          visible={true}
+          unreadCount={unreadCount}
+          hasNewMessage={hasNewMessage}
+          chatContext={{
+            partnerId: chatRoomMatch.user?.id || '',
+            partnerName: chatRoomMatch.user?.name || 'TA',
+          }}
+        />
+      )}
     </Layout>
   )
 }

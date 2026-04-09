@@ -1,0 +1,93 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 玫瑰金渐变 -->
+    <linearGradient id="roseGoldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#D4A59A"/>
+      <stop offset="50%" style="stop-color:#C88B8B"/>
+      <stop offset="100%" style="stop-color:#FF8FAB"/>
+    </linearGradient>
+
+    <!-- 光晕渐变 -->
+    <radialGradient id="glowGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FF8FAB;stop-opacity:0.8"/>
+      <stop offset="70%" style="stop-color:#D4A59A;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#D4A59A;stop-opacity:0"/>
+    </radialGradient>
+
+    <!-- 高光渐变 -->
+    <linearGradient id="highlightGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0"/>
+    </linearGradient>
+
+    <!-- 滤镜效果 -->
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+      <feFlood flood-color="#FF8FAB" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="innerShadow">
+      <feOffset dx="0" dy="2"/>
+      <feGaussianBlur stdDeviation="3"/>
+      <feComposite operator="out" in2="SourceAlpha"/>
+      <feFlood flood-color="rgba(0,0,0,0.2)"/>
+      <feComposite operator="in" in2="SourceAlpha"/>
+      <feComposite operator="over" in2="SourceGraphic"/>
+    </filter>
+  </defs>
+
+  <!-- 背景光晕 -->
+  <circle cx="100" cy="100" r="90" fill="url(#glowGradient)" opacity="0.6"/>
+
+  <!-- 外环 -->
+  <circle cx="100" cy="100" r="85" fill="none" stroke="url(#roseGoldGradient)" stroke-width="2" opacity="0.5"/>
+
+  <!-- 主心形 -->
+  <g filter="url(#softGlow)">
+    <path d="M100 155 C100 155 35 125 35 75 C35 45 60 30 85 45 C92 49 97 55 100 60 C103 55 108 49 115 45 C140 30 165 45 165 75 C165 125 100 155 100 155Z"
+          fill="url(#roseGoldGradient)"
+          stroke="#FF8FAB"
+          stroke-width="1.5"/>
+  </g>
+
+  <!-- 心形高光 -->
+  <path d="M55 65 C55 65 65 55 80 58"
+        fill="none"
+        stroke="url(#highlightGradient)"
+        stroke-width="3"
+        stroke-linecap="round"
+        opacity="0.8"/>
+
+  <!-- 内层心形轮廓 -->
+  <path d="M100 140 C100 140 55 118 55 80 C55 58 72 48 88 56 C93 59 97 64 100 68 C103 64 107 59 112 56 C128 48 145 58 145 80 C145 118 100 140 100 140Z"
+        fill="none"
+        stroke="#ffffff"
+        stroke-width="1"
+        opacity="0.4"/>
+
+  <!-- 中心星光 -->
+  <g>
+    <circle cx="100" cy="85" r="8" fill="#ffffff" opacity="0.3"/>
+    <circle cx="100" cy="85" r="4" fill="#ffffff" opacity="0.6"/>
+    <circle cx="100" cy="85" r="2" fill="#ffffff"/>
+  </g>
+
+  <!-- 装饰光点 -->
+  <circle cx="65" cy="95" r="2" fill="#FF8FAB" opacity="0.8">
+    <animate attributeName="opacity" values="0.4;0.9;0.4" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="135" cy="90" r="1.5" fill="#D4A59A" opacity="0.6">
+    <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="120" cy="120" r="1" fill="#C88B8B" opacity="0.7">
+    <animate attributeName="opacity" values="0.5;1;0.5" dur="1.8s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="80" cy="110" r="1.5" fill="#FF8FAB" opacity="0.5">
+    <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2.2s" repeatCount="indefinite"/>
+  </circle>
+</svg>

@@ -1,0 +1,428 @@
+/* AI Native 主页面样式 - 浪漫未来感 */
+
+// 退出按钮 - 全局强制覆盖 Ant Design 样式，移除旋转效果
+.home-layout .header-right .logout-btn,
+.home-layout .header-right .logout-btn:hover,
+.home-layout .header-right .logout-btn:active {
+  transform: none !important;
+  transition: background 0.2s ease !important;
+}
+
+// 覆盖 Ant Design Layout 默认样式
+.ant-layout {
+  height: 100vh !important;
+  min-height: unset !important;
+}
+
+.home-layout {
+  height: 100vh !important;  // 固定视口高度
+  min-height: unset !important;  // 覆盖 Ant Design 默认 min-height
+  background: linear-gradient(180deg, #FDFBFD 0%, #F8F1F3 100%);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+
+  // 未来感背景光晕
+  &::before {
+    content: '';
+    position: absolute;
+    top: -30%;
+    right: -20%;
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(212, 165, 154, 0.12) 0%, transparent 70%);
+    animation: homeAura 10s infinite ease-in-out;
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(255, 143, 171, 0.08) 0%, transparent 70%);
+    animation: homeAura 10s infinite ease-in-out reverse;
+    pointer-events: none;
+  }
+
+  @keyframes homeAura {
+    0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.5; }
+    50% { transform: scale(1.2) translate(-20px, 20px); opacity: 0.8; }
+  }
+}
+
+.home-header {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(212, 165, 154, 0.15);
+  height: 68px;
+  flex: 0 0 68px;  // 固定 header 高度
+  box-shadow: 0 2px 20px rgba(212, 165, 154, 0.08);
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .page-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1a1a1a;
+      letter-spacing: -0.01em;
+    }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    // 退出按钮 - 移除旋转动画，保留悬浮效果
+    .logout-btn {
+      transition: background 0.2s ease !important;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05) !important;
+        transform: none !important;
+        box-shadow: none !important;
+      }
+
+      &:active {
+        transform: none !important;
+      }
+    }
+
+    .notification-btn {
+      position: relative;
+      padding: 10px !important;
+      border-radius: 50% !important;
+      transition: all 0.2s ease !important;
+
+      &:hover {
+        background: rgba(212, 165, 154, 0.1) !important;
+        transform: scale(1.05);
+        box-shadow: 0 0 15px rgba(212, 165, 154, 0.3);
+      }
+
+      .notification-badge {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 10px;
+        height: 10px;
+        background: linear-gradient(135deg, #FF8FAB 0%, #D4A59A 100%);
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 8px rgba(255, 143, 171, 0.5);
+      }
+    }
+
+    .user-avatar {
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      border: 2px solid white;
+      box-shadow: 0 2px 12px rgba(212, 165, 154, 0.2);
+
+      &:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 20px rgba(212, 165, 154, 0.3);
+      }
+    }
+  }
+}
+
+.home-content {
+  flex: 1;
+  overflow: hidden;  // 防止内容溢出
+  display: flex;
+  flex-direction: column;
+  min-height: 0;  // 关键：允许 flex 子项滚动
+
+  .content-wrapper {
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;  // 关键：允许 flex 滚动
+    overflow: hidden;
+  }
+}
+
+.chat-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  border-radius: 0;
+  border: 1px solid rgba(212, 165, 154, 0.1);
+  box-shadow: 0 4px 24px rgba(212, 165, 154, 0.06);
+  overflow: hidden;
+  min-height: 0;  // 关键：允许 flex 滚动
+
+  > .chat-interface {
+    flex: 1;
+    min-height: 0;  // 关键：允许内部滚动
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.chat-room-view {
+  height: 100%;  // 使用 100% 填充父容器
+  overflow: hidden;
+}
+
+.discover-view,
+.timeline-view,
+.love-language-view,
+.date-suggestions-view,
+.games-view,
+.digital-home-view,
+.ai-precomm-view {
+  height: 100%;
+}
+
+/* Generative UI 动画 */
+@keyframes cardAppear {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.generative-ui-container {
+  animation: cardAppear 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.animating {
+    opacity: 0.8;
+  }
+}
+
+// 卡片进入动画
+.card-enter {
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// 按钮点击波纹效果
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  &:active::after {
+    width: 200px;
+    height: 200px;
+  }
+}
+
+// 悬浮球容器
+.floating-ball-container {
+  position: fixed;
+  z-index: 999;
+  animation: float 3s ease-in-out infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+}
+
+// 通知动画
+@keyframes notificationSlide {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.notification-slide {
+  animation: notificationSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// 加载骨架屏
+.skeleton-loading {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeletonPulse 1.5s infinite;
+
+  @keyframes skeletonPulse {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+}
+
+// 玻璃态效果
+.glass-effect {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+// 渐变边框
+.gradient-border {
+  position: relative;
+  background: white;
+  border-radius: 16px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    padding: 2px;
+    background: linear-gradient(135deg, #D4A59A 0%, #C88B8B 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .home-sider {
+    display: none;
+  }
+
+  .home-content {
+    padding: 0;  // 移除移动端 padding，使用全屏
+
+    .content-wrapper {
+      border-radius: 0;
+      padding: 0;
+    }
+  }
+
+  .home-header {
+    padding: 0 16px;
+    height: 56px;
+    flex: 0 0 56px;  // 固定 header 高度
+
+    .page-title {
+      font-size: 16px !important;
+    }
+
+    .header-right {
+      .logout-btn {
+        font-size: 13px !important;
+        padding: 4px 8px !important;
+      }
+    }
+  }
+
+  // 移动端安全区域适配
+  .home-layout {
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .home-header {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+}
+
+/* iPhone 特定适配 */
+@supports (-webkit-touch-callout: none) {
+  .home-layout {
+    // iOS Safari 地址栏适配
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+
+  .home-content {
+    min-height: 0;
+  }
+}
+
+/* 超小屏幕适配（iPhone SE 等） */
+@media (max-width: 375px) {
+  .home-header {
+    height: 52px;
+    flex: 0 0 52px;
+    padding: 0 12px;
+
+    .page-title {
+      font-size: 15px !important;
+    }
+
+    .ant-avatar {
+      size: 32px !important;
+    }
+  }
+
+  .header-right {
+    gap: 8px !important;
+
+    .logout-btn {
+      display: none;  // 超小屏幕隐藏退出按钮文字，只保留图标
+    }
+  }
+}
+
+/* 横屏模式提示 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .home-header {
+    height: 44px !important;
+    flex: 0 0 44px !important;
+  }
+
+  .page-title {
+    display: none;  // 横屏模式隐藏标题
+  }
+}

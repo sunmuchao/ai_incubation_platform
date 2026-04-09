@@ -1,0 +1,208 @@
+/* PWA 安装提示样式 */
+
+.pwa-install-modal {
+  .ant-modal-content {
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .ant-modal-body {
+    padding: 0;
+  }
+}
+
+.pwa-install-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.pwa-install-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px 16px;
+  background: linear-gradient(135deg, rgba(212, 165, 154, 0.1) 0%, rgba(255, 143, 171, 0.1) 100%);
+  border-bottom: 1px solid rgba(212, 165, 154, 0.15);
+
+  .install-icon {
+    font-size: 28px;
+    color: #D4A59A;
+  }
+
+  .ant-typography {
+    flex: 1;
+    margin: 0 !important;
+  }
+
+  .close-btn {
+    padding: 4px !important;
+    border-radius: 50% !important;
+    color: #999;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+  }
+}
+
+.pwa-install-body {
+  padding: 20px 24px;
+}
+
+.install-description {
+  display: block;
+  margin-bottom: 20px;
+  color: #666;
+  line-height: 1.6;
+}
+
+/* iOS 安装指南 */
+.ios-install-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.install-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  .step-number {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #D4A59A 0%, #C88B8B 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .step-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+
+    .share-icon {
+      color: #1890ff;
+      font-size: 16px;
+      margin: 0 4px;
+    }
+  }
+}
+
+.install-illustration {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  background: rgba(212, 165, 154, 0.05);
+  border-radius: 12px;
+  margin-top: 8px;
+}
+
+.illustration-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  .illustration-text {
+    font-size: 12px;
+    color: #666;
+  }
+}
+
+.arrow {
+  font-size: 24px;
+  color: #999;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(8px);
+  }
+}
+
+/* Android 安装指南 */
+.android-install-guide {
+  .ant-btn {
+    height: 44px;
+    font-size: 16px;
+  }
+}
+
+.pwa-install-footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid rgba(212, 165, 154, 0.15);
+
+  .ant-space-compact {
+    .ant-btn {
+      flex: 1;
+      height: 40px;
+      font-size: 14px;
+
+      &:first-child {
+        background: linear-gradient(135deg, #D4A59A 0%, #C88B8B 100%);
+        border: none;
+
+        &:hover {
+          background: linear-gradient(135deg, #c8958a 0%, #b87b7b 100%);
+        }
+      }
+    }
+  }
+}
+
+/* 移动端适配 */
+@media (max-width: 375px) {
+  .pwa-install-content {
+    max-width: 100%;
+  }
+
+  .pwa-install-header,
+  .pwa-install-body,
+  .pwa-install-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .install-step {
+    .step-number {
+      width: 24px;
+      height: 24px;
+      font-size: 12px;
+    }
+  }
+}
+
+/* 暗黑模式支持 */
+@media (prefers-color-scheme: dark) {
+  .pwa-install-header {
+    background: linear-gradient(135deg, rgba(212, 165, 154, 0.2) 0%, rgba(255, 143, 171, 0.2) 100%);
+    border-bottom-color: rgba(212, 165, 154, 0.3);
+  }
+
+  .install-illustration {
+    background: rgba(212, 165, 154, 0.1);
+  }
+
+  .illustration-box {
+    background: #2a2a2a;
+  }
+}

@@ -1,0 +1,81 @@
+/**
+ * 约会建议页面样式
+ */
+
+.date-suggestions-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.date-suggestions-empty {
+  text-align: center;
+  padding: 48px 0;
+}
+
+/* 建议卡片动画 */
+.ant-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.ant-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* 约会类型图标 */
+.date-type-icon {
+  font-size: 32px;
+  margin-right: 12px;
+}
+
+/* 场所信息卡片 */
+.venue-info-card {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+/* 状态标签 */
+.status-tag {
+  font-weight: 500;
+}
+
+/* 活动时间线 */
+.activity-timeline {
+  margin-top: 16px;
+}
+
+.activity-timeline .ant-timeline-item-content {
+  color: #666;
+}
+
+/* 响应按钮 */
+.response-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* 弹窗表单 */
+.generate-form .ant-form-item {
+  margin-bottom: 16px;
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .date-suggestions-page {
+    padding: 12px !important;
+  }
+
+  .date-suggestions-header h1 {
+    font-size: 20px !important;
+  }
+
+  .activity-timeline .ant-timeline-item-content {
+    font-size: 14px;
+  }
+}

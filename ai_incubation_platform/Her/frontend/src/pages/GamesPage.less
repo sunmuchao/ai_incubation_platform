@@ -1,0 +1,80 @@
+/**
+ * 双人游戏页面样式
+ */
+
+.games-page-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.game-type-card {
+  transition: all 0.3s ease;
+}
+
+.game-type-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.game-type-card-selected {
+  border-color: #11998e !important;
+  background: #f0f9f7 !important;
+}
+
+.game-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.game-progress {
+  margin-top: 16px;
+}
+
+.game-result-card {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.insights-section {
+  margin-top: 24px;
+}
+
+/* 游戏状态指示器 */
+.game-status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.game-status-pending {
+  background: #faad14;
+}
+
+.game-status-in-progress {
+  background: #1890ff;
+}
+
+.game-status-completed {
+  background: #52c41a;
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .games-page {
+    padding: 12px !important;
+  }
+
+  .game-icon {
+    font-size: 36px;
+  }
+
+  .game-type-card {
+    margin-bottom: 12px;
+  }
+}

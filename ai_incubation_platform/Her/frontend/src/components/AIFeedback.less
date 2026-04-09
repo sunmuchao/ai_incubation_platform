@@ -1,0 +1,174 @@
+// AI 感知反馈样式
+// 优雅的 Toast 通知设计，传达 AI 正在学习用户偏好
+
+@ai-primary-color: #667eea;
+@ai-success-color: #52c41a;
+@ai-warning-color: #faad14;
+@ai-error-color: #ff4d4f;
+
+.ai-feedback-container {
+  position: fixed;
+  top: 80px;
+  right: 24px;
+  z-index: 1000;
+  animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  .ai-feedback-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    min-width: 280px;
+    max-width: 360px;
+  }
+
+  .ai-feedback-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 12px;
+  }
+
+  .ai-feedback-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ai-feedback-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+
+    .ai-icon {
+      color: @ai-primary-color;
+      font-size: 16px;
+    }
+  }
+
+  .ai-feedback-message {
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.65);
+  }
+
+  .ant-progress {
+    margin-top: 4px;
+
+    .ant-progress-bg {
+      border-radius: 4px;
+      transition: width 0.1s linear;
+    }
+  }
+}
+
+// AI 偏好更新提示
+.ai-preference-update {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+  .ai-preference-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+
+    .ai-icon {
+      color: @ai-primary-color;
+      font-size: 16px;
+    }
+  }
+
+  .ai-preference-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+
+    .ant-tag {
+      margin: 0;
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 12px;
+    }
+  }
+}
+
+// 动画
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translate(-50%, 100px);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+// 暗色主题适配
+.theme-dark {
+  .ai-feedback-toast,
+  .ai-preference-update {
+    background: rgba(30, 30, 30, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+// 响应式适配
+@media (max-width: 768px) {
+  .ai-feedback-container {
+    top: auto;
+    bottom: 100px;
+    right: 16px;
+    left: 16px;
+
+    .ai-feedback-toast {
+      min-width: auto;
+      width: 100%;
+    }
+  }
+
+  .ai-preference-update {
+    bottom: 160px;
+    left: 16px;
+    right: 16px;
+    transform: none;
+    width: auto;
+  }
+}

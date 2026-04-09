@@ -7,11 +7,9 @@ import type { WebSocketMessage, WebSocketStatus } from '../types'
 
 type MessageHandler = (message: WebSocketMessage) => void
 
-// 生产环境也打印日志，用于调试
-const isDev = process.env.NODE_ENV === 'development'
+// 开发环境打印详细日志
 const log = (...args: unknown[]) => { console.log('[WebSocket]', ...args) }
 const error = (...args: unknown[]) => { console.error('[WebSocket]', ...args) }
-const info = (...args: unknown[]) => { console.info('[WebSocket] INFO:', ...args) }
 
 class WebSocketService {
   private ws: WebSocket | null = null
@@ -89,9 +87,9 @@ class WebSocketService {
   }
 
   private buildDefaultUrl(userId: string): string {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    // 使用路径参数格式，与后端 /api/chat/ws/{user_id} 匹配
-    return `${protocol}//${window.location.host}/api/chat/ws/${userId}`
+    // 直接连接后端 WebSocket 端口 (8002)，不通过 Vite 代理
+    // 这样可以避免 Vite WebSocket 代理的兼容性问题
+    return `ws://localhost:8002/api/chat/ws/${userId}`
   }
 
   private attemptReconnect() {

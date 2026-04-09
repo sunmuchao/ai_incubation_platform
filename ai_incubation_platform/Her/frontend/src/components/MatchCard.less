@@ -1,0 +1,516 @@
+// MatchCard 样式 - 现代精致版
+// 参考：Tinder +探探 设计风格
+
+.match-card {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  border-radius: 24px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.12);
+    border-color: rgba(102, 126, 234, 0.2);
+
+    .match-card-header {
+      &::after {
+        opacity: 1;
+      }
+    }
+  }
+
+  &.swipe-mode {
+    .action-buttons {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+.match-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+  position: relative;
+  overflow: hidden;
+
+  // 装饰性光晕
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
+    animation: headerGlow 8s ease-in-out infinite;
+  }
+
+  @keyframes headerGlow {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    50% { transform: translate(-10%, -10%) rotate(5deg); }
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+}
+
+.avatar-container {
+  position: relative;
+  display: inline-block;
+  z-index: 1;
+}
+
+.main-avatar {
+  border: 4px solid white;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-radius: 20px;
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.verified-badge {
+  position: absolute;
+  bottom: 6px;
+  right: -6px;
+  font-size: 14px;
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  color: white;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.4);
+  border: 2px solid white;
+  z-index: 2;
+}
+
+.compatibility-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 16px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  border: 2px solid rgba(102, 126, 234, 0.2);
+  z-index: 1;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: scale(1.05);
+    border-color: rgba(102, 126, 234, 0.4);
+    box-shadow: 0 12px 32px rgba(102, 126, 234, 0.15);
+  }
+}
+
+.compatibility-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: conic-gradient(
+    #667eea 0deg,
+    #764ba2 var(--compatibility-degrees),
+    #f0f0f0 var(--compatibility-degrees),
+    #f0f0f0 360deg
+  );
+  animation: none;
+}
+
+.compatibility-inner {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.compatibility-text {
+  font-size: 14px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.compatibility-label {
+  font-size: 9px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.match-card-body {
+  padding: 20px 24px 24px;
+}
+
+.user-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.user-name {
+  font-size: 22px;
+  font-weight: 600;
+  color: #1a1a1a;
+  letter-spacing: -0.02em;
+}
+
+.user-age {
+  font-size: 18px;
+  color: #999;
+  font-weight: 400;
+}
+
+.user-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 13px;
+  margin-bottom: 14px;
+
+  .anticon {
+    font-size: 14px;
+    color: #667eea;
+  }
+}
+
+.user-bio {
+  color: #666;
+  line-height: 1.7;
+  margin-bottom: 18px;
+  font-size: 14px;
+}
+
+.interests-section {
+  margin-bottom: 18px;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.common-interests-section {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.06) 0%, rgba(118, 75, 162, 0.06) 100%);
+  padding: 14px;
+  border-radius: 16px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.interest-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.interest-tag {
+  padding: 6px 12px;
+  background: white;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #333;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    border-color: rgba(102, 126, 234, 0.3);
+  }
+}
+
+.matching-reason {
+  background: linear-gradient(135deg, rgba(114, 46, 209, 0.05) 0%, rgba(102, 126, 234, 0.05) 100%);
+  padding: 14px 16px;
+  border-radius: 16px;
+  border-left: 3px solid;
+  border-image: linear-gradient(180deg, #722ed1 0%, #667eea 100%) 1;
+  font-size: 14px;
+  color: #555;
+  line-height: 1.6;
+
+  strong {
+    color: #722ed1;
+    font-weight: 600;
+  }
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  padding: 20px 24px;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.8), transparent);
+  margin: 0 -24px -24px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.match-card.swipe-mode .action-buttons,
+.match-card:hover .action-buttons {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.action-btn {
+  width: 52px;
+  height: 52px;
+  font-size: 22px;
+  border-radius: 50%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white;
+  border-width: 2px;
+
+  &:hover {
+    transform: scale(1.15);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &.pass-btn {
+    color: #ff4d4f;
+    border-color: rgba(255, 77, 79, 0.3);
+
+    &:hover {
+      background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+      border-color: #ff4d4f;
+      color: white;
+      box-shadow: 0 6px 20px rgba(255, 77, 79, 0.35);
+    }
+  }
+
+  &.super-like-btn {
+    color: #1890ff;
+    border-color: rgba(24, 144, 255, 0.3);
+
+    &:hover {
+      background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+      border-color: #1890ff;
+      color: white;
+      box-shadow: 0 6px 20px rgba(24, 144, 255, 0.35);
+    }
+  }
+
+  &.like-btn {
+    color: #52c41a;
+    border-color: rgba(82, 196, 26, 0.3);
+
+    &:hover {
+      background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+      border-color: #52c41a;
+      color: white;
+      box-shadow: 0 6px 20px rgba(82, 196, 26, 0.35);
+    }
+  }
+}
+
+/* Modal 样式 */
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-content {
+  padding: 8px 0;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .detail-label {
+    font-size: 12px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .detail-value {
+    font-size: 15px;
+    color: #333;
+    font-weight: 500;
+  }
+}
+
+.compatibility-details {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.compatibility-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  > :first-child {
+    width: 90px;
+    flex-shrink: 0;
+    font-size: 13px;
+    color: #666;
+  }
+
+  > :last-child {
+    flex: 1;
+
+    .ant-progress {
+      border-radius: 4px;
+    }
+  }
+}
+
+.ai-reasoning {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.06) 0%, rgba(118, 75, 162, 0.06) 100%);
+  padding: 16px;
+  border-radius: 16px;
+  border-left: 3px solid #722ed1;
+  font-style: italic;
+  color: #555;
+  line-height: 1.7;
+  font-size: 14px;
+
+  strong {
+    color: #722ed1;
+    font-weight: 600;
+  }
+}
+
+/* 动画效果 */
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.match-card {
+  animation: cardEnter 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+.compatibility-circle {
+  animation: pulse 3s ease-in-out infinite;
+}
+
+// 滑动动画
+@keyframes swipeLeft {
+  to {
+    transform: translateX(-150%) rotate(-30deg);
+    opacity: 0;
+  }
+}
+
+@keyframes swipeRight {
+  to {
+    transform: translateX(150%) rotate(30deg);
+    opacity: 0;
+  }
+}
+
+.match-card {
+  &.swiping-left {
+    animation: swipeLeft 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  &.swiping-right {
+    animation: swipeRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .match-card {
+    max-width: 100%;
+    border-radius: 20px;
+  }
+
+  .match-card-header {
+    padding: 18px;
+  }
+
+  .match-card-body {
+    padding: 16px 18px 20px;
+  }
+
+  .user-name {
+    font-size: 20px;
+  }
+
+  .action-buttons {
+    gap: 10px;
+  }
+
+  .action-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+}

@@ -19,7 +19,7 @@ from auth.jwt import get_current_user, get_current_user_optional
 from db.models import UserDB, ChatConversationDB
 from services.chat_service import ChatService
 from config import settings
-from utils.logger import logger
+from utils.logger import logger, get_trace_id
 from agent.user_simulation_agent import get_agent_for_user
 import asyncio
 
@@ -275,61 +275,73 @@ async def send_message(
     - **message_type**: 消息类型 (text/image/emoji/voice)
     - **metadata**: 元数据
     """
+    # 生成/获取 trace_id
+    trace_id = get_trace_id()
+    logger.info(f"📡 [CHAT:SEND] START trace_id={trace_id}")
+
     # 开发环境匿名用户处理
     user_id = current_user.get("user_id", "user-anonymous-dev")
     is_anonymous = current_user.get("is_anonymous", True)
 
-    logger.info(f"SendMessage: user={user_id}, receiver={request.receiver_id}, anonymous={is_anonymous}")
+    logger.info(f"📡 [CHAT:SEND] user={user_id}, receiver={request.receiver_id}, anonymous={is_anonymous}, trace_id={trace_id}")
 
     service = ChatService(db)
 
-    message = service.send_message(
-        sender_id=user_id,
-        receiver_id=request.receiver_id,
-        content=request.content,
-        message_type=request.message_type,
-        message_metadata=request.message_metadata
-    )
-
-    # 如果接收者在线，通过 WebSocket 推送
-    if request.receiver_id in manager.user_connections:
-        await manager.send_personal_message({
-            "type": "new_message",
-            "id": message.id,
-            "sender_id": user_id,
-            "content": message.content,
-            "message_type": message.message_type,
-            "timestamp": message.created_at.isoformat()
-        }, request.receiver_id)
-
-    # 开发环境：触发模拟 Agent 回复
-    # 无论是匿名用户还是认证用户，在开发环境都触发模拟回复，方便测试
-    if settings.environment == "development":
-        logger.info(f"DevMode: Scheduling agent reply for receiver {request.receiver_id}")
-        # 后台异步触发模拟回复
-        asyncio.create_task(
-            simulate_agent_reply(
-                db=db,
-                conversation_id=message.conversation_id,
-                message_content=request.content,
-                sender_id=user_id,
-                receiver_id=request.receiver_id
-            )
+    try:
+        message = service.send_message(
+            sender_id=user_id,
+            receiver_id=request.receiver_id,
+            content=request.content,
+            message_type=request.message_type,
+            message_metadata=request.message_metadata
         )
+        logger.info(f"📡 [CHAT:SEND] DB saved message_id={message.id}, conversation_id={message.conversation_id}")
 
-    # 手动构建响应（避免 Pydantic 验证问题）
-    return {
-        "id": message.id,
-        "conversation_id": message.conversation_id,
-        "sender_id": message.sender_id,
-        "receiver_id": message.receiver_id,
-        "message_type": message.message_type,
-        "content": message.content,
-        "status": message.status,
-        "is_read": message.is_read,
-        "created_at": message.created_at.isoformat(),
-        "metadata": message.message_metadata
-    }
+        # 如果接收者在线，通过 WebSocket 推送
+        if request.receiver_id in manager.user_connections:
+            await manager.send_personal_message({
+                "type": "new_message",
+                "id": message.id,
+                "sender_id": user_id,
+                "content": message.content,
+                "message_type": message.message_type,
+                "timestamp": message.created_at.isoformat()
+            }, request.receiver_id)
+            logger.info(f"📡 [CHAT:SEND] Pushed to WebSocket for receiver {request.receiver_id}")
+
+        # 开发环境：触发模拟 Agent 回复
+        if settings.environment == "development":
+            logger.info(f"📡 [CHAT:SEND] DevMode: Scheduling agent reply for receiver {request.receiver_id}")
+            # 后台异步触发模拟回复
+            asyncio.create_task(
+                simulate_agent_reply(
+                    db=db,
+                    conversation_id=message.conversation_id,
+                    message_content=request.content,
+                    sender_id=user_id,
+                    receiver_id=request.receiver_id
+                )
+            )
+
+        logger.info(f"📡 [CHAT:SEND] SUCCESS trace_id={trace_id}, message_id={message.id}")
+
+        # 手动构建响应（避免 Pydantic 验证问题）
+        return {
+            "id": message.id,
+            "conversation_id": message.conversation_id,
+            "sender_id": message.sender_id,
+            "receiver_id": message.receiver_id,
+            "message_type": message.message_type,
+            "content": message.content,
+            "status": message.status,
+            "is_read": message.is_read,
+            "created_at": message.created_at.isoformat(),
+            "metadata": message.message_metadata
+        }
+
+    except Exception as e:
+        logger.error(f"📡 [CHAT:SEND] FAILED trace_id={trace_id} error={str(e)}", exc_info=True)
+        raise
 
 
 async def simulate_agent_reply(
@@ -349,27 +361,31 @@ async def simulate_agent_reply(
         sender_id: 发送者 ID
         receiver_id: 接收者 ID（模拟用户）
     """
+    # 获取 trace_id 用于链路追踪
+    trace_id = get_trace_id()
+    logger.info(f"🤖 [AGENT:REPLY] START trace_id={trace_id} conv={conversation_id}")
+
     try:
         # 检查是否是给自己发消息
         if sender_id == receiver_id:
-            logger.info(f"AgentReply: Skipping - sender and receiver are the same user ({sender_id})")
+            logger.info(f"🤖 [AGENT:REPLY] Skipping - sender and receiver are the same user ({sender_id})")
             return
 
-        logger.info(f"AgentReply: Task started - conv={conversation_id}, sender={sender_id}, receiver={receiver_id}")
+        logger.info(f"🤖 [AGENT:REPLY] Task started - conv={conversation_id}, sender={sender_id}, receiver={receiver_id}")
 
         # 从数据库读取接收者的真实画像，创建模拟 Agent
         from agent.user_simulation_agent import create_agent_from_db
         agent = create_agent_from_db(db, receiver_id)
-        logger.info(f"AgentReply: create_agent_from_db result: {agent is not None}")
+        logger.info(f"🤖 [AGENT:REPLY] create_agent_from_db result: {agent is not None}")
 
         # 如果数据库中找不到用户，使用默认 Agent
         if agent is None:
-            logger.warning(f"User {receiver_id} not found in DB, using default agent")
+            logger.warning(f"🤖 [AGENT:REPLY] User {receiver_id} not found in DB, using default agent")
             from agent.user_simulation_agent import get_agent_for_user
             agent = get_agent_for_user(receiver_id)
-            logger.info(f"AgentReply: Using default agent for user {receiver_id}")
+            logger.info(f"🤖 [AGENT:REPLY] Using default agent for user {receiver_id}")
 
-        logger.info(f"AgentReply: Agent created successfully, name={agent.name}, reply_probability={agent.reply_config['reply_probability']}")
+        logger.info(f"🤖 [AGENT:REPLY] Agent created successfully, name={agent.name}, reply_probability={agent.reply_config['reply_probability']}")
 
         # 模拟收到消息后的反应
         reply_info = agent.simulate_receive_message(
@@ -379,10 +395,10 @@ async def simulate_agent_reply(
             sender_name="用户"
         )
 
-        logger.info(f"AgentReply: simulate_receive_message result: {reply_info is not None}")
+        logger.info(f"🤖 [AGENT:REPLY] simulate_receive_message result: {reply_info is not None}")
 
         if reply_info:
-            logger.info(f"AgentReply: Will reply after {reply_info['delay_seconds']}s with content: {reply_info['content'][:30]}...")
+            logger.info(f"🤖 [AGENT:REPLY] Will reply after {reply_info['delay_seconds']}s with content: {reply_info['content'][:30]}...")
             # 等待延迟时间
             await asyncio.sleep(reply_info["delay_seconds"])
 
@@ -394,7 +410,7 @@ async def simulate_agent_reply(
                 content=reply_info["content"],
                 message_type=reply_info.get("message_type", "text")
             )
-            logger.info(f"AgentReply: Message sent to DB, id={reply_message.id}")
+            logger.info(f"🤖 [AGENT:REPLY] Message sent to DB, id={reply_message.id}")
 
             # 如果发送者在线，推送回复
             if sender_id in manager.user_connections:
@@ -406,16 +422,18 @@ async def simulate_agent_reply(
                     "message_type": reply_message.message_type,
                     "timestamp": reply_message.created_at.isoformat()
                 }, sender_id)
-                logger.info(f"AgentReply: Pushed to WebSocket for sender {sender_id}")
+                logger.info(f"🤖 [AGENT:REPLY] Pushed to WebSocket for sender {sender_id}")
             else:
-                logger.info(f"AgentReply: Sender {sender_id} not in online connections, message saved to DB only")
+                logger.info(f"🤖 [AGENT:REPLY] Sender {sender_id} not in online connections, message saved to DB only")
 
-            logger.info(f"AgentReply: Sent reply to {sender_id}: {reply_info['content'][:30]}...")
+            logger.info(f"🤖 [AGENT:REPLY] Sent reply to {sender_id}: {reply_info['content'][:30]}...")
         else:
-            logger.info(f"AgentReply: Decided not to reply to {sender_id}")
+            logger.info(f"🤖 [AGENT:REPLY] Decided not to reply to {sender_id}")
+
+        logger.info(f"🤖 [AGENT:REPLY] SUCCESS trace_id={trace_id}")
 
     except Exception as e:
-        logger.error(f"AgentReply failed: {e}", exc_info=True)
+        logger.error(f"🤖 [AGENT:REPLY] FAILED trace_id={trace_id} error={str(e)}", exc_info=True)
 
 
 @router.get("/conversations", response_model=List[ConversationResponse], summary="获取会话列表")

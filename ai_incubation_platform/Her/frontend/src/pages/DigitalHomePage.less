@@ -1,0 +1,134 @@
+/**
+ * 数字小家页面样式
+ */
+
+.digital-home-page {
+  min-height: 100%;
+}
+
+/* 情侣空间 */
+.couple-space {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* 头像组合 */
+.couple-avatars {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.couple-avatar {
+  transition: transform 0.3s ease;
+}
+
+.couple-avatar:hover {
+  transform: scale(1.1);
+}
+
+.heart-between {
+  font-size: 24px;
+  color: #ff4d4f;
+  margin: 0 16px;
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+/* 统计卡片 */
+.stat-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+}
+
+/* 里程碑时间线 */
+.milestone-timeline {
+  margin-top: 24px;
+}
+
+.milestone-timeline .ant-timeline-item-content {
+  color: #666;
+}
+
+.milestone-icon {
+  font-size: 20px;
+}
+
+/* 关系进度条 */
+.relationship-progress {
+  margin-top: 16px;
+}
+
+.progress-item {
+  margin-bottom: 16px;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+/* 照片墙 */
+.photo-wall {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.photo-item {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.photo-item:hover {
+  transform: scale(1.05);
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .digital-home-page {
+    padding: 12px !important;
+  }
+
+  .couple-space {
+    padding: 16px;
+  }
+
+  .couple-avatar {
+    width: 60px !important;
+    height: 60px !important;
+  }
+
+  .heart-between {
+    font-size: 18px;
+    margin: 0 8px;
+  }
+
+  .stat-card {
+    margin-bottom: 12px;
+  }
+}

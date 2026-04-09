@@ -8,11 +8,13 @@
  */
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Input, Button, Avatar, Typography, Space, Empty, Tooltip } from 'antd'
-import { SendOutlined, LeftOutlined, PictureOutlined, SmileOutlined, MoreOutlined } from '@ant-design/icons'
+import { Input, Button, Avatar, Typography, Space, Empty, Tooltip, message, Tag } from 'antd'
+import { SendOutlined, LeftOutlined, PictureOutlined, SmileOutlined, MoreOutlined, RobotOutlined } from '@ant-design/icons'
 import type { MatchCandidate } from '../types'
 import { chatApi } from '../api'
+import { chatAssistantSkill } from '../api/skillClient'
 import { websocketService } from '../services/websocket'
+import GenerativeUIRenderer from './GenerativeUI'
 import './ChatRoom.less'
 
 const { Text } = Typography
@@ -51,14 +53,26 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
-  const [isPartnerOnline, setIsPartnerOnline] = useState(true)
+  const [showAiSuggestions, setShowAiSuggestions] = useState(false)
+  const [aiSuggestions, setAiSuggestions] = useState<Array<{ id: string; style: string; content: string }>>([])
+  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false)
+  const [aiSuggestionUi, setAiSuggestionUi] = useState<any>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<any>(null)
 
-  const currentUserId = localStorage.getItem('user_info')
-    ? JSON.parse(localStorage.getItem('user_info') || '{}')?.id || JSON.parse(localStorage.getItem('user_info') || '{}')?.username
-    : 'user-anonymous-dev'
+  // 获取当前用户 ID
+  const currentUserId = useMemo(() => {
+    const userInfoStr = localStorage.getItem('user_info')
+    if (userInfoStr) {
+      try {
+        const userInfo = JSON.parse(userInfoStr)
+        return userInfo.id || userInfo.username
+      } catch {
+        return 'user-anonymous-dev'
+      }
+    }
+    return 'user-anonymous-dev'
+  }, [])
 
   // 连接 WebSocket 接收实时消息
   useEffect(() => {
@@ -133,7 +147,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
 
   // 使用防抖的滚动策略
   const scrollToBottomDebounced = useMemo(() => {
-    let timeoutId: NodeJS.Timeout | null = null
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
     return () => {
       if (timeoutId) {
         clearTimeout(timeoutId)
@@ -180,8 +194,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
     }
   }
 
-  // 发送消息
-  const handleSend = async () => {
+  // 发送消息 - 使用 chatAssistant Skill
+  const handleSend = useCallback(async () => {
     if (!inputValue.trim() || isLoading || !actualPartnerId) {
       return
     }
@@ -204,31 +218,69 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
     setIsLoading(true)
 
     try {
-      const response = await chatApi.sendMessage({
-        receiver_id: actualPartnerId,
-        content: messageContent,
-        message_type: 'text'
-      })
+      // 使用 chatAssistant Skill 发送消息（AI Native 方式）
+      const result = await chatAssistantSkill.sendMessage(
+        currentUserId,
+        actualPartnerId,
+        messageContent,
+        'text'
+      )
 
-      // 更新为实际的消息 ID
+      // 更新为实际的消息 ID 和 Generative UI
       setMessages(prev => prev.map(msg =>
         msg.id === userMessage.id
-          ? { ...msg, id: response.id, created_at: response.created_at }
+          ? { ...msg, id: result.chat_data?.message_id || msg.id }
           : msg
       ))
+
+      // 如果有 AI 生成的 UI，显示出来
+      if (result.generative_ui) {
+        setAiSuggestionUi(result.generative_ui)
+      }
+
+      // 发送成功后，轮询获取对方回复（最多轮询 5 次，每次间隔 1 秒）
+      console.log('[ChatRoom] Starting reply polling...')
+      for (let i = 0; i < 5; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        try {
+          const history = await chatApi.getHistory(actualPartnerId)
+          const latestMessage = history[history.length - 1]
+          if (latestMessage && latestMessage.sender_id === actualPartnerId) {
+            console.log('[ChatRoom] Reply received via polling:', latestMessage.content)
+            setMessages(prev => {
+              const exists = prev.some(m => m.id === latestMessage.id)
+              if (exists) return prev
+              return [...prev, {
+                id: latestMessage.id,
+                sender_id: latestMessage.sender_id,
+                receiver_id: latestMessage.receiver_id,
+                message_type: latestMessage.message_type || 'text',
+                content: latestMessage.content,
+                is_read: latestMessage.is_read,
+                created_at: latestMessage.created_at,
+                status: 'delivered'
+              }]
+            })
+            break
+          }
+        } catch (e) {
+          console.warn('[ChatRoom] Polling failed:', e)
+        }
+      }
 
     } catch (error) {
       // 标记发送失败
       setMessages(prev => prev.map(msg =>
         msg.id === userMessage.id ? { ...msg, status: 'failed' } : msg
       ))
+      message.error('发送失败，请稍后重试')
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [inputValue, isLoading, actualPartnerId, currentUserId, setMessages, setInputValue, setIsLoading, setAiSuggestionUi])
 
   // 模拟对方回复 (开发环境)
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
@@ -239,6 +291,104 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value)
   }
+
+  // 生成 AI 回复建议 - 使用 chatAssistant Skill
+  const handleGenerateAiSuggestion = useCallback(async () => {
+    if (messages.length === 0) return
+
+    const lastMessage = messages[messages.length - 1]
+
+    // 只有当最后一条是对方发的消息时才生成建议
+    if (lastMessage.sender_id === currentUserId) {
+      message.info('等待对方回复再生成建议吧~')
+      return
+    }
+
+    setIsGeneratingSuggestion(true)
+    setShowAiSuggestions(true)
+
+    try {
+      // 使用 chatAssistant Skill 获取聊天建议
+      const result = await chatAssistantSkill.getSuggestions(currentUserId, actualPartnerId)
+
+      // 从 Skill 响应中提取建议
+      const suggestions = result.chat_data?.suggestions?.map((s: any, index: number) => ({
+        id: `suggestion-${index}`,
+        style: s.type === 'icebreaker' ? '破冰' : '话题',
+        content: s.content || ''
+      })) || []
+
+      setAiSuggestions(suggestions)
+
+      // 如果有 Generative UI，也渲染出来
+      if (result.generative_ui) {
+        setAiSuggestionUi(result.generative_ui)
+      }
+
+      if (suggestions.length === 0) {
+        message.warning('AI 暂时没想到好的回复，换个方式试试？')
+      }
+    } catch (error) {
+      console.error('AI 建议生成失败:', error)
+      message.error(error instanceof Error ? error.message : 'AI 思考失败，请稍后再试')
+    } finally {
+      setIsGeneratingSuggestion(false)
+    }
+  }, [messages, currentUserId, actualPartnerId])
+
+  // 记录 AI 建议反馈
+  const recordAiFeedback = useCallback(async (
+    suggestionId: string,
+    feedbackType: string,
+    suggestionContent: string,
+    suggestionStyle: string,
+    userActualReply?: string
+  ) => {
+    try {
+      await fetch('/api/quick_chat/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+        body: JSON.stringify({
+          partnerId: actualPartnerId,
+          suggestionId,
+          feedbackType,
+          suggestionContent,
+          suggestionStyle,
+          userActualReply: userActualReply || null,
+        }),
+      })
+      console.log('[ChatRoom] Feedback recorded:', { suggestionId, feedbackType })
+    } catch (error) {
+      console.error('[ChatRoom] Record feedback failed:', error)
+      // 不阻断用户操作，静默失败
+    }
+  }, [actualPartnerId])
+
+  // 选择 AI 建议并发送
+  const handleSelectAiSuggestion = useCallback(async (suggestion: { id: string; style: string; content: string }) => {
+    const content = suggestion.content || ''
+
+    // 记录反馈 - 采纳建议
+    recordAiFeedback(
+      suggestion.id,
+      'adopted',
+      content,
+      suggestion.style,
+      content
+    )
+
+    setInputValue(content)
+    setShowAiSuggestions(false)
+    setAiSuggestions([])
+
+    // 延迟一点发送，让用户看到输入框内容变化
+    setTimeout(() => {
+      handleSend()
+    }, 100)
+  }, [recordAiFeedback, handleSend])
 
   // 按日期分组消息 - 使用 useMemo 缓存分组结果
   const groupedMessages = useMemo(() => {
@@ -367,8 +517,79 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
+      {/* AI 回复建议面板 */}
+      {showAiSuggestions && aiSuggestions.length > 0 && (
+        <div className="ai-suggestion-panel">
+          <div className="ai-suggestion-header">
+            <RobotOutlined /> <Text strong>AI 建议回复</Text>
+            <Button
+              type="text"
+              size="small"
+              onClick={() => setShowAiSuggestions(false)}
+            >
+              收起
+            </Button>
+          </div>
+          {aiSuggestions.map((suggestion: { id: string; style: string; content: string }, index: number) => (
+            <Button
+              key={index}
+              className="suggestion-item"
+              onClick={() => handleSelectAiSuggestion(suggestion)}
+              block
+            >
+              <div className="suggestion-content">
+                <Tag color="blue" className="suggestion-style">{suggestion.style}</Tag>
+                <Text>{suggestion.content}</Text>
+              </div>
+            </Button>
+          ))}
+          <Button
+            size="small"
+            className="regenerate-btn"
+            onClick={handleGenerateAiSuggestion}
+            loading={isGeneratingSuggestion}
+          >
+            换一批
+          </Button>
+        </div>
+      )}
+
+      {/* Generative UI 渲染区域 - AI Native 动态生成的界面 */}
+      {aiSuggestionUi && (
+        <div className="generative-ui-section">
+          <GenerativeUIRenderer
+            uiConfig={aiSuggestionUi}
+            onAction={(action) => {
+              message.info(`AI 操作：${action.type}`)
+              // 处理 AI 建议的操作
+              if (action.type === 'send_message') {
+                handleGenerateAiSuggestion()
+              } else if (action.type === 'use_suggestion') {
+                // 使用建议
+              }
+            }}
+          />
+        </div>
+      )}
+
       {/* 输入区域 */}
       <div className="chat-room-input-area">
+        {/* AI 帮我回按钮 */}
+        {messages.length > 0 && messages[messages.length - 1].sender_id !== currentUserId && (
+          <div className="ai-suggestion-trigger">
+            <Button
+              size="small"
+              icon={<RobotOutlined />}
+              onClick={handleGenerateAiSuggestion}
+              loading={isGeneratingSuggestion}
+              type="primary"
+              ghost
+            >
+              AI 帮我回
+            </Button>
+          </div>
+        )}
+
         <div className="input-tools">
           <Space>
             <Tooltip title="图片">
@@ -385,7 +606,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
             ref={inputRef}
             value={inputValue}
             onChange={handleInputChange}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             placeholder="输入消息..."
             suffix={
               <Button
