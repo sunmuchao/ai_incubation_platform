@@ -29,12 +29,31 @@ export interface ConversationMatchRequest {
   context?: Record<string, any>
 }
 
+// AI Native 问题卡片类型（动态生成）
+export interface QuestionOption {
+  value: string
+  label: string
+  icon?: string
+}
+
+export interface QuestionCard {
+  question: string
+  subtitle?: string
+  question_type: 'single_choice' | 'multiple_choice' | 'tags'
+  options: QuestionOption[]
+  dimension: string
+  depth?: number  // 追问深度，0=首次提问，1+=追问
+}
+
 export interface ConversationMatchResponse {
   success: boolean
   message: string
   matches?: MatchCandidate[]
   suggestions?: string[]
   next_actions?: string[]
+  // AI Native 用户画像收集
+  question_card?: QuestionCard  // AI 生成的个人信息收集卡片
+  need_profile_collection?: boolean  // 是否需要收集信息
 }
 
 // 流式响应类型

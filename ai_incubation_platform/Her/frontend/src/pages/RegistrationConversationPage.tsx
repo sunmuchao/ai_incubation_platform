@@ -6,17 +6,16 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Card, Input, Button, Typography, Space, Avatar, Divider, Tag, Spin, Alert, Progress } from 'antd'
+import { Card, Input, Button, Typography, Space, Avatar, Divider, Tag, Spin, Alert, Progress, Modal } from 'antd'
 import {
   HeartOutlined,
-  HeartFilled,
   SendOutlined,
   UserOutlined,
   CheckCircleOutlined,
   FastForwardOutlined,
-  TrophyOutlined,
 } from '@ant-design/icons'
-import { registrationConversationApi, userApi } from '../api'
+import { registrationConversationApi } from '../api'
+import { authStorage } from '../utils/storage'
 import HerAvatar from '../assets/her-avatar.svg'
 import './RegistrationConversationPage.less'
 
@@ -35,17 +34,16 @@ const RegistrationConversationPage: React.FC<{
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [userMessage, setUserMessage] = useState('')
-  const [aiMessage, setAiMessage] = useState('')
   const [isCompleted, setIsCompleted] = useState(false)
   const [understandingLevel, setUnderstandingLevel] = useState(0)
   const [collectedDimensions, setCollectedDimensions] = useState<CollectedDimension[]>([])
-  const [conversationCount, setConversationCount] = useState(0)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [conversationHistory, setConversationHistory] = useState<Array<{
     type: 'ai' | 'user'
     message: string
     timestamp: Date
   }>>([])
+  const [showLeaveModal, setShowLeaveModal] = useState(false)  // 离开劝导弹窗
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -94,19 +92,16 @@ const RegistrationConversationPage: React.FC<{
   const initConversation = async () => {
     try {
       setLoading(true)
-      // 从 localStorage 获取用户信息
-      const storedUser = localStorage.getItem('user_info')
-      let user = null
+      // 从存储获取用户信息
+      const user = authStorage.getUser()
 
-      if (storedUser) {
-        user = JSON.parse(storedUser)
+      if (user) {
         setCurrentUser(user)
-        console.log('Using user from localStorage:', user)
+        console.log('Using user from storage:', user)
       }
 
       if (!user) {
         console.error('No user information available')
-        setAiMessage('无法获取用户信息，请重新登录')
         setLoading(false)
         return
       }
@@ -117,7 +112,6 @@ const RegistrationConversationPage: React.FC<{
 
       const response = await registrationConversationApi.startConversation(userId, userName)
 
-      setAiMessage(`你好，我是 Her 🤍 让我慢慢了解你吧～`)
       setUnderstandingLevel(response.understanding_level)
       setCollectedDimensions(response.collected_dimensions || [])
 
@@ -130,8 +124,14 @@ const RegistrationConversationPage: React.FC<{
       ])
     } catch (error: unknown) {
       console.error('Failed to init conversation:', error)
-      const errorMsg = error instanceof Error ? error.message : '初始化对话失败'
-      setAiMessage(errorMsg)
+      // 显示错误消息在对话历史中
+      setConversationHistory([
+        {
+          type: 'ai',
+          message: error instanceof Error ? error.message : '初始化对话失败',
+          timestamp: new Date(),
+        },
+      ])
     } finally {
       setLoading(false)
     }
@@ -145,6 +145,8 @@ const RegistrationConversationPage: React.FC<{
     setSending(true)
 
     try {
+      const userId = currentUser.id || currentUser.username
+
       // 添加用户消息到历史
       setConversationHistory((prev) => [
         ...prev,
@@ -155,16 +157,8 @@ const RegistrationConversationPage: React.FC<{
         },
       ])
 
-      // 发送消息到后端
-      const userId = currentUser.id || currentUser.username
+      // 使用同步 API（更稳定）
       const response = await registrationConversationApi.sendMessage(userId, message)
-
-      // 更新状态
-      setAiMessage(response.ai_message)
-      setIsCompleted(response.is_completed)
-      setUnderstandingLevel(response.understanding_level)
-      setCollectedDimensions(response.collected_dimensions || [])
-      setConversationCount(response.conversation_count)
 
       // 添加 AI 回复到历史
       setConversationHistory((prev) => [
@@ -176,6 +170,17 @@ const RegistrationConversationPage: React.FC<{
         },
       ])
 
+      // 更新状态
+      setIsCompleted(response.is_completed)
+      setUnderstandingLevel(response.understanding_level)
+      setCollectedDimensions(
+        (response.collected_dimensions || []).map((name: string) => ({
+          name,
+          confidence: 1.0,
+          data: '',
+        }))
+      )
+
       // 如果对话完成，延迟后自动跳转
       if (response.is_completed) {
         setTimeout(() => {
@@ -184,14 +189,43 @@ const RegistrationConversationPage: React.FC<{
       }
     } catch (error: unknown) {
       console.error('Failed to send message:', error)
-      const errorMsg = error instanceof Error ? error.message : '抱歉，出现了一些问题，请稍后再试～'
-      setAiMessage(errorMsg)
+
+      // 添加错误消息到历史
+      setConversationHistory((prev) => [
+        ...prev,
+        {
+          type: 'ai',
+          message: '抱歉，出现了一些问题，请稍后再试～',
+          timestamp: new Date(),
+        },
+      ])
     } finally {
       setSending(false)
     }
   }
 
   const handleSkip = async () => {
+    // 了解度低于 80% 时，弹出劝导提示
+    if (understandingLevel < 0.8) {
+      setShowLeaveModal(true)
+      return
+    }
+
+    // 了解度足够，可以跳过
+    if (!currentUser) return
+    try {
+      const userId = currentUser.id || currentUser.username
+      await registrationConversationApi.completeConversation(userId)
+      onComplete?.()
+    } catch (error: unknown) {
+      console.error('Failed to skip conversation:', error)
+      onComplete?.()
+    }
+  }
+
+  const handleForceSkip = async () => {
+    // 强制跳过（用户确认后）
+    setShowLeaveModal(false)
     if (!currentUser) return
     try {
       const userId = currentUser.id || currentUser.username
@@ -272,15 +306,18 @@ const RegistrationConversationPage: React.FC<{
                   <Title level={4} style={{ margin: 0 }}>Her</Title>
                 </div>
               </div>
-              <Button
-                type="text"
-                icon={<FastForwardOutlined />}
-                onClick={handleSkip}
-                className="skip-button"
-                disabled={isCompleted}
-              >
-                跳过
-              </Button>
+              {/* 只在了解度 >= 80% 时显示跳过按钮 */}
+              {understandingLevel >= 0.8 && (
+                <Button
+                  type="text"
+                  icon={<FastForwardOutlined />}
+                  onClick={handleSkip}
+                  className="skip-button"
+                  disabled={isCompleted}
+                >
+                  跳过
+                </Button>
+              )}
             </div>
 
             {renderProgressBar()}
@@ -297,7 +334,7 @@ const RegistrationConversationPage: React.FC<{
                 对话完成 🎉
               </Title>
               <Paragraph className="completed-subtitle">
-                {aiMessage}
+                {conversationHistory.filter(m => m.type === 'ai').pop()?.message || '太棒了，我已经了解你了！'}
               </Paragraph>
 
               <div className="summary-card-wrapper">
@@ -354,7 +391,7 @@ const RegistrationConversationPage: React.FC<{
                 {sending && (
                   <div className="sending-indicator">
                     <Spin size="small" />
-                    <Text type="secondary" style={{ marginLeft: 8 }}>AI 思考中...</Text>
+                    <Text type="secondary" style={{ marginLeft: 8 }}>Her 正在想...</Text>
                   </div>
                 )}
               </div>
@@ -397,6 +434,47 @@ const RegistrationConversationPage: React.FC<{
           )}
         </div>
       </Card>
+
+      {/* 离开劝导 Modal */}
+      <Modal
+        open={showLeaveModal}
+        onCancel={() => setShowLeaveModal(false)}
+        footer={null}
+        centered
+        className="leave-modal"
+      >
+        <div className="leave-modal-content">
+          <Avatar size={64} src={HerAvatar} style={{ backgroundColor: '#fff', marginBottom: 16 }} />
+          <Title level={4} style={{ color: '#D4A59A', marginBottom: 12 }}>
+            我还不够了解你啊 😊
+          </Title>
+          <Paragraph style={{ color: '#666', marginBottom: 24 }}>
+            再聊聊吧～让 Her 更懂你，才能给你更好的推荐哦！
+          </Paragraph>
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Button
+              type="primary"
+              block
+              icon={<HeartOutlined />}
+              onClick={() => setShowLeaveModal(false)}
+              style={{
+                background: 'linear-gradient(135deg, #D4A59A 0%, #C88B8B 100%)',
+                borderColor: '#C88B8B',
+              }}
+            >
+              好的，再聊聊~
+            </Button>
+            <Button
+              type="default"
+              block
+              onClick={handleForceSkip}
+              style={{ color: '#999' }}
+            >
+              下次再来认识你
+            </Button>
+          </Space>
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Input, Button, Card, Avatar, Spin, Tag, Space, Typography, Divider, Progress, Empty, Timeline } from 'antd'
-import { UserOutlined, ThunderboltOutlined, HeartOutlined, GiftOutlined, CheckCircleOutlined, CloseCircleOutlined, MessageOutlined, RobotOutlined, SendOutlined } from '@ant-design/icons'
+import { UserOutlined, ThunderboltOutlined, HeartFilled, CheckCircleOutlined, CloseCircleOutlined, MessageOutlined, SendOutlined } from '@ant-design/icons'
 import type { MatchCandidate, AIPreCommunicationSession } from '../types'
 import { conversationMatchingApi, aiAwarenessApi } from '../api'
 import {
@@ -14,9 +14,19 @@ import {
 } from '../api/aiInterlocutor'
 import HerAvatar from '../assets/her-avatar.svg'
 import MatchCard from './MatchCard'
+import { FeatureCardRenderer } from './FeatureCards'
+import ProfileQuestionCard from './ProfileQuestionCard'
+import type { Feature } from './FeaturesDrawer'
+import { authStorage } from '../utils/storage'
+import profileApi from '../api/profileApi'
 import './ChatInterface.less'
 
 const { Text, Paragraph } = Typography
+
+interface QuickTag {
+  label: string
+  trigger: string
+}
 
 interface Message {
   id: string
@@ -26,8 +36,9 @@ interface Message {
   suggestions?: string[]
   next_actions?: string[]
   timestamp: Date
-  generativeCard?: 'precommunication' | 'precommunication-dialog' | 'match' | 'analysis'  // Generative UI 卡片类型
+  generativeCard?: 'precommunication' | 'precommunication-dialog' | 'match' | 'analysis' | 'feature' | 'profile_question'  // Generative UI 卡片类型
   generativeData?: unknown  // Generative UI 数据
+  featureAction?: string  // 功能卡片类型
 }
 
 // 最大消息数量限制，防止内存泄漏
@@ -59,7 +70,32 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   ])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [quickTags, setQuickTags] = useState<QuickTag[]>([])  // 动态快捷标签
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // 获取动态快捷标签
+  useEffect(() => {
+    const fetchQuickTags = async () => {
+      try {
+        const token = authStorage.getToken()
+        const response = await fetch('/api/quick_chat/tags', {
+          headers: {
+            'Authorization': `Bearer ${token || ''}`,
+          },
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setQuickTags(data.tags || [])
+        }
+      } catch (error) {
+        // 静默失败，使用默认标签
+        setQuickTags([
+          { label: '今日推荐', trigger: '看看今天有什么推荐' }
+        ])
+      }
+    }
+    fetchQuickTags()
+  }, [])
 
   // 组件挂载检查 - 添加清理函数
   useEffect(() => {
@@ -75,6 +111,80 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     // 清理函数
     return () => {
       clearTimeout(timeoutId)
+    }
+  }, [])
+
+  // 监听功能触发事件
+  useEffect(() => {
+    const handleFeatureTrigger = (event: CustomEvent<{ feature: Feature }>) => {
+      const { feature } = event.detail
+
+      // 添加 AI 消息
+      const aiMessage: Message = {
+        id: `ai-${Date.now()}`,
+        type: 'ai',
+        content: `好的，我来帮你打开「${feature.name}」~`,
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, aiMessage])
+
+      // 添加功能卡片
+      setTimeout(() => {
+        const cardMessage: Message = {
+          id: `card-${Date.now()}`,
+          type: 'ai',
+          content: '',
+          timestamp: new Date(),
+          generativeCard: 'feature',
+          featureAction: feature.action,
+        }
+        setMessages(prev => [...prev, cardMessage])
+      }, 300)
+    }
+
+    window.addEventListener('trigger-feature', handleFeatureTrigger as EventListener)
+
+    return () => {
+      window.removeEventListener('trigger-feature', handleFeatureTrigger as EventListener)
+    }
+  }, [])
+
+  // 监听场景推送功能卡片事件
+  useEffect(() => {
+    const handleFeaturePush = (event: CustomEvent<{
+      feature: string
+      message: string
+      priority: string
+    }>) => {
+      const { feature, message } = event.detail
+
+      // 添加 AI 消息
+      const aiMessage: Message = {
+        id: `ai-push-${Date.now()}`,
+        type: 'ai',
+        content: message,
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, aiMessage])
+
+      // 添加功能卡片
+      setTimeout(() => {
+        const cardMessage: Message = {
+          id: `card-push-${Date.now()}`,
+          type: 'ai',
+          content: '',
+          timestamp: new Date(),
+          generativeCard: 'feature',
+          featureAction: feature,
+        }
+        setMessages(prev => [...prev, cardMessage])
+      }, 300)
+    }
+
+    window.addEventListener('push-feature-card', handleFeaturePush as EventListener)
+
+    return () => {
+      window.removeEventListener('push-feature-card', handleFeaturePush as EventListener)
     }
   }, [])
 
@@ -187,7 +297,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setIsLoading(true)
 
     // 追踪聊天消息行为
-    const userId = localStorage.getItem('user_info') ? JSON.parse(localStorage.getItem('user_info') || '{}').username : 'anonymous'
+    const userId = authStorage.getUserId()
     if (userId) {
       aiAwarenessApi.trackChatMessage(userId, 'system', userInput.length).catch(() => {})
     }
@@ -241,6 +351,39 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const response = await conversationMatchingApi.match({
         user_intent: userInput,
       })
+
+      // 检查是否需要收集用户信息（AI Native 设计）
+      if (response.need_profile_collection && response.question_card) {
+        const aiMessage: Message = {
+          id: `ai-${Date.now()}`,
+          type: 'ai',
+          content: response.message,
+          timestamp: new Date(),
+        }
+        setMessages((prev) => {
+          const newMessages = [...prev, aiMessage]
+          if (newMessages.length > MAX_MESSAGES) {
+            return newMessages.slice(newMessages.length - MAX_MESSAGES)
+          }
+          return newMessages
+        })
+
+        // 添加问题卡片
+        setTimeout(() => {
+          const questionMessage: Message = {
+            id: `question-${Date.now()}`,
+            type: 'ai',
+            content: '',
+            generativeCard: 'profile_question',
+            generativeData: response.question_card,
+            timestamp: new Date(),
+          }
+          setMessages((prev) => [...prev, questionMessage])
+        }, 300)
+
+        setIsLoading(false)
+        return
+      }
 
       const aiMessage: Message = {
         id: `ai-${Date.now()}`,
@@ -315,16 +458,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }
 
   const handleQuickAction = (action: string) => {
-    // 快捷操作转为对话意图
-    const actionMap: Record<string, string> = {
-      '找对象': '帮我找对象，看看今天有什么推荐',
-      '爱旅游': '我想找喜欢旅行的女生，有什么推荐吗？',
-      '今日推荐': '看看今天有什么推荐的匹配对象',
-      '发起对话': '我想和最匹配的人聊天，该怎么开始呢？',
-      'AI 预沟通': '启动 AI 预沟通，看看有哪些推荐',
-      '关系分析': '帮我分析一下当前的关系状态',
-    }
-    setInputValue(actionMap[action] || action)
+    // 直接使用 action 填充输入框
+    setInputValue(action)
   }
 
   // 检测用户意图并返回相应回复
@@ -592,8 +727,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // 从会话开始聊天
   const handleStartChatFromSession = (session: AIPreCommunicationSession) => {
-    const userStr = localStorage.getItem('user_info')
-    const userId = userStr ? JSON.parse(userStr).username : 'anonymous'
+    const userId = authStorage.getUserId()
     const partnerId = session.user_id_1 === userId ? session.user_id_2 : session.user_id_1
     const partnerName = session.user_b_id === userId ? session.user_a_name : session.user_b_name || 'TA'
 
@@ -633,7 +767,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             return {
               key: msg.id,
               color: msg.sender_agent.includes('agent_1') ? 'blue' : 'purple',
-              dot: <RobotOutlined />,
+              dot: <HeartFilled style={{ color: '#FF8FAB' }} />,
               children: (
                 <Card size="small" style={{ marginBottom: 8 }}>
                   <Space direction="vertical" size="small" style={{ width: '100%' }}>
@@ -707,6 +841,84 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           )}
 
+          {/* Generative UI: 功能卡片 */}
+          {message.generativeCard === 'feature' && message.featureAction && (
+            <div className="generative-ui-container feature-card-container">
+              <FeatureCardRenderer
+                featureAction={message.featureAction}
+                data={message.generativeData}
+                onAction={(action, data) => {
+                  console.log('Feature action:', action, data)
+                  // TODO: 调用对应的 API
+                }}
+              />
+            </div>
+          )}
+
+          {/* Generative UI: AI 问题卡片 */}
+          {message.generativeCard === 'profile_question' && message.generativeData && (
+            <div className="generative-ui-container">
+              <ProfileQuestionCard
+                question={(message.generativeData as any).question}
+                subtitle={(message.generativeData as any).subtitle}
+                questionType={(message.generativeData as any).question_type}
+                options={(message.generativeData as any).options}
+                dimension={(message.generativeData as any).dimension}
+                depth={(message.generativeData as any).depth || 0}
+                onAnswer={async (dimension, value, depth) => {
+                  // 用户选择后，自动发送为消息
+                  const answerText = Array.isArray(value)
+                    ? value.join('、')
+                    : value
+
+                  // 添加用户回答消息
+                  const userMessage: Message = {
+                    id: `user-${Date.now()}`,
+                    type: 'user',
+                    content: answerText,
+                    timestamp: new Date(),
+                  }
+                  setMessages(prev => [...prev, userMessage])
+
+                  // 调用 API 保存用户偏好
+                  try {
+                    const result = await profileApi.submitAnswer({
+                      dimension,
+                      answer: value,
+                      depth,
+                    })
+
+                    // 添加 AI 确认回复
+                    const aiMessage: Message = {
+                      id: `ai-${Date.now()}`,
+                      type: 'ai',
+                      content: result.ai_message,
+                      timestamp: new Date(),
+                    }
+                    setMessages(prev => [...prev, aiMessage])
+
+                    // 如果有下一个问题，添加问题卡片
+                    if (result.has_more_questions && result.next_question) {
+                      setTimeout(() => {
+                        const questionMessage: Message = {
+                          id: `question-${Date.now()}`,
+                          type: 'ai',
+                          content: '',
+                          generativeCard: 'profile_question',
+                          generativeData: result.next_question,
+                          timestamp: new Date(),
+                        }
+                        setMessages(prev => [...prev, questionMessage])
+                      }, 500)
+                    }
+                  } catch (error) {
+                    console.error('Failed to submit profile answer:', error)
+                  }
+                }}
+              />
+            </div>
+          )}
+
           {/* 匹配结果卡片 */}
           {message.matches && message.matches.length > 0 && (
             <div className="match-cards">
@@ -773,7 +985,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <div className="loading-indicator">
             <Spin size="small" />
             <Text type="secondary" style={{ marginLeft: 8 }}>
-              AI 正在分析你的需求...
+              Her 正在想...
             </Text>
           </div>
         )}
@@ -782,46 +994,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       {/* 输入区域 */}
       <div className="input-area">
-        <div className="quick-actions">
-          <Tag
-            bordered={false}
-            onClick={() => handleQuickAction('找对象')}
-            className="quick-action-tag"
-            icon={<HeartOutlined />}
-          >
-            找对象
-          </Tag>
-          <Tag
-            bordered={false}
-            onClick={() => handleQuickAction('AI 预沟通')}
-            className="quick-action-tag"
-            icon={<RobotOutlined />}
-          >
-            AI 预沟通
-          </Tag>
-          <Tag
-            bordered={false}
-            onClick={() => handleQuickAction('关系分析')}
-            className="quick-action-tag"
-            icon={<ThunderboltOutlined />}
-          >
-            关系分析
-          </Tag>
-          <Tag
-            bordered={false}
-            onClick={() => handleQuickAction('约会建议')}
-            className="quick-action-tag"
-            icon={<GiftOutlined />}
-          >
-            约会建议
-          </Tag>
-        </div>
+        {/* 动态快捷标签 */}
+        {quickTags.length > 0 && (
+          <div className="quick-actions">
+            {quickTags.map((tag, index) => (
+              <Tag
+                key={index}
+                bordered={false}
+                onClick={() => setInputValue(tag.trigger)}
+                className="quick-action-tag"
+              >
+                {tag.label}
+              </Tag>
+            ))}
+          </div>
+        )}
         <Input
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder="告诉我你想要什么，或者随便聊聊~"
-          prefix={<RobotOutlined />}
+          prefix={<HeartFilled style={{ color: '#FF8FAB' }} />}
           suffix={
             <Button
               type="primary"

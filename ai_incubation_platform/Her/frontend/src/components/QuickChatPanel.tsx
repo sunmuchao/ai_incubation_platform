@@ -4,6 +4,7 @@
  * 功能：
  * - 与 Her 快速对话
  * - 支持传入当前聊天上下文，让 Her 理解"她/他"指代的是谁
+ * - 用户可以问"怎么回复TA？"，后端自动获取聊天历史并分析
  */
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -11,10 +12,12 @@ import { Input, Button, Avatar, Typography, Empty, message } from 'antd'
 import { SendOutlined } from '@ant-design/icons'
 import HerAvatar from '../assets/her-avatar.svg'
 import { chatApi } from '../api'
+import { authStorage } from '../utils/storage'
 import './QuickChatPanel.less'
 
 const { Text } = Typography
 
+// 本地消息类型（用于与 Her 的对话）
 interface Message {
   id: string
   sender_id: string
@@ -23,10 +26,10 @@ interface Message {
   created_at: string
 }
 
+// 聊天上下文（传入当前聊天对象信息）
 interface ChatContext {
   partnerId: string
   partnerName: string
-  recentMessages: Message[] // 最近聊天记录
 }
 
 interface QuickChatPanelProps {
@@ -51,9 +54,7 @@ const QuickChatPanel: React.FC<QuickChatPanelProps> = ({ chatContext, onClose })
   const [herTyping, setHerTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const currentUserId = localStorage.getItem('user_info')
-    ? JSON.parse(localStorage.getItem('user_info') || '{}')?.username
-    : 'user-anonymous-dev'
+  const currentUserId = authStorage.getUserId()
 
   const herUserId = 'her-ai-assistant'
 
@@ -106,25 +107,18 @@ const QuickChatPanel: React.FC<QuickChatPanelProps> = ({ chatContext, onClose })
     setMessages(prev => [...prev, userMessage])
 
     try {
-      // 准备聊天上下文
-      const recentMessages = (chatContext?.recentMessages || []).map((msg) => ({
-        senderId: msg.sender_id === currentUserId ? 'me' : 'her',
-        content: msg.content,
-        timestamp: msg.created_at,
-      }))
-
-      // 调用快速对话 API
+      // 调用快速对话 API（后端会自动获取聊天历史）
       const response = await fetch('/api/quick_chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+          'Authorization': `Bearer ${authStorage.getToken() || ''}`,
         },
         body: JSON.stringify({
           question: question,
           partnerId: chatContext?.partnerId || '',
           partnerName: chatContext?.partnerName || 'TA',
-          recentMessages: recentMessages,
+          recentMessages: [],  // 后端会自动从数据库获取
         }),
       })
 
@@ -149,7 +143,7 @@ const QuickChatPanel: React.FC<QuickChatPanelProps> = ({ chatContext, onClose })
 
     } catch (error) {
       console.error('QuickChat error:', error)
-      message.error(error instanceof Error ? error.message : 'AI 思考失败，请稍后再试')
+      message.error(error instanceof Error ? error.message : 'Her 思考遇到问题，请稍后再试')
 
       // 显示错误消息
       const errorReply: Message = {
@@ -232,7 +226,7 @@ const QuickChatPanel: React.FC<QuickChatPanelProps> = ({ chatContext, onClose })
           value={inputValue}
           onChange={handleInputChange}
           onKeyPress={handleKeyPress}
-          placeholder={chatContext ? `问 Her 关于${chatContext.partnerName}的事...` : "跟 Her 说些什么..."}
+          placeholder={chatContext ? `问 Her：怎么回复${chatContext.partnerName}？` : "跟 Her 说些什么..."}
           suffix={
             <Button
               type="primary"

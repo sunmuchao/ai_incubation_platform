@@ -44,6 +44,9 @@ class ConversationMatchResponse(BaseModel):
     matches: Optional[List[dict]] = None
     suggestions: Optional[List[str]] = None
     next_actions: Optional[List[str]] = None  # 建议的下一步操作
+    # 新增：Generative UI 问题卡片
+    question_card: Optional[dict] = None  # AI 生成的个人信息收集卡片
+    need_profile_collection: Optional[bool] = None  # 是否需要收集信息
 
 
 class RelationshipAnalysisRequest(BaseModel):
@@ -98,7 +101,34 @@ async def conversation_match(
     logger.info(f"[ConversationMatch] current_user dict: {current_user}")
 
     try:
-        # Step 1: AI 意图理解
+        # Step 1: 检查用户画像缺口（AI Native 设计）
+        # 如果用户缺乏关键信息，优先触发信息收集而非直接匹配
+        profile_gaps = await _check_profile_gaps(user_id)
+
+        # 如果有重要的信息缺口（如关系目标、性格等），触发信息收集
+        if profile_gaps and len(profile_gaps) > 0:
+            # 检查是否是高优先级的缺口（关系目标、性格特点等）
+            high_priority_gaps = [g for g in profile_gaps if g.get("importance") == "high"]
+
+            if high_priority_gaps or len(profile_gaps) >= 3:
+                # 触发 ProfileCollectionSkill
+                question_result = await _trigger_profile_collection(
+                    user_id=user_id,
+                    user_intent=request.user_intent,
+                    gaps=profile_gaps
+                )
+
+                if question_result.get("question_card"):
+                    return ConversationMatchResponse(
+                        success=True,
+                        message=question_result.get("ai_message", "让我先了解一下你的偏好~"),
+                        question_card=question_result["question_card"],
+                        need_profile_collection=True,
+                        suggestions=["回答问题", "稍后再说"],
+                        next_actions=["继续"]
+                    )
+
+        # Step 2: AI 意图理解
         logger.info(f"[ConversationMatch] Calling _parse_user_intent...")
         intent_result = _parse_user_intent(request.user_intent, user_id)
         logger.info(f"[ConversationMatch] Parsed intent: {intent_result}")
@@ -639,6 +669,111 @@ def _generate_compatibility_interpretation(analysis: dict) -> str:
             interpretation += f"- {conflict.get('description', '潜在冲突')}\n"
 
     return interpretation
+
+
+# ============= 用户画像收集辅助函数 =============
+
+async def _check_profile_gaps(user_id: str) -> List[Dict]:
+    """
+    检查用户画像缺口
+
+    使用 ProfileCollectionSkill 分析用户缺少哪些关键信息。
+    返回缺口列表，包含维度、重要性等信息。
+    """
+    try:
+        from agent.skills.profile_collection_skill import get_profile_collection_skill
+
+        skill = get_profile_collection_skill()
+
+        # 获取用户当前画像
+        profile = await _get_user_profile(user_id)
+
+        # 分析缺口
+        gaps = skill._analyze_profile_gaps(profile)
+
+        logger.info(f"[ConversationMatch] Profile gaps for user={user_id}: {len(gaps)} gaps found")
+
+        return gaps
+
+    except Exception as e:
+        logger.error(f"[ConversationMatch] Failed to check profile gaps: {e}")
+        return []
+
+
+async def _get_user_profile(user_id: str) -> Dict[str, Any]:
+    """获取用户画像"""
+    try:
+        from utils.db_session_manager import db_session
+        from db.models import UserDB
+
+        with db_session() as db:
+            user = db.query(UserDB).filter(UserDB.id == user_id).first()
+            if user:
+                return {
+                    "relationship_goal": getattr(user, "goal", None),
+                    "age_preference": {
+                        "min": getattr(user, "preferred_age_min", None),
+                        "max": getattr(user, "preferred_age_max", None),
+                    } if getattr(user, "preferred_age_min", None) else None,
+                    "location_preference": getattr(user, "location", None),
+                    "interests": getattr(user, "interests", None),
+                    "lifestyle": None,
+                    "values": None,
+                    "deal_breakers": None,
+                    "personality": None,
+                }
+    except Exception as e:
+        logger.debug(f"Failed to get user profile: {e}")
+
+    return {}
+
+
+async def _trigger_profile_collection(
+    user_id: str,
+    user_intent: str,
+    gaps: List[Dict]
+) -> Dict:
+    """
+    触发个人信息收集流程
+
+    当用户缺乏关键信息时，AI 生成问题卡片收集信息，
+    而非直接进行匹配（AI Native 设计）。
+
+    Returns:
+        包含 question_card 和 ai_message 的字典
+    """
+    try:
+        from agent.skills.profile_collection_skill import get_profile_collection_skill
+
+        skill = get_profile_collection_skill()
+
+        # 构建对话上下文
+        conversation_context = [
+            {"role": "user", "content": user_intent}
+        ]
+
+        # 获取当前画像
+        profile = await _get_user_profile(user_id)
+
+        # 调用 Skill 生成问题
+        result = await skill.execute(
+            user_id=user_id,
+            conversation_context=conversation_context,
+            current_profile=profile,
+            trigger_reason="matching_need"  # 匹配需要信息
+        )
+
+        logger.info(f"[ConversationMatch] Profile collection triggered for user={user_id}")
+
+        return {
+            "question_card": result.get("question_card"),
+            "ai_message": result.get("ai_message", "为了更好地帮你找到合适的对象，让我先了解一下你的偏好~"),
+            "profile_gaps": result.get("profile_gaps", [])
+        }
+
+    except Exception as e:
+        logger.error(f"[ConversationMatch] Failed to trigger profile collection: {e}")
+        return {}
 
 
 # ============= AI 主动推送接口 =============
