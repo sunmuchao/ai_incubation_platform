@@ -117,14 +117,15 @@ class SafetyMonitoringService:
         return self._assess_location_risk_fallback(lat, lng)
 
     def _assess_location_risk_with_amap(self, lat: float, lng: float) -> Dict[str, Any]:
-        """使用高德地图 API 评估位置风险"""
-        # TODO: 集成高德地图 API 的地理编码和 POI 分析
-        # 未来实现：
-        # 1. 调用高德地理编码 API 获取地址信息
-        # 2. 分析周边 POI（警察局、医院、商场等安全设施）
-        # 3. 根据时间（白天/夜晚）和区域类型评估风险
+        """使用高德地图 API 评估位置风险
+
+        未来增强：集成高德地图 API
+        - 调用地理编码 API 获取地址信息
+        - 分析周边 POI（警察局、医院、商场等安全设施）
+        - 根据时间（白天/夜晚）和区域类型评估风险
+        """
         logger.info(f"Using AMap for location risk assessment: lat={lat}, lng={lng}")
-        # 临时返回降级方案
+        # 当前使用降级方案，待集成高德 API 后替换
         return self._assess_location_risk_fallback(lat, lng)
 
     def _assess_location_risk_fallback(self, lat: float, lng: float) -> Dict[str, Any]:
@@ -566,7 +567,7 @@ class SafetyMonitoringService:
 
         # 获取用户位置信息（用于生成位置链接）
         location_url = None
-        # TODO: 获取用户实时位置并生成分享链接
+        # 未来增强：集成 GPS 定位服务，获取实时位置并生成分享链接
 
         notifications_sent = 0
 
@@ -1028,7 +1029,7 @@ class SafetyMonitoringService:
             "emergency_id": result["alert_id"],
             "alert_level": "critical",
             "status": "active",
-            "contacts_notified": 0,  # TODO: 实际通知逻辑
+            "contacts_notified": 0,  # 待实现：集成推送通知服务后更新
             "message": "紧急求助已触发，正在通知紧急联系人..."
         }
 

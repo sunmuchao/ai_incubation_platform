@@ -283,38 +283,18 @@ class EmotionWarningService:
     def acknowledge_warning(self, warning_id: str, db_session_param: Optional[Any] = None) -> bool:
         """确认预警（支持 db_session 参数）"""
         if db_session_param:
-            db = db_session_param
-            use_context = False
+            return self._acknowledge_warning_internal(warning_id, db_session_param)
         else:
-            use_context = True
-
-        try:
-            if use_context:
-                with db_session() as db:
-                    return self._acknowledge_warning_internal(warning_id, db)
-            else:
-                return self._acknowledge_warning_internal(warning_id, db_session_param)
-        finally:
-            if use_context:
-                pass
+            with db_session() as db:
+                return self._acknowledge_warning_internal(warning_id, db)
 
     def resolve_warning(self, warning_id: str, relationship_improvement: Optional[float] = None, db_session_param: Optional[Any] = None) -> bool:
         """解决预警（支持 db_session 参数）"""
         if db_session_param:
-            db = db_session_param
-            use_context = False
+            return self._resolve_warning_internal(warning_id, relationship_improvement, db_session_param)
         else:
-            use_context = True
-
-        try:
-            if use_context:
-                with db_session() as db:
-                    return self._resolve_warning_internal(warning_id, relationship_improvement, db)
-            else:
-                return self._resolve_warning_internal(warning_id, relationship_improvement, db_session_param)
-        finally:
-            if use_context:
-                pass
+            with db_session() as db:
+                return self._resolve_warning_internal(warning_id, relationship_improvement, db)
 
     def _acknowledge_warning_internal(self, warning_id: str, db: Any) -> bool:
         """确认预警内部方法"""
@@ -340,20 +320,10 @@ class EmotionWarningService:
     def get_user_warnings(self, user_id: str, days: int = 7, only_unresolved: bool = False, db_session_param: Optional[Any] = None) -> List[Dict[str, Any]]:
         """获取用户预警历史（支持 db_session 参数）"""
         if db_session_param:
-            db = db_session_param
-            use_context = False
+            return self._get_user_warnings_internal(user_id, days, only_unresolved, db_session_param)
         else:
-            use_context = True
-
-        try:
-            if use_context:
-                with db_session_readonly() as db:
-                    return self._get_user_warnings_internal(user_id, days, only_unresolved, db)
-            else:
-                return self._get_user_warnings_internal(user_id, days, only_unresolved, db_session_param)
-        finally:
-            if use_context:
-                pass
+            with db_session_readonly() as db:
+                return self._get_user_warnings_internal(user_id, days, only_unresolved, db)
 
     def _get_user_warnings_internal(self, user_id: str, days: int, only_unresolved: bool, db: Any) -> List[Dict[str, Any]]:
         """获取用户预警历史内部方法"""
@@ -510,63 +480,6 @@ class EmotionWarningService:
             })
 
         return suggestions
-
-    def acknowledge_warning(self, warning_id: str, db_session_param: Optional[Any] = None) -> bool:
-        """确认预警（测试兼容 - 接受 db_session 参数）"""
-        if db_session_param:
-            db = db_session_param
-            use_context = False
-        else:
-            use_context = True
-
-        try:
-            if use_context:
-                with db_session() as db:
-                    return self._acknowledge_warning_internal(warning_id, db)
-            else:
-                return self._acknowledge_warning_internal(warning_id, db_session_param)
-        finally:
-            if use_context:
-                pass
-
-    def _acknowledge_warning_internal(self, warning_id: str, db: Any) -> bool:
-        """确认预警内部方法"""
-        warning = db.query(EmotionWarningDB).filter(EmotionWarningDB.id == warning_id).first()
-        if not warning:
-            return False
-        warning.is_acknowledged = True
-        warning.acknowledged_at = datetime.now()
-        warning.acknowledged_by = "user"
-        return True
-
-    def resolve_warning(self, warning_id: str, relationship_improvement: Optional[float] = None, db_session_param: Optional[Any] = None) -> bool:
-        """解决预警（测试兼容 - 接受 db_session 参数）"""
-        if db_session_param:
-            db = db_session_param
-            use_context = False
-        else:
-            use_context = True
-
-        try:
-            if use_context:
-                with db_session() as db:
-                    return self._resolve_warning_internal(warning_id, relationship_improvement, db)
-            else:
-                return self._resolve_warning_internal(warning_id, relationship_improvement, db_session_param)
-        finally:
-            if use_context:
-                pass
-
-    def _resolve_warning_internal(self, warning_id: str, relationship_improvement: Optional[float], db: Any) -> bool:
-        """解决预警内部方法"""
-        warning = db.query(EmotionWarningDB).filter(EmotionWarningDB.id == warning_id).first()
-        if not warning:
-            return False
-        warning.is_resolved = True
-        warning.resolved_at = datetime.now()
-        if relationship_improvement is not None:
-            warning.resolution_note = f"关系改善度：{relationship_improvement}"
-        return True
 
 
 # 全局服务实例

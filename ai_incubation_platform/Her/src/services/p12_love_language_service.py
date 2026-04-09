@@ -166,20 +166,10 @@ class LoveLanguageTranslationService:
     ) -> bool:
         """提交翻译反馈"""
         if db_session_param:
-            db = db_session_param
-            use_context = False
+            return self._submit_feedback_internal(translation_id, feedback, db_session_param)
         else:
-            use_context = True
-
-        try:
-            if use_context:
-                with db_session() as db:
-                    return self._submit_feedback_internal(translation_id, feedback, db)
-            else:
-                return self._submit_feedback_internal(translation_id, feedback, db_session_param)
-        finally:
-            if use_context:
-                pass
+            with db_session() as db:
+                return self._submit_feedback_internal(translation_id, feedback, db)
 
     def _submit_feedback_internal(self, translation_id: str, feedback: str, db: Any) -> bool:
         """提交翻译反馈内部方法"""
@@ -203,20 +193,10 @@ class LoveLanguageTranslationService:
     ) -> List[Dict[str, Any]]:
         """获取用户的翻译历史"""
         if db_session_param:
-            db = db_session_param
-            use_context = False
+            return self._get_user_translations_internal(user_id, limit, db_session_param)
         else:
-            use_context = True
-
-        try:
-            if use_context:
-                with db_session_readonly() as db:
-                    return self._get_user_translations_internal(user_id, limit, db)
-            else:
-                return self._get_user_translations_internal(user_id, limit, db_session_param)
-        finally:
-            if use_context:
-                pass
+            with db_session_readonly() as db:
+                return self._get_user_translations_internal(user_id, limit, db)
 
     def _get_user_translations_internal(self, user_id: str, limit: int, db: Any) -> List[Dict[str, Any]]:
         """获取用户翻译历史内部方法"""
