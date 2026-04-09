@@ -151,56 +151,56 @@ class ValuesDriftDetectorSkill:
         period_days: int
     ) -> List[Dict]:
         """获取价值观历史"""
-        from db.database import SessionLocal
+        from utils.db_session_manager import db_session
         from models.p1_values_models import DeclaredValuesDB, InferredValuesDB
 
-        db = SessionLocal()
         cutoff_date = datetime.now() - timedelta(days=period_days)
 
-        # 获取声明价值观历史
-        declared_history = db.query(DeclaredValuesDB).filter(
-            DeclaredValuesDB.user_id == user_id,
-            DeclaredValuesDB.created_at >= cutoff_date
-        ).order_by(DeclaredValuesDB.created_at.desc()).all()
+        with db_session() as db:
+            # 获取声明价值观历史
+            declared_history = db.query(DeclaredValuesDB).filter(
+                DeclaredValuesDB.user_id == user_id,
+                DeclaredValuesDB.created_at >= cutoff_date
+            ).order_by(DeclaredValuesDB.created_at.desc()).all()
 
-        history = []
-        for d in declared_history:
-            history.append({
-                "type": "declared",
-                "timestamp": d.created_at.isoformat(),
-                "values": {
-                    "family": {"value": d.family_value, "weight": d.family_weight},
-                    "career": {"value": d.career_value, "weight": d.career_weight},
-                    "lifestyle": {"value": d.lifestyle_value, "weight": d.lifestyle_weight},
-                    "finance": {"value": d.finance_value, "weight": d.finance_weight},
-                    "growth": {"value": d.growth_value, "weight": d.growth_weight},
-                    "relationship": {"value": d.relationship_value, "weight": d.relationship_weight},
-                }
-            })
+            history = []
+            for d in declared_history:
+                history.append({
+                    "type": "declared",
+                    "timestamp": d.created_at.isoformat(),
+                    "values": {
+                        "family": {"value": d.family_value, "weight": d.family_weight},
+                        "career": {"value": d.career_value, "weight": d.career_weight},
+                        "lifestyle": {"value": d.lifestyle_value, "weight": d.lifestyle_weight},
+                        "finance": {"value": d.finance_value, "weight": d.finance_weight},
+                        "growth": {"value": d.growth_value, "weight": d.growth_weight},
+                        "relationship": {"value": d.relationship_value, "weight": d.relationship_weight},
+                    }
+                })
 
-        # 获取推断价值观历史
-        inferred_history = db.query(InferredValuesDB).filter(
-            InferredValuesDB.user_id == user_id,
-            InferredValuesDB.created_at >= cutoff_date
-        ).order_by(InferredValuesDB.created_at.desc()).all()
+            # 获取推断价值观历史
+            inferred_history = db.query(InferredValuesDB).filter(
+                InferredValuesDB.user_id == user_id,
+                InferredValuesDB.created_at >= cutoff_date
+            ).order_by(InferredValuesDB.created_at.desc()).all()
 
-        for i in inferred_history:
-            history.append({
-                "type": "inferred",
-                "timestamp": i.created_at.isoformat(),
-                "values": {
-                    "family": {"value": i.family_value, "confidence": i.confidence_score},
-                    "career": {"value": i.career_value, "confidence": i.confidence_score},
-                    "lifestyle": {"value": i.lifestyle_value, "confidence": i.confidence_score},
-                    "finance": {"value": i.finance_value, "confidence": i.confidence_score},
-                    "growth": {"value": i.growth_value, "confidence": i.confidence_score},
-                    "relationship": {"value": i.relationship_value, "confidence": i.confidence_score},
-                }
-            })
+            for i in inferred_history:
+                history.append({
+                    "type": "inferred",
+                    "timestamp": i.created_at.isoformat(),
+                    "values": {
+                        "family": {"value": i.family_value, "confidence": i.confidence_score},
+                        "career": {"value": i.career_value, "confidence": i.confidence_score},
+                        "lifestyle": {"value": i.lifestyle_value, "confidence": i.confidence_score},
+                        "finance": {"value": i.finance_value, "confidence": i.confidence_score},
+                        "growth": {"value": i.growth_value, "confidence": i.confidence_score},
+                        "relationship": {"value": i.relationship_value, "confidence": i.confidence_score},
+                    }
+                })
 
-        # 按时间排序
-        history.sort(key=lambda x: x["timestamp"], reverse=True)
-        return history
+            # 按时间排序
+            history.sort(key=lambda x: x["timestamp"], reverse=True)
+            return history
 
     def _analyze_drift(
         self,

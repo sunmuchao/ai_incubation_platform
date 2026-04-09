@@ -139,29 +139,29 @@ class ConflictCompatibilityAnalyzerSkill:
 
     def _get_conflict_style(self, user_id: str) -> Dict:
         """获取用户冲突风格"""
-        from db.database import SessionLocal
+        from utils.db_session_manager import db_session
         from models.p1_conflict_models import ConflictStyleDB
 
-        db = SessionLocal()
-        style = db.query(ConflictStyleDB).filter(
-            ConflictStyleDB.user_id == user_id
-        ).order_by(ConflictStyleDB.created_at.desc()).first()
+        with db_session() as db:
+            style = db.query(ConflictStyleDB).filter(
+                ConflictStyleDB.user_id == user_id
+            ).order_by(ConflictStyleDB.created_at.desc()).first()
 
-        if style:
-            return {
-                "primary_style": style.primary_style,
-                "secondary_style": style.secondary_style,
-                "style_scores": style.style_scores,
-                "assessment_date": style.assessed_at.isoformat() if style.assessed_at else None,
-            }
-        else:
-            # 返回默认风格
-            return {
-                "primary_style": "unknown",
-                "secondary_style": None,
-                "style_scores": {},
-                "assessment_date": None,
-            }
+            if style:
+                return {
+                    "primary_style": style.primary_style,
+                    "secondary_style": style.secondary_style,
+                    "style_scores": style.style_scores,
+                    "assessment_date": style.assessed_at.isoformat() if style.assessed_at else None,
+                }
+            else:
+                # 返回默认风格
+                return {
+                    "primary_style": "unknown",
+                    "secondary_style": None,
+                    "style_scores": {},
+                    "assessment_date": None,
+                }
 
     def _calculate_compatibility(
         self,

@@ -141,24 +141,24 @@ class ValuesInferencerSkill:
 
     def _get_declared_values(self, user_id: str) -> List[Dict]:
         """获取用户声明的价值观"""
-        from db.database import SessionLocal
+        from utils.db_session_manager import db_session
         from models.p1_values_models import DeclaredValuesDB
 
-        db = SessionLocal()
-        declared = db.query(DeclaredValuesDB).filter(
-            DeclaredValuesDB.user_id == user_id
-        ).order_by(DeclaredValuesDB.created_at.desc()).first()
+        with db_session() as db:
+            declared = db.query(DeclaredValuesDB).filter(
+                DeclaredValuesDB.user_id == user_id
+            ).order_by(DeclaredValuesDB.created_at.desc()).first()
 
-        if declared:
-            return [
-                {"dimension": "family", "value": declared.family_value, "weight": declared.family_weight},
-                {"dimension": "career", "value": declared.career_value, "weight": declared.career_weight},
-                {"dimension": "lifestyle", "value": declared.lifestyle_value, "weight": declared.lifestyle_weight},
-                {"dimension": "finance", "value": declared.finance_value, "weight": declared.finance_weight},
-                {"dimension": "growth", "value": declared.growth_value, "weight": declared.growth_weight},
-                {"dimension": "relationship", "value": declared.relationship_value, "weight": declared.relationship_weight},
-            ]
-        return []
+            if declared:
+                return [
+                    {"dimension": "family", "value": declared.family_value, "weight": declared.family_weight},
+                    {"dimension": "career", "value": declared.career_value, "weight": declared.career_weight},
+                    {"dimension": "lifestyle", "value": declared.lifestyle_value, "weight": declared.lifestyle_weight},
+                    {"dimension": "finance", "value": declared.finance_value, "weight": declared.finance_weight},
+                    {"dimension": "growth", "value": declared.growth_value, "weight": declared.growth_weight},
+                    {"dimension": "relationship", "value": declared.relationship_value, "weight": declared.relationship_weight},
+                ]
+            return []
 
     def _infer_from_behavior(
         self,
@@ -255,48 +255,48 @@ class ValuesInferencerSkill:
     ) -> Dict:
         """调整匹配权重"""
         from services.values_evolution_service import values_evolution_service
-        from db.database import SessionLocal
+        from utils.db_session_manager import db_session
         from models.p1_values_models import DeclaredValuesDB
 
-        db = SessionLocal()
-        declared = db.query(DeclaredValuesDB).filter(
-            DeclaredValuesDB.user_id == user_id
-        ).first()
+        with db_session() as db:
+            declared = db.query(DeclaredValuesDB).filter(
+                DeclaredValuesDB.user_id == user_id
+            ).first()
 
-        if not declared:
-            return {}
+            if not declared:
+                return {}
 
-        # 获取当前权重
-        before_weights = {
-            "family": declared.family_weight,
-            "career": declared.career_weight,
-            "lifestyle": declared.lifestyle_weight,
-            "finance": declared.finance_weight,
-            "growth": declared.growth_weight,
-            "relationship": declared.relationship_weight,
-        }
+            # 获取当前权重
+            before_weights = {
+                "family": declared.family_weight,
+                "career": declared.career_weight,
+                "lifestyle": declared.lifestyle_weight,
+                "finance": declared.finance_weight,
+                "growth": declared.growth_weight,
+                "relationship": declared.relationship_weight,
+            }
 
-        # 根据偏移调整权重
-        after_weights = before_weights.copy()
-        for dim in drift_analysis.get("drift_dimensions", []):
-            # 增加推断价值观的权重
-            after_weights[dim] = min(100, before_weights.get(dim, 20) + 10)
+            # 根据偏移调整权重
+            after_weights = before_weights.copy()
+            for dim in drift_analysis.get("drift_dimensions", []):
+                # 增加推断价值观的权重
+                after_weights[dim] = min(100, before_weights.get(dim, 20) + 10)
 
-        # 调用服务记录调整
-        success, message, adjustment = values_evolution_service.adjust_matching_weights(
-            user_id=user_id,
-            before_weights=before_weights,
-            after_weights=after_weights,
-            adjustment_reason="values_drift_detected",
-            ai_reasoning=f"检测到{len(drift_analysis.get('drift_dimensions', []))}个维度存在价值观偏移",
-        )
+            # 调用服务记录调整
+            success, message, adjustment = values_evolution_service.adjust_matching_weights(
+                user_id=user_id,
+                before_weights=before_weights,
+                after_weights=after_weights,
+                adjustment_reason="values_drift_detected",
+                ai_reasoning=f"检测到{len(drift_analysis.get('drift_dimensions', []))}个维度存在价值观偏移",
+            )
 
-        return {
-            "success": success,
-            "before": before_weights,
-            "after": after_weights,
-            "adjustment_id": adjustment.id if adjustment else None,
-        }
+            return {
+                "success": success,
+                "before": before_weights,
+                "after": after_weights,
+                "adjustment_id": adjustment.id if adjustment else None,
+            }
 
     def _generate_suggestions(
         self,

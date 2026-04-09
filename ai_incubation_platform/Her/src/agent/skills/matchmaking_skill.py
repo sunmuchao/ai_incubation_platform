@@ -607,29 +607,29 @@ class MatchmakingAgentSkill:
         # 注：当前从用户资料中读取最后推荐时间，生产环境应从推荐记录表读取
         try:
             from db.models import UserDB
-            from db.database import SessionLocal
+            from utils.db_session_manager import db_session
 
-            db = SessionLocal()
-            user = db.query(UserDB).filter(UserDB.id == user_id).first()
+            with db_session() as db:
+                user = db.query(UserDB).filter(UserDB.id == user_id).first()
 
-            if user:
-                # 检查 last_daily_recommend 字段
-                last_recommend = getattr(user, "last_daily_recommend", None)
+                if user:
+                    # 检查 last_daily_recommend 字段
+                    last_recommend = getattr(user, "last_daily_recommend", None)
 
-                if last_recommend:
-                    # 如果是今天发送过，跳过
-                    if isinstance(last_recommend, datetime):
-                        if last_recommend.date() == datetime.now().date():
-                            logger.info(f"MatchmakingSkill: Daily recommend already sent today for user={user_id}")
-                            return False
+                    if last_recommend:
+                        # 如果是今天发送过，跳过
+                        if isinstance(last_recommend, datetime):
+                            if last_recommend.date() == datetime.now().date():
+                                logger.info(f"MatchmakingSkill: Daily recommend already sent today for user={user_id}")
+                                return False
 
-                # 更新最后推荐时间
-                user.last_daily_recommend = datetime.now()
-                db.commit()
-                logger.info(f"MatchmakingSkill: Daily recommend allowed for user={user_id}")
+                    # 更新最后推荐时间
+                    user.last_daily_recommend = datetime.now()
+                    db.commit()
+                    logger.info(f"MatchmakingSkill: Daily recommend allowed for user={user_id}")
+                    return True
+
                 return True
-
-            return True
         except Exception as e:
             logger.error(f"MatchmakingSkill: Error checking daily recommend: {e}")
             return True
@@ -643,28 +643,28 @@ class MatchmakingAgentSkill:
 
         try:
             from db.models import MatchHistoryDB
-            from db.database import SessionLocal
+            from utils.db_session_manager import db_session
 
-            db = SessionLocal()
-            # 查找未推送的高质量匹配
-            matches = db.query(MatchHistoryDB).filter(
-                (MatchHistoryDB.user_id_1 == user_id) | (MatchHistoryDB.user_id_2 == user_id),
-                MatchHistoryDB.compatibility_score >= threshold,
-                MatchHistoryDB.status == "pending"
-            ).all()
+            with db_session() as db:
+                # 查找未推送的高质量匹配
+                matches = db.query(MatchHistoryDB).filter(
+                    (MatchHistoryDB.user_id_1 == user_id) | (MatchHistoryDB.user_id_2 == user_id),
+                    MatchHistoryDB.compatibility_score >= threshold,
+                    MatchHistoryDB.status == "pending"
+                ).all()
 
-            if matches:
-                logger.info(f"MatchmakingSkill: Found {len(matches)} high quality matches")
-                return [
-                    {
-                        "match_id": m.id,
-                        "user_id": m.user_id_2 if m.user_id_1 == user_id else m.user_id_1,
-                        "score": m.compatibility_score
-                    }
-                    for m in matches
-                ]
+                if matches:
+                    logger.info(f"MatchmakingSkill: Found {len(matches)} high quality matches")
+                    return [
+                        {
+                            "match_id": m.id,
+                            "user_id": m.user_id_2 if m.user_id_1 == user_id else m.user_id_1,
+                            "score": m.compatibility_score
+                        }
+                        for m in matches
+                    ]
 
-            return []
+                return []
         except Exception as e:
             logger.error(f"MatchmakingSkill: Error finding high quality matches: {e}")
             return []

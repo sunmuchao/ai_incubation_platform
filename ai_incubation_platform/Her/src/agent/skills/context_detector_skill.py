@@ -408,18 +408,18 @@ class ContextDetectorSkill:
         if not partner_id:
             return "initial"
 
-        from db.database import SessionLocal
+        from utils.db_session_manager import db_session
         from db.models import MatchHistoryDB
 
-        db = SessionLocal()
-        match = db.query(MatchHistoryDB).filter(
-            ((MatchHistoryDB.user_a_id == user_id) & (MatchHistoryDB.user_b_id == partner_id)) |
-            ((MatchHistoryDB.user_a_id == partner_id) & (MatchHistoryDB.user_b_id == user_id))
-        ).first()
+        with db_session() as db:
+            match = db.query(MatchHistoryDB).filter(
+                ((MatchHistoryDB.user_a_id == user_id) & (MatchHistoryDB.user_b_id == partner_id)) |
+                ((MatchHistoryDB.user_a_id == partner_id) & (MatchHistoryDB.user_b_id == user_id))
+            ).first()
 
-        if match:
-            return match.match_status or "initial"
-        return "initial"
+            if match:
+                return match.match_status or "initial"
+            return "initial"
 
 
 # 全局单例获取函数

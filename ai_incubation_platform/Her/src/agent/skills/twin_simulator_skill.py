@@ -272,42 +272,42 @@ class TwinSimulatorSkill:
         simulation_id: int
     ) -> Dict[str, Any]:
         """获取状态"""
-        from db.database import SessionLocal
+        from utils.db_session_manager import db_session
         from models.p2_digital_twin_models import DigitalTwinSimulation
 
-        db = SessionLocal()
-        simulation = db.query(DigitalTwinSimulation).filter(
-            DigitalTwinSimulation.id == simulation_id
-        ).first()
+        with db_session() as db:
+            simulation = db.query(DigitalTwinSimulation).filter(
+                DigitalTwinSimulation.id == simulation_id
+            ).first()
 
-        if not simulation:
+            if not simulation:
+                return {
+                    "success": False,
+                    "error": "模拟未找到",
+                    "ai_message": "模拟不存在~",
+                }
+
             return {
-                "success": False,
-                "error": "模拟未找到",
-                "ai_message": "模拟不存在~",
+                "success": True,
+                "data": {
+                    "simulation_id": simulation_id,
+                    "status": simulation.status,
+                    "total_rounds": simulation.total_rounds,
+                    "completed_rounds": simulation.completed_rounds,
+                    "progress": round(
+                        simulation.completed_rounds / simulation.total_rounds * 100
+                    )
+                    if simulation.total_rounds > 0
+                    else 0,
+                    "started_at": simulation.started_at.isoformat()
+                    if simulation.started_at
+                    else None,
+                    "completed_at": simulation.completed_at.isoformat()
+                    if simulation.completed_at
+                    else None,
+                },
+                "ai_message": f"模拟进度：{simulation.completed_rounds}/{simulation.total_rounds}",
             }
-
-        return {
-            "success": True,
-            "data": {
-                "simulation_id": simulation_id,
-                "status": simulation.status,
-                "total_rounds": simulation.total_rounds,
-                "completed_rounds": simulation.completed_rounds,
-                "progress": round(
-                    simulation.completed_rounds / simulation.total_rounds * 100
-                )
-                if simulation.total_rounds > 0
-                else 0,
-                "started_at": simulation.started_at.isoformat()
-                if simulation.started_at
-                else None,
-                "completed_at": simulation.completed_at.isoformat()
-                if simulation.completed_at
-                else None,
-            },
-            "ai_message": f"模拟进度：{simulation.completed_rounds}/{simulation.total_rounds}",
-        }
 
 
 # 全局单例获取函数

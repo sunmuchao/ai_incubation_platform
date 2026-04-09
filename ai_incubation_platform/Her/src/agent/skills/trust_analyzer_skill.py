@@ -155,30 +155,30 @@ class TrustAnalyzerSkill:
 
     def _get_trust_badges(self, user_id: str) -> List[Dict]:
         """获取信任勋章"""
-        from db.database import SessionLocal
+        from utils.db_session_manager import db_session
         from models.p0_identity_models import TrustBadgeDB
 
-        db = SessionLocal()
-        badges = db.query(TrustBadgeDB).filter(
-            TrustBadgeDB.user_id == user_id,
-            TrustBadgeDB.is_active == True
-        ).all()
+        with db_session() as db:
+            badges = db.query(TrustBadgeDB).filter(
+                TrustBadgeDB.user_id == user_id,
+                TrustBadgeDB.is_active == True
+            ).all()
 
-        return [
-            {
-                "id": b.id,
-                "badge_type": b.badge_type,
-                "badge_name": b.badge_name,
-                "badge_icon": b.badge_icon,
-                "earned_at": b.earned_at.isoformat() if b.earned_at else None,
-                "score_weight": b.score_weight,
-            }
-            for b in badges
-        ]
+            return [
+                {
+                    "id": b.id,
+                    "badge_type": b.badge_type,
+                    "badge_name": b.badge_name,
+                    "badge_icon": b.badge_icon,
+                    "earned_at": b.earned_at.isoformat() if b.earned_at else None,
+                    "score_weight": b.score_weight,
+                }
+                for b in badges
+            ]
 
     def _get_verifications(self, user_id: str) -> List[Dict]:
         """获取验证状态"""
-        from db.database import SessionLocal
+        from utils.db_session_manager import db_session
         from models.p0_identity_models import (
             EducationCredentialDB,
             OccupationCredentialDB,
@@ -187,52 +187,52 @@ class TrustAnalyzerSkill:
         )
         from db.models import IdentityVerificationDB
 
-        db = SessionLocal()
-        verifications = []
+        with db_session() as db:
+            verifications = []
 
-        # 基础实名认证
-        basic = db.query(IdentityVerificationDB).filter(
-            IdentityVerificationDB.user_id == user_id
-        ).first()
-        if basic:
-            verifications.append({
-                "type": "identity",
-                "name": "实名认证",
-                "icon": "🆔",
-                "status": basic.verification_status,
-                "verified_at": basic.verified_at.isoformat() if basic.verified_at else None,
-            })
+            # 基础实名认证
+            basic = db.query(IdentityVerificationDB).filter(
+                IdentityVerificationDB.user_id == user_id
+            ).first()
+            if basic:
+                verifications.append({
+                    "type": "identity",
+                    "name": "实名认证",
+                    "icon": "🆔",
+                    "status": basic.verification_status,
+                    "verified_at": basic.verified_at.isoformat() if basic.verified_at else None,
+                })
 
-        # 学历认证
-        edu = db.query(EducationCredentialDB).filter(
-            EducationCredentialDB.user_id == user_id
-        ).first()
-        if edu:
-            verifications.append({
-                "type": "education",
-                "name": "学历认证",
-                "icon": "🎓",
-                "status": edu.verification_status,
-                "school_name": edu.school_name,
-                "degree_type": edu.degree_type,
-                "verified_at": edu.verified_at.isoformat() if edu.verified_at else None,
-            })
+            # 学历认证
+            edu = db.query(EducationCredentialDB).filter(
+                EducationCredentialDB.user_id == user_id
+            ).first()
+            if edu:
+                verifications.append({
+                    "type": "education",
+                    "name": "学历认证",
+                    "icon": "🎓",
+                    "status": edu.verification_status,
+                    "school_name": edu.school_name,
+                    "degree_type": edu.degree_type,
+                    "verified_at": edu.verified_at.isoformat() if edu.verified_at else None,
+                })
 
-        # 职业认证
-        occ = db.query(OccupationCredentialDB).filter(
-            OccupationCredentialDB.user_id == user_id
-        ).first()
-        if occ:
-            verifications.append({
-                "type": "occupation",
-                "name": "职业认证",
-                "icon": "💼",
-                "status": occ.verification_status,
-                "company_name": occ.company_name,
-                "verified_at": occ.verified_at.isoformat() if occ.verified_at else None,
-            })
+            # 职业认证
+            occ = db.query(OccupationCredentialDB).filter(
+                OccupationCredentialDB.user_id == user_id
+            ).first()
+            if occ:
+                verifications.append({
+                    "type": "occupation",
+                    "name": "职业认证",
+                    "icon": "💼",
+                    "status": occ.verification_status,
+                    "company_name": occ.company_name,
+                    "verified_at": occ.verified_at.isoformat() if occ.verified_at else None,
+                })
 
-        return verifications
+            return verifications
 
     def _score_to_level(self, score: int) -> str:
         """分数转等级"""

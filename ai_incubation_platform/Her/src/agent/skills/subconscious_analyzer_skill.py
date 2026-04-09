@@ -135,25 +135,25 @@ class SubconsciousAnalyzerSkill:
 
     def _get_subconscious_profile(self, user_id: str) -> Optional[Dict]:
         """获取潜意识档案"""
-        from db.database import SessionLocal
+        from utils.db_session_manager import db_session
         from models.p1_perception_models import DigitalSubconsciousProfileDB
 
-        db = SessionLocal()
-        profile = db.query(DigitalSubconsciousProfileDB).filter(
-            DigitalSubconsciousProfileDB.user_id == user_id
-        ).first()
+        with db_session() as db:
+            profile = db.query(DigitalSubconsciousProfileDB).filter(
+                DigitalSubconsciousProfileDB.user_id == user_id
+            ).first()
 
-        if profile:
-            return {
-                "id": profile.id,
-                "user_id": profile.user_id,
-                "attachment_style": profile.attachment_style,
-                "attachment_score": profile.attachment_score,
-                "subconscious_traits": profile.subconscious_traits,
-                "confidence_scores": profile.confidence_scores,
-                "last_updated": profile.updated_at.isoformat() if profile.updated_at else None,
-            }
-        return None
+            if profile:
+                return {
+                    "id": profile.id,
+                    "user_id": profile.user_id,
+                    "attachment_style": profile.attachment_style,
+                    "attachment_score": profile.attachment_score,
+                    "subconscious_traits": profile.subconscious_traits,
+                    "confidence_scores": profile.confidence_scores,
+                    "last_updated": profile.updated_at.isoformat() if profile.updated_at else None,
+                }
+            return None
 
     def _analyze_attachment_style(
         self,
@@ -246,26 +246,26 @@ class SubconsciousAnalyzerSkill:
 
     def _analyze_behavior_patterns(self, user_id: str) -> List[Dict]:
         """分析行为模式"""
-        from db.database import SessionLocal
+        from utils.db_session_manager import db_session
         from models.l4_learning_models import BehaviorLearningPattern
 
-        db = SessionLocal()
-        patterns = db.query(BehaviorLearningPattern).filter(
-            BehaviorLearningPattern.user_id == user_id,
-            BehaviorLearningPattern.is_validated == True,
-        ).limit(5).all()
+        with db_session() as db:
+            patterns = db.query(BehaviorLearningPattern).filter(
+                BehaviorLearningPattern.user_id == user_id,
+                BehaviorLearningPattern.is_validated == True,
+            ).limit(5).all()
 
-        result = []
-        for p in patterns:
-            result.append({
-                "type": p.pattern_type,
-                "name": self._get_pattern_name(p.pattern_type),
-                "data": p.pattern_data,
-                "strength": p.pattern_strength,
-                "description": self._get_pattern_description(p.pattern_type, p.pattern_data),
-            })
+            result = []
+            for p in patterns:
+                result.append({
+                    "type": p.pattern_type,
+                    "name": self._get_pattern_name(p.pattern_type),
+                    "data": p.pattern_data,
+                    "strength": p.pattern_strength,
+                    "description": self._get_pattern_description(p.pattern_type, p.pattern_data),
+                })
 
-        return result
+            return result
 
     def _generate_suggestions(
         self,
