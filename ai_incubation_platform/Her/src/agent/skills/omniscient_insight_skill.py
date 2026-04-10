@@ -7,9 +7,10 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 from agent.skills.base import BaseSkill
 from utils.logger import logger
+import json
 
 
-class OmniscientInsightAgentSkill:
+class OmniscientInsightSkill:
     """
     AI 全知感知 Skill
 
@@ -129,7 +130,7 @@ class OmniscientInsightAgentSkill:
         Returns:
             Skill 执行结果
         """
-        logger.info(f"OmniscientInsightAgentSkill: user={user_id}, type={query_type}, range={time_range}")
+        logger.info(f"OmniscientInsightSkill: user={user_id}, type={query_type}, range={time_range}")
 
         if query_type == "overview":
             return await self._get_overview(user_id, time_range)
@@ -212,6 +213,7 @@ class OmniscientInsightAgentSkill:
         从行为日志服务中获取真实数据
         """
         from db.database import SessionLocal
+        from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
         from services.behavior_log_service import get_behavior_log_service
 
         db = SessionLocal()
@@ -525,15 +527,85 @@ class OmniscientInsightAgentSkill:
         }
 
     def _get_prediction_recommendation(self, match_probability: str, relationship_prospect: str) -> str:
-        """根据预测给出建议"""
+        """
+        根据预测给出建议（AI 驱动）
+
+        使用 AI 根据匹配概率和关系前景生成个性化建议。
+        """
+        # 尝试 AI 生成
+        ai_recommendation = self._generate_ai_recommendation(match_probability, relationship_prospect)
+        if ai_recommendation:
+            return ai_recommendation
+
+        # 降级：基于规则的简单建议
+        return self._fallback_recommendation(match_probability, relationship_prospect)
+
+    def _generate_ai_recommendation(self, match_probability: str, relationship_prospect: str) -> Optional[str]:
+        """使用 AI 生成个性化建议"""
+        try:
+            from services.llm_semantic_service import get_llm_semantic_service
+
+            llm_service = get_llm_semantic_service()
+            if not llm_service.enabled:
+                return None
+
+            prompt = f'''你是一位恋爱顾问，请根据以下情况给出一条简洁的建议（30字以内）。
+
+匹配概率：{match_probability}（high/medium/low）
+关系前景：{relationship_prospect}（promising/stable/needs_attention）
+
+要求：
+1. 语言亲切自然
+2. 针对具体问题给出建议
+3. 正向鼓励为主
+
+只返回建议文字，不要其他内容。'''
+
+            import asyncio
+            from concurrent.futures import ThreadPoolExecutor
+
+            try:
+                loop = asyncio.get_running_loop()
+                with ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run,
+                        llm_service._call_llm(prompt)
+                    )
+                    response = future.result(timeout=10)
+            except RuntimeError:
+                response = asyncio.run(llm_service._call_llm(prompt))
+
+            if response and not response.startswith('{"fallback"'):
+                # 清理响应
+                response = response.strip()
+                if response.startswith('"') and response.endswith('"'):
+                    response = response[1:-1]
+                if len(response) <= 100:
+                    return response
+
+            return None
+
+        except Exception as e:
+            logger.debug(f"OmniscientInsightSkill: AI recommendation failed: {e}")
+            return None
+
+    def _fallback_recommendation(self, match_probability: str, relationship_prospect: str) -> str:
+        """
+        # ==================== FALLBACK 方案 ====================
+        # 此方法仅在 LLM 不可用时作为降级方案使用。
+        # 主要建议生成应通过 _generate_ai_recommendation() 进行 AI 分析。
+        # =======================================================
+
+        降级：基于规则的简单建议
+        """
         if match_probability == "high" and relationship_prospect == "promising":
-            return "形势大好，继续保持当前的互动方式！"
+            return "形势大好，继续保持！"
         elif match_probability == "high":
-            return "匹配机会多，但需要更用心经营关系~"
+            return "匹配机会多，用心经营关系~"
         elif relationship_prospect == "promising":
-            return "关系发展良好，可以适当增加匹配投入~"
+            return "关系发展良好，可以多参与匹配~"
         else:
-            return "建议调整策略，完善资料，增加互动频率~"
+            return "完善资料，增加互动频率~"
 
     # 检测方法
 
@@ -607,6 +679,7 @@ class OmniscientInsightAgentSkill:
         try:
             from db.models import MatchHistoryDB
             from db.database import SessionLocal
+            from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
             from datetime import datetime, timedelta
 
             db = SessionLocal()
@@ -657,7 +730,7 @@ class OmniscientInsightAgentSkill:
         Returns:
             触发结果
         """
-        logger.info(f"OmniscientInsightAgentSkill: Context trigger {trigger_type} for {user_id}")
+        logger.info(f"OmniscientInsightSkill: Context trigger {trigger_type} for {user_id}")
 
         insight = None
 
@@ -703,7 +776,7 @@ class OmniscientInsightAgentSkill:
 
         if insight:
             # 推送洞察
-            logger.info(f"OmniscientInsightAgentSkill: Would push insight: {insight['type']}")
+            logger.info(f"OmniscientInsightSkill: Would push insight: {insight['type']}")
             return {"triggered": True, "insight": insight, "should_push": True}
 
         return {"triggered": False}
@@ -763,12 +836,12 @@ class OmniscientInsightAgentSkill:
 
 
 # 全局 Skill 实例
-_omniscient_insight_skill_instance: Optional[OmniscientInsightAgentSkill] = None
+_omniscient_insight_skill_instance: Optional[OmniscientInsightSkill] = None
 
 
-def get_omniscient_insight_skill() -> OmniscientInsightAgentSkill:
+def get_omniscient_insight_skill() -> OmniscientInsightSkill:
     """获取 AI 感知 Skill 单例实例"""
     global _omniscient_insight_skill_instance
     if _omniscient_insight_skill_instance is None:
-        _omniscient_insight_skill_instance = OmniscientInsightAgentSkill()
+        _omniscient_insight_skill_instance = OmniscientInsightSkill()
     return _omniscient_insight_skill_instance

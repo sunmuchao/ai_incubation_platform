@@ -62,7 +62,7 @@ src/agent/
 | 类型 | 命名格式 | 示例 |
 |------|---------|------|
 | Skill 文件 | `*_skill.py` | `matchmaking_skill.py` |
-| Skill 类 | `*Skill` | `MatchmakingAgentSkill` |
+| Skill 类 | `*Skill` | `MatchmakingSkill` |
 | Tool 文件 | `*_tool.py` | `geo_tool.py` |
 | Tool 类 | `*Tool` 或数据类 | `GeoTool`, `Location` |
 | Workflow 文件 | `*_workflow.py` | `match_workflow.py` |

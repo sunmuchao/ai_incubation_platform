@@ -9,7 +9,7 @@ from agent.skills.base import BaseSkill
 from utils.logger import logger
 
 
-class PreCommunicationAgentSkill:
+class PreCommunicationSkill:
     """
     AI 替身预沟通 Skill
 
@@ -120,7 +120,7 @@ class PreCommunicationAgentSkill:
         Returns:
             Skill 执行结果
         """
-        logger.info(f"PreCommunicationAgentSkill: action={action}, match_id={match_id}")
+        logger.info(f"PreCommunicationSkill: action={action}, match_id={match_id}")
 
         if action == "start":
             return await self._start_session(match_id, user_id, preferences)
@@ -253,7 +253,7 @@ class PreCommunicationAgentSkill:
     def _get_match_info(self, match_id: str) -> Optional[dict]:
         """获取匹配信息"""
         # 注：当前使用模拟数据，待对接数据库
-        logger.info(f"PreCommunicationAgentSkill: Getting match info for {match_id}")
+        logger.info(f"PreCommunicationSkill: Getting match info for {match_id}")
         # 这里使用模拟数据
         return {
             "id": match_id,
@@ -290,7 +290,7 @@ class PreCommunicationAgentSkill:
 
         # 检查是否已有进行中的会话
         # 注：当前跳过数据库检查，待对接数据库服务
-        logger.info(f"PreCommunicationAgentSkill: Checking for existing sessions (mock)")
+        logger.info(f"PreCommunicationSkill: Checking for existing sessions (mock)")
 
         return {"suitable": True}
 
@@ -299,14 +299,14 @@ class PreCommunicationAgentSkill:
         session_id = f"precomm-{match_id}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
         # 注：当前仅记录日志，待对接数据库
-        logger.info(f"PreCommunicationAgentSkill: Created session {session_id}")
+        logger.info(f"PreCommunicationSkill: Created session {session_id}")
 
         return session_id
 
     async def _start_ai_dialog(self, session_id: str, match_info: dict, preferences: dict = None) -> dict:
         """启动 AI 对话（调用 P18 AI Interlocutor API）"""
         # 注：当前仅记录日志，待对接 AI Interlocutor 服务
-        logger.info(f"PreCommunicationAgentSkill: Starting AI dialog for session {session_id}")
+        logger.info(f"PreCommunicationSkill: Starting AI dialog for session {session_id}")
 
         return {
             "session_id": session_id,
@@ -320,13 +320,13 @@ class PreCommunicationAgentSkill:
     async def _cancel_ai_dialog(self, session_id: str) -> dict:
         """取消 AI 对话"""
         # 注：当前仅记录日志，待对接 API
-        logger.info(f"PreCommunicationAgentSkill: Cancelling dialog for session {session_id}")
+        logger.info(f"PreCommunicationSkill: Cancelling dialog for session {session_id}")
         return {"status": "cancelled"}
 
     def _get_session(self, match_id: str) -> Optional[dict]:
         """获取会话信息"""
         # 注：当前使用模拟数据，待对接数据库
-        logger.info(f"PreCommunicationAgentSkill: Getting session for match={match_id}")
+        logger.info(f"PreCommunicationSkill: Getting session for match={match_id}")
         # 模拟数据
         return {
             "id": f"precomm-{match_id}",
@@ -358,7 +358,7 @@ class PreCommunicationAgentSkill:
     async def _analyze_dialog(self, messages: list) -> dict:
         """分析对话内容"""
         # 注：当前使用模拟分析，待对接 LLM 服务
-        logger.info(f"PreCommunicationAgentSkill: Analyzing dialog with {len(messages)} messages")
+        logger.info(f"PreCommunicationSkill: Analyzing dialog with {len(messages)} messages")
         # 模拟分析结果
         return {
             "compatibility_score": 0.82,
@@ -436,7 +436,7 @@ class PreCommunicationAgentSkill:
         Returns:
             触发结果
         """
-        logger.info(f"PreCommunicationAgentSkill: Autonomous trigger for {user_id}")
+        logger.info(f"PreCommunicationSkill: Autonomous trigger for {user_id}")
 
         # 查找适合的新匹配
         suitable_matches = self._find_suitable_matches_for_precomm(user_id)
@@ -470,17 +470,17 @@ class PreCommunicationAgentSkill:
         # 2. 双方资料完整度 > 80%
         # 3. 基础匹配度 > 0.75
         # 4. 用户未主动发起对话（> 48 小时）
-        logger.info(f"PreCommunicationAgentSkill: Finding suitable matches for precomm for user={user_id}")
+        logger.info(f"PreCommunicationSkill: Finding suitable matches for precomm for user={user_id}")
         return []
 
 
 # 全局 Skill 实例
-_precommunication_skill_instance: Optional[PreCommunicationAgentSkill] = None
+_precommunication_skill_instance: Optional[PreCommunicationSkill] = None
 
 
-def get_precommunication_skill() -> PreCommunicationAgentSkill:
+def get_precommunication_skill() -> PreCommunicationSkill:
     """获取 AI 预沟通 Skill 单例实例"""
     global _precommunication_skill_instance
     if _precommunication_skill_instance is None:
-        _precommunication_skill_instance = PreCommunicationAgentSkill()
+        _precommunication_skill_instance = PreCommunicationSkill()
     return _precommunication_skill_instance

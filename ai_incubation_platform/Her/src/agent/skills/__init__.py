@@ -6,14 +6,13 @@ Agent Skills 包
 from typing import List
 from agent.skills.base import BaseSkill
 from agent.skills.registry import SkillRegistry, get_skill_registry, initialize_default_skills
-from agent.skills.matchmaking_skill import MatchmakingAgentSkill, get_matchmaking_skill
-from agent.skills.precommunication_skill import PreCommunicationAgentSkill, get_precommunication_skill
-from agent.skills.omniscient_insight_skill import OmniscientInsightAgentSkill, get_omniscient_insight_skill
-from agent.skills.relationship_coach_skill import RelationshipCoachAgentSkill, get_relationship_coach_skill
-from agent.skills.date_planning_skill import DatePlanningAgentSkill, get_date_planning_skill
+from agent.skills.matchmaking_skill import MatchmakingSkill, get_matchmaking_skill
+from agent.skills.precommunication_skill import PreCommunicationSkill, get_precommunication_skill
+from agent.skills.omniscient_insight_skill import OmniscientInsightSkill, get_omniscient_insight_skill
+from agent.skills.relationship_coach_skill import RelationshipCoachSkill, get_relationship_coach_skill
+from agent.skills.date_planning_skill import DatePlanningSkill, get_date_planning_skill
 from agent.skills.bill_analysis_skill import BillAnalysisSkill, get_bill_analysis_skill
-from agent.skills.geo_location_skill import GeoLocationSkill, get_geo_location_skill
-from agent.skills.gift_ordering_skill import GiftOrderingSkill, get_gift_ordering_skill
+# 注：geo_location, gift_ordering 已删除，改用 REST API
 
 __all__ = [
     # 基类
@@ -25,26 +24,22 @@ __all__ = [
     "initialize_default_skills",
 
     # P0 Skills - 核心 AI Native 能力
-    "MatchmakingAgentSkill",
+    "MatchmakingSkill",
     "get_matchmaking_skill",
-    "PreCommunicationAgentSkill",
+    "PreCommunicationSkill",
     "get_precommunication_skill",
-    "OmniscientInsightAgentSkill",
+    "OmniscientInsightSkill",
     "get_omniscient_insight_skill",
 
     # P1 Skills - 增强 AI 自主性
-    "RelationshipCoachAgentSkill",
+    "RelationshipCoachSkill",
     "get_relationship_coach_skill",
-    "DatePlanningAgentSkill",
+    "DatePlanningSkill",
     "get_date_planning_skill",
 
     # P19 Skills - 外部服务集成
     "BillAnalysisSkill",
     "get_bill_analysis_skill",
-    "GeoLocationSkill",
-    "get_geo_location_skill",
-    "GiftOrderingSkill",
-    "get_gift_ordering_skill",
 ]
 
 # 技能元数据
@@ -84,19 +79,8 @@ SKILL_METADATA = {
         "priority": "P19",
         "category": "external_service",
         "description": "基于消费水平的真实匹配服务"
-    },
-    "geo_location": {
-        "name": "地理位置",
-        "priority": "P19/P22",
-        "category": "external_service",
-        "description": "基于地理轨迹的约会地点推荐"
-    },
-    "gift_ordering": {
-        "name": "礼物订购",
-        "priority": "P15/P21",
-        "category": "external_service",
-        "description": "智能礼物推荐与一键订购服务"
     }
+    # 注：geo_location, gift_ordering 已删除，改用 REST API
 }
 
 

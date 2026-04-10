@@ -9,7 +9,7 @@ from agent.skills.base import BaseSkill
 from utils.logger import logger
 
 
-class DatePlanningAgentSkill:
+class DatePlanningSkill:
     """
     约会策划 Skill
 
@@ -140,7 +140,7 @@ class DatePlanningAgentSkill:
         Returns:
             Skill 执行结果
         """
-        logger.info(f"DatePlanningAgentSkill: Executing for match_id={match_id}")
+        logger.info(f"DatePlanningSkill: Executing for match_id={match_id}")
 
         # 获取匹配信息
         match_info = self._get_match_info(match_id)
@@ -181,6 +181,7 @@ class DatePlanningAgentSkill:
         try:
             from db.models import MatchHistoryDB, UserDB
             from db.database import SessionLocal
+            from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
             import json
 
             db = SessionLocal()
@@ -253,6 +254,7 @@ class DatePlanningAgentSkill:
         try:
             from db.models import ChatConversationDB
             from db.database import SessionLocal
+            from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 
             db = SessionLocal()
             match = db.query(MatchHistoryDB).filter(MatchHistoryDB.id == match_id).first()
@@ -777,7 +779,7 @@ class DatePlanningAgentSkill:
         Returns:
             触发结果
         """
-        logger.info(f"DatePlanningAgentSkill: Autonomous trigger {trigger_type} for {user_id}")
+        logger.info(f"DatePlanningSkill: Autonomous trigger {trigger_type} for {user_id}")
 
         if trigger_type == "relationship_stage_upgrade":
             return await self._handle_stage_upgrade(user_id, context)
@@ -862,12 +864,12 @@ class DatePlanningAgentSkill:
 
 
 # 全局 Skill 实例
-_date_planning_skill_instance: Optional[DatePlanningAgentSkill] = None
+_date_planning_skill_instance: Optional[DatePlanningSkill] = None
 
 
-def get_date_planning_skill() -> DatePlanningAgentSkill:
+def get_date_planning_skill() -> DatePlanningSkill:
     """获取约会策划 Skill 单例实例"""
     global _date_planning_skill_instance
     if _date_planning_skill_instance is None:
-        _date_planning_skill_instance = DatePlanningAgentSkill()
+        _date_planning_skill_instance = DatePlanningSkill()
     return _date_planning_skill_instance

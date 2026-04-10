@@ -10,7 +10,7 @@ from utils.logger import logger
 import json
 
 
-class MatchmakingAgentSkill:
+class MatchmakingSkill:
     """
     AI 红娘助手 Skill - 帮助用户找到合适的匹配对象
 
@@ -133,7 +133,7 @@ class MatchmakingAgentSkill:
         Returns:
             Skill 执行结果
         """
-        logger.info(f"MatchmakingAgentSkill: Executing for intent='{user_intent[:50]}...'")
+        logger.info(f"MatchmakingSkill: Executing for intent='{user_intent[:50]}...'")
 
         start_time = datetime.now()
 
@@ -195,13 +195,13 @@ class MatchmakingAgentSkill:
         - 软性偏好（兴趣/性格/生活方式等）
         - 情绪状态（期待/焦虑/孤独等）
         """
-        logger.info(f"MatchmakingAgentSkill: Parsing intent: {intent[:50]}...")
+        logger.info(f"MatchmakingSkill: Parsing intent: {intent[:50]}...")
 
         # 尝试使用 LLM 进行意图识别
         llm_result = self._parse_intent_llm(intent)
 
         if llm_result and llm_result.get("intent_type"):
-            logger.info(f"MatchmakingAgentSkill: LLM parsed intent: {llm_result['intent_type']}")
+            logger.info(f"MatchmakingSkill: LLM parsed intent: {llm_result['intent_type']}")
             return {
                 "intent_type": llm_result.get("intent_type", "general"),
                 "limit": llm_result.get("limit", 5),
@@ -214,7 +214,7 @@ class MatchmakingAgentSkill:
             }
 
         # 降级到关键词匹配
-        logger.info("MatchmakingAgentSkill: Using fallback keyword matching")
+        logger.info("MatchmakingSkill: Using fallback keyword matching")
         return self._parse_intent_fallback(intent, context)
 
     def _call_llm_sync(self, llm_service, prompt: str) -> str:
@@ -239,7 +239,7 @@ class MatchmakingAgentSkill:
                 finally:
                     loop.close()
         except Exception as e:
-            logger.error(f"MatchmakingAgentSkill: LLM sync call failed: {e}")
+            logger.error(f"MatchmakingSkill: LLM sync call failed: {e}")
             raise
 
     def _extract_json_from_response(self, response: str) -> dict:
@@ -270,7 +270,7 @@ class MatchmakingAgentSkill:
                 pass
 
         # 所有尝试失败，返回默认值
-        logger.warning(f"MatchmakingAgentSkill: Failed to extract JSON from response: {response[:200]}")
+        logger.warning(f"MatchmakingSkill: Failed to extract JSON from response: {response[:200]}")
         return {
             "intent_type": "general",
             "limit": 5,
@@ -325,14 +325,17 @@ class MatchmakingAgentSkill:
             return self._extract_json_from_response(llm_response)
 
         except Exception as e:
-            logger.debug(f"MatchmakingAgentSkill: LLM intent parsing failed: {e}")
+            logger.debug(f"MatchmakingSkill: LLM intent parsing failed: {e}")
             return None
 
     def _parse_intent_fallback(self, intent: str, context: dict = None) -> dict:
         """
-        降级意图识别（当 LLM 不可用时）
+        # ==================== FALLBACK 方案 ====================
+        # 此方法仅在 LLM 不可用时作为降级方案使用。
+        # 主要意图识别应通过 _parse_intent_llm() 进行 AI 分析。
+        # =======================================================
 
-        使用关键词匹配进行简单的意图识别
+        使用关键词匹配进行简单的意图识别（降级方案）
         """
         result = {
             "intent_type": "general",
@@ -545,7 +548,7 @@ class MatchmakingAgentSkill:
         Returns:
             触发结果
         """
-        logger.info(f"MatchmakingAgentSkill: Autonomous trigger for {user_id}, type={trigger_type}")
+        logger.info(f"MatchmakingSkill: Autonomous trigger for {user_id}, type={trigger_type}")
 
         # 检查触发条件
         if trigger_type == "daily":
@@ -571,7 +574,7 @@ class MatchmakingAgentSkill:
 
         if result.get("matches"):
             # 这里应该调用推送通知服务
-            logger.info(f"MatchmakingAgentSkill: Would push notification for {len(result['matches'])} matches")
+            logger.info(f"MatchmakingSkill: Would push notification for {len(result['matches'])} matches")
             return {"triggered": True, "result": result, "should_push": True}
 
         return {"triggered": False, "reason": "no_matches"}
@@ -671,12 +674,12 @@ class MatchmakingAgentSkill:
 
 
 # 全局 Skill 实例
-_matchmaking_skill_instance: Optional[MatchmakingAgentSkill] = None
+_matchmaking_skill_instance: Optional[MatchmakingSkill] = None
 
 
-def get_matchmaking_skill() -> MatchmakingAgentSkill:
+def get_matchmaking_skill() -> MatchmakingSkill:
     """获取匹配助手 Skill 单例实例"""
     global _matchmaking_skill_instance
     if _matchmaking_skill_instance is None:
-        _matchmaking_skill_instance = MatchmakingAgentSkill()
+        _matchmaking_skill_instance = MatchmakingSkill()
     return _matchmaking_skill_instance

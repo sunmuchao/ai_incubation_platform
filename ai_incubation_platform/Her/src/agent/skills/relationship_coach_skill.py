@@ -9,7 +9,7 @@ from agent.skills.base import BaseSkill
 from utils.logger import logger
 
 
-class RelationshipCoachAgentSkill:
+class RelationshipCoachSkill:
     """
     关系教练 Skill
 
@@ -119,7 +119,7 @@ class RelationshipCoachAgentSkill:
         Returns:
             Skill 执行结果
         """
-        logger.info(f"RelationshipCoachAgentSkill: action={action}, match_id={match_id}")
+        logger.info(f"RelationshipCoachSkill: action={action}, match_id={match_id}")
 
         if action == "health_check":
             return await self._health_check(match_id, context)
@@ -245,6 +245,7 @@ class RelationshipCoachAgentSkill:
         try:
             from db.models import MatchHistoryDB, ChatConversationDB
             from db.database import SessionLocal
+            from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
             from sqlalchemy.orm import joinedload
 
             db = SessionLocal()
@@ -593,7 +594,7 @@ class RelationshipCoachAgentSkill:
         Returns:
             触发结果
         """
-        logger.info(f"RelationshipCoachAgentSkill: Autonomous trigger {trigger_type} for {user_id}")
+        logger.info(f"RelationshipCoachSkill: Autonomous trigger {trigger_type} for {user_id}")
 
         if trigger_type == "communication_drop":
             return await self._handle_communication_drop(user_id, context)
@@ -658,12 +659,12 @@ class RelationshipCoachAgentSkill:
 
 
 # 全局 Skill 实例
-_relationship_coach_skill_instance: Optional[RelationshipCoachAgentSkill] = None
+_relationship_coach_skill_instance: Optional[RelationshipCoachSkill] = None
 
 
-def get_relationship_coach_skill() -> RelationshipCoachAgentSkill:
+def get_relationship_coach_skill() -> RelationshipCoachSkill:
     """获取关系教练 Skill 单例实例"""
     global _relationship_coach_skill_instance
     if _relationship_coach_skill_instance is None:
-        _relationship_coach_skill_instance = RelationshipCoachAgentSkill()
+        _relationship_coach_skill_instance = RelationshipCoachSkill()
     return _relationship_coach_skill_instance
