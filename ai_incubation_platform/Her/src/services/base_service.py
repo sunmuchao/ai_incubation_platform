@@ -6,11 +6,12 @@
 P20 重构增强：
 - 添加通用 CRUD 方法，减少重复代码
 - 统一错误处理模式
+- 使用 db_session 上下文管理器，避免连接泄露
 """
 from typing import Optional, TypeVar, Generic, Type, Any, List, Dict, Callable
 from sqlalchemy.orm import Session, Query
 from sqlalchemy import desc, asc
-from db.database import SessionLocal
+from utils.db_session_manager import db_session, db_session_readonly
 from utils.logger import logger
 
 T = TypeVar('T')
@@ -50,9 +51,13 @@ class BaseService(Generic[T]):
 
     @property
     def db(self) -> Session:
-        """获取数据库会话"""
+        """获取数据库会话（需要外部传入或使用 with 语句）"""
         if self._db is None:
-            self._db = SessionLocal()
+            raise RuntimeError(
+                "数据库会话未设置。请通过以下方式之一提供会话：\n"
+                "1. 构造函数传入: MyService(db=session)\n"
+                "2. 使用上下文管理器: with db_session() as db: service = MyService(db=db)"
+            )
         return self._db
 
     @db.setter
@@ -64,31 +69,6 @@ class BaseService(Generic[T]):
     def logger(self):
         """获取日志器"""
         return self._logger
-
-    def _get_db(self) -> Session:
-        """
-        获取数据库会话（兼容旧代码）
-
-        Returns:
-            Session: 数据库会话
-        """
-        if self._db is None:
-            self._db = SessionLocal()
-        return self._db
-
-    def _close_db(self):
-        """关闭数据库会话（如果是由本服务创建的）"""
-        if self._db is not None:
-            self._db.close()
-            self._db = None
-
-    def __enter__(self):
-        """上下文管理器入口"""
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """上下文管理器出口"""
-        self._close_db()
 
     # ==================== 通用 CRUD 方法 ====================
 

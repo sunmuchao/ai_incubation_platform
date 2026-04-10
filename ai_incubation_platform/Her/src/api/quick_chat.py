@@ -11,6 +11,7 @@ from typing import List, Dict, Optional
 
 from services.quick_chat_service import QuickChatService
 from auth.jwt import get_current_user
+from db.database import SessionLocal
 from db.models import UserDB
 
 router = APIRouter(prefix="/api/quick_chat", tags=["QuickChat"])
@@ -63,7 +64,7 @@ class FeedbackRequest(BaseModel):
 @router.post("", response_model=QuickChatResponse)
 async def quick_chat(
     request: QuickChatRequest,
-    current_user: UserDB = Depends(get_current_user),
+    current_user_id: str = Depends(get_current_user),
 ):
     """
     悬浮球快速对话
@@ -76,9 +77,11 @@ async def quick_chat(
     Her 会分析聊天上下文给出建议
     """
     try:
+        # 延迟导入以便定位错误
+        from services.quick_chat_service import QuickChatService
         service = QuickChatService()
         result = service.get_ai_advice(
-            current_user_id=current_user.id,
+            current_user_id=current_user_id,
             partner_id=request.partnerId,
             question=request.question,
             recent_messages=request.recentMessages,
@@ -90,13 +93,15 @@ async def quick_chat(
             analysis=result.get("analysis", {}),
         )
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"AI 思考失败：{str(e)}")
 
 
 @router.post("/suggest_reply", response_model=SuggestReplyResponse)
 async def suggest_reply(
     request: SuggestReplyRequest,
-    current_user: UserDB = Depends(get_current_user),
+    current_user_id: str = Depends(get_current_user),
 ):
     """
     生成回复建议
@@ -105,9 +110,10 @@ async def suggest_reply(
     AI 会生成 3 种不同风格的回复建议
     """
     try:
+        from services.quick_chat_service import QuickChatService
         service = QuickChatService()
         result = service.suggest_reply(
-            current_user_id=current_user.id,
+            current_user_id=current_user_id,
             partner_id=request.partnerId,
             last_message=request.lastMessage,
             recent_messages=request.recentMessages,
@@ -129,7 +135,7 @@ async def suggest_reply(
 @router.post("/feedback")
 async def record_feedback(
     request: FeedbackRequest,
-    current_user: UserDB = Depends(get_current_user),
+    current_user_id: str = Depends(get_current_user),
 ):
     """
     记录用户对 AI 建议的反馈
@@ -137,9 +143,10 @@ async def record_feedback(
     用于追踪 AI 建议的采纳情况和效果，持续优化 AI 策略
     """
     try:
+        from services.quick_chat_service import QuickChatService
         service = QuickChatService()
         feedback_id = service.record_suggestion_feedback(
-            current_user_id=current_user.id,
+            current_user_id=current_user_id,
             partner_id=request.partnerId,
             suggestion_id=request.suggestionId,
             feedback_type=request.feedbackType,
@@ -151,3 +158,27 @@ async def record_feedback(
         return {"success": True, "feedback_id": feedback_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"记录反馈失败：{str(e)}")
+
+
+class QuickTagResponse(BaseModel):
+    """快捷标签响应"""
+    tags: List[Dict]
+
+
+@router.get("/tags", response_model=QuickTagResponse)
+async def get_quick_tags(
+    current_user_id: str = Depends(get_current_user),
+):
+    """
+    获取动态快捷标签
+
+    AI 根据用户状态动态生成最相关的 1-3 个快捷标签。
+    """
+    try:
+        from services.quick_tag_service import get_quick_tag_service
+        service = get_quick_tag_service()
+        tags = service.get_quick_tags(current_user_id)
+
+        return QuickTagResponse(tags=tags)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取标签失败：{str(e)}")

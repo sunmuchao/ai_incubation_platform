@@ -134,6 +134,7 @@ class ChatAssistantSkill:
 
         try:
             from db.database import SessionLocal
+            from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
             from services.chat_service import ChatService
 
             db = SessionLocal()
@@ -314,6 +315,7 @@ class ChatAssistantSkill:
         """获取聊天建议"""
         # 从数据库获取用户信息生成建议
         from db.database import SessionLocal
+        from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
         from db.repositories import UserRepository
 
         db = SessionLocal()
@@ -474,6 +476,7 @@ class ChatAssistantSkill:
 
         if trigger_type == "unread_reminder":
             from db.database import SessionLocal
+            from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
             from services.chat_service import ChatService
 
             db = SessionLocal()

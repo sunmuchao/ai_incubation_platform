@@ -21,6 +21,7 @@ from sqlalchemy import desc
 import json
 
 from db.database import SessionLocal
+from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 from models.p20_models import BehaviorCreditDB, BehaviorCreditEventDB
 from utils.logger import logger
 
@@ -67,12 +68,27 @@ class BehaviorCreditService:
         "D": ["no_chat_initiate", "reduced_recommendations"],  # 禁止发起聊天、降低推荐优先级
     }
 
-    def __init__(self):
-        self._db: Optional[Session] = None
-        self._should_close_db: bool = False
+    def __init__(self, db: Optional[Session] = None):
+        self._db: Optional[Session] = db
+        self._should_close_db: bool = db is None
 
     def _get_db(self) -> Session:
-        """获取数据库会话"""
+        """
+        获取数据库会话
+
+        注意：推荐使用 db_session() 上下文管理器代替延迟创建会话模式。
+
+        迁移示例:
+            # 旧方式
+            service = BehaviorCreditService()
+            credit = service.get_or_create_credit(user_id)
+            service.close()
+
+            # 新方式（推荐）
+            with db_session() as db:
+                service = BehaviorCreditService(db=db)
+                credit = service.get_or_create_credit(user_id)
+        """
         if self._db is None:
             self._db = SessionLocal()
             self._should_close_db = True

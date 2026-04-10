@@ -173,12 +173,11 @@ def initialize_default_skills() -> SkillRegistry:
 
     # P19 Skills - 外部服务集成
     from agent.skills.bill_analysis_skill import get_bill_analysis_skill
-    from agent.skills.geo_location_skill import get_geo_location_skill
-    from agent.skills.gift_ordering_skill import get_gift_ordering_skill
 
     registry.register(get_bill_analysis_skill(), tags=["p19", "external_service", "consumption"])
-    registry.register(get_geo_location_skill(), tags=["p19", "p22", "external_service", "location"])
-    registry.register(get_gift_ordering_skill(), tags=["p15", "p21", "external_service", "gift"])
+
+    # 注：geo_location 和 gift_ordering 已删除，改用 REST API
+    # /api/activities/locations/* 和 /api/gifts/*
 
     # ===== 新增：API 改造 Skill (P0 优先级) =====
 
@@ -280,11 +279,7 @@ def initialize_default_skills() -> SkillRegistry:
 
     # ===== 新增：API 改造 Skill (从 REST API 升级) =====
 
-    # P3 - 关系进展追踪
-    from agent.skills.relationship_progress_skill import get_relationship_progress_skill
-
-    registry.register(get_relationship_progress_skill(), tags=["p3", "relationship", "progress", "core"])
-
+    # 注：relationship_progress 已删除，改用 REST API /api/relationship/*
     # P11 - 紧急求助扩展 (SafetyGuardianSkill 已注册，此处添加功能扩展说明)
     # SafetyGuardianSkill 已在上注册，新增 trigger_emergency 和 notify_emergency_contact 方法
 

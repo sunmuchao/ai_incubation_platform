@@ -57,6 +57,8 @@ class MatchTool:
         """
         处理匹配计算请求
 
+        统一使用 matchmaker.find_matches() 进行匹配，确保 REST API 和 Skill 路径逻辑一致。
+
         Args:
             user_id: 用户 ID
             limit: 返回结果数量上限
@@ -75,84 +77,7 @@ class MatchTool:
             db_user = user_repo.get_by_id(user_id)
             user_exists = db_user is not None
 
-            # 开发环境匿名用户特殊处理（用户不存在于数据库时）
-            if not user_exists or user_id == "user-anonymous-dev":
-                # 获取所有活跃用户作为候选
-                all_users = user_repo.list_all(is_active=True)
-                candidates = []
-
-                # 匿名用户性别固定为男性（开发环境默认）
-                # 注意：这是因为开发环境测试用户通常是男性
-                # 生产环境应该从用户资料或偏好设置中读取
-                anon_gender = 'male'
-                anon_orientation = 'heterosexual'
-
-                # 构造一个虚拟的匿名用户对象
-                anonymous_user = {
-                    "id": user_id if user_id != "user-anonymous-dev" else "user-anonymous-dev",
-                    "gender": anon_gender,
-                    "sexual_orientation": anon_orientation,
-                    "age": 25,
-                    "preferred_age_min": 20,
-                    "preferred_age_max": 40,
-                    "location": "",
-                    "preferred_locations": None,
-                    "goal": "serious"
-                }
-
-                logger.info(f"MatchTool: Anonymous user config: gender={anon_gender}, orientation={anon_orientation}")
-
-                for db_user_item in all_users:
-                    # 跳过自己
-                    if db_user_item.id == user_id:
-                        continue
-
-                    from api.users import _from_db
-                    user_dict = _from_db(db_user_item).model_dump()
-
-                    # 应用基本兼容性检查（性取向、性别偏好等）
-                    if not matchmaker._check_basic_compatibility(anonymous_user, user_dict):
-                        logger.debug(f"MatchTool: Anonymous user skipped {user_dict.get('id')} due to basic incompatibility (gender={user_dict.get('gender')}, orientation={user_dict.get('sexual_orientation')})")
-                        continue
-
-                    # 计算简单匹配分（基于年龄、地理位置等）
-                    score = 0.65  # 默认基础分，确保能通过 workflow 的 min_score=0.6 阈值
-                    candidates.append({
-                        "user_id": db_user_item.id,
-                        "score": score,
-                        "user": user_dict
-                    })
-                # 按分数排序
-                candidates.sort(key=lambda x: x["score"], reverse=True)
-                filtered = [c for c in candidates if c["score"] >= min_score][:limit]
-                logger.info(f"MatchTool: Anonymous user (exists={user_exists}), found {len(filtered)} candidates after filtering")
-
-                # 输出结果性别分布
-                male_matches = sum(1 for c in filtered if c.get('user', {}).get('gender') == 'male')
-                female_matches = sum(1 for c in filtered if c.get('user', {}).get('gender') == 'female')
-                logger.info(f"MatchTool: Match gender distribution: male={male_matches}, female={female_matches}")
-
-                return {
-                    "matches": filtered,
-                    "total": len(filtered),
-                    "has_more": len(candidates) > len(filtered)
-                }
-
-            # 确保用户已在匹配系统中注册
-            if user_id not in matchmaker._users:
-                db = next(get_db())
-                user_repo = UserRepository(db)
-                db_user = user_repo.get_by_id(user_id)
-                if db_user:
-                    from api.users import _from_db
-                    matchmaker.register_user(_from_db(db_user).model_dump())
-                    logger.info(f"MatchTool: User {user_id} registered to matching system")
-                else:
-                    return {"error": "User not found"}
-
-            # 加载所有活跃用户到匹配系统（确保候选池中有数据）
-            db = next(get_db())
-            user_repo = UserRepository(db)
+            # ===== 统一：先加载所有活跃用户到匹配系统 =====
             all_users = user_repo.list_all(is_active=True)
             loaded_count = 0
             for db_user_item in all_users:
@@ -163,7 +88,33 @@ class MatchTool:
             if loaded_count > 0:
                 logger.info(f"MatchTool: Loaded {loaded_count} active users to matching system")
 
-            # 执行匹配计算
+            # ===== 统一：确保当前用户已在匹配系统中注册 =====
+            if user_id not in matchmaker._users:
+                if user_exists:
+                    # 已注册用户：从数据库加载
+                    from api.users import _from_db
+                    matchmaker.register_user(_from_db(db_user).model_dump())
+                    logger.info(f"MatchTool: User {user_id} registered to matching system")
+                else:
+                    # 匿名用户：构造虚拟用户并注册到 matchmaker
+                    # 这样匿名用户也能走统一的匹配逻辑
+                    anonymous_user = {
+                        "id": user_id,
+                        "gender": 'male',
+                        "sexual_orientation": 'heterosexual',
+                        "age": 25,
+                        "preferred_age_min": 20,
+                        "preferred_age_max": 40,
+                        "location": "",
+                        "preferred_locations": None,
+                        "goal": "serious",
+                        "interests": [],
+                        "values": {}
+                    }
+                    matchmaker.register_user(anonymous_user)
+                    logger.info(f"MatchTool: Anonymous user {user_id} registered to matching system")
+
+            # ===== 统一：调用 matchmaker.find_matches() =====
             matches = matchmaker.find_matches(user_id, limit=limit)
 
             # 过滤低于阈值的匹配
@@ -182,7 +133,12 @@ class MatchTool:
                     match["user"] = user_dict
                     enriched_matches.append(match)
 
-            logger.info(f"MatchTool: Found {len(enriched_matches)} matches for user {user_id}")
+            logger.info(f"MatchTool: Found {len(enriched_matches)} matches for user {user_id} (anonymous={not user_exists})")
+
+            # 输出结果性别分布（调试用）
+            male_matches = sum(1 for c in enriched_matches if c.get('user', {}).get('gender') == 'male')
+            female_matches = sum(1 for c in enriched_matches if c.get('user', {}).get('gender') == 'female')
+            logger.info(f"MatchTool: Match gender distribution: male={male_matches}, female={female_matches}")
 
             return {
                 "matches": enriched_matches,

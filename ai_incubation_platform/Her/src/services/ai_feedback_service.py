@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from db.database import SessionLocal
+from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 from utils.logger import logger
 
 # 数据库模型
@@ -51,13 +52,22 @@ class AIFeedbackService:
         Args:
             db: 数据库会话（如果不提供，会在使用时创建临时会话）
             data_dir: 数据目录路径（可选，默认使用 src/data）
+
+        推荐用法:
+            with db_session() as db:
+                service = AIFeedbackService(db=db)
+                service.record_feedback(...)
         """
         self._db = db
         self._should_close_db = db is None  # 如果自己创建的，需要负责关闭
         self.data_dir = data_dir
 
     def _get_db(self) -> Session:
-        """获取数据库会话"""
+        """
+        获取数据库会话
+
+        注意：推荐在构造函数中传入 db session，避免延迟创建。
+        """
         if self._db is None:
             self._db = SessionLocal()
             self._should_close_db = True

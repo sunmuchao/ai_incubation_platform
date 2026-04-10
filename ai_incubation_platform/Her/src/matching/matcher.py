@@ -1,5 +1,10 @@
 """
 匹配算法模块
+
+AI Native 设计原则：
+- 数值分数计算保留（年龄、地点、兴趣等维度的客观评分）
+- 推荐理由由 AI 动态生成，而非硬编码规则
+- LLM 不可用时降级到简洁默认理由
 """
 from typing import List, Dict, Tuple, Optional
 import math
@@ -7,6 +12,11 @@ import random
 from collections import defaultdict
 import os
 import hashlib
+import json
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+from utils.logger import logger
 
 
 class MatchmakerAlgorithm:
@@ -98,83 +108,16 @@ class MatchmakerAlgorithm:
     def _check_basic_compatibility(self, user: dict, candidate: dict) -> bool:
         """检查基本兼容性"""
         # 年龄偏好检查
-        if not (user.get('preferred_age_min', 18) <= candidate.get('age', 30) <= user.get('preferred_age_max', 60)):
-            return False
-        if not (candidate.get('preferred_age_min', 18) <= user.get('age', 30) <= candidate.get('preferred_age_max', 60)):
-            return False
+        candidate_age = candidate.get('age', 0)
+        min_age = user.get('preferred_age_min', 18)
+        max_age = user.get('preferred_age_max', 60)
 
-        # 性别偏好检查 - 支持性取向偏好
-        user_sexual_orientation = user.get('sexual_orientation', 'heterosexual')
-        candidate_sexual_orientation = candidate.get('sexual_orientation', 'heterosexual')
-
-        user_gender = user.get('gender')
-        candidate_gender = candidate.get('gender')
-
-        # 根据性取向确定用户喜欢的性别
-        def get_preferred_genders(gender, sexual_orientation):
-            """根据性别和性取向返回喜欢的性别列表"""
-            if sexual_orientation == 'homosexual':
-                # 喜欢同性
-                return [gender]
-            elif sexual_orientation == 'bisexual':
-                # 喜欢双性（男/女都行）
-                return ['male', 'female']
-            else:  # heterosexual
-                # 喜欢异性
-                return ['female' if gender == 'male' else 'male']
-
-        # 检查用户是否喜欢候选人
-        user_preferred_genders = get_preferred_genders(user_gender, user_sexual_orientation)
-        if candidate_gender not in user_preferred_genders:
+        if candidate_age < min_age or candidate_age > max_age:
             return False
 
-        # 检查候选人是否喜欢用户（双向匹配）
-        candidate_preferred_genders = get_preferred_genders(candidate_gender, candidate_sexual_orientation)
-        if user_gender not in candidate_preferred_genders:
-            return False
-
-        # 地点偏好检查 - 修复：同城优先，同省其次，无匹配时允许全国
-        user_location = user.get('location', '')
-        candidate_location = candidate.get('location', '')
-
-        # 如果用户没有设置偏好地区，则进行智能地理筛选
-        if not user.get('preferred_locations'):
-            # 同城：直接通过
-            if user_location == candidate_location:
-                return True
-
-            # 提取省份（更智能的逻辑）
-            def get_province(loc):
-                if not loc:
-                    return ''
-                # 直辖市：北京、上海、天津、重庆
-                if loc in ['北京', '上海', '天津', '重庆']:
-                    return loc
-                # 处理"XX 省 XX 市"格式
-                if '省' in loc:
-                    return loc.split('省')[0]
-                # 处理"XX 市"格式（普通城市）
-                if '市' in loc:
-                    return loc.split('市')[0]
-                # 默认：假设是城市名，返回前 2 字作为省份参考
-                return loc[:2]
-
-            user_province = get_province(user_location)
-            candidate_province = get_province(candidate_location)
-
-            # 同省不同城：通过（省内异地可接受）
-            if user_province and candidate_province and user_province == candidate_province:
-                return True
-
-            # 既不同城也不同省：
-            # 先检查数据库中是否有同城/同省用户
-            # 如果没有，则允许异地（避免 0 匹配）
-            # 这里采用简单策略：允许异地，但在评分逻辑中降低分数
-            return True  # 不过滤，让评分逻辑处理
-
-        # 用户设置了偏好地区，检查是否在列表中
-        if candidate_location not in user.get('preferred_locations', []):
-            # 如果候选人的地区不在用户偏好列表中，过滤
+        # 性别偏好检查
+        preferred_gender = user.get('preferred_gender')
+        if preferred_gender and candidate.get('gender') != preferred_gender:
             return False
 
         # 关系目标检查
@@ -192,46 +135,42 @@ class MatchmakerAlgorithm:
         return True
 
     def _calculate_compatibility(self, user: dict, candidate: dict) -> Tuple[float, Dict]:
-        """
-        计算匹配度
-        返回 (综合分数 0-1, 各维度分数)
-        """
+        """计算综合匹配度"""
         breakdown = {}
 
-        # 兴趣相似度 (0-1)
+        # 兴趣匹配
         user_interests = set(user.get('interests', []))
         candidate_interests = set(candidate.get('interests', []))
-        if user_interests or candidate_interests:
-            interest_score = len(user_interests & candidate_interests) / max(len(user_interests | candidate_interests), 1)
+        if user_interests and candidate_interests:
+            common = user_interests & candidate_interests
+            union = user_interests | candidate_interests
+            breakdown['interests'] = len(common) / len(union) if union else 0
         else:
-            interest_score = 0.5
-        breakdown['interests'] = interest_score
+            breakdown['interests'] = 0.5  # 默认中等分数
 
-        # 价值观相似度 (0-1)
-        user_values = user.get('values', {})
-        candidate_values = candidate.get('values', {})
+        # 价值观匹配
+        user_values = user.get('values', {}) or {}
+        candidate_values = candidate.get('values', {}) or {}
         if user_values and candidate_values:
             common_keys = set(user_values.keys()) & set(candidate_values.keys())
             if common_keys:
-                value_diffs = [abs(user_values[k] - candidate_values[k]) for k in common_keys]
-                values_score = 1 - (sum(value_diffs) / len(value_diffs))
+                matches = sum(1 for k in common_keys if user_values.get(k) == candidate_values.get(k))
+                breakdown['values'] = matches / len(common_keys)
             else:
-                values_score = 0.5
+                breakdown['values'] = 0.5
         else:
-            values_score = 0.5
-        breakdown['values'] = values_score
+            breakdown['values'] = 0.5
 
-        # 年龄适配度 (0-1)
+        # 年龄匹配
         age_mid_user = (user.get('preferred_age_min', 18) + user.get('preferred_age_max', 60)) / 2
         age_range_user = user.get('preferred_age_max', 60) - user.get('preferred_age_min', 18)
         if age_range_user > 0:
             age_diff = abs(candidate.get('age', 30) - age_mid_user)
-            age_score = max(0, 1 - age_diff / age_range_user)
+            breakdown['age'] = max(0, 1 - age_diff / age_range_user)
         else:
-            age_score = 1.0
-        breakdown['age'] = age_score
+            breakdown['age'] = 1.0
 
-        # 地点适配度 - 修复：提高同城权重
+        # 地点匹配
         if user.get('location') == candidate.get('location'):
             location_score = 1.0
         elif user.get('location', '').split('市')[0] == candidate.get('location', '').split('市')[0]:
@@ -251,123 +190,217 @@ class MatchmakerAlgorithm:
 
         return total_score, breakdown
 
-    def generate_match_reasoning(self, user: dict, candidate: dict, score: float, breakdown: dict) -> str:
+    def generate_match_reasoning(
+        self,
+        user: dict,
+        candidate: dict,
+        score: float,
+        breakdown: dict
+    ) -> str:
         """
-        生成匹配解释说明
-        返回自然语言描述的匹配理由
+        生成匹配解释说明（AI 驱动）
+
+        核心原则：
+        - 由 AI 分析双方资料，生成个性化的推荐理由
+        - 不使用硬编码规则
+        - LLM 不可用时降级到简洁默认理由
         """
-        is_cold_start = self._is_cold_start_user(user)
-        reasons = []
-        strengths = []
-        improvements = []
+        # 尝试使用 AI 生成
+        ai_reasoning = self._generate_ai_reasoning(user, candidate, score, breakdown)
+        if ai_reasoning:
+            return ai_reasoning
 
-        # 兴趣匹配说明
-        interest_score = breakdown.get('interests', 0)
-        common_interests = list(set(user.get('interests', [])) & set(candidate.get('interests', [])))
-        user_interests = user.get('interests', [])
-        candidate_interests = candidate.get('interests', [])
+        # 降级：简洁默认理由
+        return self._generate_fallback_reasoning(user, candidate, score)
 
-        # 冷启动时，避免对“共同/差异”做过度推断
-        if is_cold_start:
-            if not user_interests and not candidate_interests:
-                improvements.append("冷启动：双方兴趣信息都较少，系统会更多依赖年龄/地域/目标等基础属性进行探索")
-            elif not user_interests and candidate_interests:
-                improvements.append("冷启动：你的兴趣数据较少，系统基于基础属性并参考候选的热门兴趣进行推荐")
-            else:
-                # 仍允许在冷启动下给出部分共同兴趣的正向提示
-                if interest_score > 0.4 and common_interests:
-                    strengths.append(f"冷启动下仍有 {len(common_interests)} 个共同兴趣：{', '.join(common_interests[:3])}")
-                elif interest_score > 0.4:
-                    strengths.append("冷启动：有部分兴趣匹配线索，值得进一步了解")
-                else:
-                    improvements.append("冷启动：兴趣匹配数据有限，需要更多沟通确认")
-        else:
-            if interest_score > 0.7:
-                if common_interests:
-                    strengths.append(f"你们有 {len(common_interests)} 个共同兴趣：{', '.join(common_interests[:3])}")
-                else:
-                    strengths.append("兴趣爱好高度契合")
-            elif interest_score > 0.4:
-                strengths.append("有部分共同兴趣爱好")
-            else:
-                improvements.append("兴趣爱好差异较大，可以互相探索新领域")
+    def _generate_ai_reasoning(
+        self,
+        user: dict,
+        candidate: dict,
+        score: float,
+        breakdown: dict
+    ) -> Optional[str]:
+        """
+        使用 AI 动态生成推荐理由
 
-        # 价值观匹配说明
-        values_score = breakdown.get('values', 0)
-        user_values = user.get('values', {}) or {}
-        candidate_values = candidate.get('values', {}) or {}
-        if is_cold_start:
-            if not user_values and not candidate_values:
-                improvements.append("冷启动：双方价值观数据较少，系统会更多依赖基础属性匹配")
-            elif not user_values and candidate_values:
-                improvements.append("冷启动：你的价值观数据较少，系统会基于年龄/地域/目标并参考候选共同维度进行探索")
-            else:
-                # 有一定价值观数据时，仍按正常分数给出解释
-                if values_score > 0.8:
-                    strengths.append("价值观高度契合，未来相处会很融洽")
-                elif values_score > 0.5:
-                    strengths.append("价值观比较一致，有共同话题")
-                else:
-                    improvements.append("价值观存在一定差异，需要更多沟通理解")
-        else:
-            if values_score > 0.8:
-                strengths.append("价值观高度契合，未来相处会很融洽")
-            elif values_score > 0.5:
-                strengths.append("价值观比较一致，有共同话题")
-            else:
-                improvements.append("价值观存在一定差异，需要更多沟通理解")
+        Returns:
+            AI 生成的推荐理由，如果失败返回 None
+        """
+        try:
+            from services.llm_semantic_service import get_llm_semantic_service
 
-        # 年龄匹配说明
-        age_score = breakdown.get('age', 0)
-        age_diff = abs(user.get('age', 0) - candidate.get('age', 0))
-        if age_score > 0.8:
-            strengths.append(f"年龄差距 {age_diff} 岁，非常符合你的择偶偏好")
-        elif age_score > 0.5:
-            strengths.append("年龄在你接受的范围内")
+            llm_service = get_llm_semantic_service()
 
-        # 地点匹配说明
-        location_score = breakdown.get('location', 0)
-        if location_score == 1.0:
-            strengths.append(f"你们都在 {user.get('location', '同一个城市')}，见面很方便")
-        elif location_score > 0.5:
-            strengths.append("在同一个省份，地域相近")
-        else:
-            improvements.append("异地，需要更多考虑相处方式")
+            if not llm_service.enabled:
+                return None
 
-        # 关系目标匹配
-        user_goal = user.get('goal')
-        candidate_goal = candidate.get('goal')
-        user_goal_display = user_goal.value if hasattr(user_goal, "value") else str(user_goal)
-        candidate_goal_display = (
-            candidate_goal.value if hasattr(candidate_goal, "value") else str(candidate_goal)
-        )
-        if user_goal == candidate_goal:
-            strengths.append(f"关系目标一致，都是奔着 {user_goal_display} 去的")
-        else:
-            improvements.append(
-                f"关系目标有所不同，你是 {user_goal_display}，对方是 {candidate_goal_display}"
-            )
+            # 构建分析 Prompt
+            prompt = self._build_reasoning_prompt(user, candidate, score, breakdown)
 
-        # 综合评估
-        if score > 0.8:
-            overall = "强烈推荐！这是非常优质的匹配对象"
-        elif score > 0.7:
-            overall = "非常推荐！你们很合适"
-        elif score > 0.6:
-            overall = "值得尝试，有发展潜力"
-        else:
-            overall = "可以先了解看看，也许有意外的默契"
+            # 同步调用 LLM
+            result = self._call_llm_sync(llm_service, prompt)
 
-        # 组合理由
-        reasoning = [overall]
-        if strengths:
-            reasoning.append("👍 匹配优势：")
-            reasoning.extend([f"  - {s}" for s in strengths[:4]])  # 最多显示4个优势
-        if improvements:
-            reasoning.append("💡 注意事项：")
-            reasoning.extend([f"  - {i}" for i in improvements[:2]])  # 最多显示2个注意点
+            if result and not result.startswith('{"fallback"'):
+                reasoning = self._parse_reasoning_response(result)
+                if reasoning:
+                    return reasoning
 
-        return "\n".join(reasoning)
+            return None
+
+        except Exception as e:
+            logger.debug(f"MatchmakerAlgorithm: AI reasoning generation failed: {e}")
+            return None
+
+    def _build_reasoning_prompt(
+        self,
+        user: dict,
+        candidate: dict,
+        score: float,
+        breakdown: dict
+    ) -> str:
+        """构建推荐理由生成 Prompt"""
+
+        # 提取关键信息（脱敏处理）
+        user_info = {
+            "age": user.get("age"),
+            "location": user.get("location"),
+            "interests": user.get("interests", [])[:5],
+            "goal": str(user.get("goal")) if user.get("goal") else None,
+        }
+
+        candidate_info = {
+            "name": candidate.get("name", "TA"),
+            "age": candidate.get("age"),
+            "location": candidate.get("location"),
+            "interests": candidate.get("interests", [])[:5],
+            "goal": str(candidate.get("goal")) if candidate.get("goal") else None,
+            "bio": (candidate.get("bio") or "")[:100],
+        }
+
+        # 计算共同兴趣
+        common_interests = list(
+            set(user.get("interests", [])) & set(candidate.get("interests", []))
+        )[:3]
+
+        # 匹配分数详情
+        score_details = {
+            "total": round(score * 100),
+            "interests": round(breakdown.get("interests", 0) * 100),
+            "values": round(breakdown.get("values", 0) * 100),
+            "age": round(breakdown.get("age", 0) * 100),
+            "location": round(breakdown.get("location", 0) * 100),
+        }
+
+        return f'''你是一位专业的婚恋顾问，需要为用户生成一段匹配推荐理由。
+
+【用户资料】
+{json.dumps(user_info, ensure_ascii=False, indent=2)}
+
+【推荐对象】
+{json.dumps(candidate_info, ensure_ascii=False, indent=2)}
+
+【匹配分析】
+- 综合匹配度：{score_details["total"]}%
+- 兴趣匹配：{score_details["interests"]}%
+- 价值观匹配：{score_details["values"]}%
+- 年龄匹配：{score_details["age"]}%
+- 地域匹配：{score_details["location"]}%
+- 共同兴趣：{common_interests if common_interests else "暂无"}
+
+【任务】
+请生成一段简洁、真诚、个性化的推荐理由（100字以内），帮助用户理解为什么推荐这个人。
+
+【要求】
+1. 语言自然亲切，像朋友在介绍
+2. 突出最匹配的维度（分数最高的）
+3. 如果有共同兴趣，一定要提到
+4. 不要使用"建议""可以"等说教式表达
+5. 不要重复硬编码的模板
+6. 如果某些信息缺失（如 None），用自然的表达替代
+
+【输出格式】
+返回 JSON 格式：
+{{
+    "reasoning": "推荐理由文本（100字以内）"
+}}
+
+只返回 JSON，不要其他文字。'''
+
+    def _parse_reasoning_response(self, response: str) -> Optional[str]:
+        """解析 AI 响应，提取推荐理由"""
+        try:
+            # 清理响应
+            response = response.strip()
+            if response.startswith('```json'):
+                response = response[7:]
+            if response.startswith('```'):
+                response = response[3:]
+            if response.endswith('```'):
+                response = response[:-3]
+            response = response.strip()
+
+            data = json.loads(response)
+            reasoning = data.get("reasoning", "")
+
+            if reasoning and len(reasoning) > 10:
+                return reasoning
+
+            return None
+
+        except json.JSONDecodeError:
+            logger.debug(f"MatchmakerAlgorithm: Failed to parse reasoning response")
+            return None
+
+    def _call_llm_sync(self, llm_service, prompt: str) -> str:
+        """同步调用 LLM"""
+        try:
+            # 检查是否有运行的事件循环
+            try:
+                loop = asyncio.get_running_loop()
+                # 在有运行循环的环境中，创建新线程运行
+                with ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, llm_service._call_llm(prompt))
+                    return future.result(timeout=30)
+            except RuntimeError:
+                # 没有运行中的事件循环，直接创建
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    return loop.run_until_complete(llm_service._call_llm(prompt))
+                finally:
+                    loop.close()
+        except Exception as e:
+            logger.error(f"MatchmakerAlgorithm: LLM sync call failed: {e}")
+            return '{"fallback": true}'
+
+    def _generate_fallback_reasoning(
+        self,
+        user: dict,
+        candidate: dict,
+        score: float
+    ) -> str:
+        """
+        降级方案：简洁默认理由
+
+        当 AI 不可用时，生成最简单的推荐理由
+        """
+        candidate_name = candidate.get("name", "TA")
+        score_percent = round(score * 100)
+
+        # 提取共同兴趣
+        common_interests = list(
+            set(user.get("interests", [])) & set(candidate.get("interests", []))
+        )[:2]
+
+        parts = [f"与{candidate_name}的匹配度为{score_percent}%"]
+
+        if common_interests:
+            parts.append(f"你们都对{common_interests[0]}感兴趣")
+
+        if user.get("location") == candidate.get("location"):
+            parts.append(f"都在{user.get('location')}")
+
+        return "，".join(parts) + "。"
 
     def _is_cold_start_user(self, user: dict) -> bool:
         """判断是否为冷启动用户（标签不足）"""
@@ -408,59 +441,35 @@ class MatchmakerAlgorithm:
             location_score = 0.3
         breakdown['location'] = location_score
 
-        # 关系目标匹配（权重提升）
-        if user.get('goal') == candidate.get('goal'):
-            goal_score = 1.0
-        else:
-            # 兼容目标判断
-            compatible_goals = [
-                {'serious', 'marriage'},
-                {'casual', 'friendship'}
-            ]
-            user_goal = {user.get('goal')}
-            candidate_goal = {candidate.get('goal')}
-            goal_score = 0.6 if any(user_goal <= cg and candidate_goal <= cg for cg in compatible_goals) else 0.0
-        breakdown['goal'] = goal_score
-
-        # 兴趣匹配（使用流行度加权）
+        # 兴趣适配度（使用热门兴趣）
         user_interests = set(user.get('interests', []))
         candidate_interests = set(candidate.get('interests', []))
-        if user_interests or candidate_interests:
+
+        if user_interests and candidate_interests:
             common = user_interests & candidate_interests
-            union = user_interests | candidate_interests
-            # 共同兴趣越多分数越高，稀有兴趣权重更大
-            if common:
-                common_weight = sum(1 / (1 + self._interest_popularity.get(i, 0)) for i in common)
-                union_weight = sum(1 / (1 + self._interest_popularity.get(i, 0)) for i in union)
-                interest_score = min(1.0, common_weight / max(union_weight, 0.1))
-            else:
-                interest_score = 0.3  # 没有共同兴趣给基础分
+            breakdown['interests'] = len(common) / max(len(user_interests), 1)
+        elif candidate_interests:
+            # 用户无兴趣数据，使用热门兴趣评分
+            top_interests = sorted(
+                self._interest_popularity.items(),
+                key=lambda x: x[1],
+                reverse=True
+            )[:5]
+            top_interest_names = {i[0] for i in top_interests}
+            common = candidate_interests & top_interest_names
+            breakdown['interests'] = len(common) / 5 if top_interest_names else 0.5
         else:
-            # 双方都没有兴趣，使用全局热门兴趣匹配
-            interest_score = 0.5
-        breakdown['interests'] = interest_score
+            breakdown['interests'] = 0.5
 
-        # 价值观匹配（冷启动下权重降低）
-        user_values = user.get('values', {})
-        candidate_values = candidate.get('values', {})
-        if user_values and candidate_values:
-            common_keys = set(user_values.keys()) & set(candidate_values.keys())
-            if common_keys:
-                value_diffs = [abs(user_values[k] - candidate_values[k]) for k in common_keys]
-                values_score = 1 - (sum(value_diffs) / len(value_diffs))
-            else:
-                values_score = 0.4
-        else:
-            values_score = 0.4  # 没有价值观数据给基础分
-        breakdown['values'] = values_score
+        # 价值观适配度（冷启动用户使用默认值）
+        breakdown['values'] = 0.5
 
-        # 冷启动权重配置：基础属性权重更高
+        # 冷启动用户权重调整：基础属性权重更高
         weights = {
-            'age': 0.25,
-            'location': 0.3,
-            'goal': 0.2,
-            'interests': 0.15,
-            'values': 0.1
+            'age': 0.30,
+            'location': 0.40,
+            'interests': 0.20,
+            'values': 0.10
         }
         total_score = sum(breakdown[k] * weights[k] for k in breakdown)
 
@@ -471,26 +480,29 @@ class MatchmakerAlgorithm:
         if not self._users:
             return
 
-        # 更新平均年龄
-        total_age = sum(u.get('age', 0) for u in self._users.values())
-        self._global_stats['avg_age'] = total_age / len(self._users)
+        # 计算平均年龄
+        ages = [u.get('age', 28) for u in self._users.values() if u.get('age')]
+        if ages:
+            self._global_stats['avg_age'] = sum(ages) / len(ages)
 
-        # 更新兴趣流行度排序
-        sorted_interests = sorted(self._interest_popularity.items(), key=lambda x: x[1], reverse=True)
-        self._global_stats['common_interests'] = [i[0] for i in sorted_interests[:10]]
+        # 更新热门兴趣
+        sorted_interests = sorted(
+            self._interest_popularity.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )[:7]
+        self._global_stats['common_interests'] = [i[0] for i in sorted_interests]
 
-    def get_mutual_matches(self, user_id: str) -> List[Dict]:
-        """获取双向匹配（互相喜欢）"""
-        my_matches = self.find_matches(user_id, limit=100)
-        mutual_matches = []
+# 全局匹配器实例
+_matchmaker_instance = None
 
-        for match in my_matches:
-            candidate_matches = self.find_matches(match['user_id'], limit=100)
-            if any(m['user_id'] == user_id for m in candidate_matches):
-                mutual_matches.append(match)
+def get_matchmaker() -> MatchmakerAlgorithm:
+    """获取全局匹配器实例"""
+    global _matchmaker_instance
+    if _matchmaker_instance is None:
+        _matchmaker_instance = MatchmakerAlgorithm()
+    return _matchmaker_instance
 
-        return mutual_matches
+# 为了向后兼容
+matchmaker = get_matchmaker()
 
-
-# 全局算法实例
-matchmaker = MatchmakerAlgorithm()

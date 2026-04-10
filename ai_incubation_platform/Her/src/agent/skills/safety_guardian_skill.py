@@ -237,6 +237,7 @@ class SafetyGuardianSkill:
     ) -> Dict[str, Any]:
         """执行安全检查"""
         from db.database import SessionLocal
+        from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
         from services.p11_safety_service import safety_monitoring_service
 
         db = SessionLocal()
@@ -522,6 +523,7 @@ class SafetyGuardianSkill:
 
         from services.p11_safety_service import safety_monitoring_service
         from db.database import SessionLocal
+        from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 
         db = SessionLocal()
         try:
@@ -596,6 +598,7 @@ class SafetyGuardianSkill:
 
         from services.p11_safety_service import safety_monitoring_service
         from db.database import SessionLocal
+        from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 
         db = SessionLocal()
         try:

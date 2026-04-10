@@ -23,6 +23,7 @@ import json
 import random
 
 from db.database import SessionLocal
+from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 from db.models import (
     UserDB, BehaviorEventDB, ConversationDB, ChatMessageDB,
     MatchHistoryDB, SwipeActionDB, VideoDateDB, RelationshipProgressDB,

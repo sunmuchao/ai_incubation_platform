@@ -87,24 +87,30 @@ def db_session_readonly() -> Generator[Session, None, None]:
 
 # ==================== 会话管理工具函数 ====================
 
-def managed_db_session(db: Optional[Session] = None) -> Session:
+@contextmanager
+def optional_db_session(db: Optional[Session] = None):
     """
-    获取受管理的数据库会话
+    可选的数据库会话上下文管理器
 
-    用于服务类内部方法，当需要在方法内确保有会话时使用。
+    如果提供了外部会话，则使用它；否则创建新会话。
+
+    用法:
+        def my_method(self, db: Optional[Session] = None):
+            with optional_db_session(db) as session:
+                # 使用 session 进行操作
+                session.query(...).all()
+            # 如果是新创建的会话，自动 commit/close
 
     Args:
-        db: 当前会话（可能为 None）
-
-    Returns:
-        Session: 有效的数据库会话
-
-    注意:
-        此函数不会关闭会话，调用者需要负责关闭
+        db: 可选的外部数据库会话
     """
     if db is not None:
-        return db
-    return SessionLocal()
+        # 使用外部会话，不需要管理生命周期
+        yield db
+    else:
+        # 创建新会话，自动管理生命周期
+        with db_session() as session:
+            yield session
 
 
 def cleanup_db_session(db: Optional[Session], own_session: bool) -> None:

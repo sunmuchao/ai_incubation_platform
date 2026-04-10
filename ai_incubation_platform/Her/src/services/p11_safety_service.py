@@ -524,6 +524,7 @@ class SafetyMonitoringService:
             )
             db.add(plan)
 
+        db.commit()  # Commit the transaction
         return plan.id
 
     def trigger_emergency_response(
@@ -936,6 +937,7 @@ class SafetyMonitoringService:
             actual_start=scheduled_start or datetime.now()
         )
         db.add(session)
+        db.commit()  # Commit the transaction
         return session.id
 
     def start_date_safety_session(self, session_id: str, db_session_param: Optional[Session] = None) -> bool:
@@ -967,6 +969,7 @@ class SafetyMonitoringService:
 
         session.session_status = "active"
         session.actual_start = datetime.now()
+        db.commit()  # Commit the transaction
         return True
 
     def complete_date_safety_session(
@@ -1012,6 +1015,7 @@ class SafetyMonitoringService:
         session.actual_end = datetime.now()
         session.safety_rating = safety_rating
         session.post_date_feedback = feedback
+        db.commit()  # Commit the transaction
         return True
 
     def trigger_emergency(

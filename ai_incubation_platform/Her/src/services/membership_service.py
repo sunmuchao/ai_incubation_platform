@@ -22,12 +22,13 @@ from models.membership import (
     MEMBERSHIP_BENEFITS,
     UserUsageTrackerDB,
 )
-from db.database import SessionLocal, engine
+from db.database import SessionLocal
+from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
+from db.database import engine
 from db.models import UserMembershipDB, MembershipOrderDB
 from sqlalchemy.orm import Session
 from utils.logger import logger
 from cache import cache_manager
-from utils.db_session_manager import db_session
 
 
 class MembershipService:
@@ -35,10 +36,6 @@ class MembershipService:
 
     def __init__(self, db: Session):
         self.db = db
-
-    def _get_db(self) -> Session:
-        """获取数据库会话（内部方法，用于兼容旧代码）"""
-        return self.db
 
     def get_user_membership(self, user_id: str) -> UserMembership:
         """获取用户会员状态"""
@@ -279,7 +276,7 @@ class MembershipService:
         )
 
         # 保存到数据库
-        db = self._get_db()
+        db = self.db
         cursor = db.cursor()
         cursor.execute("""
             INSERT INTO membership_orders
@@ -324,7 +321,7 @@ class MembershipService:
         )
 
         # 保存到数据库
-        db = self._get_db()
+        db = self.db
         cursor = db.cursor()
         cursor.execute("""
             INSERT INTO membership_orders
@@ -560,9 +557,9 @@ class MembershipService:
 
         # 根据权益类型检查并增加使用次数
         feature_to_action = {
-            MembershipFeature.super_likes: "super_like",
-            MembershipFeature.boosts: "boost",
-            MembershipFeature.rewinds: "rewind",
+            MembershipFeature.SUPER_LIKES: "super_like",
+            MembershipFeature.BOOST: "boost",
+            MembershipFeature.REWIND: "rewind",
         }
 
         action = feature_to_action.get(feature)

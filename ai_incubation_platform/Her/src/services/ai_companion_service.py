@@ -14,6 +14,7 @@ import uuid
 from db.models import (
     AICompanionSessionDB, AICompanionMessageDB, UserDB
 )
+from agent.skills.emotion_analysis_skill import analyze_text_emotion_sync
 
 
 # 虚拟角色设定
@@ -364,33 +365,50 @@ class AICompanionService:
         }
 
     def _analyze_sentiment(self, text: str) -> float:
-        """简单的情感分析（-1.0 到 1.0）"""
-        positive_words = ["开心", "高兴", "好", "棒", "喜欢", "爱", "快乐", "幸福", "美好", "期待"]
-        negative_words = ["难过", "伤心", "痛苦", "讨厌", "恨", "糟糕", "差", "失望", "绝望", "累"]
+        """
+        情感分析（AI 驱动）
 
-        score = 0.0
-        for word in positive_words:
-            if word in text:
-                score += 0.2
-        for word in negative_words:
-            if word in text:
-                score -= 0.2
+        Returns:
+            -1.0 到 1.0 的情感分数
+        """
+        try:
+            result = analyze_text_emotion_sync(text)
+            # 将 mood 映射到 -1.0 到 1.0
+            mood = result.get("mood", "neutral")
+            intensity = result.get("intensity", 0.5)
 
-        return max(-1.0, min(1.0, score))
+            if mood == "positive":
+                return min(1.0, 0.3 + intensity * 0.7)
+            elif mood == "negative":
+                return max(-1.0, -0.3 - intensity * 0.7)
+            else:
+                return 0.0
+        except Exception:
+            # 完全降级：返回中性
+            return 0.0
 
     def _detect_emotion(self, text: str) -> str:
-        """简单的情绪检测"""
-        if any(word in text for word in ["开心", "高兴", "快乐", "幸福", "笑"]):
-            return "happy"
-        elif any(word in text for word in ["难过", "伤心", "哭", "痛苦", "悲伤"]):
-            return "sad"
-        elif any(word in text for word in ["害怕", "担心", "焦虑", "紧张", "恐惧"]):
-            return "anxious"
-        elif any(word in text for word in ["生气", "愤怒", "恼火", "烦", "讨厌"]):
-            return "angry"
-        elif any(word in text for word in ["兴奋", "激动", "期待", "激动"]):
-            return "excited"
-        else:
+        """
+        情绪检测（AI 驱动）
+
+        Returns:
+            情绪类型字符串
+        """
+        try:
+            result = analyze_text_emotion_sync(text)
+            emotion = result.get("emotion", "neutral")
+
+            # 映射到兼容的返回值
+            emotion_map = {
+                "happiness": "happy",
+                "sadness": "sad",
+                "anger": "angry",
+                "fear": "anxious",
+                "surprise": "excited",
+                "neutral": "neutral",
+            }
+            return emotion_map.get(emotion, emotion)
+        except Exception:
             return "neutral"
 
     def _generate_ai_response(self, session: AICompanionSessionDB,

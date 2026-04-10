@@ -176,7 +176,9 @@ async def get_current_user(
 ) -> str:
     """
     获取当前用户 ID（依赖注入）
-    使用方式：user_id = Depends(get_current_user)
+    使用方式：user_id: str = Depends(get_current_user)
+
+    返回 user_id 字符串，端点可基于此进行数据库查询
     """
     token = credentials.credentials
     user_id = decode_access_token(token)

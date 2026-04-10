@@ -213,6 +213,7 @@ class RelationshipProphetSkill(BaseSkill):
     ) -> Dict[str, Any]:
         """执行关系预测"""
         from db.database import SessionLocal
+        from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 
         db = SessionLocal()
         result = {

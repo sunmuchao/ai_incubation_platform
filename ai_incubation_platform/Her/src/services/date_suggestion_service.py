@@ -10,6 +10,7 @@ import uuid
 import math
 
 from db.database import SessionLocal
+from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 from db.models import UserDB, MatchHistoryDB
 from models.p10_models import DateSuggestionDB, DateVenueDB
 from utils.logger import logger
@@ -55,8 +56,8 @@ class DateSuggestionService:
         Returns:
             建议 ID
         """
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
         try:
             # 获取用户信息
             user = db.query(UserDB).filter(UserDB.id == user_id).first()
@@ -321,8 +322,8 @@ class DateSuggestionService:
         db_session: Optional[Any] = None
     ) -> List[Dict[str, Any]]:
         """获取用户的约会建议列表"""
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
         try:
             query = db.query(DateSuggestionDB).filter(
                 DateSuggestionDB.user_id == user_id
@@ -372,8 +373,8 @@ class DateSuggestionService:
         db_session: Optional[Any] = None
     ) -> bool:
         """响应用户对约会建议的回应"""
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
         try:
             suggestion = db.query(DateSuggestionDB).filter(
                 DateSuggestionDB.id == suggestion_id

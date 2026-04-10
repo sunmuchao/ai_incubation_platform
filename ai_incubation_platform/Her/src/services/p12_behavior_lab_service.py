@@ -14,6 +14,7 @@ import re
 from sqlalchemy.orm import Session
 
 from db.database import SessionLocal
+from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 from db.models import ConversationDB, ChatMessageDB, UserDB
 from models.p12_models import (
     SharedExperienceDB,
@@ -27,6 +28,9 @@ from services.p12_behavior_lab_types import (
     SilenceEventConfig,
     SilenceContext,
     GeneratedTopic,
+)
+from agent.skills.emotion_analysis_skill import analyze_text_emotion_sync
+from services.p12_behavior_lab_types import (
     ConversationContext,
     UserInterestProfile,
     TopicRecommendation
@@ -73,8 +77,8 @@ class SharedExperienceService:
         Returns:
             经历 ID，如果创建成功；否则 None
         """
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
 
         try:
             # 生成经历 ID
@@ -148,8 +152,8 @@ class SharedExperienceService:
         Returns:
             经历列表
         """
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
 
         try:
             since = datetime.utcnow() - timedelta(days=days)
@@ -196,8 +200,8 @@ class SharedExperienceService:
         Returns:
             重要回忆列表
         """
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
 
         try:
             experiences = db.query(SharedExperienceDB).filter(
@@ -223,7 +227,11 @@ class SharedExperienceService:
         db: Any,
         reference_data: Dict
     ) -> float:
-        """计算经历的情感评分"""
+        """
+        计算经历的情感评分（AI 驱动）
+
+        使用 AI 分析对话内容中的情感倾向。
+        """
         # 如果有对话 ID，分析对话情感
         if "conversation_id" in reference_data:
             conv_id = reference_data["conversation_id"]
@@ -232,19 +240,31 @@ class SharedExperienceService:
             ).all()
 
             if messages:
-                # 简单的情感分析：基于积极/消极关键词
-                positive_words = ["开心", "喜欢", "爱", "高兴", "愉快", "有趣", "美好", "温暖"]
-                negative_words = ["难过", "生气", "讨厌", "无聊", "失望", "伤心", "烦躁"]
-
+                # 使用 AI 情绪分析
                 sentiment_sum = 0
-                for msg in messages:
-                    text = msg.content.lower()
-                    pos_count = sum(1 for word in positive_words if word in text)
-                    neg_count = sum(1 for word in negative_words if word in text)
-                    if pos_count + neg_count > 0:
-                        sentiment_sum += (pos_count - neg_count) / (pos_count + neg_count)
+                analyzed_count = 0
 
-                return max(-1, min(1, sentiment_sum / len(messages))) if messages else 0.0
+                for msg in messages:
+                    text = msg.content
+                    if not text or len(text) < 2:
+                        continue
+
+                    try:
+                        result = analyze_text_emotion_sync(text)
+                        mood = result.get("mood", "neutral")
+                        intensity = result.get("intensity", 0.5)
+
+                        # 映射到 -1 到 1
+                        if mood == "positive":
+                            sentiment_sum += intensity
+                        elif mood == "negative":
+                            sentiment_sum -= intensity
+                        analyzed_count += 1
+                    except Exception:
+                        continue
+
+                if analyzed_count > 0:
+                    return max(-1, min(1, sentiment_sum / analyzed_count))
 
         # 默认中性评分
         return reference_data.get("sentiment_score", 0.0)
@@ -327,8 +347,8 @@ class SilenceDetectionService:
         Returns:
             沉默事件详情，如果没有沉默则返回 None
         """
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
 
         try:
             # 获取最后一条消息
@@ -420,8 +440,8 @@ class SilenceDetectionService:
         Returns:
             是否成功解决
         """
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
 
         try:
             silence_event = db.query(SilenceEventDB).filter(
@@ -551,8 +571,8 @@ class IcebreakerTopicService:
 
     def _initialize_default_topics(self, db_session: Optional[Session] = None):
         """初始化默认话题库"""
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
 
         try:
             # 检查是否已有话题
@@ -564,6 +584,7 @@ class IcebreakerTopicService:
             default_topics = [
                 # 共同经历相关
                 {
+                    "id": "topic_shared_experience_1",
                     "category": "shared_experience",
                     "topic_text": "还记得我们第一次{activity}吗？那时候真的很{emotion}",
                     "applicable_scenarios": ["nostalgia", "bonding"],
@@ -571,6 +592,7 @@ class IcebreakerTopicService:
                     "depth_level": 3
                 },
                 {
+                    "id": "topic_shared_experience_2",
                     "category": "shared_experience",
                     "topic_text": "上次一起去{location}真的很有趣，你最难忘的是什么？",
                     "applicable_scenarios": ["nostalgia", "conversation_restart"],
@@ -579,6 +601,7 @@ class IcebreakerTopicService:
                 },
                 # 当前事件相关
                 {
+                    "id": "topic_current_event_1",
                     "category": "current_event",
                     "topic_text": "今天发生的{event}你有关注吗？你怎么看？",
                     "applicable_scenarios": ["small_talk", "opinion_exchange"],
@@ -586,6 +609,7 @@ class IcebreakerTopicService:
                     "depth_level": 2
                 },
                 {
+                    "id": "topic_current_event_2",
                     "category": "current_event",
                     "topic_text": "最近天气变化好大，你有什么应对秘诀吗？",
                     "applicable_scenarios": ["small_talk", "daily_care"],
@@ -601,6 +625,7 @@ class IcebreakerTopicService:
                     "depth_level": 2
                 },
                 {
+                    "id": "topic_interest_based_1",
                     "category": "interest_based",
                     "topic_text": "我最近发现了一个很不错的{interest}推荐，想听听你的想法",
                     "applicable_scenarios": ["recommendation", "sharing"],
@@ -609,6 +634,7 @@ class IcebreakerTopicService:
                 },
                 # 季节性话题
                 {
+                    "id": "topic_seasonal_1",
                     "category": "seasonal",
                     "topic_text": "这个季节最适合去{seasonal_activity}了，你有计划吗？",
                     "applicable_scenarios": ["planning", "invitation"],
@@ -617,6 +643,7 @@ class IcebreakerTopicService:
                 },
                 # 破冰专用
                 {
+                    "id": "topic_icebreaker_1",
                     "category": "icebreaker",
                     "topic_text": "如果可以选择一个超能力，你想要什么？为什么？",
                     "applicable_scenarios": ["first_date", "awkward_silence"],
@@ -624,6 +651,7 @@ class IcebreakerTopicService:
                     "depth_level": 1
                 },
                 {
+                    "id": "topic_icebreaker_2",
                     "category": "icebreaker",
                     "topic_text": "你小时候最难忘的回忆是什么？",
                     "applicable_scenarios": ["deep_conversation", "bonding"],
@@ -632,6 +660,7 @@ class IcebreakerTopicService:
                 },
                 # 关系升温
                 {
+                    "id": "topic_relationship_1",
                     "category": "relationship",
                     "topic_text": "和你在一起的时候，我觉得最特别的时刻是...",
                     "applicable_scenarios": ["confession", "bonding"],
@@ -641,10 +670,14 @@ class IcebreakerTopicService:
             ]
 
             for topic_data in default_topics:
-                topic = IcebreakerTopicDB(
-                    id=f"topic_{topic_data['category']}_{len(default_topics)}",
-                    **topic_data
-                )
+                # 检查是否已存在
+                existing = db.query(IcebreakerTopicDB).filter(
+                    IcebreakerTopicDB.id == topic_data["id"]
+                ).first()
+                if existing:
+                    continue
+
+                topic = IcebreakerTopicDB(**topic_data)
                 db.add(topic)
 
             if should_close:
@@ -683,8 +716,8 @@ class IcebreakerTopicService:
         Returns:
             话题列表
         """
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
 
         try:
             query = db.query(IcebreakerTopicDB)
@@ -734,8 +767,8 @@ class IcebreakerTopicService:
         Returns:
             生成的破冰话题
         """
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
 
         try:
             # 获取共同经历
@@ -838,8 +871,8 @@ class IcebreakerTopicService:
         Returns:
             是否成功记录
         """
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
 
         try:
             icebreaker = db.query(GeneratedIcebreakerDB).filter(

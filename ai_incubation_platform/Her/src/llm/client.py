@@ -2,10 +2,13 @@
 LLM 客户端模块
 
 封装大模型调用，支持多种 LLM 后端（OpenAI、DashScope、DeepSeek 等）
+支持流式响应和同步调用
 """
 import os
 import json
-from typing import Optional, Dict, Any
+import asyncio
+from typing import Optional, Dict, Any, Generator, AsyncGenerator
+
 from utils.logger import logger
 
 # 尝试导入 OpenAI
@@ -44,6 +47,7 @@ def call_llm(
     system_prompt: Optional[str] = None,
     temperature: float = 0.7,
     max_tokens: int = 1000,
+    timeout: int = 30,
     **kwargs
 ) -> str:
     """
@@ -54,6 +58,7 @@ def call_llm(
         system_prompt: 系统提示（可选）
         temperature: 温度参数（0-1）
         max_tokens: 最大 token 数
+        timeout: 超时时间（秒）
         **kwargs: 其他参数
 
     Returns:
@@ -80,6 +85,7 @@ def call_llm(
             client = OpenAI(
                 api_key=config["api_key"],
                 base_url=config["api_base"],
+                timeout=timeout,
             )
 
             response = client.chat.completions.create(
@@ -123,6 +129,176 @@ def call_llm(
     except Exception as e:
         logger.error(f"LLM call failed: {e}")
         return "抱歉，我刚才走神了，你能再说一遍吗？😊"
+
+
+def call_llm_stream(
+    prompt: str,
+    system_prompt: Optional[str] = None,
+    temperature: float = 0.7,
+    max_tokens: int = 1000,
+    **kwargs
+) -> Generator[str, None, None]:
+    """
+    调用 LLM 流式生成回复
+
+    Args:
+        prompt: 用户提示
+        system_prompt: 系统提示（可选）
+        temperature: 温度参数（0-1）
+        max_tokens: 最大 token 数
+        **kwargs: 其他参数
+
+    Yields:
+        LLM 生成的文本片段（逐字输出）
+    """
+    config = get_llm_config()
+
+    if not config["api_key"]:
+        logger.error("LLM API key not configured")
+        yield "抱歉，我现在无法思考，请稍后再试～"
+        return
+
+    # 构建消息
+    messages = []
+
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+
+    messages.append({"role": "user", "content": prompt})
+
+    # 调用 LLM（流式）
+    try:
+        if OPENAI_AVAILABLE and config["api_base"]:
+            client = OpenAI(
+                api_key=config["api_key"],
+                base_url=config["api_base"],
+            )
+
+            response = client.chat.completions.create(
+                model=config["model"],
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+                **kwargs
+            )
+
+            for chunk in response:
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+
+        else:
+            # 降级：使用 requests 直接调用（不支持流式，直接返回完整内容）
+            import requests
+
+            headers = {
+                "Authorization": f"Bearer {config['api_key']}",
+                "Content-Type": "application/json",
+            }
+
+            payload = {
+                "model": config["model"],
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
+
+            resp = requests.post(
+                f"{config['api_base']}/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=30,
+            )
+            resp.raise_for_status()
+            content = resp.json()["choices"][0]["message"]["content"]
+            yield content.strip()
+
+    except Exception as e:
+        logger.error(f"LLM stream call failed: {e}")
+        yield "抱歉，我刚才走神了，你能再说一遍吗？😊"
+
+
+async def call_llm_stream_async(
+    prompt: str,
+    system_prompt: Optional[str] = None,
+    temperature: float = 0.7,
+    max_tokens: int = 1000,
+    **kwargs
+) -> AsyncGenerator[str, None]:
+    """
+    异步流式调用 LLM（逐字输出）
+
+    Args:
+        prompt: 用户提示
+        system_prompt: 系统提示（可选）
+        temperature: 温度参数（0-1）
+        max_tokens: 最大 token 数
+        **kwargs: 其他参数
+
+    Yields:
+        LLM 生成的单个字符
+    """
+    config = get_llm_config()
+
+    if not config["api_key"]:
+        logger.error("LLM API key not configured")
+        yield "抱歉，我现在无法思考，请稍后再试～"
+        return
+
+    # 构建消息
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+
+    try:
+        if OPENAI_AVAILABLE and config["api_base"]:
+            import httpx
+
+            headers = {
+                "Authorization": f"Bearer {config['api_key']}",
+                "Content-Type": "application/json",
+            }
+
+            payload = {
+                "model": config["model"],
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "stream": True,
+            }
+
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                async with client.stream(
+                    "POST",
+                    f"{config['api_base']}/chat/completions",
+                    headers=headers,
+                    json=payload,
+                ) as response:
+                    response.raise_for_status()
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            if data_str == "[DONE]":
+                                break
+                            try:
+                                data = json.loads(data_str)
+                                if data.get("choices") and data["choices"][0].get("delta", {}).get("content"):
+                                    content = data["choices"][0]["delta"]["content"]
+                                    # 逐字符 yield，前端实现打字动画
+                                    for char in content:
+                                        yield char
+                            except json.JSONDecodeError:
+                                continue
+        else:
+            # 降级：同步调用后逐字输出
+            result = call_llm(prompt, system_prompt, temperature, max_tokens, **kwargs)
+            for char in result:
+                yield char
+
+    except Exception as e:
+        logger.error(f"LLM async stream call failed: {e}")
+        yield "抱歉，我刚才走神了，你能再说一遍吗？😊"
 
 
 def analyze_text(

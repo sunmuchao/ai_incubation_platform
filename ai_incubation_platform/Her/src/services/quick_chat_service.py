@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 import json
 
 from llm.client import call_llm
-from db.database import SessionLocal
+from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 from db.models import UserDB, ChatMessageDB, ChatConversationDB
 from utils.logger import logger
 from sqlalchemy import or_, and_, desc
@@ -23,12 +23,9 @@ class QuickChatService:
     """悬浮球快速对话服务"""
 
     def __init__(self, db: Optional[Session] = None):
+        # 使用延迟导入避免模块加载顺序问题
+        from db.database import SessionLocal
         self.db = db or SessionLocal()
-
-    def close(self):
-        """关闭数据库会话"""
-        if self.db:
-            self.db.close()
 
     def get_ai_advice(
         self,

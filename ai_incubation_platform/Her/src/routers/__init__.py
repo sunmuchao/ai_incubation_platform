@@ -28,6 +28,7 @@ def register_all_routers(app: FastAPI) -> None:
     from api.relationship import router as relationship_router
     from api.activities import router as activities_router
     from api.conversations import router as conversations_router
+    from api.profile import router as profile_router
 
     app.include_router(users_router)
     registered_count += 1
@@ -47,6 +48,9 @@ def register_all_routers(app: FastAPI) -> None:
     app.include_router(conversations_router)
     registered_count += 1
     logger.debug(f"Registered router: conversations_router")
+    app.include_router(profile_router)
+    registered_count += 1
+    logger.debug(f"Registered router: profile_router")
 
     # ========== P4-P6 路由 ==========
     from api.photos import router as photos_router
@@ -166,6 +170,13 @@ def register_all_routers(app: FastAPI) -> None:
     registered_count += 1
     logger.debug(f"Registered router: quick_chat_router")
 
+    # ========== 微信登录路由 ==========
+    from api.wechat_login import router as wechat_login_router
+
+    app.include_router(wechat_login_router)
+    registered_count += 1
+    logger.debug(f"Registered router: wechat_login_router")
+
     # ========== P2: 礼物闭环集成路由 ==========
     from api.gift_integration import router as gift_integration_router
 
@@ -196,6 +207,10 @@ def register_all_routers(app: FastAPI) -> None:
     from api.ai_learning import router as ai_learning_router
     from api.digital_twin import router as digital_twin_router  # P2 数字孪生
     from api.adaptive_ui import router as adaptive_ui_router
+    from api.ai_interlocutor import router as ai_interlocutor_router  # AI 预沟通
+    from services.scene_detection_service import router as scene_detection_router  # 场景检测
+    from utils.api_checker import router as api_checker_router  # API 检查
+    from utils.skills_checker import router as skills_checker_router  # Skills 检查
 
     app.include_router(conversation_matching_router)
     app.include_router(ai_awareness_router)
@@ -208,8 +223,12 @@ def register_all_routers(app: FastAPI) -> None:
     app.include_router(ai_learning_router)
     app.include_router(digital_twin_router)
     app.include_router(adaptive_ui_router)
-    registered_count += 11
-    logger.debug(f"Registered AI Native routers: 11 routers")
+    app.include_router(ai_interlocutor_router)
+    app.include_router(scene_detection_router)
+    app.include_router(api_checker_router)
+    app.include_router(skills_checker_router)
+    registered_count += 15
+    logger.debug(f"Registered AI Native routers: 15 routers")
 
     logger.info(f"All routers registered successfully. Total routers: {registered_count}")
 

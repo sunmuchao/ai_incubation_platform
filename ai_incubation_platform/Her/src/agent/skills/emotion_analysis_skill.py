@@ -211,6 +211,7 @@ class EmotionAnalysisSkill:
     ) -> Dict[str, Any]:
         """执行情感分析"""
         from db.database import SessionLocal
+        from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
         from services.p11_services import emotion_analysis_service
 
         db = SessionLocal()
@@ -518,6 +519,205 @@ class EmotionAnalysisSkill:
             }
 
         return {"triggered": False, "result": result}
+
+    async def analyze_text_emotion(
+        self,
+        text: str,
+        context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        分析文本情绪（AI 驱动）
+
+        统一的文本情绪分析方法，替代硬编码的关键词匹配。
+
+        Args:
+            text: 待分析的文本内容
+            context: 上下文信息（对话历史、用户信息等）
+
+        Returns:
+            {
+                "emotion": str,           # 主要情绪：happiness/sadness/anger/fear/neutral
+                "mood": str,              # 心情倾向：positive/negative/neutral
+                "confidence": float,      # 置信度 0-1
+                "intensity": float,       # 情绪强度 0-1
+                "secondary_emotions": [], # 次要情绪列表
+                "ai_insights": str,       # AI 洞察（可选）
+            }
+        """
+        logger.info(f"EmotionAnalysisSkill: Analyzing text emotion, length={len(text)}")
+
+        # 尝试 AI 分析
+        ai_result = await self._analyze_text_with_ai(text, context)
+        if ai_result:
+            return ai_result
+
+        # 降级：基于规则的简单分析（仅作为 fallback）
+        return self._analyze_text_fallback(text)
+
+    async def _analyze_text_with_ai(
+        self,
+        text: str,
+        context: Optional[Dict[str, Any]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """使用 AI 分析文本情绪"""
+        try:
+            from services.llm_semantic_service import get_llm_semantic_service
+
+            llm_service = get_llm_semantic_service()
+            if not llm_service.enabled:
+                return None
+
+            prompt = f'''分析以下文本的情绪状态，返回 JSON 格式结果。
+
+文本内容：{text}
+
+返回格式：
+{{
+    "emotion": "happiness/sadness/anger/fear/surprise/neutral",
+    "mood": "positive/negative/neutral",
+    "confidence": 0.0-1.0,
+    "intensity": 0.0-1.0,
+    "secondary_emotions": [],
+    "insights": "简短的情绪洞察（可选）"
+}}
+
+分析要点：
+1. emotion 是主要情绪类型
+2. mood 是情绪的整体倾向（正面/负面/中性）
+3. confidence 是分析的确定程度
+4. intensity 是情绪的强烈程度
+5. secondary_emotions 是同时存在的其他情绪
+
+只返回 JSON，不要其他内容。'''
+
+            # 同步调用 LLM
+            import asyncio
+            from concurrent.futures import ThreadPoolExecutor
+
+            try:
+                loop = asyncio.get_running_loop()
+                with ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run,
+                        llm_service._call_llm(prompt)
+                    )
+                    response = future.result(timeout=15)
+            except RuntimeError:
+                response = await llm_service._call_llm(prompt)
+
+            if response and not response.startswith('{"fallback"'):
+                return self._parse_emotion_response(response)
+
+            return None
+
+        except Exception as e:
+            logger.debug(f"EmotionAnalysisSkill: AI text analysis failed: {e}")
+            return None
+
+    def _parse_emotion_response(self, response: str) -> Optional[Dict[str, Any]]:
+        """解析 AI 返回的情绪 JSON"""
+        import re
+
+        # 清理响应
+        response = response.strip()
+        if response.startswith('```json'):
+            response = response[7:]
+        if response.startswith('```'):
+            response = response[3:]
+        if response.endswith('```'):
+            response = response[:-3]
+        response = response.strip()
+
+        try:
+            data = json.loads(response)
+            return {
+                "emotion": data.get("emotion", "neutral"),
+                "mood": data.get("mood", "neutral"),
+                "confidence": min(1.0, max(0.0, float(data.get("confidence", 0.5)))),
+                "intensity": min(1.0, max(0.0, float(data.get("intensity", 0.5)))),
+                "secondary_emotions": data.get("secondary_emotions", []),
+                "ai_insights": data.get("insights", ""),
+            }
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.debug(f"EmotionAnalysisSkill: Failed to parse emotion response: {e}")
+            return None
+
+    def _analyze_text_fallback(self, text: str) -> Dict[str, Any]:
+        """
+        降级：基于规则的简单情绪分析
+
+        注意：这是 LLM 不可用时的 fallback 方案，
+        不应作为主要分析方法。
+        """
+        text_lower = text.lower()
+
+        # 简化的情绪词汇（仅用于降级场景）
+        emotion_indicators = {
+            "happiness": ["开心", "高兴", "快乐", "幸福", "哈哈", "嘻嘻", "太好了", "棒"],
+            "sadness": ["难过", "伤心", "哭", "悲伤", "心碎", "失落", "唉"],
+            "anger": ["生气", "愤怒", "烦", "讨厌", "气死", "恼火"],
+            "fear": ["害怕", "担心", "焦虑", "紧张", "恐惧", "不安"],
+            "surprise": ["惊讶", "没想到", "天哪", "哇", "居然"],
+        }
+
+        # 统计各情绪出现次数
+        emotion_counts = {}
+        for emotion, keywords in emotion_indicators.items():
+            count = sum(1 for kw in keywords if kw in text_lower)
+            if count > 0:
+                emotion_counts[emotion] = count
+
+        # 确定主要情绪
+        if emotion_counts:
+            dominant = max(emotion_counts, key=emotion_counts.get)
+            confidence = min(0.7, 0.4 + emotion_counts[dominant] * 0.1)
+        else:
+            dominant = "neutral"
+            confidence = 0.5
+
+        # 确定 mood
+        positive_emotions = {"happiness", "surprise"}
+        negative_emotions = {"sadness", "anger", "fear"}
+
+        if dominant in positive_emotions:
+            mood = "positive"
+        elif dominant in negative_emotions:
+            mood = "negative"
+        else:
+            mood = "neutral"
+
+        return {
+            "emotion": dominant,
+            "mood": mood,
+            "confidence": confidence,
+            "intensity": 0.5,
+            "secondary_emotions": list(emotion_counts.keys())[:2] if len(emotion_counts) > 1 else [],
+            "ai_insights": "",
+        }
+
+
+# 同步接口（方便非异步代码调用）
+def analyze_text_emotion_sync(text: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    同步版本的文本情绪分析
+
+    用于非异步环境中调用情绪分析。
+    """
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+
+    skill = get_emotion_analysis_skill()
+
+    try:
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor() as executor:
+            future = executor.submit(
+                asyncio.run,
+                skill.analyze_text_emotion(text, context)
+            )
+            return future.result(timeout=15)
+    except RuntimeError:
+        return asyncio.run(skill.analyze_text_emotion(text, context))
 
 
 # 全局 Skill 实例

@@ -480,7 +480,7 @@ class ShareService:
             return None
 
         # 检查是否达到使用次数上限
-        if result[4] >= result[3]:
+        if result[5] >= result[4]:
             return None
 
         return {

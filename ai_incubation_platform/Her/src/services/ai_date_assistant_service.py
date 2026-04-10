@@ -25,6 +25,7 @@ from models.p20_models import (
 from models.p11_models import EmotionAnalysisDB  # 从 p11_models 导入情感分析模型
 from models import EmotionalTrendDB  # P11 的情感趋势（视频面诊）
 from db.models import UserDB
+from agent.skills.emotion_analysis_skill import analyze_text_emotion_sync
 
 
 # ============= P20-001: 智能聊天助手服务 =============
@@ -155,23 +156,33 @@ class ChatAssistantService:
         return True
 
     def _analyze_message_mood(self, message: str) -> Dict[str, Any]:
-        """分析消息情绪"""
-        positive_words = ["开心", "高兴", "好", "棒", "喜欢", "爱", "哈哈", "嘻嘻"]
-        negative_words = ["难过", "伤心", "累", "烦", "讨厌", "生气", "唉", "呜呜"]
-        tired_words = ["累", "困", "忙", "辛苦", "疲"]
+        """
+        分析消息情绪（AI 驱动）
 
-        mood = "neutral"
-        for word in positive_words:
-            if word in message:
-                mood = "positive"
-                break
-        for word in negative_words:
-            if word in message:
-                mood = "negative"
-                break
+        替代硬编码的情绪词匹配，使用 AI 分析情绪。
+        """
+        try:
+            result = analyze_text_emotion_sync(message)
 
-        is_tired = any(word in message for word in tired_words)
-        return {"mood": mood, "is_tired": is_tired}
+            mood = result.get("mood", "neutral")
+            emotion = result.get("emotion", "neutral")
+            intensity = result.get("intensity", 0.5)
+
+            # 检测疲劳状态（基于情绪和内容）
+            is_tired = emotion == "sadness" and any(
+                word in message for word in ["累", "困", "忙", "辛苦", "疲"]
+            )
+
+            return {
+                "mood": mood,
+                "is_tired": is_tired,
+                "emotion": emotion,
+                "intensity": intensity,
+                "ai_insights": result.get("ai_insights", ""),
+            }
+        except Exception:
+            # 降级：返回中性
+            return {"mood": "neutral", "is_tired": False}
 
     def _analyze_message_intent(self, message: str) -> Dict[str, Any]:
         """分析消息意图"""
@@ -194,36 +205,115 @@ class ChatAssistantService:
         intent: Dict[str, Any],
         context: Optional[Dict[str, Any]]
     ) -> tuple:
-        """生成回复建议"""
+        """
+        生成回复建议（AI 驱动）
+
+        根据消息内容、情绪状态和上下文，由 AI 动态生成个性化回复建议。
+        """
+        # 尝试 AI 生成
+        ai_suggestions = self._generate_ai_reply_suggestions(message, mood, intent, context)
+        if ai_suggestions:
+            return ai_suggestions
+
+        # 降级：基于规则的简单建议（仅作为 fallback）
+        return self._generate_fallback_reply_suggestions(mood, intent)
+
+    def _generate_ai_reply_suggestions(
+        self,
+        message: str,
+        mood: Dict[str, Any],
+        intent: Dict[str, Any],
+        context: Optional[Dict[str, Any]]
+    ) -> Optional[tuple]:
+        """使用 AI 生成回复建议"""
+        try:
+            from services.llm_semantic_service import get_llm_semantic_service
+
+            llm_service = get_llm_semantic_service()
+            if not llm_service.enabled:
+                return None
+
+            emotion = mood.get("emotion", "neutral")
+            is_tired = mood.get("is_tired", False)
+            is_question = intent.get("is_question", False)
+
+            prompt = f'''你是一位约会顾问，帮助用户生成合适的回复建议。
+
+对方发来的消息：{message}
+
+情绪分析：
+- 主要情绪：{emotion}
+- 是否疲惫：{is_tired}
+- 是否提问：{is_question}
+
+请生成 3 条回复建议，格式如下：
+{{
+    "primary": "主要推荐回复（最合适的一条）",
+    "alternatives": ["备选回复1", "备选回复2"]
+}}
+
+要求：
+1. 回复要自然、真诚、有温度
+2. 根据对方情绪调整语气
+3. 如果对方疲惫，表达关心
+4. 如果对方开心，积极回应
+5. 只返回 JSON，不要其他内容'''
+
+            import asyncio
+            from concurrent.futures import ThreadPoolExecutor
+
+            try:
+                loop = asyncio.get_running_loop()
+                with ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run,
+                        llm_service._call_llm(prompt)
+                    )
+                    response = future.result(timeout=15)
+            except RuntimeError:
+                response = asyncio.run(llm_service._call_llm(prompt))
+
+            if response and not response.startswith('{"fallback"'):
+                import re
+                response = response.strip()
+                if response.startswith('```json'):
+                    response = response[7:]
+                if response.startswith('```'):
+                    response = response[3:]
+                if response.endswith('```'):
+                    response = response[:-3]
+                response = response.strip()
+
+                data = json.loads(response)
+                primary = data.get("primary", "")
+                alternatives = data.get("alternatives", [])
+
+                if primary:
+                    return primary, alternatives[:2]
+
+            return None
+
+        except Exception as e:
+            return None
+
+    def _generate_fallback_reply_suggestions(
+        self,
+        mood: Dict[str, Any],
+        intent: Dict[str, Any]
+    ) -> tuple:
+        """
+        降级：基于规则的回复建议
+
+        注意：这是 AI 不可用时的 fallback 方案。
+        """
         if mood.get("is_tired"):
-            primary = "辛苦啦！要不要休息一下？我给你讲个轻松的事情~"
-            alternatives = [
-                "抱抱~ 累了就歇一会儿吧",
-                "工作再忙也要记得照顾自己哦",
-                "心疼你，要不要我陪你聊聊天放松一下？"
-            ]
+            return "辛苦啦！要不要休息一下？", ["抱抱~", "照顾好自己哦"]
         elif mood.get("mood") == "positive":
-            primary = "听起来你今天心情不错呀！有什么开心的事吗？"
-            alternatives = [
-                "看到你这么开心我也很高兴~",
-                "真好！多分享一些让我也开心开心",
-                "笑容是会传染的，我现在也跟着笑了"
-            ]
+            return "听起来心情不错呀！", ["真好~", "分享更多吧"]
         elif intent.get("is_question"):
-            primary = "这是个好问题！让我想想怎么回答你..."
-            alternatives = [
-                "你问的这个问题很有意思",
-                "我理解你的疑问，我觉得...",
-                "从我的角度来看..."
-            ]
+            return "让我想想怎么回答...", ["好问题", "我觉得..."]
         else:
-            primary = "嗯嗯，我在听呢，继续说~"
-            alternatives = [
-                "原来是这样，然后呢？",
-                "我理解你的感受",
-                "你说的很有道理"
-            ]
-        return primary, alternatives
+            return "我在听呢~", ["继续说", "明白了"]
 
     def _generate_topics_from_interests(self, user: UserDB, target_user: UserDB) -> List[Dict[str, Any]]:
         """基于共同兴趣生成话题"""

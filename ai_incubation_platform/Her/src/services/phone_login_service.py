@@ -6,12 +6,19 @@
 - 验证短信验证码
 - 手机号登录/注册
 - 手机号绑定/解绑
+
+安全特性:
+- 验证码频次限制（防止短信轰炸）
+- 同一手机号 60 秒内只能发送 1 次
+- 同一 IP 每小时最多发送 10 次
 """
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 import random
 import re
 from sqlalchemy.orm import Session
+from collections import defaultdict
+import time
 
 from db.models import UserDB
 from db.repositories import UserRepository
@@ -24,9 +31,17 @@ class PhoneLoginService:
     # 验证码有效期（分钟）
     CODE_EXPIRY_MINUTES = 10
 
+    # 频次限制配置
+    SMS_INTERVAL_SECONDS = 60  # 同一手机号两次发送间隔
+    IP_HOURLY_LIMIT = 10  # 同一 IP 每小时限制
+
     def __init__(self, db: Session):
         self.db = db
         self.user_repo = UserRepository(db)
+
+        # 频次限制存储（生产环境应使用 Redis）
+        self._phone_last_sent: Dict[str, float] = {}  # 手机号 -> 上次发送时间
+        self._ip_hourly_count: Dict[str, list] = defaultdict(list)  # IP -> [timestamps]
 
     def _generate_verification_code(self) -> str:
         """生成 6 位验证码"""
@@ -38,12 +53,61 @@ class PhoneLoginService:
         pattern = r'^1[3-9]\d{9}$'
         return bool(re.match(pattern, phone))
 
-    def send_verification_code(self, phone: str) -> Dict[str, Any]:
+    def _check_rate_limit(self, phone: str, client_ip: str = None) -> Dict[str, Any]:
+        """
+        检查频次限制
+
+        Returns:
+            {"allowed": bool, "message": str, "wait_seconds": int}
+        """
+        current_time = time.time()
+
+        # 1. 检查手机号发送间隔
+        if phone in self._phone_last_sent:
+            elapsed = current_time - self._phone_last_sent[phone]
+            if elapsed < self.SMS_INTERVAL_SECONDS:
+                wait_seconds = int(self.SMS_INTERVAL_SECONDS - elapsed)
+                return {
+                    "allowed": False,
+                    "message": f"请 {wait_seconds} 秒后再试",
+                    "wait_seconds": wait_seconds
+                }
+
+        # 2. 检查 IP 每小时限制
+        if client_ip:
+            # 清理过期记录
+            hour_ago = current_time - 3600
+            self._ip_hourly_count[client_ip] = [
+                ts for ts in self._ip_hourly_count[client_ip] if ts > hour_ago
+            ]
+
+            if len(self._ip_hourly_count[client_ip]) >= self.IP_HOURLY_LIMIT:
+                return {
+                    "allowed": False,
+                    "message": "该设备发送次数过多，请 1 小时后再试",
+                    "wait_seconds": 3600
+                }
+
+        return {"allowed": True, "message": "", "wait_seconds": 0}
+
+    def _record_send(self, phone: str, client_ip: str = None):
+        """记录发送行为"""
+        current_time = time.time()
+        self._phone_last_sent[phone] = current_time
+        if client_ip:
+            self._ip_hourly_count[client_ip].append(current_time)
+
+    def send_verification_code(
+        self,
+        phone: str,
+        client_ip: str = None
+    ) -> Dict[str, Any]:
         """
         发送验证码到手机号
 
         Args:
             phone: 手机号
+            client_ip: 客户端 IP（用于频次限制）
 
         Returns:
             {"success": bool, "message": str, "user_exists": bool}
@@ -51,6 +115,12 @@ class PhoneLoginService:
         # 验证手机号格式
         if not self._validate_phone_format(phone):
             return {"success": False, "message": "手机号格式不正确"}
+
+        # 频次限制检查
+        rate_check = self._check_rate_limit(phone, client_ip)
+        if not rate_check["allowed"]:
+            logger.warning(f"SMS rate limited for phone: {phone}, IP: {client_ip}")
+            return {"success": False, "message": rate_check["message"]}
 
         # 检查手机号是否已注册
         user = self.user_repo.get_by_phone(phone)
@@ -66,6 +136,8 @@ class PhoneLoginService:
             sms_result = self._send_sms(phone, code)
 
             if sms_result["success"]:
+                # 记录发送行为
+                self._record_send(phone, client_ip)
                 logger.info(f"Verification code sent to existing user: {phone}")
                 return {
                     "success": True,
@@ -102,6 +174,8 @@ class PhoneLoginService:
             sms_result = self._send_sms(phone, code)
 
             if sms_result["success"]:
+                # 记录发送行为
+                self._record_send(phone, client_ip)
                 logger.info(f"Verification code sent to new user: {phone}, user_id={user_id}")
                 return {
                     "success": True,

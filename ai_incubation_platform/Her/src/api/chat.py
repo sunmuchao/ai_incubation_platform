@@ -107,19 +107,24 @@ class ConnectionManager:
 
     async def send_personal_message(self, message: dict, user_id: str):
         """向特定用户发送消息"""
+        logger.info(f"🔗 [WS:SEND] Attempting to send message to user={user_id}, online_users={list(self.user_connections.keys())}")
         if user_id in self.user_connections:
             for websocket in self.user_connections[user_id]:
                 try:
+                    logger.info(f"🔗 [WS:SEND] Sending to user={user_id}: {message.get('type', 'unknown')}")
                     await websocket.send_json(message)
+                    logger.info(f"🔗 [WS:SEND] Successfully sent to user={user_id}")
                 except Exception as e:
                     # 连接已断开，记录日志并移除断开的连接
-                    logger.debug(f"WebSocket send failed for user {user_id}: {e}")
+                    logger.warning(f"🔗 [WS:SEND] WebSocket send failed for user {user_id}: {e}")
                     try:
                         await websocket.close()
                     except Exception:
                         pass
                     if websocket in self.user_connections[user_id]:
                         self.user_connections[user_id].remove(websocket)
+        else:
+            logger.warning(f"🔗 [WS:SEND] User {user_id} not in online connections")
 
     async def broadcast(self, message: dict):
         """广播消息 (给所有在线用户)"""
@@ -168,8 +173,9 @@ async def websocket_endpoint(
     #         await websocket.close(code=4001, reason="Token mismatch")
     #         return
 
-    logger.info(f"WebSocket connection requested for user={user_id}")
+    logger.info(f"🔗 [WS:CONNECT] WebSocket connection requested for user={user_id}")
     await manager.connect(websocket, user_id)
+    logger.info(f"🔗 [WS:CONNECT] WebSocket accepted for user={user_id}, active_connections={list(manager.active_connections.keys())}")
 
     try:
         while True:
@@ -512,11 +518,11 @@ async def get_chat_history(
 async def mark_message_read(
     message_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user_id: str = Depends(get_current_user)
 ):
     """标记指定消息为已读"""
     service = ChatService(db)
-    success = service.mark_message_read(message_id, current_user.id)
+    success = service.mark_message_read(message_id, current_user_id)
 
     if not success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="标记失败")
@@ -528,7 +534,7 @@ async def mark_message_read(
 async def mark_conversation_read(
     request: MarkReadRequest,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user_id: str = Depends(get_current_user)
     ):
     """标记整个会话为已读"""
     service = ChatService(db)
@@ -544,11 +550,11 @@ async def mark_conversation_read(
 async def recall_message(
     message_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user_id: str = Depends(get_current_user)
 ):
     """撤回已发送的消息（2 分钟内）"""
     service = ChatService(db)
-    success = service.recall_message(message_id, current_user.id)
+    success = service.recall_message(message_id, current_user_id)
 
     if not success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="撤回失败")
@@ -560,11 +566,11 @@ async def recall_message(
 async def delete_message(
     message_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user_id: str = Depends(get_current_user)
 ):
     """删除消息"""
     service = ChatService(db)
-    success = service.delete_message(message_id, current_user.id)
+    success = service.delete_message(message_id, current_user_id)
 
     if not success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="删除失败")
@@ -576,11 +582,11 @@ async def delete_message(
 async def archive_conversation(
     other_user_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user_id: str = Depends(get_current_user)
 ):
     """归档聊天会话"""
     service = ChatService(db)
-    success = service.archive_conversation(current_user.id, other_user_id)
+    success = service.archive_conversation(current_user_id, other_user_id)
 
     if not success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="归档失败")
@@ -592,11 +598,11 @@ async def archive_conversation(
 async def block_user(
     other_user_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user_id: str = Depends(get_current_user)
 ):
     """屏蔽指定用户"""
     service = ChatService(db)
-    success = service.block_user(current_user.id, other_user_id)
+    success = service.block_user(current_user_id, other_user_id)
 
     if not success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="屏蔽失败")
@@ -607,11 +613,11 @@ async def block_user(
 @router.get("/unread/count", summary="获取未读消息数")
 async def get_unread_count(
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user_id: str = Depends(get_current_user)
 ):
     """获取当前用户的未读消息总数"""
     service = ChatService(db)
-    count = service.get_unread_count(current_user.id)
+    count = service.get_unread_count(current_user_id)
     return {"unread_count": count}
 
 
@@ -620,11 +626,11 @@ async def search_messages(
     keyword: str = Query(..., description="搜索关键词"),
     limit: int = Query(default=20, description="返回数量"),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user_id: str = Depends(get_current_user)
 ):
     """搜索包含关键词的消息"""
     service = ChatService(db)
-    messages = service.search_messages(current_user.id, keyword, limit)
+    messages = service.search_messages(current_user_id, keyword, limit)
 
     return [
         {

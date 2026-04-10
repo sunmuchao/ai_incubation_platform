@@ -10,6 +10,7 @@ from sqlalchemy import desc, func
 import json
 
 from db.database import SessionLocal
+from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 from models.l4_learning_models import (
     UserPreferenceMemory,
     BehaviorLearningPattern,
@@ -22,12 +23,16 @@ from utils.logger import logger
 class AILearningService:
     """AI 持续学习服务"""
 
-    def __init__(self):
-        self._db: Optional[Session] = None
-        self._should_close_db: bool = False
+    def __init__(self, db: Optional[Session] = None):
+        self._db: Optional[Session] = db
+        self._should_close_db: bool = db is None
 
     def _get_db(self) -> Session:
-        """获取数据库会话"""
+        """
+        获取数据库会话
+
+        注意：推荐在构造函数中传入 db session，避免延迟创建。
+        """
         if self._db is None:
             self._db = SessionLocal()
             self._should_close_db = True

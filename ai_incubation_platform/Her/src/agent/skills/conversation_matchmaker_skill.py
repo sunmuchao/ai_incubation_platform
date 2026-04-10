@@ -268,7 +268,14 @@ class ConversationMatchmakerSkill(BaseSkill):
         return suggestions
 
     def _parse_intent_fallback(self, user_intent: str) -> Dict[str, Any]:
-        """降级意图识别（当 LLM 不可用时）"""
+        """
+        # ==================== FALLBACK 方案 ====================
+        # 此方法仅在 LLM 不可用时作为降级方案使用。
+        # 主要意图识别应通过 _parse_intent_with_llm() 进行 AI 分析。
+        # =======================================================
+
+        降级意图识别（当 LLM 不可用时）
+        """
         intent_lower = user_intent.lower() if user_intent else ""
 
         analysis = {

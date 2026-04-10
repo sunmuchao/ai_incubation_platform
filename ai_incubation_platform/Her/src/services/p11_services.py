@@ -139,7 +139,7 @@ class EmotionAnalysisService:
         )
 
         db.add(analysis)
-        # auto-commits
+        db.commit()  # Commit the transaction
 
         logger.info(f"Micro expression analysis completed: {analysis_id}, user: {user_id}")
         return analysis_id
@@ -220,7 +220,7 @@ class EmotionAnalysisService:
         )
 
         db.add(analysis)
-        # auto-commits
+        db.commit()  # Commit the transaction
 
         logger.info(f"Voice emotion analysis completed: {analysis_id}, user: {user_id}")
         return analysis_id
@@ -248,51 +248,76 @@ class EmotionAnalysisService:
         Returns:
             分析记录 ID
         """
-        with db_session() as db:
-            # 分别分析
-            face_emotions = self._extract_emotions_from_facial_data(facial_data)
-            voice_emotions = self._extract_emotions_from_voice_data(voice_data)
+        if db_session_param:
+            db = db_session_param
+            use_context = False
+        else:
+            use_context = True
 
-            # 合并情感
-            all_emotions = self._merge_emotion_lists(face_emotions, voice_emotions)
-            dominant_emotion = max(all_emotions, key=lambda x: x.get("confidence", 0)) if all_emotions else None
+        try:
+            if use_context:
+                with db_session() as db:
+                    return self._combined_analysis_internal(user_id, session_id, facial_data, voice_data, db, session_type)
+            else:
+                return self._combined_analysis_internal(user_id, session_id, facial_data, voice_data, db_session_param, session_type)
+        finally:
+            if use_context:
+                pass  # Context manager handles cleanup
 
-            # 检测不一致性（语音和面部表情不匹配）
-            inconsistency_flags = self._detect_cross_modal_inconsistencies(face_emotions, voice_emotions)
+    def _combined_analysis_internal(
+        self,
+        user_id: str,
+        session_id: str,
+        facial_data: Dict[str, Any],
+        voice_data: Dict[str, Any],
+        db: Session,
+        session_type: str = "video_interview"
+    ) -> str:
+        """内部方法：综合分析（微表情 + 语音）"""
+        # 分别分析
+        face_emotions = self._extract_emotions_from_facial_data(facial_data)
+        voice_emotions = self._extract_emotions_from_voice_data(voice_data)
 
-            # 生成综合洞察
-            ai_insights = self._generate_combined_insights(all_emotions, facial_data, voice_data)
+        # 合并情感
+        all_emotions = self._merge_emotion_lists(face_emotions, voice_emotions)
+        dominant_emotion = max(all_emotions, key=lambda x: x.get("confidence", 0)) if all_emotions else None
 
-            # 创建综合分析记录
-            analysis_id = str(uuid.uuid4())
-            analysis = EmotionAnalysisDB(
-                id=analysis_id,
-                user_id=user_id,
-                session_id=session_id,
-                session_type=session_type,
-                analysis_type="combined_analysis",
-                micro_expressions={
-                    "detected_emotions": face_emotions,
-                    "dominant_emotion": face_emotions[0]["emotion"] if face_emotions else None
-                },
-                voice_emotions={
-                    "detected_emotions": voice_emotions,
-                    "dominant_emotion": voice_emotions[0]["emotion"] if voice_emotions else None
-                },
-                combined_emotion=dominant_emotion["emotion"] if dominant_emotion else None,
-                emotion_confidence=dominant_emotion.get("confidence", 0) if dominant_emotion else 0,
-                emotional_state_summary=self._generate_emotional_state_summary(all_emotions),
-                inconsistency_flags=inconsistency_flags,
-                ai_insights=ai_insights,
-                emotional_intelligence_tips=self._generate_eq_tips(all_emotions, facial_data, voice_data),
-                analyzed_at=datetime.utcnow()
-            )
+        # 检测不一致性（语音和面部表情不匹配）
+        inconsistency_flags = self._detect_cross_modal_inconsistencies(face_emotions, voice_emotions)
 
-            db.add(analysis)
-            # auto-commits
+        # 生成综合洞察
+        ai_insights = self._generate_combined_insights(all_emotions, facial_data, voice_data)
 
-            logger.info(f"Combined emotion analysis completed: {analysis_id}, user: {user_id}")
-            return analysis_id
+        # 创建综合分析记录
+        analysis_id = str(uuid.uuid4())
+        analysis = EmotionAnalysisDB(
+            id=analysis_id,
+            user_id=user_id,
+            session_id=session_id,
+            session_type=session_type,
+            analysis_type="combined_analysis",
+            micro_expressions={
+                "detected_emotions": face_emotions,
+                "dominant_emotion": face_emotions[0]["emotion"] if face_emotions else None
+            },
+            voice_emotions={
+                "detected_emotions": voice_emotions,
+                "dominant_emotion": voice_emotions[0]["emotion"] if voice_emotions else None
+            },
+            combined_emotion=dominant_emotion["emotion"] if dominant_emotion else None,
+            emotion_confidence=dominant_emotion.get("confidence", 0) if dominant_emotion else 0,
+            emotional_state_summary=self._generate_emotional_state_summary(all_emotions),
+            inconsistency_flags=inconsistency_flags,
+            ai_insights=ai_insights,
+            emotional_intelligence_tips=self._generate_eq_tips(all_emotions, facial_data, voice_data),
+            analyzed_at=datetime.utcnow()
+        )
+
+        db.add(analysis)
+        db.commit()  # Commit the transaction
+
+        logger.info(f"Combined emotion analysis completed: {analysis_id}, user: {user_id}")
+        return analysis_id
 
     def get_analysis_by_session(
         self,
@@ -300,11 +325,17 @@ class EmotionAnalysisService:
         db_session_param: Optional[Session] = None
     ) -> Optional[EmotionAnalysisDB]:
         """获取会话的情感分析记录"""
-        with db_session_readonly() as db:
-            analysis = db.query(EmotionAnalysisDB).filter(
+        if db_session_param is not None:
+            analysis = db_session_param.query(EmotionAnalysisDB).filter(
                 EmotionAnalysisDB.session_id == session_id
             ).order_by(desc(EmotionAnalysisDB.created_at)).first()
             return analysis
+        else:
+            with db_session_readonly() as db:
+                analysis = db.query(EmotionAnalysisDB).filter(
+                    EmotionAnalysisDB.session_id == session_id
+                ).order_by(desc(EmotionAnalysisDB.created_at)).first()
+                return analysis
 
     def get_user_analyses(
         self,
@@ -313,10 +344,15 @@ class EmotionAnalysisService:
         db_session_param: Optional[Session] = None
     ) -> List[EmotionAnalysisDB]:
         """获取用户的情感分析历史"""
-        with db_session_readonly() as db:
-            return db.query(EmotionAnalysisDB).filter(
+        if db_session_param is not None:
+            return db_session_param.query(EmotionAnalysisDB).filter(
                 EmotionAnalysisDB.user_id == user_id
             ).order_by(desc(EmotionAnalysisDB.created_at)).limit(limit).all()
+        else:
+            with db_session_readonly() as db:
+                return db.query(EmotionAnalysisDB).filter(
+                    EmotionAnalysisDB.user_id == user_id
+                ).order_by(desc(EmotionAnalysisDB.created_at)).limit(limit).all()
 
     # ========== 辅助方法 ==========
 

@@ -9,7 +9,7 @@ import json
 import uuid
 import random
 from sqlalchemy.orm import Session
-from utils.db_session_manager import db_session, db_session_readonly
+from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 from db.database import SessionLocal
 from db.models import UserDB, MatchHistoryDB
 from models.p10_models import (
@@ -188,8 +188,8 @@ class CoupleGameService:
         if game_type not in GAME_TYPES:
             raise ValueError(f"Invalid game type: {game_type}")
 
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
         try:
             # 验证匹配关系
             match_record = db.query(MatchHistoryDB).filter(
@@ -265,8 +265,8 @@ class CoupleGameService:
 
     def get_game_details(self, game_id: str, db_session: Optional[Any] = None) -> Optional[Dict[str, Any]]:
         """获取游戏详情"""
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
         try:
             game = db.query(CoupleGameDB).filter(CoupleGameDB.id == game_id).first()
             if not game:
@@ -318,8 +318,8 @@ class CoupleGameService:
 
     def start_game(self, game_id: str, user_id: str, db_session: Optional[Any] = None) -> bool:
         """开始游戏"""
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
         try:
             game = db.query(CoupleGameDB).filter(CoupleGameDB.id == game_id).first()
             if not game:
@@ -362,8 +362,8 @@ class CoupleGameService:
         Returns:
             轮次结果（包含匹配情况）
         """
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
         try:
             game = db.query(CoupleGameDB).filter(CoupleGameDB.id == game_id).first()
             if not game:
@@ -666,8 +666,8 @@ class CoupleGameService:
         db_session: Optional[Any] = None
     ) -> List[Dict[str, Any]]:
         """获取用户参与的游戏列表"""
-        db = db_session if db_session else SessionLocal()
-        should_close = db_session is None
+        with optional_db_session(db_session) as db:
+            should_close = db_session is None
         try:
             query = db.query(CoupleGameDB).filter(
                 (CoupleGameDB.user_id_1 == user_id) |

@@ -8,6 +8,9 @@ P4 新增:
 - 照片验证机制
 """
 import uuid
+import os
+import base64
+from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session
@@ -17,6 +20,11 @@ from db.database import get_db
 from auth.jwt import get_current_user
 from db.models import UserDB
 from services.photo_service import PhotoService
+from utils.logger import logger
+
+# 静态文件目录
+STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'static')
+os.makedirs(STATIC_DIR, exist_ok=True)
 
 
 router = APIRouter(prefix="/api/photos", tags=["照片管理"])
@@ -98,6 +106,83 @@ async def upload_photo(
         return photo
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/upload-file", summary="上传照片文件")
+async def upload_photo_file(
+    file: UploadFile = File(..., description="照片文件"),
+    photo_type: str = Form(default="chat", description="照片类型"),
+    db: Session = Depends(get_db),
+    current_user: UserDB = Depends(get_current_user)
+):
+    """
+    上传照片文件（用于聊天图片等场景）
+
+    - **file**: 照片文件 (支持 jpg/png/gif/webp)
+    - **photo_type**: 照片类型 (chat/profile/avatar/verification/lifestyle)
+    """
+    # 验证文件类型
+    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"不支持的文件类型: {file.content_type}"
+        )
+
+    # 验证文件大小 (最大 5MB)
+    max_size = 5 * 1024 * 1024
+    content = await file.read()
+    if len(content) > max_size:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="文件大小不能超过 5MB"
+        )
+
+    # 生成唯一文件名
+    file_ext = file.filename.split('.')[-1] if file.filename and '.' in file.filename else 'jpg'
+    unique_filename = f"{current_user.id}_{uuid.uuid4().hex[:8]}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.{file_ext}"
+    file_path = os.path.join(STATIC_DIR, unique_filename)
+
+    # 保存文件
+    try:
+        with open(file_path, 'wb') as f:
+            f.write(content)
+        logger.info(f"Photo file saved: {file_path}")
+    except Exception as e:
+        logger.error(f"Failed to save photo file: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="文件保存失败"
+        )
+
+    # 生成 URL
+    photo_url = f"/static/{unique_filename}"
+
+    # 如果是 profile 类型，保存到照片服务
+    if photo_type in ["profile", "avatar", "lifestyle"]:
+        service = PhotoService(db)
+        try:
+            photo = service.upload_photo(
+                user_id=current_user.id,
+                photo_url=photo_url,
+                photo_type=photo_type
+            )
+            return {
+                "id": photo.id,
+                "photo_url": photo_url,
+                "photo_type": photo_type
+            }
+        except ValueError as e:
+            # 清理文件
+            os.remove(file_path)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    # chat 类型直接返回 URL
+    return {
+        "id": uuid.uuid4().hex,
+        "photo_url": photo_url,
+        "photo_type": photo_type
+    }
 
 
 @router.get("/my", response_model=List[PhotoResponse], summary="获取我的照片列表")

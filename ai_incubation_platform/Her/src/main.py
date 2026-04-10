@@ -98,13 +98,34 @@ async def startup_event():
     init_audit()
     logger.info("Audit logging system initialized")
 
+    # AI Native: 初始化 Skills 注册表
+    from agent.skills.registry import initialize_default_skills
+    initialize_default_skills()
+    logger.info("Skills registry initialized")
+
+    # P1: 启动时检查 API 注册和 Skills 同步
+    from utils.api_checker import check_api_registration
+    from utils.skills_checker import check_skills_sync
+
+    api_check = check_api_registration(raise_on_error=False)
+    skills_check = check_skills_sync(raise_on_error=False)
+
+    if api_check:
+        logger.info("✅ API registration check passed")
+    else:
+        logger.warning("⚠️ API registration check failed, check /api/checker/api-registration for details")
+
+    if skills_check:
+        logger.info("✅ Skills sync check passed")
+    else:
+        logger.warning("⚠️ Skills sync check failed, check /api/checker/skills-sync for details")
+
     # 从数据库加载所有活跃用户到匹配器
-    from db.database import SessionLocal
     from db.repositories import UserRepository
     from matching.matcher import matchmaker
+    from utils.db_session_manager import db_session
 
-    db = SessionLocal()
-    try:
+    with db_session() as db:
         user_repo = UserRepository(db)
         users = user_repo.list_all(is_active=True)
         loaded_count = 0
@@ -145,10 +166,6 @@ async def startup_event():
             except Exception as e:
                 logger.warning(f"Failed to load user {db_user.id} to matchmaker: {e}")
         logger.info(f"Loaded {loaded_count} users from database to matchmaker")
-    except Exception as e:
-        logger.warning(f"Failed to load users from database to matchmaker: {e}")
-    finally:
-        db.close()
 
 # 全局异常处理
 @app.exception_handler(Exception)

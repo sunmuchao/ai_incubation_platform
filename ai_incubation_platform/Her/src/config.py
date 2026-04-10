@@ -160,6 +160,9 @@ settings = Settings()
 if settings.environment == "production" and settings.debug:
     raise ValueError("DEBUG mode must be disabled in production environment for security. Set DEBUG=false")
 
+# JWT Secret 配置
+_JWT_SECRET_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".jwt_secret")
+
 if not settings.jwt_secret_key or len(settings.jwt_secret_key) < 32:
     if settings.environment == "production":
         raise ValueError(
@@ -167,12 +170,36 @@ if not settings.jwt_secret_key or len(settings.jwt_secret_key) < 32:
             "and be at least 32 characters long"
         )
     else:
-        # 非生产环境：避免使用已知固定默认密钥，改为启动期临时密钥
-        settings.jwt_secret_key = secrets.token_urlsafe(32)
-        warnings.warn(
-            "JWT_SECRET_KEY is missing or too short; generated a temporary in-memory secret for non-production. "
-            "Set JWT_SECRET_KEY environment variable with a strong secret for any real deployment."
-        )
+        # 非生产环境：尝试从文件加载持久化的密钥
+        if os.path.exists(_JWT_SECRET_FILE):
+            try:
+                with open(_JWT_SECRET_FILE, "r") as f:
+                    saved_secret = f.read().strip()
+                    if len(saved_secret) >= 32:
+                        settings.jwt_secret_key = saved_secret
+                        warnings.warn(
+                            "JWT_SECRET_KEY loaded from .jwt_secret file. "
+                            "For production, set JWT_SECRET_KEY environment variable."
+                        )
+            except Exception as e:
+                warnings.warn(f"Failed to load JWT secret from file: {e}")
+
+        # 如果仍未设置，生成新的持久化密钥
+        if not settings.jwt_secret_key or len(settings.jwt_secret_key) < 32:
+            settings.jwt_secret_key = secrets.token_urlsafe(32)
+            try:
+                with open(_JWT_SECRET_FILE, "w") as f:
+                    f.write(settings.jwt_secret_key)
+                warnings.warn(
+                    "JWT_SECRET_KEY generated and saved to .jwt_secret file. "
+                    "This secret will persist across server restarts. "
+                    "For production, set JWT_SECRET_KEY environment variable."
+                )
+            except Exception as e:
+                warnings.warn(
+                    f"Failed to save JWT secret to file: {e}. "
+                    "Secret will be regenerated on next restart."
+                )
 
 # LLM 配置验证
 if settings.llm_enabled and not settings.llm_api_key:

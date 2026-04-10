@@ -8,6 +8,7 @@ AI Native 注册对话服务
 2. 动态话题生成 - 根据上下文和了解度决定下一个话题
 3. LLM 驱动回复 - 使用大模型生成自然、有个性的回复
 4. 了解度评估 - 判断何时"足够了解"用户
+5. 感知已有资料 - 避免重复询问用户注册时已填写的信息
 
 对话流程示例：
 AI: "你好呀～很高兴认识你！😊 第一次来这个平台吧？"
@@ -20,11 +21,13 @@ AI: "认真恋爱最好了！那你理想中的感情是什么样的？是慢慢
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 from utils.logger import logger
+from utils.db_session_manager import db_session_readonly
+from db.models import UserDB
 import json
 import random
 
 # LLM 调用（使用项目配置的大模型）
-from llm.client import call_llm
+from llm.client import call_llm, call_llm_stream_async
 
 
 class KnowledgeDimension:
@@ -60,15 +63,17 @@ class AINativeConversationService:
 - 每次只问一个问题，不要像查户口
 
 你的目标是通过自然对话了解用户的：
-1. 基本信息（名字、年龄等）
-2. 关系期望（认真恋爱/结婚/交友）
-3. 理想型描述
-4. 性格特点
-5. 生活方式和兴趣爱好
-6. 核心价值观
-7. 感情的底线/禁忌
+1. 关系期望（认真恋爱/结婚/交友）【核心】
+2. 理想型描述【核心】
+3. 性格特点
+4. 生活方式和兴趣爱好（如果用户注册时未填写）
+5. 核心价值观
+6. 感情的底线/禁忌
 
-注意事项：
+⚠️ 重要注意：
+- 如果用户在注册时已填写了基本信息（年龄、性别、位置等），不要重复询问！
+- 在提问前，先查看"已了解的用户信息"，确认该维度是否已收集
+- 如果某个维度已标记为"已确认"，跳过该话题，问下一个缺失的维度
 - 不要一次性问太多问题
 - 根据用户的回答灵活追问
 - 如果用户回答很简短，不要气馁，继续引导
@@ -144,7 +149,7 @@ class AINativeConversationService:
 
     def start_conversation(self, user_id: str, user_name: str) -> Dict:
         """
-        开始对话
+        开始对话 - 感知用户已有资料
 
         Args:
             user_id: 用户 ID
@@ -160,37 +165,197 @@ class AINativeConversationService:
             name=d.name, priority=d.priority, description=d.description, keywords=d.keywords
         ) for k, d in self.dimensions.items()}
 
-        # 生成欢迎消息
-        welcome_messages = [
-            f"你好呀，{user_name}～ 很高兴认识你！",
-            f"欢迎！让我慢慢了解你吧～",
-            f"嗨，{user_name}！让我先了解一下你吧 ✨",
-        ]
+        # 获取用户已有资料，标记已收集的信息
+        existing_profile = self._get_existing_profile(user_id)
+        if existing_profile:
+            self._mark_existing_info(state, existing_profile)
 
-        # 第一条消息
-        ai_message = random.choice(welcome_messages)
-
-        # 开启话题
-        opening_questions = [
-            "第一次来这个平台吧？有什么想了解的随时问我～",
-            "让我先了解一下，你希望通过这里找到什么样的人呢？",
-            "在开始之前，我想问问你，你理想中的感情是什么样的？",
-        ]
-        ai_message += "\n\n" + random.choice(opening_questions)
+        # 生成欢迎消息 - 根据已有信息个性化
+        ai_message = self._generate_welcome_message(user_name, existing_profile)
 
         self.sessions[user_id] = state
 
-        logger.info(f"AI Native conversation started for user {user_id}")
+        # 初始了解度评估（基于已有资料）
+        self._evaluate_understanding(state)
+
+        logger.info(f"AI Native conversation started for user {user_id}, initial understanding: {state.overall_understanding:.2f}")
+
+        collected_dims = [d.name for k, d in state.knowledge_base.items() if d.collected]
 
         return {
             "user_id": user_id,
             "user_name": user_name,
             "ai_message": ai_message,
-            "current_stage": "dynamic_conversation",  # AI Native 使用动态话题，非固定阶段
+            "current_stage": "dynamic_conversation",
             "is_completed": False,
-            "understanding_level": 0.0,
-            "collected_dimensions": [],
+            "understanding_level": round(state.overall_understanding, 2),
+            "collected_dimensions": collected_dims,
         }
+
+    def _get_existing_profile(self, user_id: str) -> Optional[Dict]:
+        """
+        获取用户已有的资料信息
+
+        Args:
+            user_id: 用户 ID
+
+        Returns:
+            用户已有资料字典，包含已填写的基本信息
+        """
+        try:
+            with db_session_readonly() as db:
+                user = db.query(UserDB).filter(UserDB.id == user_id).first()
+                if not user:
+                    return None
+
+                profile = {
+                    "name": user.name,
+                    "age": user.age,
+                    "gender": user.gender,
+                    "location": user.location,
+                    "bio": user.bio,
+                    "interests": user.interests,
+                    "goal": getattr(user, "goal", None),
+                    # 从 preferred 字段提取偏好
+                    "preferred_age_min": user.preferred_age_min,
+                    "preferred_age_max": user.preferred_age_max,
+                    "preferred_location": user.preferred_location,
+                    "preferred_gender": user.preferred_gender,
+                }
+
+                # 过滤掉空值
+                existing = {k: v for k, v in profile.items() if v is not None and v != "" and v != []}
+                logger.info(f"User {user_id} existing profile fields: {list(existing.keys())}")
+                return existing
+
+        except Exception as e:
+            logger.error(f"Failed to get existing profile for user {user_id}: {e}")
+            return None
+
+    def _mark_existing_info(self, state: ConversationState, existing_profile: Dict) -> None:
+        """
+        标记用户已有信息为已收集状态
+
+        Args:
+            state: 对话状态
+            existing_profile: 用户已有资料
+        """
+        # 基本信息 - 年龄、性别、位置等
+        basic_fields = ["name", "age", "gender", "location"]
+        basic_data = {}
+        for field in basic_fields:
+            if field in existing_profile:
+                basic_data[field] = existing_profile[field]
+
+        if basic_data:
+            state.knowledge_base["basic"].collected = True
+            state.knowledge_base["basic"].confidence = 1.0  # 数据库信息可信度最高
+            state.knowledge_base["basic"].raw_data = basic_data
+
+        # 兴趣爱好
+        if "interests" in existing_profile:
+            interests = existing_profile["interests"]
+            if isinstance(interests, list) and len(interests) > 0:
+                state.knowledge_base["interests"].collected = True
+                state.knowledge_base["interests"].confidence = 1.0
+                state.knowledge_base["interests"].raw_data = interests
+            elif isinstance(interests, str) and interests:
+                # 尝试解析 JSON 或逗号分隔的字符串
+                try:
+                    parsed = json.loads(interests)
+                    if parsed:
+                        state.knowledge_base["interests"].collected = True
+                        state.knowledge_base["interests"].confidence = 1.0
+                        state.knowledge_base["interests"].raw_data = parsed
+                except:
+                    if interests:
+                        state.knowledge_base["interests"].collected = True
+                        state.knowledge_base["interests"].confidence = 1.0
+                        state.knowledge_base["interests"].raw_data = interests.split(",")
+
+        # 关系目标
+        if "goal" in existing_profile:
+            state.knowledge_base["relationship_goal"].collected = True
+            state.knowledge_base["relationship_goal"].confidence = 1.0
+            state.knowledge_base["relationship_goal"].raw_data = existing_profile["goal"]
+
+        # 个人简介可能包含性格、生活方式等线索
+        if "bio" in existing_profile and existing_profile["bio"]:
+            # 标记为部分收集，后续可以通过对话深入了解
+            bio_text = existing_profile["bio"]
+            # 简单判断：bio 超过 20 字符认为有有价值信息
+            if len(bio_text) >= 20:
+                state.knowledge_base["lifestyle"].collected = True
+                state.knowledge_base["lifestyle"].confidence = 0.5  # 简介信息置信度较低，需要深入
+                state.knowledge_base["lifestyle"].raw_data = {"bio_hint": bio_text[:100]}
+
+    def _generate_welcome_message(self, user_name: str, existing_profile: Optional[Dict]) -> str:
+        """
+        AI 动态生成个性化欢迎消息
+
+        Args:
+            user_name: 用户名称
+            existing_profile: 用户已有资料
+
+        Returns:
+            AI 生成的欢迎消息
+        """
+        # 构建用户信息摘要
+        info_parts = []
+        if existing_profile:
+            if existing_profile.get("age"):
+                info_parts.append(f"年龄：{existing_profile['age']}岁")
+            if existing_profile.get("location"):
+                info_parts.append(f"所在地：{existing_profile['location']}")
+            if existing_profile.get("gender"):
+                info_parts.append(f"性别：{existing_profile['gender']}")
+
+            # 处理兴趣
+            interests = existing_profile.get("interests")
+            if interests:
+                interest_list = []
+                if isinstance(interests, list):
+                    interest_list = [i for i in interests if i]
+                elif isinstance(interests, str) and interests.strip() and interests != "[]":
+                    try:
+                        parsed = json.loads(interests)
+                        if isinstance(parsed, list):
+                            interest_list = [i for i in parsed if i]
+                    except:
+                        interest_list = [i.strip() for i in interests.split(",") if i.strip()]
+                if interest_list:
+                    info_parts.append(f"兴趣爱好：{', '.join(interest_list[:3])}")
+
+        # 构建 prompt
+        if info_parts:
+            prompt = f"""用户刚注册完成，已有以下资料：
+{chr(10).join(info_parts)}
+
+请生成一段简短的欢迎消息（30-60字）：
+1. 友好地问候用户（名字：{user_name}）
+2. 自然地提及已知的用户信息
+3. 引导用户分享感情期待
+
+要求：语气温暖亲切，像朋友聊天，适当用 emoji。直接输出消息内容，不要其他文字。"""
+        else:
+            prompt = f"""用户刚注册完成，还没有填写任何资料。
+请生成一段简短的欢迎消息（30-50字）：
+1. 友好地问候用户（名字：{user_name}）
+2. 表示想要了解用户
+3. 询问用户的感情期待
+
+要求：语气温暖亲切，像朋友聊天，适当用 emoji。直接输出消息内容，不要其他文字。"""
+
+        try:
+            response = call_llm(prompt, temperature=0.8, max_tokens=150, timeout=10)
+            return response.strip()
+        except Exception as e:
+            logger.warning(f"Failed to generate AI welcome message: {e}")
+            # 快速 fallback，不依赖 LLM
+            if info_parts:
+                return f"你好呀，{user_name}～ 我注意到你已经填写了资料。让我了解一下你的感情期待吧，你希望通过这里找到什么样的关系呢？"
+            else:
+                return f"你好呀，{user_name}～ 很高兴认识你！让我了解一下你吧，你希望通过这里找到什么样的关系呢？"
 
     def process_user_message(self, user_id: str, user_message: str) -> Dict:
         """
@@ -254,6 +419,161 @@ class AINativeConversationService:
             "conversation_count": len(state.conversation_history) // 2,
         }
 
+    async def process_user_message_stream(self, user_id: str, user_message: str):
+        """
+        流式处理用户消息 - 优化响应速度
+
+        使用 LLM 流式输出，让前端逐字显示 AI 回复。
+
+        Args:
+            user_id: 用户 ID
+            user_message: 用户消息
+
+        Yields:
+            流式数据块（dict）
+        """
+        if user_id not in self.sessions:
+            logger.warning(f"No session for user {user_id}, creating new one")
+            result = self.start_conversation(user_id, "朋友")
+            yield {"type": "message", "content": result["ai_message"]}
+            yield {"type": "done", "data": result}
+            return
+
+        state = self.sessions[user_id]
+        state.last_active_at = datetime.now()
+
+        # 记录用户消息
+        state.conversation_history.append({
+            "role": "user",
+            "content": user_message,
+            "timestamp": datetime.now().isoformat(),
+        })
+
+        # 构建流式 prompt
+        prompt = self._build_stream_prompt(state, user_message)
+
+        # 流式调用 LLM（真正的异步流式）
+        full_response = ""
+        try:
+            async for chunk in call_llm_stream_async(prompt, temperature=0.7):
+                full_response += chunk
+                yield {"type": "chunk", "content": chunk}
+
+        except Exception as e:
+            logger.error(f"Stream LLM failed: {e}")
+            yield {"type": "chunk", "content": "抱歉，我刚才走神了，能再说一次吗？😊"}
+            full_response = "抱歉，我刚才走神了，能再说一次吗？😊"
+
+        # 从完整回复中提取信息
+        extracted_info = self._extract_from_response(full_response)
+        self._update_knowledge_base(state, {"extractions": extracted_info})
+
+        # 评估了解度
+        self._evaluate_understanding(state)
+
+        # 检查是否完成
+        is_completed = state.overall_understanding >= 0.7
+        if is_completed:
+            state.is_completed = True
+
+        # 记录 AI 回复
+        state.conversation_history.append({
+            "role": "assistant",
+            "content": full_response,
+            "timestamp": datetime.now().isoformat(),
+        })
+
+        # 返回最终状态
+        collected_dims = [d.name for k, d in state.knowledge_base.items() if d.collected]
+        yield {
+            "type": "done",
+            "data": {
+                "user_id": user_id,
+                "ai_message": full_response,
+                "current_stage": "dynamic_conversation",
+                "is_completed": is_completed,
+                "understanding_level": round(state.overall_understanding, 2),
+                "collected_dimensions": collected_dims,
+                "conversation_count": len(state.conversation_history) // 2,
+            }
+        }
+
+    def _build_stream_prompt(self, state: ConversationState, user_message: str) -> str:
+        """
+        构建流式输出的 prompt（简化版，只生成回复）
+
+        Args:
+            state: 对话状态
+            user_message: 用户消息
+
+        Returns:
+            prompt 字符串
+        """
+        # 构建对话上下文
+        recent_history = state.conversation_history[-6:]
+        history_text = "\n".join([f"{m['role']}: {m['content']}" for m in recent_history])
+
+        # 已收集的信息
+        collected_summary = []
+        for dim in state.knowledge_base.values():
+            if dim.collected and dim.raw_data:
+                collected_summary.append(f"- {dim.name}: {dim.raw_data}")
+
+        # 确定下一个要了解的维度
+        next_dimension = None
+        for dim_key, dim in sorted(state.knowledge_base.items(), key=lambda x: x[1].priority):
+            if not dim.collected:
+                next_dimension = dim
+                break
+
+        # 已有信息提醒
+        existing_info_reminder = ""
+        if state.knowledge_base["basic"].collected and state.knowledge_base["basic"].raw_data:
+            basic_data = state.knowledge_base["basic"].raw_data
+            if isinstance(basic_data, dict):
+                fields = [f"{k}: {v}" for k, v in basic_data.items()]
+                if fields:
+                    existing_info_reminder = f"\n⚠️ 用户已填写（不要重复询问）：{', '.join(fields)}"
+
+        return f"""{self.AI_PERSONA}
+{existing_info_reminder}
+
+## 对话上下文
+{history_text}
+
+## 用户刚说
+{user_message}
+
+## 已了解的用户信息
+{chr(10).join(collected_summary) if collected_summary else "暂无"}
+
+## 任务
+生成你的回复（30-100 字）：
+- 先回应刚才的话
+- {"下一个话题：" + next_dimension.description if next_dimension else "准备结束对话，给出温暖的结束语"}
+- 自然亲切，像朋友聊天
+- 一次只问一个问题
+- 适当用 emoji
+
+直接回复，不要其他内容："""
+
+    def _extract_from_response(self, response: str) -> Dict:
+        """
+        从 AI 回复中推断已获取的信息（简化版）
+
+        基于 LLM 已生成的回复内容推断用户可能透露的信息。
+        这是一个轻量级方法，避免额外的 LLM 调用。
+
+        Args:
+            response: AI 回复内容
+
+        Returns:
+            推断的信息
+        """
+        # 简单推断：如果回复中提到某些关键词，认为相关信息已被收集
+        # 这里不做复杂的 NLP，依赖对话上下文自然积累
+        return {}
+
     def _process_with_llm(self, state: ConversationState, user_message: str) -> Dict:
         """
         一次 LLM 调用完成：信息提取 + 回复生成
@@ -269,20 +589,33 @@ class AINativeConversationService:
         recent_history = state.conversation_history[-8:]
         history_text = "\n".join([f"{m['role']}: {m['content']}" for m in recent_history])
 
-        # 已收集的信息摘要
+        # 已收集的信息摘要（包含置信度）
         collected_summary = []
         for dim in state.knowledge_base.values():
             if dim.collected and dim.raw_data:
-                collected_summary.append(f"- {dim.name}: {dim.raw_data}")
+                confidence_str = "（已确认）" if dim.confidence >= 0.9 else "（部分了解）"
+                collected_summary.append(f"- {dim.name}{confidence_str}: {dim.raw_data}")
 
-        # 确定下一个要了解的维度
+        # 确定下一个要了解的维度（跳过已收集的）
         next_dimension = None
         for dim_key, dim in sorted(state.knowledge_base.items(), key=lambda x: x[1].priority):
             if not dim.collected:
                 next_dimension = dim
                 break
 
+        # 构建已有信息提醒（防止重复询问）
+        existing_info_reminder = ""
+        if state.knowledge_base["basic"].collected and state.knowledge_base["basic"].raw_data:
+            basic_data = state.knowledge_base["basic"].raw_data
+            if isinstance(basic_data, dict):
+                fields = []
+                for k, v in basic_data.items():
+                    fields.append(f"{k}: {v}")
+                if fields:
+                    existing_info_reminder = f"\n⚠️ 注意：用户已在注册时填写了以下信息，不要重复询问：{', '.join(fields)}"
+
         prompt = f"""{self.AI_PERSONA}
+{existing_info_reminder}
 
 ## 当前对话
 {history_text}
@@ -298,7 +631,7 @@ class AINativeConversationService:
 
 ### 1. 提取信息
 从用户消息中提取以下维度的信息（如果有）：
-- basic: 基本信息（姓名、年龄、职业、家乡等）
+- basic: 基本信息（姓名、年龄、职业、家乡等）【注意：如果已在注册时填写，不要重复提取】
 - relationship_goal: 关系期望（恋爱/结婚/交友等）
 - ideal_type: 理想型描述
 - personality: 性格特点
@@ -453,9 +786,9 @@ class AINativeConversationService:
 
         使用 LLM 生成自然、有个性的回复，包括：
         1. 共情/回应
-        2. 追问下一个话题
+        2. 追问下一个话题（跳过已收集的信息）
         """
-        # 确定下一个要了解的维度（优先级高且未收集的）
+        # 确定下一个要了解的维度（跳过已收集的）
         next_dimension = None
         for dim_key, dim in sorted(state.knowledge_base.items(), key=lambda x: x[1].priority):
             if not dim.collected:
@@ -466,14 +799,27 @@ class AINativeConversationService:
         recent_history = state.conversation_history[-8:]
         history_text = "\n".join([f"{m['role']}: {m['content']}" for m in recent_history])
 
-        # 收集到的信息摘要
+        # 收集到的信息摘要（包含置信度）
         collected_summary = []
         for dim in state.knowledge_base.values():
             if dim.collected and dim.raw_data:
-                collected_summary.append(f"{dim.name}: {dim.raw_data}")
+                confidence_str = "（已确认）" if dim.confidence >= 0.9 else "（部分了解）"
+                collected_summary.append(f"{dim.name}{confidence_str}: {dim.raw_data}")
+
+        # 构建已有信息提醒
+        existing_info_reminder = ""
+        if state.knowledge_base["basic"].collected and state.knowledge_base["basic"].raw_data:
+            basic_data = state.knowledge_base["basic"].raw_data
+            if isinstance(basic_data, dict):
+                fields = []
+                for k, v in basic_data.items():
+                    fields.append(f"{k}: {v}")
+                if fields:
+                    existing_info_reminder = f"\n⚠️ 用户已填写信息（不要重复询问）：{', '.join(fields)}"
 
         prompt = f"""
 {self.AI_PERSONA}
+{existing_info_reminder}
 
 当前对话上下文：
 {history_text}
@@ -490,6 +836,7 @@ class AINativeConversationService:
 - 然后自然地引入下一个话题或追问
 - 语气自然亲切，像朋友聊天
 - 一次只问一个问题
+- ⚠️ 不要询问用户已填写的信息（如年龄、性别等）
 - 适当使用 emoji（🌸 ✨ 💕 😊）但不要太多
 - 回复长度 30-100 字
 

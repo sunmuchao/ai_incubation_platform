@@ -7,7 +7,7 @@ P0 优化：
 - 集成缓存层
 - 集成限流保护
 """
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from typing import List, Optional
 import json
 
@@ -26,11 +26,14 @@ from auth.jwt import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     REFRESH_TOKEN_EXPIRE_DAYS,
 )
-from matching.matcher import matchmaker
+from matching.matcher import MatchmakerAlgorithm
 from utils.logger import logger
 from config import settings
 from cache import cache_manager
-from middleware.rate_limiter import rate_limit_login
+from middleware.rate_limiter import rate_limiter, rate_limit_login
+
+# 创建全局匹配器实例
+matchmaker = MatchmakerAlgorithm()
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -41,8 +44,21 @@ def get_user_service(db=Depends(get_db)):
 
 
 @router.post("/register", response_model=User)
-async def register_user(user_data: UserCreate, service=Depends(get_user_service)):
-    """注册新用户"""
+async def register_user(
+    user_data: UserCreate,
+    request: Request,
+    service=Depends(get_user_service)
+):
+    """注册新用户
+
+    安全特性：
+    - 限流保护：防止批量注册攻击
+    - 邮箱唯一性检查
+    - 密码哈希存储（SHA-256 + bcrypt 双重哈希）
+    """
+    # 注册限流保护
+    await rate_limit_login(request)
+
     logger.info(f"New user registration attempt: {user_data.email}")
 
     # 检查邮箱是否已存在
@@ -87,11 +103,22 @@ async def register_user(user_data: UserCreate, service=Depends(get_user_service)
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(credentials: UserCredentials, service=Depends(get_user_service)):
+async def login(
+    credentials: UserCredentials,
+    request: Request,
+    service=Depends(get_user_service)
+):
     """用户登录（返回 access_token + refresh_token）
 
     支持多种登录方式：邮箱、用户名、手机号
+
+    安全特性：
+    - 限流保护：同一客户端 10 次突发，1 次/秒补充
+    - 密码错误日志记录
     """
+    # P0: 登录限流保护 - 防止暴力破解
+    await rate_limit_login(request)
+
     logger.info(f"Login attempt START: username={credentials.username}")
     logger.info(f"Login credentials: username={credentials.username}, password_length={len(credentials.password)}")
 
@@ -183,6 +210,14 @@ async def refresh_token(request: RefreshTokenRequest, service=Depends(get_user_s
     """
     logger.info("Token refresh request received")
 
+    # 检查 token 是否已被撤销
+    if is_token_revoked(request.refresh_token):
+        logger.warning("Token refresh failed: token has been revoked")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked"
+        )
+
     # 验证 refresh_token
     user_id = decode_refresh_token(request.refresh_token)
     if not user_id:
@@ -203,6 +238,10 @@ async def refresh_token(request: RefreshTokenRequest, service=Depends(get_user_s
 
     # 生成新的令牌对（轮换机制）
     access_token, new_refresh_token = create_token_pair(user_id)
+
+    # 撤销旧的 refresh token（轮换机制）
+    revoke_refresh_token(request.refresh_token)
+
     logger.info(f"Token refreshed for user: {user_id}")
 
     return TokenResponse(
@@ -329,6 +368,194 @@ async def get_user_profile(user_id: str, service=Depends(get_user_service)):
         compatibility_profile=compatibility_profile,
         deal_breakers=['smoking', 'debt']  # 示例
     )
+
+
+# ========== 密码重置相关模型 ==========
+
+from pydantic import BaseModel, EmailStr
+from datetime import datetime, timedelta
+import secrets
+
+
+class ForgotPasswordRequest(BaseModel):
+    """忘记密码请求"""
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """重置密码请求"""
+    token: str
+    new_password: str  # 前端已 SHA-256 哈希
+
+
+class PasswordResetResponse(BaseModel):
+    """密码重置响应"""
+    success: bool
+    message: str
+
+
+# ========== 密码重置端点 ==========
+
+# 临时存储重置 token（生产环境应使用 Redis）
+_password_reset_tokens = {}  # {token: {"email": str, "expires_at": datetime}}
+
+
+@router.post("/forgot-password", response_model=PasswordResetResponse)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    http_request: Request,
+    service=Depends(get_user_service)
+):
+    """
+    忘记密码 - 发送重置邮件
+
+    安全特性：
+    - 限流保护
+    - 不泄露用户是否存在信息
+    - Token 1 小时有效
+    """
+    # 限流保护
+    await rate_limit_login(http_request)
+
+    # 查找用户
+    user = service.get_by_email(request.email)
+
+    # 安全考虑：无论用户是否存在，都返回相同响应，避免枚举攻击
+    if not user:
+        logger.info(f"Password reset requested for non-existent email: {request.email}")
+        return PasswordResetResponse(
+            success=True,
+            message="如果该邮箱已注册，重置邮件将在几分钟内送达"
+        )
+
+    # 生成重置 token
+    reset_token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(hours=1)
+
+    # 存储 token（生产环境应使用 Redis）
+    _password_reset_tokens[reset_token] = {
+        "email": request.email,
+        "user_id": user.id,
+        "expires_at": expires_at
+    }
+
+    # TODO: 发送邮件（需要配置邮件服务）
+    # 目前开发环境：打印 token 到日志
+    logger.info(f"Password reset token for {request.email}: {reset_token}")
+
+    # 开发环境：返回 token（生产环境应移除）
+    if settings.environment == "development":
+        logger.info(f"[DEV] Reset link: /reset-password?token={reset_token}")
+
+    return PasswordResetResponse(
+        success=True,
+        message="如果该邮箱已注册，重置邮件将在几分钟内送达"
+    )
+
+
+@router.post("/reset-password", response_model=PasswordResetResponse)
+async def reset_password(
+    request: ResetPasswordRequest,
+    http_request: Request,
+    service=Depends(get_user_service)
+):
+    """
+    重置密码 - 使用 token 设置新密码
+
+    安全特性：
+    - Token 一次性使用
+    - Token 过期机制
+    - 密码强度验证
+    """
+    # 限流保护
+    await rate_limit_login(http_request)
+
+    # 验证 token
+    token_data = _password_reset_tokens.get(request.token)
+
+    if not token_data:
+        logger.warning(f"Invalid reset token used: {request.token[:10]}...")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="重置链接无效或已过期"
+        )
+
+    # 检查是否过期
+    if datetime.utcnow() > token_data["expires_at"]:
+        del _password_reset_tokens[request.token]
+        logger.warning(f"Expired reset token used: {request.token[:10]}...")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="重置链接已过期，请重新申请"
+        )
+
+    # 获取用户
+    user = service.get_by_id(token_data["user_id"])
+    if not user:
+        del _password_reset_tokens[request.token]
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="用户不存在"
+        )
+
+    # 验证密码强度（SHA-256 哈希后应为 64 位十六进制）
+    new_password = request.new_password
+    is_sha256_hash = len(new_password) == 64 and all(c in '0123456789abcdef' for c in new_password.lower())
+
+    if not is_sha256_hash:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="密码格式错误"
+        )
+
+    # 更新密码
+    user.password_hash = get_password_hash(new_password)
+    service.db.commit()
+
+    # 删除已使用的 token
+    del _password_reset_tokens[request.token]
+
+    logger.info(f"Password reset successful for user: {user.id}")
+
+    return PasswordResetResponse(
+        success=True,
+        message="密码重置成功，请使用新密码登录"
+    )
+
+
+# ========== Token 撤销机制（P1） ==========
+
+# 已撤销的 refresh token（生产环境应使用 Redis）
+_revoked_tokens = set()
+
+
+def revoke_refresh_token(token: str) -> None:
+    """撤销 refresh token"""
+    _revoked_tokens.add(token)
+
+
+def is_token_revoked(token: str) -> bool:
+    """检查 token 是否已被撤销"""
+    return token in _revoked_tokens
+
+
+@router.post("/logout")
+async def logout(
+    request: RefreshTokenRequest,
+    current_user_id: str = Depends(get_current_user)
+):
+    """
+    登出 - 撤销 refresh token
+
+    安全特性：
+    - 撤销 refresh token，防止被滥用
+    - 前端应同时清除本地存储的 token
+    """
+    if request.refresh_token:
+        revoke_refresh_token(request.refresh_token)
+        logger.info(f"User logged out, token revoked: {current_user_id}")
+
+    return {"success": True, "message": "登出成功"}
 
 
 def _from_db(db_user) -> User:

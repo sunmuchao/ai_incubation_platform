@@ -54,6 +54,11 @@ class UserDB(Base):
     phone_verification_code = Column(String(6), nullable=True)
     phone_verification_expires_at = Column(DateTime(timezone=True), nullable=True)
 
+    # 微信登录支持
+    wechat_openid = Column(String(64), unique=True, nullable=True, index=True)
+    wechat_unionid = Column(String(64), unique=True, nullable=True, index=True)
+    last_login = Column(DateTime(timezone=True), nullable=True)
+
 
 class MatchHistoryDB(Base):
     """匹配历史记录 - P3 增强版"""

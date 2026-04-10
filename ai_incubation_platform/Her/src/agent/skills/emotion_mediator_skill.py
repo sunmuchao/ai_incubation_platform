@@ -222,6 +222,7 @@ class EmotionMediatorSkill(BaseSkill):
     ) -> Dict[str, Any]:
         """执行调解分析"""
         from db.database import SessionLocal
+        from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
         from services.p12_emotion_mediation_service import emotion_mediation_service
 
         db = SessionLocal()
@@ -818,6 +819,7 @@ class EmotionMediatorSkill(BaseSkill):
 
         # 获取对话历史
         from db.database import SessionLocal
+        from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
         from db.models import ChatMessageDB
 
         db = SessionLocal()

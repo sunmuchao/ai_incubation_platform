@@ -3,9 +3,15 @@ AI Native 注册对话 API
 
 提供 AI 红娘与注册用户的自然对话接口。
 AI 主导对话流程，通过自然对话了解用户，而非机械化问答。
+
+优化：
+- 支持流式响应（SSE），提升用户体验
+- 正确处理同步 LLM 调用在异步环境中的运行
 """
+import asyncio
 from fastapi import APIRouter, HTTPException, Depends
-from typing import Dict, Optional
+from fastapi.responses import StreamingResponse
+from typing import Dict, Optional, AsyncGenerator
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -84,10 +90,11 @@ async def start_conversation(
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # 开始对话
-    result = ai_native_conversation_service.start_conversation(
-        user_id=request.user_id,
-        user_name=request.user_name
+    # 开始对话（在线程中运行同步方法，避免阻塞事件循环）
+    result = await asyncio.to_thread(
+        ai_native_conversation_service.start_conversation,
+        request.user_id,
+        request.user_name
     )
 
     logger.info(f"AI Native conversation started for user {request.user_id}")
@@ -115,10 +122,11 @@ async def send_message(
     """
     logger.info(f"Received message from user {request.user_id}: {request.message[:50]}...")
 
-    # 处理用户消息
-    result = ai_native_conversation_service.process_user_message(
-        user_id=request.user_id,
-        user_message=request.message
+    # 处理用户消息（在线程中运行同步方法，避免阻塞事件循环）
+    result = await asyncio.to_thread(
+        ai_native_conversation_service.process_user_message,
+        request.user_id,
+        request.message
     )
 
     # 如果对话完成，更新用户数据到数据库
@@ -144,6 +152,56 @@ async def send_message(
         understanding_level=result.get("understanding_level", 0.0),
         collected_dimensions=result.get("collected_dimensions", []),
         conversation_count=result.get("conversation_count", 0),
+    )
+
+
+@router.post("/message/stream")
+async def send_message_stream(
+    request: SendMessageRequest,
+    db=Depends(get_db)
+):
+    """
+    发送对话消息（流式响应）
+
+    使用 SSE (Server-Sent Events) 实现流式输出，
+    让用户看到 AI 逐字生成回复，提升体验。
+    """
+    logger.info(f"Received streaming message from user {request.user_id}")
+
+    async def generate() -> AsyncGenerator[str, None]:
+        """生成 SSE 流"""
+        try:
+            # 流式处理用户消息
+            async for chunk in ai_native_conversation_service.process_user_message_stream(
+                user_id=request.user_id,
+                user_message=request.message
+            ):
+                # SSE 格式: data: {json}\n\n
+                import json
+                yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+
+            # 对话完成时保存数据
+            session_status = ai_native_conversation_service.get_session_status(request.user_id)
+            if session_status.get("is_completed"):
+                _save_collected_data_to_db(
+                    user_id=request.user_id,
+                    session_status=session_status,
+                    db=db
+                )
+
+        except Exception as e:
+            logger.error(f"Stream error: {e}")
+            import json
+            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
     )
 
 
