@@ -13,7 +13,7 @@ from db.database import SessionLocal
 from db.models import ConversationDB, ChatMessageDB, UserDB
 from models.p12_models import EmotionWarningDB, CalmingKitDB
 from utils.logger import logger
-from utils.db_session_manager import db_session, db_session_readonly
+from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 
 
 class EmotionWarningService:
@@ -163,7 +163,7 @@ class EmotionWarningService:
         Returns:
             情绪分析结果，包括预警级别和建议
         """
-        with db_session_readonly() as db:
+        with optional_db_session(db_session_param) as db:
             # 获取最近消息
             messages = db.query(ChatMessageDB).filter(
                 ChatMessageDB.conversation_id == conversation_id

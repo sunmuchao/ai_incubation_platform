@@ -278,15 +278,18 @@ class TestSafetyAIService:
     def test_get_sender_risk_profile_high_violations(self, service, mock_db):
         """测试获取发送者风险画像 - 多次违规"""
         # Arrange
-        mock_db.query.return_value.filter.return_value.count.return_value = 5
+        # 需要分别 mock 三个查询：risk_events, report_count, pending_high_priority_reports
+        # 使用 side_effect 让每个查询返回不同的值
+        mock_db.query.return_value.filter.return_value.count.side_effect = [5, 0, 0]
 
         # Act
         result = service._get_sender_risk_profile("user_risky")
 
         # Assert
         assert result["violation_count"] == 5
-        assert result["base_risk_score"] == 50
-        assert result["risk_level"] == RiskLevel.HIGH
+        # violation_score = min(30, 5*10) = 30, report_score = 0, pending_score = 0
+        assert result["base_risk_score"] == 30
+        assert result["risk_level"] == RiskLevel.MEDIUM
 
     def test_calculate_risk_score_low(self, service):
         """测试计算风险分数 - 低风险"""

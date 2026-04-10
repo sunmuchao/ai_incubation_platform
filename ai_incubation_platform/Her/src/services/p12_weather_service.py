@@ -10,7 +10,7 @@ from db.database import SessionLocal
 from db.models import ConversationDB, ChatMessageDB
 from models.p12_models import RelationshipWeatherReportDB, EmotionWarningDB
 from utils.logger import logger
-from utils.db_session_manager import db_session, db_session_readonly
+from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 
 
 class RelationshipWeatherService:
@@ -52,7 +52,7 @@ class RelationshipWeatherService:
         Returns:
             气象报告
         """
-        with db_session() as db:
+        with optional_db_session(db_session_param) as db:
             # 确定报告日期范围
             now = datetime.now()
             if report_period == "daily":
@@ -149,7 +149,7 @@ class RelationshipWeatherService:
         db_session_param: Optional[Any] = None
     ) -> List[Dict[str, Any]]:
         """获取用户的报告历史"""
-        with db_session_readonly() as db:
+        with optional_db_session(db_session_param) as db:
             query = db.query(RelationshipWeatherReportDB).filter(
                 (RelationshipWeatherReportDB.user_a_id == user_id) |
                 (RelationshipWeatherReportDB.user_b_id == user_id)
@@ -183,8 +183,8 @@ class RelationshipWeatherService:
 
         # 获取共同对话
         conversations = db.query(ConversationDB).filter(
-            ((ConversationDB.user_a_id == user_a_id) & (ConversationDB.user_b_id == user_b_id)) |
-            ((ConversationDB.user_a_id == user_b_id) & (ConversationDB.user_b_id == user_a_id))
+            ((ConversationDB.user_id_1 == user_a_id) & (ConversationDB.user_id_2 == user_b_id)) |
+            ((ConversationDB.user_id_1 == user_b_id) & (ConversationDB.user_id_2 == user_a_id))
         ).all()
 
         conversation_ids = [c.id for c in conversations]

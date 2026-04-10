@@ -39,13 +39,19 @@ class TestChatAssistantService:
         mock_db.refresh.return_value = mock_suggestion
 
         # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        # Patch where the function is used (imported into services.ai_date_assistant_service)
         with patch('services.ai_date_assistant_service.analyze_text_emotion_sync',
-                   return_value={"mood": "neutral", "emotion": "neutral", "is_tired": True}):
-            result = service.generate_reply_suggestion(
-                user_id="user_001",
-                received_message="今天好累啊，工作辛苦了",
-                target_user_id="user_002"
-            )
+                   return_value={"mood": "neutral", "emotion": "sadness", "is_tired": True}):
+            # Mock LLM service to be disabled so fallback is used
+            mock_llm = MagicMock()
+            mock_llm.enabled = False
+            with patch('services.llm_semantic_service.get_llm_semantic_service',
+                       return_value=mock_llm):
+                result = service.generate_reply_suggestion(
+                    user_id="user_001",
+                    received_message="今天好累啊，工作辛苦了",
+                    target_user_id="user_002"
+                )
 
         assert result is not None
         assert result.tone == "caring"
@@ -59,11 +65,16 @@ class TestChatAssistantService:
         # Mock analyze_text_emotion_sync to avoid LLM API timeout
         with patch('services.ai_date_assistant_service.analyze_text_emotion_sync',
                    return_value={"mood": "positive", "emotion": "happiness"}):
-            result = service.generate_reply_suggestion(
-                user_id="user_001",
-                received_message="今天好开心，嘻嘻",
-                target_user_id="user_002"
-            )
+            # Mock LLM service to be disabled so fallback is used
+            mock_llm = MagicMock()
+            mock_llm.enabled = False
+            with patch('services.llm_semantic_service.get_llm_semantic_service',
+                       return_value=mock_llm):
+                result = service.generate_reply_suggestion(
+                    user_id="user_001",
+                    received_message="今天好开心，嘻嘻",
+                    target_user_id="user_002"
+                )
 
         assert result is not None
         assert result.tone == "cheerful"
@@ -77,11 +88,16 @@ class TestChatAssistantService:
         # Mock analyze_text_emotion_sync to avoid LLM API timeout
         with patch('services.ai_date_assistant_service.analyze_text_emotion_sync',
                    return_value={"mood": "neutral", "emotion": "neutral"}):
-            result = service.generate_reply_suggestion(
-                user_id="user_001",
-                received_message="你知道为什么吗？",
-                target_user_id="user_002"
-            )
+            # Mock LLM service to be disabled so fallback is used
+            mock_llm = MagicMock()
+            mock_llm.enabled = False
+            with patch('services.llm_semantic_service.get_llm_semantic_service',
+                       return_value=mock_llm):
+                result = service.generate_reply_suggestion(
+                    user_id="user_001",
+                    received_message="你知道为什么吗？",
+                    target_user_id="user_002"
+                )
 
         assert result is not None
         assert result.tone == "thoughtful"
@@ -95,12 +111,17 @@ class TestChatAssistantService:
         # Mock analyze_text_emotion_sync to avoid LLM API timeout
         with patch('services.ai_date_assistant_service.analyze_text_emotion_sync',
                    return_value={"mood": "neutral", "emotion": "neutral"}):
-            # 使用不包含情绪词的测试用例
-            result = service.generate_reply_suggestion(
-                user_id="user_001",
-                received_message="哦哦知道了",
-                target_user_id="user_002"
-            )
+            # Mock LLM service to be disabled so fallback is used
+            mock_llm = MagicMock()
+            mock_llm.enabled = False
+            with patch('services.llm_semantic_service.get_llm_semantic_service',
+                       return_value=mock_llm):
+                # 使用不包含情绪词的测试用例
+                result = service.generate_reply_suggestion(
+                    user_id="user_001",
+                    received_message="哦哦知道了",
+                    target_user_id="user_002"
+                )
 
         assert result is not None
 
@@ -124,9 +145,11 @@ class TestChatAssistantService:
     def test_analyze_message_mood_tired(self, service):
         """测试分析消息情绪 - 累"""
         # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        # Need to return emotion="sadness" for is_tired detection logic
         with patch('services.ai_date_assistant_service.analyze_text_emotion_sync',
-                   return_value={"mood": "neutral", "emotion": "neutral", "is_tired": True}):
+                   return_value={"mood": "neutral", "emotion": "sadness"}):
             result = service._analyze_message_mood("好累啊，想睡觉")
+        # is_tired requires emotion == "sadness" AND message contains tired words
         assert result["is_tired"] == True
 
     def test_analyze_message_mood_neutral(self, service):
@@ -161,7 +184,12 @@ class TestChatAssistantService:
         """测试生成回复建议 - 累了"""
         mood = {"is_tired": True, "mood": "neutral"}
         intent = {"is_question": False, "is_sharing": False, "intent": "chat"}
-        primary, alternatives = service._generate_reply_suggestions("好累", mood, intent, None)
+        # Mock LLM service to be disabled so fallback is used
+        mock_llm = MagicMock()
+        mock_llm.enabled = False
+        with patch('services.llm_semantic_service.get_llm_semantic_service',
+                   return_value=mock_llm):
+            primary, alternatives = service._generate_reply_suggestions("好累", mood, intent, None)
         assert len(primary) > 0
         assert len(alternatives) > 0
 
@@ -169,7 +197,12 @@ class TestChatAssistantService:
         """测试生成回复建议 - 心情好"""
         mood = {"is_tired": False, "mood": "positive"}
         intent = {"is_question": False, "is_sharing": False, "intent": "chat"}
-        primary, alternatives = service._generate_reply_suggestions("好开心", mood, intent, None)
+        # Mock LLM service to be disabled so fallback is used
+        mock_llm = MagicMock()
+        mock_llm.enabled = False
+        with patch('services.llm_semantic_service.get_llm_semantic_service',
+                   return_value=mock_llm):
+            primary, alternatives = service._generate_reply_suggestions("好开心", mood, intent, None)
         assert len(primary) > 0
         assert len(alternatives) > 0
 

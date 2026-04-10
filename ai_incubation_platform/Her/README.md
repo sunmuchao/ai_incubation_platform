@@ -416,8 +416,6 @@ pytest --cov=src --cov-report=html
 | P16 | 圈子融合 | 部落匹配、数字小家、见家长模拟 |
 | P17 | 终极共振 | 压力测试、成长计划、靠谱背书 |
 
-详见 [PRODUCT_ROADMAP.md](./PRODUCT_ROADMAP.md)
-
 ## 贡献指南
 
 1. Fork 本项目

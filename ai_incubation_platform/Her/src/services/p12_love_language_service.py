@@ -10,7 +10,7 @@ import re
 from db.database import SessionLocal
 from models.p12_models import LoveLanguageTranslationDB
 from utils.logger import logger
-from utils.db_session_manager import db_session, db_session_readonly
+from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 
 
 class LoveLanguageTranslationService:
@@ -97,7 +97,7 @@ class LoveLanguageTranslationService:
         Returns:
             翻译结果，包括真实意图和建议回应
         """
-        with db_session() as db:
+        with optional_db_session(db_session_param) as db:
             # 分析原始表达的情感
             original_sentiment = self._analyze_sentiment(expression)
 
@@ -110,7 +110,7 @@ class LoveLanguageTranslationService:
             # 生成真实意图解读
             if need_analysis:
                 true_intention = need_analysis["true_intention"]
-                suggested_response = need_analysis["suggested_response_template"]
+                suggested_response = need_analysis["suggested_response"]
                 response_explanation = f"对方可能在表达{need_analysis['love_language']}类型的需求。"
             else:
                 true_intention = self._generate_true_intention(expression, love_language)

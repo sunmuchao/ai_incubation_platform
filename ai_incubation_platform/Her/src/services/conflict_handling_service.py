@@ -27,7 +27,7 @@ from models.p17_models import TrustScoreDB
 
 
 # ============= 冲突处理风格兼容性矩阵 =============
-# 从 PRODUCT_ROADMAP.md 中的"从静态标签匹配转向动态共鸣演算法"提取
+# 基于"从静态标签匹配转向动态共鸣演算法"设计理念
 
 COMPATIBILITY_MATRIX = {
     # 回避型 vs 其他
