@@ -9,6 +9,7 @@ P4 新增:
 
 P20 增强:
 - 缓存失效集成
+- 继承 BaseService 统一数据库会话管理
 """
 import json
 import uuid
@@ -20,9 +21,10 @@ from sqlalchemy import and_
 
 from db.models import PhotoDB, UserDB
 from cache import cache_manager
+from services.base_service import BaseService
 
 
-class PhotoService:
+class PhotoService(BaseService[PhotoDB]):
     """照片管理服务"""
 
     # 允许的照片类型
@@ -36,8 +38,14 @@ class PhotoService:
     STATUS_APPROVED = "approved"
     STATUS_REJECTED = "rejected"
 
-    def __init__(self, db: Session):
-        self.db = db
+    def __init__(self, db: Optional[Session] = None):
+        """
+        初始化照片服务
+
+        Args:
+            db: 数据库会话（可选，支持依赖注入）
+        """
+        super().__init__(db, PhotoDB)
         self.upload_dir = "uploads/photos"
 
     def upload_photo(
@@ -114,7 +122,7 @@ class PhotoService:
         return query.order_by(PhotoDB.display_order, PhotoDB.created_at).all()
 
     def get_photo(self, photo_id: str) -> Optional[PhotoDB]:
-        """获取照片详情"""
+        """获取照片详情（仅返回活跃照片）"""
         return self.db.query(PhotoDB).filter(
             and_(PhotoDB.id == photo_id, PhotoDB.is_active == True)
         ).first()

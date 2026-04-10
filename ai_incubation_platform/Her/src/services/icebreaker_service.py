@@ -2,6 +2,9 @@
 v1.3 破冰问题服务
 
 基于用户画像和兴趣，生成个性化的破冰问题。
+
+P20 增强:
+- 继承 BaseService 统一数据库会话管理
 """
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -10,9 +13,10 @@ import json
 import random
 
 from db.models import IcebreakerQuestionDB, UserDB
+from services.base_service import BaseService
 
 
-class IcebreakerService:
+class IcebreakerService(BaseService[IcebreakerQuestionDB]):
     """破冰问题服务"""
 
     # 内置问题库（初始种子数据）
@@ -43,8 +47,14 @@ class IcebreakerService:
         {"question": "你认为两个人在一起最重要的是什么？", "category": "values", "depth_level": 5},
     ]
 
-    def __init__(self, db: Session):
-        self.db = db
+    def __init__(self, db: Optional[Session] = None):
+        """
+        初始化破冰问题服务
+
+        Args:
+            db: 数据库会话（可选，支持依赖注入）
+        """
+        super().__init__(db, IcebreakerQuestionDB)
         self._init_builtin_questions()
 
     def _init_builtin_questions(self):

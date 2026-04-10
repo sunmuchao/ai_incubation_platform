@@ -2,6 +2,9 @@
 v1.3 视频约会服务
 
 提供视频约会管理、预约、提醒等功能。
+
+P20 增强:
+- 继承 BaseService 统一数据库会话管理
 """
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
@@ -11,13 +14,20 @@ import json
 import uuid
 
 from db.models import VideoDateDB, UserDB, VideoDateReportDB, UserBlockDB, GameSessionDB
+from services.base_service import BaseService
 
 
-class VideoDateService:
+class VideoDateService(BaseService[VideoDateDB]):
     """视频约会服务"""
 
-    def __init__(self, db: Session):
-        self.db = db
+    def __init__(self, db: Optional[Session] = None):
+        """
+        初始化视频约会服务
+
+        Args:
+            db: 数据库会话（可选，支持依赖注入）
+        """
+        super().__init__(db, VideoDateDB)
         self.active_dates = {}  # 内存存储活跃约会 {room_id: date_info}
 
     def schedule_date(
