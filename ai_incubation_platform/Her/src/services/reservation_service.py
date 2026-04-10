@@ -12,14 +12,11 @@
 - MAOYAN_API_KEY: 猫眼 API 密钥
 """
 import os
-import requests
 from typing import Dict, List, Optional, Any
 from datetime import datetime, date
 from abc import ABC, abstractmethod
-import logging
 import uuid
-
-logger = logging.getLogger(__name__)
+from utils.logger import logger
 
 
 class ReservationProvider(ABC):

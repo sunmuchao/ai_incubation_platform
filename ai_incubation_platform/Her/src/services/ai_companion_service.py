@@ -5,14 +5,14 @@ P6 AI 陪伴助手服务
 通过 LLM 实现深度情感交流和个性化陪伴。
 """
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
+from sqlalchemy import func
 from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 import uuid
 
 from db.models import (
-    AICompanionSessionDB, AICompanionMessageDB, UserDB
+    AICompanionSessionDB, AICompanionMessageDB
 )
 from agent.skills.emotion_analysis_skill import analyze_text_emotion_sync
 

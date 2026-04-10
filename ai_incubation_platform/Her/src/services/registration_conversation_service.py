@@ -3,10 +3,9 @@
 
 实现 AI 红娘与注册用户的深度沟通，通过对话收集用户信息并完善画像。
 """
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional
 from datetime import datetime
 from utils.logger import logger
-import json
 
 
 class RegistrationConversationService:

@@ -16,9 +16,7 @@ import requests
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from abc import ABC, abstractmethod
-import logging
-
-logger = logging.getLogger(__name__)
+from utils.logger import logger
 
 
 class WeatherProvider(ABC):

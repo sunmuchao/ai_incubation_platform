@@ -10,10 +10,7 @@
 - AMENITIES_API_KEY: 场所搜索 API 密钥（可选）
 """
 import math
-from typing import Dict, List, Optional, Any, Tuple
-import logging
-
-logger = logging.getLogger(__name__)
+from typing import Dict, List, Optional, Any
 
 
 # 地球半径（公里）

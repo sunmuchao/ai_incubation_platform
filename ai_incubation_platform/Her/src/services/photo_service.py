@@ -13,13 +13,12 @@ P20 增强:
 """
 import json
 import uuid
-import os
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
-from db.models import PhotoDB, UserDB
+from db.models import PhotoDB
 from cache import cache_manager
 from services.base_service import BaseService
 

@@ -15,12 +15,11 @@ P0 增强：
 import json
 import uuid
 import hashlib
-import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List, Tuple
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
 
+from utils.logger import logger
 from db.models import IdentityVerificationDB, UserDB
 from models.p0_identity_models import (
     TrustBadgeDB,
@@ -31,8 +30,6 @@ from models.p0_identity_models import (
     PropertyCredentialDB,
 )
 from models.p17_models import TrustScoreDB
-
-logger = logging.getLogger("matchmaker-agent")
 
 
 class IdentityVerificationService:
