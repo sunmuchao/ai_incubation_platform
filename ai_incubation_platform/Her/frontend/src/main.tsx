@@ -4,6 +4,16 @@ import { ConfigProvider } from 'antd'
 import App from './App'
 import './styles/index.less'
 
+// 国际化配置 - 必须在应用渲染前导入
+import './locales/i18n'
+
+// 移动端适配初始化
+import { initIOSOptimizations } from './utils/iosUtils'
+
+// 初始化移动端优化
+const iosInit = initIOSOptimizations()
+console.log('📱 Device Info:', iosInit)
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ConfigProvider

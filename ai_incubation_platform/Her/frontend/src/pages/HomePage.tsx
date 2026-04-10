@@ -8,45 +8,43 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Layout, Typography, Space, Button, Avatar, Badge, notification, Drawer } from 'antd'
+import { Layout, Typography, Space, Button, Avatar, notification, Drawer, message } from 'antd'
 import {
-  BellOutlined,
   UserOutlined,
   CommentOutlined,
-  HeartOutlined,
 } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import type { MatchCandidate } from '../types'
 import ChatInterface from '../components/ChatInterface'
 import ChatRoom from '../components/ChatRoom'
 import MatchCard from '../components/MatchCard'
-import RelationshipTimeline from '../components/RelationshipTimeline'
-import LoveLanguageProfile from '../components/LoveLanguageProfile'
 import PushNotifications from '../components/PushNotifications'
 import AgentFloatingBall from '../components/AgentFloatingBall'
-import PWAInstallPrompt from '../components/PWAInstallPrompt'
+import { FeaturesDrawer, FeaturesButton, Feature } from '../components/FeaturesDrawer'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 import HerAvatar from '../assets/her-avatar.svg'
 import { chatApi, conversationMatchingApi } from '../api'
 import './HomePage.less'
 
 const { Header, Content } = Layout
-const { Title, Text } = Typography
-
-// 最大通知数量限制，防止内存泄漏
-const MAX_NOTIFICATIONS = 20
+const { Text } = Typography
 
 interface HomePageProps {
   onLogout?: () => void
 }
 
 const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
+  const { t } = useTranslation()
   const [selectedMatch, setSelectedMatch] = useState<MatchCandidate | null>(null)
   const [chatInitialMatch, setChatInitialMatch] = useState<MatchCandidate | null>(null)
   const [chatRoomMatch, setChatRoomMatch] = useState<MatchCandidate | null>(null)
   const [userInfo, setUserInfo] = useState<{ username?: string; name?: string } | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [conversations, setConversations] = useState<any[]>([])  // 会话列表
   const [lastMessageTime, setLastMessageTime] = useState<Record<string, string>>({})
   const [matchesCache, setMatchesCache] = useState<Record<string, MatchCandidate>>({})
   const [hasNewMessage, setHasNewMessage] = useState(false)
+  const [featuresDrawerOpen, setFeaturesDrawerOpen] = useState(false) // 功能抽屉状态
   const userId = userInfo?.username || 'user-anonymous-dev'
 
   // 已通知的消息 ID 集合，避免重复弹窗
@@ -154,6 +152,7 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
 
           if (mounted) {
             setUnreadCount(totalUnread)
+            setConversations(response)  // 保存会话列表
             setLastMessageTime(newLastMessageTime)
           }
         }
@@ -213,6 +212,17 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
     setChatRoomMatch(match)
   }
 
+  // 处理功能选择 - 在对话区生成功能卡片
+  const handleFeatureSelect = (feature: Feature) => {
+    message.info(`正在打开「${feature.name}」...`)
+
+    // TODO: 触发 ChatInterface 生成对应的功能卡片
+    // 这里可以通过事件或状态传递给 ChatInterface
+    window.dispatchEvent(new CustomEvent('trigger-feature', {
+      detail: { feature }
+    }))
+  }
+
   const renderView = () => {
     if (chatRoomMatch) {
       return (
@@ -249,19 +259,21 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
               src={HerAvatar}
               style={{ backgroundColor: '#fff', padding: 4 }}
             />
-            <Text strong style={{ color: '#4A4040', fontSize: 18, letterSpacing: '2px' }}>Her</Text>
+            <Text strong style={{ color: '#4A4040', fontSize: 18, letterSpacing: '2px' }}>{t('app.name')}</Text>
           </Space>
         </div>
         <div className="header-right">
-          <Space size="large">
-            <Badge count={unreadCount} offset={[-5, 5]}>
-              <PushNotifications
-                onNotificationClick={() => {
-                  // 通知点击处理
-                }}
-                onMatchSelect={handleMatchSelect}
+          <Space size="middle">
+            {/* 语言切换 */}
+            <LanguageSwitcher trigger="icon" size="small" />
+            <PushNotifications
+                unreadCount={unreadCount}
+                conversations={conversations}
+                matchesCache={matchesCache}
+                onOpenChatRoom={handleOpenChatRoom}
               />
-            </Badge>
+            {/* 聊天室模式下隐藏功能按钮，专注聊天 */}
+            {!chatRoomMatch && <FeaturesButton onClick={() => setFeaturesDrawerOpen(true)} />}
             <Space>
               {userInfo && (
                 <Text type="secondary" style={{ fontSize: 14 }}>
@@ -275,7 +287,7 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
                 size="small"
                 className="logout-btn"
               >
-                退出
+                {t('auth.logout')}
               </Button>
             </Space>
           </Space>
@@ -290,7 +302,7 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
       {/* 匹配详情 Drawer */}
       {selectedMatch && (
         <Drawer
-          title="匹配详情"
+          title={t('match.title')}
           placement="right"
           width={400}
           open={!!selectedMatch}
@@ -306,14 +318,20 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
         </Drawer>
       )}
 
+      {/* 功能抽屉 - 轻量级功能入口 */}
+      <FeaturesDrawer
+        open={featuresDrawerOpen}
+        onClose={() => setFeaturesDrawerOpen(false)}
+        onFeatureSelect={handleFeatureSelect}
+      />
+
       {/* PWA 安装提示 - 临时禁用，方便调试 */}
       {/* <PWAInstallPrompt /> */}
 
-      {/* 悬浮球 - 快速对话入口（只在聊天室模式显示） */}
+      {/* 悬浮球 - 快速对话入口（只在聊天室模式显示，沉浸式聊天不显示数字） */}
       {chatRoomMatch && (
         <AgentFloatingBall
           visible={true}
-          unreadCount={unreadCount}
           hasNewMessage={hasNewMessage}
           chatContext={{
             partnerId: chatRoomMatch.user?.id || '',

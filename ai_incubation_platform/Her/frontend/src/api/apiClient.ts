@@ -5,6 +5,7 @@
  */
 
 import axios from 'axios'
+import { authStorage, devStorage } from '@/utils/storage'
 
 const API_BASE_URL = ''
 
@@ -18,13 +19,13 @@ export const apiClient = axios.create({
 
 // 请求拦截器 - 添加 JWT token
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('jwt_token')
+  const token = authStorage.getToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   } else if (process.env.NODE_ENV === 'development') {
     // 开发环境：使用默认测试用户
-    const testUserId = localStorage.getItem('test_user_id') || 'user-test-001'
-    localStorage.setItem('test_user_id', testUserId)
+    const testUserId = devStorage.getTestUserId() || 'user-test-001'
+    devStorage.setTestUserId(testUserId)
     config.headers['X-Dev-User-Id'] = testUserId
   }
   return config

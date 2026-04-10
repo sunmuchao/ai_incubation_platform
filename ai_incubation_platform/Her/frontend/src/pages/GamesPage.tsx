@@ -39,6 +39,7 @@ import {
 import type { CoupleGame, GameType } from '../types/p10_types'
 import { coupleGameApi } from '../api/p10_api'
 import AgentFloatingBall from '../components/AgentFloatingBall'
+import { authStorage } from '../utils/storage'
 import './GamesPage.less'
 
 const { Text, Title } = Typography
@@ -97,7 +98,7 @@ const GamesPage: React.FC<GamesPageProps> = ({ userId }) => {
   const [unreadCount, setUnreadCount] = useState(0)
   const [hasNewMessage, setHasNewMessage] = useState(false)
 
-  const currentUserId = userId || localStorage.getItem('user_info')?.username || 'anonymous'
+  const currentUserId = userId || authStorage.getUserId()
 
   useEffect(() => {
     loadGames()

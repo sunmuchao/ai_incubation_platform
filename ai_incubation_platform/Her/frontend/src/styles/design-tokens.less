@@ -1,0 +1,424 @@
+/**
+ * AI Native 设计令牌体系 (Design Tokens)
+ * 基于 Apple Human Interface Guidelines 与 Linear 设计理念
+ *
+ * 核心原则：
+ * 1. 8px 栅格系统 - 所有间距为 4 或 8 的倍数
+ * 2. 多层弥散投影 - 模拟自然光照效果
+ * 3. 色彩层级 - 通过色深而非仅靠字号区分信息主次
+ * 4. 圆角一致性 - 外层大圆角，内部按比例递减
+ */
+
+// ==================== 色彩系统 ====================
+
+// 主色调 - 温暖浪漫玫瑰金系列
+@color-primary: #D4A59A;
+@color-primary-hover: #C88B8B;
+@color-primary-light: rgba(212, 165, 154, 0.08);
+@color-primary-medium: rgba(212, 165, 154, 0.15);
+@color-primary-strong: rgba(212, 165, 154, 0.25);
+
+// 强调色
+@color-accent: #FF8FAB;
+@color-accent-light: rgba(255, 143, 171, 0.12);
+@color-accent-medium: rgba(255, 143, 171, 0.25);
+
+// 成功/警告/错误色
+@color-success: #52c41a;
+@color-success-light: rgba(82, 196, 26, 0.1);
+@color-warning: #faad14;
+@color-warning-light: rgba(250, 173, 20, 0.1);
+@color-error: #ff4d4f;
+@color-error-light: rgba(255, 77, 79, 0.1);
+
+// 文字层级 - 通过色深区分主次
+@text-primary: #111827;      // 主要文字 - 最高优先级信息
+@text-secondary: #6B7280;    // 次级文字 - 辅助说明
+@text-tertiary: #9CA3AF;     // 三级文字 - 提示性文字
+@text-quaternary: #D1D5DB;   // 四级文字 - 禁用/占位
+@text-inverse: #FFFFFF;      // 反色文字 - 深色背景上
+
+// 背景层级 - 极淡灰色系，通透感
+@bg-base: #F9FAFB;           // 基础背景 - 页面底色
+@bg-subtle: #FFFFFF;         // 微妙背景 - 卡片底色
+@bg-elevated: #FFFFFF;       // 浮起背景 - 弹窗/抽屉
+@bg-overlay: rgba(0, 0, 0, 0.45); // 遮罩层
+
+// 边框色 - 半透明，柔和
+@border-default: rgba(0, 0, 0, 0.05);
+@border-light: rgba(0, 0, 0, 0.03);
+@border-medium: rgba(0, 0, 0, 0.08);
+@border-strong: rgba(0, 0, 0, 0.12);
+@border-primary: rgba(212, 165, 154, 0.2);
+@border-primary-strong: rgba(212, 165, 154, 0.35);
+
+// ==================== 间距系统 (8px 栅格) ====================
+
+@space-0: 0;
+@space-1: 4px;       // 最小间距
+@space-2: 8px;       // 紧凑间距
+@space-3: 12px;      // 标准间距
+@space-4: 16px;      // 中等间距
+@space-5: 20px;      // 舒适间距
+@space-6: 24px;      // 宽松间距
+@space-7: 28px;      // 更宽松
+@space-8: 32px;      // 大间距
+@space-9: 36px;      // 区块间距
+@space-10: 40px;     // 页面边距
+@space-12: 48px;     // 大区块间距
+@space-16: 64px;     // 页面级间距
+
+// ==================== 圆角系统 (层级递减) ====================
+
+@radius-none: 0;
+@radius-sm: 4px;     // 小元素：标签、徽章
+@radius-md: 8px;     // 中元素：输入框、按钮
+@radius-lg: 12px;    // 大元素：卡片内部
+@radius-xl: 16px;    // 容器：卡片整体
+@radius-2xl: 20px;   // 大容器：弹窗、抽屉
+@radius-3xl: 24px;   // 页面容器
+@radius-full: 9999px; // 圆形：头像、悬浮按钮
+
+// ==================== 多层弥散投影系统 ====================
+// 模拟自然光照效果，禁止生硬黑影
+
+// 微浮起 - 卡片默认状态
+@shadow-sm:
+  0 1px 2px rgba(0, 0, 0, 0.02),
+  0 2px 4px rgba(0, 0, 0, 0.02),
+  0 4px 8px rgba(0, 0, 0, 0.02);
+
+// 标准浮起 - hover 状态
+@shadow-md:
+  0 2px 4px rgba(0, 0, 0, 0.02),
+  0 4px 8px rgba(0, 0, 0, 0.04),
+  0 8px 16px rgba(0, 0, 0, 0.04),
+  0 16px 32px rgba(0, 0, 0, 0.02);
+
+// 强浮起 - 弹窗、抽屉
+@shadow-lg:
+  0 4px 8px rgba(0, 0, 0, 0.02),
+  0 8px 16px rgba(0, 0, 0, 0.04),
+  0 16px 32px rgba(0, 0, 0, 0.06),
+  0 32px 64px rgba(0, 0, 0, 0.04);
+
+// 品牌色投影 - 主色调元素
+@shadow-primary:
+  0 2px 4px rgba(212, 165, 154, 0.08),
+  0 4px 8px rgba(212, 165, 154, 0.12),
+  0 8px 16px rgba(212, 165, 154, 0.08);
+
+// 品牌色强投影 - 按钮点击态
+@shadow-primary-strong:
+  0 4px 8px rgba(212, 165, 154, 0.15),
+  0 8px 16px rgba(212, 165, 154, 0.25),
+  0 16px 32px rgba(212, 165, 154, 0.15);
+
+// 强调色投影 - 成功/警告等
+@shadow-accent:
+  0 2px 4px rgba(255, 143, 171, 0.1),
+  0 4px 8px rgba(255, 143, 171, 0.15);
+
+// 内阴影 - 输入框聚焦态
+@shadow-inner:
+  inset 0 1px 2px rgba(0, 0, 0, 0.04);
+
+// ==================== 过渡动画系统 ====================
+
+// 标准过渡 - 微交互
+@transition-fast: 0.15s ease-in-out;
+@transition-base: 0.25s ease-in-out;
+@transition-slow: 0.35s ease-in-out;
+
+// 弹性过渡 - 卡片浮起
+@transition-bounce: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+// 进入/离开动画
+@transition-enter: 0.2s ease-out;
+@transition-exit: 0.15s ease-in;
+
+// ==================== 字体系统 ====================
+
+// 字号层级
+@font-size-xs: 11px;
+@font-size-sm: 12px;
+@font-size-base: 14px;
+@font-size-md: 15px;
+@font-size-lg: 16px;
+@font-size-xl: 18px;
+@font-size-2xl: 20px;
+@font-size-3xl: 24px;
+@font-size-4xl: 28px;
+@font-size-5xl: 32px;
+
+// 字重
+@font-weight-normal: 400;
+@font-weight-medium: 500;
+@font-weight-semibold: 600;
+@font-weight-bold: 700;
+
+// 行高
+@line-height-tight: 1.25;
+@line-height-base: 1.5;
+@line-height-relaxed: 1.75;
+
+// 字间距
+@letter-spacing-tight: -0.01em;
+@letter-spacing-normal: 0;
+@letter-spacing-wide: 0.02em;
+
+// ==================== 断点系统 ====================
+
+@breakpoint-xs: 375px;   // 小手机
+@breakpoint-sm: 480px;   // 大手机
+@breakpoint-md: 768px;   // 平板
+@breakpoint-lg: 1024px;  // 小桌面
+@breakpoint-xl: 1440px;  // 大桌面
+@breakpoint-2xl: 1920px; // 超大屏
+
+// ==================== Z-Index 层级 ====================
+
+@z-index-base: 0;
+@z-index-dropdown: 1000;
+@z-index-sticky: 1020;
+@z-index-fixed: 1030;
+@z-index-modal-backdrop: 1040;
+@z-index-modal: 1050;
+@z-index-popover: 1060;
+@z-index-tooltip: 1070;
+@z-index-float: 9999;
+
+// ==================== 通用混合 (Mixins) ====================
+
+// 玻璃态效果
+.glass-morphism() {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+// 悬浮效果
+.hover-lift() {
+  transition: transform @transition-base, box-shadow @transition-base;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: scale(0.98) translateY(0);
+  }
+}
+
+// 文字省略
+.text-ellipsis() {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// 多行省略
+.text-ellipsis-lines(@lines: 2) {
+  display: -webkit-box;
+  -webkit-line-clamp: @lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// 卡片基础样式
+.card-base() {
+  background: @bg-subtle;
+  border-radius: @radius-xl;
+  border: 1px solid @border-default;
+  box-shadow: @shadow-sm;
+  transition: all @transition-base;
+}
+
+// 卡片悬浮样式
+.card-hover() {
+  &:hover {
+    box-shadow: @shadow-md;
+    border-color: @border-medium;
+    transform: translateY(-2px);
+  }
+}
+
+// 按钮基础样式
+.button-base() {
+  border-radius: @radius-lg;
+  font-weight: @font-weight-medium;
+  transition: all @transition-base;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: scale(0.98) translateY(0);
+  }
+}
+
+// 主色按钮
+.button-primary() {
+  background: linear-gradient(135deg, @color-primary 0%, @color-primary-hover 100%);
+  border: none;
+  box-shadow: @shadow-primary;
+
+  &:hover {
+    box-shadow: @shadow-primary-strong;
+    background: linear-gradient(135deg, @color-primary-hover 0%, @color-primary 100%);
+  }
+}
+
+// 输入框基础样式
+.input-base() {
+  border-radius: @radius-lg;
+  border: 1px solid @border-medium;
+  background: @bg-subtle;
+  transition: all @transition-fast;
+
+  &:hover {
+    border-color: @border-strong;
+  }
+
+  &:focus {
+    border-color: @color-primary;
+    box-shadow: @shadow-inner, 0 0 0 3px @color-primary-light;
+    outline: none;
+  }
+}
+
+// 标签基础样式
+.tag-base() {
+  border-radius: @radius-full;
+  font-size: @font-size-sm;
+  padding: @space-1 @space-3;
+  transition: all @transition-fast;
+}
+
+// 安全区域 mixins
+.safe-area-top() {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.safe-area-bottom() {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.safe-area-left() {
+  padding-left: env(safe-area-inset-left, 0);
+}
+
+.safe-area-right() {
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+// 骨架屏动画
+.skeleton-loading() {
+  background: linear-gradient(
+    90deg,
+    @bg-base 0%,
+    #E5E7EB 50%,
+    @bg-base 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+// 淡入动画
+.fade-in() {
+  animation: fade-in @transition-enter ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// 滑入动画（从下）
+.slide-up() {
+  animation: slide-up @transition-base ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// 卡片进入动画
+.card-enter() {
+  animation: card-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// ==================== Ant Design 覆盖 ====================
+
+// 覆盖 Ant Design 默认主题色
+.ant-primary-override() {
+  .ant-btn-primary {
+    background: linear-gradient(135deg, @color-primary 0%, @color-primary-hover 100%);
+    border: none;
+    box-shadow: @shadow-primary;
+
+    &:hover {
+      background: linear-gradient(135deg, @color-primary-hover 0%, @color-primary 100%);
+      box-shadow: @shadow-primary-strong;
+    }
+  }
+
+  .ant-tag {
+    border-radius: @radius-full;
+  }
+
+  .ant-card {
+    border-radius: @radius-xl;
+    border: 1px solid @border-default;
+  }
+
+  .ant-modal-content {
+    border-radius: @radius-2xl;
+  }
+
+  .ant-drawer-content {
+    border-radius: @radius-2xl 0 0 @radius-2xl;
+  }
+
+  .ant-input,
+  .ant-input-affix-wrapper {
+    border-radius: @radius-lg;
+  }
+
+  .ant-select-selector {
+    border-radius: @radius-lg !important;
+  }
+
+  .ant-avatar {
+    border-radius: @radius-lg;
+  }
+}

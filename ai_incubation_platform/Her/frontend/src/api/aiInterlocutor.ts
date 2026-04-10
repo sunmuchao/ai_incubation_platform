@@ -5,12 +5,13 @@ import type {
   AIPreCommunicationSession,
   AIPreCommunicationMessage,
 } from '../types'
+import { authStorage } from '../utils/storage'
 
 const API_BASE = '/api/ai/interlocutor'
 
 // 获取认证头
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('jwt_token')
+  const token = authStorage.getToken()
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   }

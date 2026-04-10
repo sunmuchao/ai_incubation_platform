@@ -1,0 +1,142 @@
+/* 语言切换组件样式 */
+
+.language-switcher-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .current-lang-name {
+    font-size: 14px;
+  }
+}
+
+.language-switcher-icon {
+  color: inherit;
+
+  &:hover {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+  }
+}
+
+.language-switcher-modal {
+  .ant-modal-header {
+    border-bottom: 1px solid #f0f0f0;
+    padding: 16px 24px;
+  }
+
+  .ant-modal-body {
+    padding: 16px 24px 24px;
+  }
+}
+
+.language-list {
+  .language-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .language-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #e8e8e8;
+    background: #fafafa;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    text-align: left;
+
+    &:hover {
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.05);
+    }
+
+    &.selected {
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.1);
+
+      .language-native-name {
+        color: #667eea;
+        font-weight: 600;
+      }
+    }
+
+    .ant-radio-button-input {
+      display: none;
+    }
+
+    &::before {
+      display: none;
+    }
+  }
+
+  .language-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .language-native-name {
+    font-size: 15px;
+    color: #1a1a1a;
+  }
+
+  .language-name {
+    font-size: 12px;
+    color: #999;
+  }
+
+  .check-icon {
+    color: #667eea;
+    font-size: 16px;
+  }
+}
+
+.language-info {
+  text-align: center;
+
+  .info-text {
+    font-size: 13px;
+  }
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .language-switcher-modal {
+    .ant-modal {
+      max-width: calc(100vw - 32px);
+      margin: 16px;
+    }
+  }
+
+  .language-switcher-btn {
+    .current-lang-name {
+      display: none;  // 移动端隐藏语言名称，节省空间
+    }
+  }
+}
+
+/* 暗色模式 */
+@media (prefers-color-scheme: dark) {
+  .language-item {
+    background: #1f1f1f;
+    border-color: #333;
+
+    &:hover {
+      background: #2a2a2a;
+    }
+
+    &.selected {
+      background: rgba(102, 126, 234, 0.15);
+    }
+  }
+
+  .language-native-name {
+    color: #fff;
+  }
+}

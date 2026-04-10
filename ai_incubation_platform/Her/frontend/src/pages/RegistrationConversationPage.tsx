@@ -144,61 +144,161 @@ const RegistrationConversationPage: React.FC<{
     setUserMessage('')
     setSending(true)
 
+    // 添加用户消息到历史
+    setConversationHistory((prev) => [
+      ...prev,
+      {
+        type: 'user',
+        message,
+        timestamp: new Date(),
+      },
+    ])
+
+    // 添加空的 AI 消息占位
+    setConversationHistory((prev) => [
+      ...prev,
+      {
+        type: 'ai',
+        message: '',
+        timestamp: new Date(),
+      },
+    ])
+
+    // 打字动画状态
+    let displayedText = ''
+    let bufferText = ''
+    let animationInterval: NodeJS.Timeout | null = null
+    const TYPING_SPEED = 30 // 每个字符 30ms
+
+    // 启动打字动画
+    const startTypingAnimation = () => {
+      animationInterval = setInterval(() => {
+        if (bufferText.length > displayedText.length) {
+          displayedText = bufferText.slice(0, displayedText.length + 1)
+          setConversationHistory((prev) => {
+            const updated = [...prev]
+            const lastIndex = updated.length - 1
+            if (lastIndex >= 0 && updated[lastIndex].type === 'ai') {
+              updated[lastIndex] = {
+                ...updated[lastIndex],
+                message: displayedText,
+              }
+            }
+            return updated
+          })
+        } else if (animationInterval) {
+          clearInterval(animationInterval)
+          animationInterval = null
+        }
+      }, TYPING_SPEED)
+    }
+
     try {
       const userId = currentUser.id || currentUser.username
+      const token = authStorage.getToken()
 
-      // 添加用户消息到历史
-      setConversationHistory((prev) => [
-        ...prev,
-        {
-          type: 'user',
-          message,
-          timestamp: new Date(),
+      const response = await fetch('/api/registration-conversation/message/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || ''}`,
         },
-      ])
+        body: JSON.stringify({
+          user_id: userId,
+          message: message,
+        }),
+      })
 
-      // 使用同步 API（更稳定）
-      const response = await registrationConversationApi.sendMessage(userId, message)
+      if (!response.ok) {
+        throw new Error('请求失败')
+      }
 
-      // 添加 AI 回复到历史
-      setConversationHistory((prev) => [
-        ...prev,
-        {
-          type: 'ai',
-          message: response.ai_message,
-          timestamp: new Date(),
-        },
-      ])
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('无法读取响应')
+      }
 
-      // 更新状态
-      setIsCompleted(response.is_completed)
-      setUnderstandingLevel(response.understanding_level)
-      setCollectedDimensions(
-        (response.collected_dimensions || []).map((name: string) => ({
-          name,
-          confidence: 1.0,
-          data: '',
-        }))
-      )
+      const decoder = new TextDecoder()
+      let buffer = ''
 
-      // 如果对话完成，延迟后自动跳转
-      if (response.is_completed) {
-        setTimeout(() => {
-          onComplete?.()
-        }, 3000)
+      // 启动打字动画
+      startTypingAnimation()
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+
+              if (data.type === 'chunk') {
+                // 添加到 buffer，让打字动画逐字显示
+                bufferText += data.content
+              } else if (data.type === 'done') {
+                // 清理动画
+                if (animationInterval) {
+                  clearInterval(animationInterval)
+                  animationInterval = null
+                }
+                // 确保显示完整内容
+                setConversationHistory((prev) => {
+                  const updated = [...prev]
+                  const lastIndex = updated.length - 1
+                  if (lastIndex >= 0 && updated[lastIndex].type === 'ai') {
+                    updated[lastIndex] = {
+                      ...updated[lastIndex],
+                      message: data.data.ai_message,
+                    }
+                  }
+                  return updated
+                })
+
+                const finalData = data.data
+                setIsCompleted(finalData.is_completed)
+                setUnderstandingLevel(finalData.understanding_level)
+                setCollectedDimensions(
+                  finalData.collected_dimensions.map((name: string) => ({
+                    name,
+                    confidence: 1.0,
+                    data: '',
+                  }))
+                )
+
+                if (finalData.is_completed) {
+                  setTimeout(() => {
+                    onComplete?.()
+                  }, 3000)
+                }
+              }
+            } catch (e) {
+              console.error('Failed to parse SSE data:', e)
+            }
+          }
+        }
       }
     } catch (error: unknown) {
       console.error('Failed to send message:', error)
-
-      // 添加错误消息到历史
-      setConversationHistory((prev) => [
-        ...prev,
-        {
-          type: 'ai',
-          message: '抱歉，出现了一些问题，请稍后再试～',
-          timestamp: new Date(),
-        },
-      ])
+      // 清理动画
+      if (animationInterval) {
+        clearInterval(animationInterval)
+      }
+      setConversationHistory((prev) => {
+        const updated = [...prev]
+        const lastIndex = updated.length - 1
+        if (lastIndex >= 0 && updated[lastIndex].type === 'ai') {
+          updated[lastIndex] = {
+            ...updated[lastIndex],
+            message: '抱歉，出现了一些问题，请稍后再试～',
+          }
+        }
+        return updated
+      })
     } finally {
       setSending(false)
     }

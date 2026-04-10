@@ -21,24 +21,19 @@ import type {
   DatePlanningSkillResponse,
   BillAnalysisSkillParams,
   BillAnalysisSkillResponse,
-  GeoLocationSkillParams,
-  GeoLocationSkillResponse,
-  GiftOrderingSkillParams,
-  GiftOrderingSkillResponse,
-  // 新增 Skill 类型
-  RelationshipProgressSkillParams,
-  RelationshipProgressSkillResponse,
+  // 注：GeoLocation, GiftOrdering, RelationshipProgress 已删除，改用 REST API
   ChatAssistantSkillParams,
   ChatAssistantSkillResponse,
   SafetyGuardianEmergencyParams,
   SafetyGuardianEmergencyResponse,
 } from '../types/skill'
+import { authStorage } from '../utils/storage'
 
 const API_BASE_URL = ''
 
 // 获取认证头
 const getAuthHeaders = (): Record<string, string> => {
-  const token = localStorage.getItem('jwt_token')
+  const token = authStorage.getToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) {
     headers.Authorization = `Bearer ${token}`
@@ -48,15 +43,7 @@ const getAuthHeaders = (): Record<string, string> => {
 
 // 获取当前用户 ID
 const getCurrentUserId = (): string => {
-  const userInfo = localStorage.getItem('user_info')
-  if (userInfo) {
-    try {
-      return JSON.parse(userInfo).username || 'user-anonymous-dev'
-    } catch {
-      return 'user-anonymous-dev'
-    }
-  }
-  return 'user-anonymous-dev'
+  return authStorage.getUserId()
 }
 
 /**
@@ -463,268 +450,7 @@ export const billAnalysisSkill = {
   }
 }
 
-// 地理位置 Skill
-export const geoLocationSkill = {
-  /**
-   * 分析轨迹
-   */
-  async analyzeTrajectory(userId: string, timeRange: 'week' | 'month' | 'quarter' = 'month'): Promise<GeoLocationSkillResponse> {
-    const result = await skillRegistry.execute('geo_location', {
-      user_id: userId,
-      action: 'analyze_trajectory',
-      time_range: timeRange
-    })
-    if (!result.success) {
-      throw new Error(result.error || 'Trajectory analysis failed')
-    }
-    return result.data as GeoLocationSkillResponse
-  },
-
-  /**
-   * 获取热区
-   */
-  async getHotzones(userId: string): Promise<GeoLocationSkillResponse> {
-    const result = await skillRegistry.execute('geo_location', {
-      user_id: userId,
-      action: 'get_hotzones'
-    })
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to get hotzones')
-    }
-    return result.data as GeoLocationSkillResponse
-  },
-
-  /**
-   * 检查位置兼容性
-   */
-  async checkCompatibility(userId: string, targetUserId: string): Promise<GeoLocationSkillResponse> {
-    const result = await skillRegistry.execute('geo_location', {
-      user_id: userId,
-      action: 'check_compatibility',
-      target_user_id: targetUserId
-    })
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to check compatibility')
-    }
-    return result.data as GeoLocationSkillResponse
-  },
-
-  /**
-   * 推荐约会地点
-   */
-  async recommendDateSpots(
-    userId: string,
-    targetUserId: string,
-    dateType: 'casual' | 'formal' | 'romantic' = 'casual'
-  ): Promise<GeoLocationSkillResponse> {
-    const result = await skillRegistry.execute('geo_location', {
-      user_id: userId,
-      action: 'recommend_date_spots',
-      target_user_id: targetUserId,
-      date_type: dateType
-    })
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to recommend date spots')
-    }
-    return result.data as GeoLocationSkillResponse
-  }
-}
-
-// 礼物订购 Skill
-export const giftOrderingSkill = {
-  /**
-   * 获取礼物推荐
-   */
-  async getSuggestions(
-    matchId: string,
-    occasion?: 'birthday' | 'anniversary' | 'valentines' | 'christmas' | 'surprise',
-    budgetRange?: 'under_100' | '100_300' | '300_500' | '500_1000' | 'above_1000'
-  ): Promise<GiftOrderingSkillResponse> {
-    const result = await skillRegistry.execute('gift_ordering', {
-      match_id: matchId,
-      action: 'get_suggestions',
-      occasion,
-      budget_range: budgetRange
-    })
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to get gift suggestions')
-    }
-    return result.data as GiftOrderingSkillResponse
-  },
-
-  /**
-   * 比较礼物选项
-   */
-  async compareOptions(matchId: string, giftId: string): Promise<GiftOrderingSkillResponse> {
-    const result = await skillRegistry.execute('gift_ordering', {
-      match_id: matchId,
-      action: 'compare_options',
-      preferences: { gift_id: giftId }
-    })
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to compare options')
-    }
-    return result.data as GiftOrderingSkillResponse
-  },
-
-  /**
-   * 下订单
-   */
-  async placeOrder(matchId: string, giftId: string): Promise<GiftOrderingSkillResponse> {
-    const result = await skillRegistry.execute('gift_ordering', {
-      match_id: matchId,
-      action: 'place_order',
-      gift_id: giftId
-    })
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to place order')
-    }
-    return result.data as GiftOrderingSkillResponse
-  },
-
-  /**
-   * 追踪物流
-   */
-  async trackDelivery(orderId: string): Promise<GiftOrderingSkillResponse> {
-    const result = await skillRegistry.execute('gift_ordering', {
-      action: 'track_delivery',
-      order_id: orderId
-    })
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to track delivery')
-    }
-    return result.data as GiftOrderingSkillResponse
-  },
-
-  /**
-   * 获取场合提醒
-   */
-  async getOccasionReminder(matchId: string): Promise<GiftOrderingSkillResponse> {
-    const result = await skillRegistry.execute('gift_ordering', {
-      match_id: matchId,
-      action: 'get_occasion_reminder'
-    })
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to get occasion reminder')
-    }
-    return result.data as GiftOrderingSkillResponse
-  }
-}
-
 // ==================== 新增 Skills (AI Native) ====================
-
-// P3 - 关系进展追踪 Skill
-// AI Native 特性：自主触发（每周报告、互动下降提醒）、Generative UI（时间线、健康度卡片）
-export const relationshipProgressSkill = {
-  /**
-   * 记录关系里程碑
-   * AI Native: 自动识别重要时刻并建议记录
-   */
-  async record(
-    user_id_1: string,
-    user_id_2: string,
-    progress_type: string,
-    description?: string,
-    progress_score?: number
-  ): Promise<RelationshipProgressSkillResponse> {
-    const result = await skillRegistry.execute('relationship_progress', {
-      operation: 'record',
-      user_id_1,
-      user_id_2,
-      progress_type,
-      description,
-      progress_score
-    })
-    if (!result.success) {
-      throw new Error(result.error || '记录关系进展失败')
-    }
-    return result.data as RelationshipProgressSkillResponse
-  },
-
-  /**
-   * 获取关系时间线
-   * AI Native: 自动生成可视化时间线
-   */
-  async getTimeline(user_id_1: string, user_id_2: string): Promise<RelationshipProgressSkillResponse> {
-    const result = await skillRegistry.execute('relationship_progress', {
-      operation: 'timeline',
-      user_id_1,
-      user_id_2
-    })
-    if (!result.success) {
-      throw new Error(result.error || '获取时间线失败')
-    }
-    return result.data as RelationshipProgressSkillResponse
-  },
-
-  /**
-   * 关系健康度评估
-   * AI Native: 多维度分析 + 智能建议生成
-   */
-  async getHealthScore(user_id_1: string, user_id_2: string): Promise<RelationshipProgressSkillResponse> {
-    const result = await skillRegistry.execute('relationship_progress', {
-      operation: 'health_score',
-      user_id_1,
-      user_id_2
-    })
-    if (!result.success) {
-      throw new Error(result.error || '健康度评估失败')
-    }
-    return result.data as RelationshipProgressSkillResponse
-  },
-
-  /**
-   * 关系可视化分析
-   * AI Native: 动态生成最适合的图表类型
-   */
-  async visualize(user_id_1: string, user_id_2: string): Promise<RelationshipProgressSkillResponse> {
-    const result = await skillRegistry.execute('relationship_progress', {
-      operation: 'visualize',
-      user_id_1,
-      user_id_2
-    })
-    if (!result.success) {
-      throw new Error(result.error || '可视化分析失败')
-    }
-    return result.data as RelationshipProgressSkillResponse
-  },
-
-  /**
-   * 综合关系分析
-   * AI Native: 整合多维度数据生成深度洞察
-   */
-  async analyze(user_id_1: string, user_id_2: string): Promise<RelationshipProgressSkillResponse> {
-    const result = await skillRegistry.execute('relationship_progress', {
-      operation: 'analyze',
-      user_id_1,
-      user_id_2
-    })
-    if (!result.success) {
-      throw new Error(result.error || '关系分析失败')
-    }
-    return result.data as RelationshipProgressSkillResponse
-  },
-
-  /**
-   * 自主触发：每周关系报告
-   * AI Native: AI 主动发现问题并推送
-   */
-  async triggerWeeklyReport(user_id_1: string, user_id_2: string) {
-    return skillRegistry.triggerAutonomous('relationship_progress', 'weekly_report', user_id_1, {
-      user_id_2
-    })
-  },
-
-  /**
-   * 自主触发：互动频率下降提醒
-   * AI Native: 感知环境变化主动响应
-   */
-  async triggerActivityDrop(user_id_1: string, user_id_2: string) {
-    return skillRegistry.triggerAutonomous('relationship_progress', 'activity_drop', user_id_1, {
-      user_id_2
-    })
-  }
-}
 
 // 聊天助手 Skill
 // AI Native 特性：对话式交互、Generative UI、自主触发（未读提醒、回复建议）
@@ -950,10 +676,8 @@ export const skills = {
   datePlanning: datePlanningSkill,
   // P19
   billAnalysis: billAnalysisSkill,
-  geoLocation: geoLocationSkill,
-  giftOrdering: giftOrderingSkill,
+  // 注：geoLocation, giftOrdering, relationshipProgress 已删除，改用 REST API
   // 新增 Skills
-  relationshipProgress: relationshipProgressSkill,
   chatAssistant: chatAssistantSkill,
   safetyGuardian: safetyGuardianSkill
 }

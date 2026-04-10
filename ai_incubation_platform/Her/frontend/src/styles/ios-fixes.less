@@ -1,0 +1,384 @@
+/**
+ * iOS 设备特定适配样式
+ * 解决 iOS Safari 特有问题
+ */
+
+/* ========== iOS 输入框优化 ========== */
+
+/* 防止 iOS Safari 自动缩放输入框 */
+input,
+textarea,
+select {
+  font-size: 16px !important;  /* 关键：16px 以上防止自动缩放 */
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 12px;
+  /* 防止 iOS 内阴影 */
+  -webkit-box-shadow: none;
+  box-shadow: none;
+  /* 防止 iOS 圆角 */
+  -webkit-border-radius: 12px;
+}
+
+/* iOS 输入框焦点状态优化 */
+input:focus,
+textarea:focus,
+select:focus {
+  /* 防止 iOS 聚焦时的灰色背景 */
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+/* iOS 搜索框优化 */
+input[type="search"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* ========== iOS 键盘弹起优化 ========== */
+
+/* 键盘弹起时固定布局 */
+.keyboard-active {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 输入区域键盘适配 */
+.chat-room-input-area,
+.input-area {
+  /* iOS 键盘弹起时保持固定 */
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+  /* 安全区域适配 */
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  /* 防止键盘弹起时被遮挡 */
+  transform: translateZ(0);
+}
+
+/* ========== iOS 安全区域完整适配 ========== */
+
+/* 全屏布局适配 */
+.fullscreen-layout {
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+/* Header 安全区域 */
+.home-header,
+.chat-room-header {
+  padding-top: max(0, env(safe-area-inset-top, 0));
+}
+
+/* 底部输入框安全区域 */
+.chat-input-wrapper,
+.input-wrapper {
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+}
+
+/* ========== iOS 刘海屏适配 ========== */
+
+/* iPhone X 及以上机型适配 */
+@supports (padding: max(0px)) {
+  .home-layout {
+    padding-top: max(0, env(safe-area-inset-top));
+    padding-bottom: max(0, env(safe-area-inset-bottom));
+    padding-left: max(0, env(safe-area-inset-left));
+    padding-right: max(0, env(safe-area-inset-right));
+  }
+
+  /* 固定头部适配 */
+  .home-header {
+    padding-top: max(12px, env(safe-area-inset-top, 12px));
+    min-height: calc(56px + env(safe-area-inset-top, 0));
+  }
+
+  /* 聊天室头部适配 */
+  .chat-room-header {
+    padding-top: max(12px, env(safe-area-inset-top, 12px));
+    min-height: calc(60px + env(safe-area-inset-top, 0));
+  }
+
+  /* 底部输入区域适配 */
+  .chat-room-input-area {
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+  }
+
+  .input-area {
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+  }
+}
+
+/* ========== iOS 视口高度修复 ========== */
+
+/* iOS Safari 地址栏导致的视口高度问题 */
+@supports (-webkit-touch-callout: none) {
+  /* 使用 -webkit-fill-available 修复 iOS 视口高度 */
+  .home-layout,
+  .chat-interface,
+  .chat-room {
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+
+  /* 内容区域高度 */
+  .home-content,
+  .messages-container,
+  .chat-room-messages {
+    min-height: 0;
+    flex: 1;
+  }
+}
+
+/* ========== iOS 滚动优化 ========== */
+
+/* iOS 平滑滚动 */
+.messages-container,
+.chat-room-messages,
+.scrollable-container {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  /* 防止滚动卡顿 */
+  transform: translateZ(0);
+}
+
+/* iOS 滚动条隐藏 */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* ========== iOS 触摸优化 ========== */
+
+/* 防止长按弹出菜单 */
+img,
+a,
+button {
+  -webkit-touch-callout: none;
+}
+
+/* 防止双击缩放 */
+* {
+  touch-action: manipulation;
+}
+
+/* 优化点击响应 */
+button,
+.ant-btn,
+.clickable {
+  touch-action: manipulation;
+  /* 快速响应触摸 */
+  -webkit-fast-tap: true;
+}
+
+/* ========== iOS 动画性能优化 ========== */
+
+/* 硬件加速 */
+.animate-smooth,
+.floating-ball-container,
+.generative-ui-container {
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* ========== iOS 固定定位修复 ========== */
+
+/* iOS Safari 固定定位问题修复 */
+.fixed-element {
+  position: fixed;
+  /* 防止 iOS Safari 地址栏影响 */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Drawer/Modal 固定定位 */
+.ant-drawer,
+.ant-modal-wrap {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* iOS 适配 */
+  z-index: 1000;
+}
+
+/* ========== iOS 表情选择器优化 ========== */
+
+.emoji-picker-panel {
+  /* 防止 iOS 键盘遮挡 */
+  position: sticky;
+  bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  /* 平滑滚动 */
+  -webkit-overflow-scrolling: touch;
+  /* 触摸优化 */
+  touch-action: manipulation;
+}
+
+/* ========== iOS 图片预览优化 ========== */
+
+/* 图片上传预览 Modal */
+.ant-modal-content {
+  /* iOS 安全区域 */
+  max-height: calc(100vh - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ========== iOS 消息气泡优化 ========== */
+
+.message-bubble {
+  /* 防止 iOS 长按菜单 */
+  -webkit-touch-callout: none;
+  /* 文本可选 */
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ========== iOS 聊天室特定优化 ========== */
+
+.chat-room {
+  /* 全屏高度适配 */
+  height: 100vh;
+  height: -webkit-fill-available;
+  /* 防止地址栏影响 */
+  position: relative;
+  overflow: hidden;
+}
+
+/* 聊天室头部固定 */
+.chat-room-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  /* iOS 安全区域 */
+  padding-top: max(12px, env(safe-area-inset-top, 12px));
+}
+
+/* 消息列表滚动优化 */
+.chat-room-messages {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* iOS 滚动性能 */
+  transform: translateZ(0);
+  /* 底部安全区域 */
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* 输入区域固定底部 */
+.chat-room-input-area {
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+  background: white;
+  /* iOS 键盘适配 */
+  padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+}
+
+/* ========== iOS 响应式断点 ========== */
+
+/* iPhone SE (小屏幕) */
+@media (max-width: 375px) {
+  .home-header {
+    padding-top: max(8px, env(safe-area-inset-top, 8px));
+    min-height: calc(52px + env(safe-area-inset-top, 0));
+  }
+
+  .chat-room-header {
+    padding-top: max(8px, env(safe-area-inset-top, 8px));
+    min-height: calc(56px + env(safe-area-inset-top, 0));
+  }
+
+  /* 输入框字体大小保持 16px */
+  input,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* iPhone Pro Max (大屏幕) */
+@media (min-width: 428px) {
+  .home-header {
+    padding-top: max(16px, env(safe-area-inset-top, 16px));
+  }
+}
+
+/* ========== iOS 横屏适配 ========== */
+
+@media (orientation: landscape) and (max-height: 500px) {
+  /* 横屏时最小化头部 */
+  .home-header,
+  .chat-room-header {
+    padding-top: max(4px, env(safe-area-inset-top, 4px));
+    min-height: calc(44px + env(safe-area-inset-top, 0));
+  }
+
+  /* 输入区域紧凑 */
+  .chat-room-input-area,
+  .input-area {
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
+  }
+
+  /* 输入框字体保持 16px */
+  input {
+    font-size: 16px !important;
+  }
+}
+
+/* ========== iOS PWA 模式优化 ========== */
+
+/* PWA 全屏模式 */
+@media (display-mode: standalone) {
+  /* PWA 模式下使用完整安全区域 */
+  .home-layout {
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .home-header {
+    padding-top: max(16px, env(safe-area-inset-top, 16px));
+  }
+
+  .chat-room-input-area {
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+  }
+}
+
+/* ========== iOS 暗色模式支持 ========== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --theme-color-dark: #1a1a1a;
+  }
+
+  /* 暗色模式下输入框优化 */
+  input,
+  textarea {
+    color-scheme: dark;
+  }
+}
+
+/* ========== iOS 减少动画偏好 ========== */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

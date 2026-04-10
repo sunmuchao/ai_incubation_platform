@@ -463,95 +463,6 @@
   }
 }
 
-// AI 帮我回按钮
-.ai-suggestion-trigger {
-  text-align: center;
-  padding: 8px 0;
-  margin-bottom: 8px;
-
-  .ant-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    border: none !important;
-    color: white !important;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    }
-  }
-}
-
-// AI 建议面板
-.ai-suggestion-panel {
-  background: linear-gradient(180deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-  padding: 12px 16px;
-  border-top: 1px solid rgba(102, 126, 234, 0.2);
-  border-bottom: 1px solid rgba(102, 126, 234, 0.2);
-
-  .ai-suggestion-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 12px;
-    color: #667eea;
-    font-size: 14px;
-
-    .anticon {
-      font-size: 16px;
-    }
-  }
-
-  .suggestion-item {
-    background: rgba(255, 255, 255, 0.9) !important;
-    border: 1px solid rgba(102, 126, 234, 0.2) !important;
-    border-radius: 12px !important;
-    padding: 12px 16px !important;
-    margin-bottom: 8px;
-    text-align: left;
-    height: auto !important;
-    transition: all 0.3s ease !important;
-
-    &:hover {
-      border-color: #667eea !important;
-      background: rgba(102, 126, 234, 0.08) !important;
-      transform: translateX(4px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-    }
-
-    .suggestion-content {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-
-      .suggestion-style {
-        font-size: 12px;
-        padding: 2px 8px;
-        flex-shrink: 0;
-      }
-
-      .ant-typography {
-        flex: 1;
-        font-size: 14px;
-        line-height: 1.5;
-      }
-    }
-  }
-
-  .regenerate-btn {
-    width: 100%;
-    margin-top: 8px;
-    border-color: #667eea !important;
-    color: #667eea !important;
-
-    &:hover {
-      background: rgba(102, 126, 234, 0.08) !important;
-    }
-  }
-}
-
 .chat-room-messages::-webkit-scrollbar-track {
   background: rgba(102, 126, 234, 0.05);
   border-radius: 3px;
@@ -594,6 +505,63 @@
     display: block;
     width: 100%;
     height: auto;
+  }
+}
+
+// 表情选择面板
+.emoji-picker-panel {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(232, 232, 232, 0.5);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+  max-width: 320px;
+
+  .emoji-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(232, 232, 232, 0.5);
+  }
+
+  .emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+
+    .emoji-item {
+      font-size: 20px !important;
+      padding: 4px !important;
+      border-radius: 8px !important;
+      transition: all 0.2s ease !important;
+
+      &:hover {
+        background: rgba(102, 126, 234, 0.15) !important;
+        transform: scale(1.2);
+      }
+    }
+  }
+}
+
+// 表情消息气泡
+.emoji-bubble {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 8px !important;
+
+  .emoji-text {
+    line-height: 1;
+  }
+
+  &::after,
+  &::before {
+    display: none !important;
   }
 }
 

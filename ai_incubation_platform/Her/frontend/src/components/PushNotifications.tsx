@@ -1,153 +1,102 @@
-// AI 主动推送通知组件
+/**
+ * 聊天消息通知组件
+ *
+ * 功能：
+ * - 显示聊天消息未读数
+ * - 点击显示"谁发了什么消息"列表
+ * - 点击消息跳转到对应聊天室
+ */
 
-import React, { useState, useEffect } from 'react'
-import { Badge, Drawer, List, Avatar, Typography, Button, Space, Tag, Empty, Spin } from 'antd'
-import { ThunderboltOutlined, HeartOutlined, StarOutlined, RobotOutlined, UserOutlined, BellOutlined } from '@ant-design/icons'
+import React from 'react'
+import { Badge, Drawer, List, Avatar, Typography, Button, Space, Empty, Spin } from 'antd'
+import { BellOutlined, UserOutlined, MessageOutlined } from '@ant-design/icons'
 import type { MatchCandidate } from '../types'
-import { conversationMatchingApi } from '../api'
 import './PushNotifications.less'
 
-const { Text, Paragraph } = Typography
+const { Text } = Typography
 
-// 最大通知数量限制，防止内存泄漏
-const MAX_NOTIFICATIONS = 20
-
-interface PushNotification {
+interface ConversationMessage {
   id: string
-  type: 'match' | 'update' | 'suggestion'
-  title: string
-  message: string
-  match?: MatchCandidate
-  timestamp: Date
-  read: boolean
+  user_id_1: string
+  user_id_2: string
+  last_message_preview?: string
+  last_message_at?: string
+  unread_count: number
 }
 
 interface PushNotificationsProps {
-  onNotificationClick?: (notification: PushNotification) => void
-  onMatchSelect?: (match: MatchCandidate) => void
+  unreadCount: number                    // 总未读消息数
+  conversations?: ConversationMessage[]  // 会话列表
+  matchesCache?: Record<string, MatchCandidate>  // 用户信息缓存
+  onOpenChatRoom?: (partnerId: string, partnerName: string) => void  // 打开聊天室
 }
 
 const PushNotifications: React.FC<PushNotificationsProps> = ({
-  onNotificationClick,
-  onMatchSelect,
+  unreadCount,
+  conversations = [],
+  matchesCache = {},
+  onOpenChatRoom,
 }) => {
-  const [visible, setVisible] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [notifications, setNotifications] = useState<PushNotification[]>([])
-  const [hasNewPush, setHasNewPush] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [visible, setVisible] = React.useState(false)
+  const [loading, setLoading] = React.useState(false)
 
-  // 定期检查 AI 推送
-  useEffect(() => {
-    checkAiPush()
-    const interval = setInterval(checkAiPush, 60000)
-    return () => clearInterval(interval)
+  // 从会话中获取当前用户 ID
+  const currentUserId = React.useMemo(() => {
+    const userInfoStr = localStorage.getItem('user_info')
+    if (userInfoStr) {
+      try {
+        const userInfo = JSON.parse(userInfoStr)
+        return userInfo.id || userInfo.username
+      } catch {
+        return 'user-anonymous-dev'
+      }
+    }
+    return 'user-anonymous-dev'
   }, [])
 
-  const checkAiPush = async () => {
-    try {
-      const response = await conversationMatchingApi.getAiPushRecommendations()
-      if (response.has_push && response.matches && response.matches.length > 0 && response.matches[0]?.user) {
-        const newNotification: PushNotification = {
-          id: `push-${Date.now()}`,
-          type: 'match',
-          title: 'AI 为你推荐新对象',
-          message: response.message,
-          match: response.matches[0],
-          timestamp: new Date(response.pushed_at),
-          read: false,
-        }
+  // 筛选有未读消息的会话
+  const unreadConversations = React.useMemo(() => {
+    return conversations.filter(conv => conv.unread_count > 0)
+  }, [conversations])
 
-        setNotifications((prev) => {
-          const exists = prev.some((n) => n.match?.user?.id === response.matches?.[0]?.user?.id)
-          if (exists) return prev
-
-          setHasNewPush(true)
-          const newNotifications = [newNotification, ...prev]
-          // 限制通知数量，移除最旧的通知
-          if (newNotifications.length > MAX_NOTIFICATIONS) {
-            return newNotifications.slice(0, MAX_NOTIFICATIONS)
-          }
-          return newNotifications
-        })
-
-        // 更新未读数
-        setUnreadCount(prev => prev + 1)
-      }
-    } catch (error: unknown) {
-      const isUnauthorized = error instanceof Error &&
-        'response' in error &&
-        (error as any).response?.status === 401
-      if (!isUnauthorized) {
-        console.error('Failed to check AI push:', error)
-      }
-    }
-  }
-
-  const handleOpenDrawer = async () => {
-    setLoading(true)
-    try {
-      // 打开时从后端获取最新推送
-      const response = await conversationMatchingApi.getAiPushRecommendations()
-      if (response.has_push && response.matches && response.matches.length > 0) {
-        // 将后端返回的匹配转换为通知
-        const newNotifications: PushNotification[] = response.matches.map((match: MatchCandidate, index: number) => ({
-          id: `push-${match.user?.id || index}`,
-          type: 'match',
-          title: 'AI 推荐',
-          message: match.reasoning || `与${match.user?.name}匹配度${Math.round((match.score || match.compatibility_score || 0) * 100)}%`,
-          match: match,
-          timestamp: new Date(),
-          read: true, // 打开后标记为已读
-        }))
-        setNotifications(newNotifications)
-      }
-    } catch (error) {
-      console.error('Failed to fetch AI push:', error)
-    } finally {
-      setLoading(false)
-    }
+  // 打开通知面板
+  const handleOpenDrawer = () => {
     setVisible(true)
-    setHasNewPush(false)
-    setUnreadCount(0)
   }
 
+  // 关闭通知面板
   const handleCloseDrawer = () => {
     setVisible(false)
   }
 
-  const handleNotificationClick = (notification: PushNotification) => {
-    onNotificationClick?.(notification)
-    if (notification.match && onMatchSelect) {
-      onMatchSelect(notification.match)
-    }
+  // 点击消息，跳转到聊天室
+  const handleConversationClick = (conv: ConversationMessage) => {
+    // 获取对方 ID
+    const partnerId = conv.user_id_1 === currentUserId ? conv.user_id_2 : conv.user_id_1
+    // 从缓存获取对方信息
+    const cachedMatch = matchesCache[partnerId]
+    const partnerName = cachedMatch?.user?.name || partnerId
+
+    // 调用回调打开聊天室
+    onOpenChatRoom?.(partnerId, partnerName)
     handleCloseDrawer()
   }
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'match':
-        return <HeartOutlined />
-      case 'update':
-        return <ThunderboltOutlined />
-      case 'suggestion':
-        return <StarOutlined />
-      default:
-        return <BellOutlined />
-    }
-  }
+  // 格式化时间
+  const formatTime = (timestamp: string) => {
+    if (!timestamp) return ''
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
 
-  const getNotificationColor = (type: string) => {
-    switch (type) {
-      case 'match':
-        return '#f5222d'
-      case 'update':
-        return '#1890ff'
-      case 'suggestion':
-        return '#faad14'
-      default:
-        return '#8c8c8c'
-    }
+    if (diffMins < 1) return '刚刚'
+    if (diffMins < 60) return `${diffMins}分钟前`
+    if (diffHours < 24) return `${diffHours}小时前`
+    if (diffDays < 7) return `${diffDays}天前`
+    return date.toLocaleDateString('zh-CN')
   }
 
   return (
@@ -165,74 +114,76 @@ const PushNotifications: React.FC<PushNotificationsProps> = ({
       <Drawer
         title={
           <div className="drawer-title">
-            <RobotOutlined />
-            <Text strong>AI 推送通知</Text>
+            <MessageOutlined />
+            <Text strong>消息通知</Text>
+            {unreadCount > 0 && (
+              <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+                {unreadCount} 条未读
+              </Text>
+            )}
           </div>
         }
         placement="right"
         width={400}
         open={visible}
         onClose={handleCloseDrawer}
-        footer={
-          <Button block onClick={() => setNotifications([])}>
-            清空所有通知
-          </Button>
-        }
       >
         <div className="notification-list">
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px 0' }}>
               <Spin tip="加载中..." />
             </div>
-          ) : notifications.length === 0 ? (
-            <Empty description="暂无新通知" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          ) : unreadConversations.length === 0 ? (
+            <Empty description="暂无新消息" image={Empty.PRESENTED_IMAGE_SIMPLE} />
           ) : (
             <List
-              dataSource={notifications}
-              renderItem={(item) => (
-                <List.Item
-                  className={`notification-item ${!item.read ? 'unread' : ''}`}
-                  onClick={() => handleNotificationClick(item)}
-                >
-                  <List.Item.Meta
-                    avatar={
-                      <Avatar
-                        icon={getNotificationIcon(item.type)}
-                        style={{ backgroundColor: getNotificationColor(item.type) }}
-                      />
-                    }
-                    title={
-                      <div className="notification-title">
-                        <Text strong>{item.title}</Text>
-                        {!item.read && <Tag color="red">新</Tag>}
-                      </div>
-                    }
-                    description={
-                      <div className="notification-content">
-                        <Text type="secondary" style={{ fontSize: 13 }}>
-                          {item.message}
-                        </Text>
-                        {item.match && (
-                          <div className="notification-match-preview">
-                            <Avatar
-                              size={24}
-                              src={item.match.user?.avatar || item.match.user?.avatar_url}
-                              icon={<UserOutlined />}
-                            />
-                            <Text style={{ fontSize: 12 }}>
-                              {item.match.user?.name} ·{' '}
-                              {Math.round((item.match.score || item.match.compatibility_score || 0) * 100)}% 匹配
+              dataSource={unreadConversations}
+              renderItem={(conv) => {
+                const partnerId = conv.user_id_1 === currentUserId ? conv.user_id_2 : conv.user_id_1
+                const cachedMatch = matchesCache[partnerId]
+                const partnerName = cachedMatch?.user?.name || partnerId
+                const partnerAvatar = cachedMatch?.user?.avatar || cachedMatch?.user?.avatar_url
+
+                return (
+                  <List.Item
+                    className="notification-item unread"
+                    onClick={() => handleConversationClick(conv)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <List.Item.Meta
+                      avatar={
+                        <Avatar
+                          size={48}
+                          src={partnerAvatar}
+                          icon={<UserOutlined />}
+                        />
+                      }
+                      title={
+                        <div className="notification-title">
+                          <Space>
+                            <Text strong>{partnerName}</Text>
+                            <Text type="secondary" style={{ fontSize: 11 }}>
+                              {formatTime(conv.last_message_at || '')}
                             </Text>
-                          </div>
-                        )}
-                        <Text type="secondary" style={{ fontSize: 11 }}>
-                          {item.timestamp.toLocaleString('zh-CN')}
-                        </Text>
-                      </div>
-                    }
-                  />
-                </List.Item>
-              )}
+                          </Space>
+                        </div>
+                      }
+                      description={
+                        <div className="notification-content">
+                          <Text style={{ fontSize: 13 }}>
+                            {conv.last_message_preview || '发来了一条消息'}
+                          </Text>
+                          {conv.unread_count > 1 && (
+                            <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
+                              ({conv.unread_count}条)
+                            </Text>
+                          )}
+                        </div>
+                      }
+                    />
+                  </List.Item>
+                )
+              }}
             />
           )}
         </div>

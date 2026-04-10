@@ -4,13 +4,33 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-    <!-- 视口配置 - 禁用缩放，适配移动端 -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- 视口配置 - iOS 优化 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no" />
+
+    <!-- iOS Web App 配置 -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Her" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="format-detection" content="email=no" />
+    <meta name="format-detection" content="address=no" />
+
+    <!-- iOS 图标 -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.svg" />
+
+    <!-- iOS 启动画面（适配不同机型） -->
+    <link rel="apple-touch-startup-image" href="/apple-touch-icon.svg" />
 
     <!-- 应用信息 -->
     <title>Her</title>
     <meta name="description" content="遇见懂你的 TA" />
     <meta name="theme-color" content="#FDFBFD" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- iOS 特定优化 -->
+    <meta name="HandheldFriendly" content="true" />
+    <meta name="MobileOptimized" content="width" />
 
     <!-- 预加载关键资源 -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

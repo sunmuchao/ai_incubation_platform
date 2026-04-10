@@ -3,7 +3,7 @@
  * 参考：Ant Design Pro, Material-UI, Modern Authentication Patterns
  */
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   Form,
   Input,
@@ -19,6 +19,8 @@ import {
   Checkbox,
   ConfigProvider,
   theme,
+  QRCode,
+  Spin,
 } from 'antd'
 import {
   UserOutlined,
@@ -30,8 +32,12 @@ import {
   EyeOutlined,
   EyeInvisibleOutlined,
   ArrowLeftOutlined,
+  WechatOutlined,
+  ReloadOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons'
 import { userApi } from '../api'
+import { authStorage, registrationStorage } from '../utils/storage'
 import CryptoJS from 'crypto-js'
 import './LoginPage.less'
 
@@ -63,6 +69,90 @@ interface ForgotPasswordFormData {
   email: string
 }
 
+// ==================== 密码强度验证 ====================
+
+interface PasswordStrength {
+  score: number
+  label: string
+  color: string
+  checks: {
+    length: boolean
+    types: boolean
+    weak: boolean
+    username: boolean
+  }
+}
+
+const validatePasswordStrength = (
+  password: string,
+  username?: string,
+  email?: string
+): PasswordStrength => {
+  const checks = {
+    length: password.length >= 8,
+    types: countCharTypes(password) >= 2,
+    weak: !isWeakPassword(password),
+    username: !containsUserInfo(password, username, email),
+  }
+
+  let score = 0
+  if (checks.length) score += 25
+  if (password.length >= 12) score += 10
+  if (checks.types) score += 30
+  if (checks.weak) score += 20
+  if (checks.username) score += 15
+
+  let label = '极弱'
+  let color = '#ff4d4f'
+  if (score >= 80) {
+    label = '强'
+    color = '#52c41a'
+  } else if (score >= 50) {
+    label = '中'
+    color = '#faad14'
+  } else if (score >= 30) {
+    label = '弱'
+    color = '#ff7a45'
+  }
+
+  return { score, label, color, checks }
+}
+
+const countCharTypes = (password: string): number => {
+  let count = 0
+  if (/[a-z]/.test(password)) count++
+  if (/[A-Z]/.test(password)) count++
+  if (/\d/.test(password)) count++
+  if (/[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\;/`~]/.test(password)) count++
+  return count
+}
+
+const COMMON_WEAK_PASSWORDS = new Set([
+  'password', 'password123', '123456', '12345678', '123456789',
+  'qwerty', 'qwerty123', 'abc123', 'admin', 'root', 'test',
+  'welcome', 'monkey', 'dragon', 'master', 'letmein', 'iloveyou',
+])
+
+const isWeakPassword = (password: string): boolean => {
+  const lower = password.toLowerCase()
+  if (COMMON_WEAK_PASSWORDS.has(lower)) return true
+  for (const weak of COMMON_WEAK_PASSWORDS) {
+    if (weak.length >= 5 && lower.includes(weak)) return true
+  }
+  return false
+}
+
+const containsUserInfo = (password: string, username?: string, email?: string): boolean => {
+  const lower = password.toLowerCase()
+  if (username && username.length >= 3 && lower.includes(username.toLowerCase())) return true
+  if (email) {
+    const prefix = email.split('@')[0].toLowerCase()
+    if (prefix.length >= 3 && lower.includes(prefix)) return true
+  }
+  return false
+}
+
+
 // ==================== 主组件 ====================
 
 const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }) => {
@@ -74,6 +164,14 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
   const [forgotEmail, setForgotEmail] = useState('')
   const [forgotLoading, setForgotLoading] = useState(false)
   const [forgotStep, setForgotStep] = useState<'input' | 'sent'>('input')
+
+  // 微信登录状态
+  const [wechatModalOpen, setWechatModalOpen] = useState(false)
+  const [wechatQrUrl, setWechatQrUrl] = useState('')
+  const [wechatState, setWechatState] = useState('')
+  const [wechatLoading, setWechatLoading] = useState(false)
+  const [wechatStatus, setWechatStatus] = useState<'pending' | 'scanned' | 'confirmed' | 'expired'>('pending')
+  const wechatPollingRef = useRef<NodeJS.Timeout | null>(null)
 
   const formRef = useRef<any>(null)
 
@@ -87,8 +185,7 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
 
       const response = await userApi.login(values.username, passwordHash)
       if (response.access_token) {
-        localStorage.setItem('jwt_token', response.access_token)
-        localStorage.setItem('user_info', JSON.stringify(response.user))
+        authStorage.saveAuth({ token: response.access_token, user: response.user })
         message.success('登录成功！')
         onLoginSuccess?.()
       }
@@ -158,9 +255,8 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
         try {
           const loginResponse = await userApi.login(values.email, passwordHash)
           if (loginResponse.access_token) {
-            localStorage.setItem('jwt_token', loginResponse.access_token)
-            localStorage.setItem('user_info', JSON.stringify(loginResponse.user))
-            localStorage.removeItem('has_completed_registration_conversation')
+            authStorage.saveAuth({ token: loginResponse.access_token, user: loginResponse.user })
+            registrationStorage.reset()
             message.success('注册并登录成功！')
             onLoginSuccess?.()
             return
@@ -177,8 +273,8 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
           name: values.name,
           email: values.email,
         }
-        localStorage.setItem('user_info', JSON.stringify(userInfo))
-        localStorage.removeItem('has_completed_registration_conversation')
+        authStorage.setUser(userInfo)
+        registrationStorage.reset()
         message.success('注册成功！请使用邮箱登录')
         setActiveTab('login')
       }
@@ -214,17 +310,15 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
 
     setForgotLoading(true)
     try {
-      // TODO: 调用后端忘记密码 API
-      // await userApi.forgotPassword(forgotEmail)
-
-      // 模拟 API 调用
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      // 调用后端忘记密码 API
+      await userApi.forgotPassword(forgotEmail)
 
       setForgotStep('sent')
       message.success('重置邮件已发送，请查收！')
     } catch (error: unknown) {
-      const errorMsg = error instanceof Error ? error.message : '发送失败，请稍后重试'
-      message.error(errorMsg)
+      // 安全考虑：无论成功失败都显示相同信息，避免枚举攻击
+      setForgotStep('sent')
+      message.success('如果该邮箱已注册，重置邮件将在几分钟内送达')
     } finally {
       setForgotLoading(false)
     }
@@ -236,6 +330,122 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
     setForgotStep('input')
     setForgotEmail('')
   }
+
+  // ========== 微信登录 ==========
+
+  // 打开微信登录弹窗
+  const handleWechatLogin = async () => {
+    setWechatLoading(true)
+    setWechatModalOpen(true)
+    setWechatStatus('pending')
+
+    try {
+      const response = await fetch('/api/wechat/qrcode')
+      if (!response.ok) {
+        throw new Error('获取二维码失败')
+      }
+
+      const data = await response.json()
+      setWechatQrUrl(data.qrcode_url)
+      setWechatState(data.state)
+
+      // 开始轮询检查登录状态
+      startWechatPolling(data.state)
+    } catch (error) {
+      console.error('Failed to get WeChat QR code:', error)
+      message.error('微信登录暂不可用，请使用账号登录')
+      setWechatModalOpen(false)
+    } finally {
+      setWechatLoading(false)
+    }
+  }
+
+  // 开始轮询检查登录状态
+  const startWechatPolling = (state: string) => {
+    // 清理之前的轮询
+    if (wechatPollingRef.current) {
+      clearInterval(wechatPollingRef.current)
+    }
+
+    // 每 2 秒检查一次
+    wechatPollingRef.current = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/wechat/status?state=${state}`)
+        if (!response.ok) return
+
+        const data = await response.json()
+        setWechatStatus(data.status)
+
+        // 登录成功
+        if (data.status === 'confirmed' && data.token) {
+          // 停止轮询
+          if (wechatPollingRef.current) {
+            clearInterval(wechatPollingRef.current)
+            wechatPollingRef.current = null
+          }
+
+          // 保存登录状态
+          authStorage.saveAuth({
+            token: data.token,
+            user: { id: data.user_id },
+          })
+
+          message.success('微信登录成功！')
+          setWechatModalOpen(false)
+
+          // 获取完整用户信息
+          try {
+            const userResponse = await fetch('/api/users/me', {
+              headers: { Authorization: `Bearer ${data.token}` },
+            })
+            if (userResponse.ok) {
+              const userData = await userResponse.json()
+              authStorage.setUser(userData)
+            }
+          } catch (e) {
+            console.warn('Failed to fetch user info:', e)
+          }
+
+          onLoginSuccess?.()
+        }
+
+        // 过期或无效
+        if (data.status === 'expired' || data.status === 'invalid') {
+          if (wechatPollingRef.current) {
+            clearInterval(wechatPollingRef.current)
+            wechatPollingRef.current = null
+          }
+        }
+      } catch (error) {
+        console.error('Polling error:', error)
+      }
+    }, 2000)
+  }
+
+  // 刷新二维码
+  const handleRefreshWechatQr = async () => {
+    setWechatStatus('pending')
+    setWechatQrUrl('')
+    await handleWechatLogin()
+  }
+
+  // 关闭微信登录弹窗
+  const handleWechatModalClose = () => {
+    setWechatModalOpen(false)
+    if (wechatPollingRef.current) {
+      clearInterval(wechatPollingRef.current)
+      wechatPollingRef.current = null
+    }
+  }
+
+  // 清理轮询
+  useEffect(() => {
+    return () => {
+      if (wechatPollingRef.current) {
+        clearInterval(wechatPollingRef.current)
+      }
+    }
+  }, [])
 
   return (
     <ConfigProvider
@@ -267,30 +477,6 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
               <Text className="brand-subtitle">
                 遇见懂你的 TA
               </Text>
-
-              <div className="brand-features">
-                <div className="feature-item">
-                  <div className="feature-icon">🎯</div>
-                  <div className="feature-text">
-                    <div className="feature-title">AI 智能匹配</div>
-                    <div className="feature-desc">深度学习你的偏好</div>
-                  </div>
-                </div>
-                <div className="feature-item">
-                  <div className="feature-icon">🔒</div>
-                  <div className="feature-text">
-                    <div className="feature-title">安全隐私</div>
-                    <div className="feature-desc">严格保护个人信息</div>
-                  </div>
-                </div>
-                <div className="feature-item">
-                  <div className="feature-icon">💕</div>
-                  <div className="feature-text">
-                    <div className="feature-title">真实认证</div>
-                    <div className="feature-desc">实名认证更放心</div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -337,35 +523,41 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
                 </Text>
               </Divider>
 
+              {/* 第三方登录 */}
               <div className="social-login">
                 <Button
-                  icon={<GoogleOutlined />}
+                  icon={<WechatOutlined />}
                   size="large"
-                  className="social-btn"
-                  onClick={() => message.info('第三方登录功能开发中')}
+                  className="social-btn wechat-btn"
+                  onClick={handleWechatLogin}
                 >
-                  Google
+                  微信登录
                 </Button>
               </div>
 
-              <div className="quick-experience">
-                <Button
-                  type="link"
-                  size="small"
-                  onClick={() => {
-                    localStorage.setItem('jwt_token', 'dev-token')
-                    localStorage.setItem('user_info', JSON.stringify({
-                      id: 'user-anonymous-dev',
-                      username: 'user-anonymous-dev',
-                      name: '体验用户'
-                    }))
-                    message.success('已进入体验模式')
-                    onLoginSuccess?.()
-                  }}
-                >
-                  游客体验模式
-                </Button>
-              </div>
+              {/* 游客体验模式 - 仅开发环境可用 */}
+              {import.meta.env.DEV && (
+                <div className="quick-experience">
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => {
+                      authStorage.saveAuth({
+                        token: 'dev-token',
+                        user: {
+                          id: 'user-anonymous-dev',
+                          username: 'user-anonymous-dev',
+                          name: '体验用户'
+                        }
+                      })
+                      message.success('已进入体验模式（仅开发环境）')
+                      onLoginSuccess?.()
+                    }}
+                  >
+                    🧪 游客体验模式（开发环境）
+                  </Button>
+                </div>
+              )}
             </Card>
 
             <div className="login-terms">
@@ -433,6 +625,83 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
               </Text>
             </div>
           )}
+        </Modal>
+
+        {/* 微信登录弹窗 */}
+        <Modal
+          title={
+            <Space>
+              <WechatOutlined style={{ color: '#07C160' }} />
+              微信扫码登录
+            </Space>
+          }
+          open={wechatModalOpen}
+          onCancel={handleWechatModalClose}
+          footer={null}
+          width={360}
+          centered
+          destroyOnClose
+        >
+          <div className="wechat-login-content">
+            {wechatLoading ? (
+              <div className="wechat-loading">
+                <Spin size="large" />
+                <Text type="secondary" style={{ marginTop: 16 }}>
+                  正在生成二维码...
+                </Text>
+              </div>
+            ) : wechatStatus === 'expired' ? (
+              <div className="wechat-expired">
+                <Text type="secondary">二维码已过期</Text>
+                <Button
+                  type="primary"
+                  icon={<ReloadOutlined />}
+                  onClick={handleRefreshWechatQr}
+                  style={{ marginTop: 16 }}
+                >
+                  刷新二维码
+                </Button>
+              </div>
+            ) : wechatStatus === 'confirmed' ? (
+              <div className="wechat-success">
+                <CheckCircleOutlined style={{ fontSize: 64, color: '#52c41a' }} />
+                <Text style={{ marginTop: 16, color: '#52c41a' }}>
+                  登录成功！
+                </Text>
+              </div>
+            ) : (
+              <>
+                <div className="wechat-qrcode">
+                  {wechatQrUrl && (
+                    <iframe
+                      src={wechatQrUrl}
+                      width="200"
+                      height="200"
+                      frameBorder="0"
+                      style={{ border: 'none' }}
+                      title="微信登录二维码"
+                    />
+                  )}
+                </div>
+                <div className="wechat-status">
+                  {wechatStatus === 'scanned' ? (
+                    <Text style={{ color: '#07C160' }}>
+                      <CheckCircleOutlined /> 已扫描，请在手机上确认
+                    </Text>
+                  ) : (
+                    <Text type="secondary">
+                      请使用微信扫描二维码登录
+                    </Text>
+                  )}
+                </div>
+                <div className="wechat-tips">
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    首次使用微信登录将自动创建账号
+                  </Text>
+                </div>
+              </>
+            )}
+          </div>
         </Modal>
       </div>
     </ConfigProvider>
@@ -522,6 +791,21 @@ const RegisterForm: React.FC<{
   loading: boolean
 }> = ({ onFinish, loading }) => {
   const [form] = Form.useForm()
+  const [passwordStrength, setPasswordStrength] = useState<PasswordStrength | null>(null)
+  const [password, setPassword] = useState('')
+
+  // 监听密码变化，实时计算强度
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setPassword(value)
+    if (value) {
+      const username = form.getFieldValue('username')
+      const email = form.getFieldValue('email')
+      setPasswordStrength(validatePasswordStrength(value, username, email))
+    } else {
+      setPasswordStrength(null)
+    }
+  }
 
   return (
     <div className="register-form-container">
@@ -551,14 +835,60 @@ const RegisterForm: React.FC<{
           name="password"
           rules={[
             { required: true, message: '请输入密码' },
-            { min: 6, message: '密码至少 6 个字符' },
+            { min: 8, message: '密码至少 8 个字符' },
+            {
+              validator: (_, value) => {
+                if (!value) return Promise.resolve()
+                const result = validatePasswordStrength(value)
+                if (result.score < 30) {
+                  return Promise.reject(new Error('密码强度不足'))
+                }
+                return Promise.resolve()
+              }
+            }
           ]}
         >
-          <Input.Password
-            prefix={<LockOutlined />}
-            placeholder="至少 6 个字符"
-            iconRender={({ visible }) => visible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
-          />
+          <div>
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="至少 8 个字符，建议包含大小写字母、数字、特殊字符"
+              iconRender={(visible) => visible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+              value={password}
+              onChange={handlePasswordChange}
+            />
+            {passwordStrength && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    flex: 1,
+                    height: 4,
+                    background: '#f0f0f0',
+                    borderRadius: 2,
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      width: `${passwordStrength.score}%`,
+                      height: '100%',
+                      background: passwordStrength.color,
+                      transition: 'width 0.3s'
+                    }} />
+                  </div>
+                  <Text style={{ fontSize: 12, color: passwordStrength.color }}>
+                    {passwordStrength.label}
+                  </Text>
+                </div>
+                <div style={{ marginTop: 4 }}>
+                  <Text type="secondary" style={{ fontSize: 11 }}>
+                    {[!passwordStrength.checks.length && '至少8字符',
+                      !passwordStrength.checks.types && '需多种字符类型',
+                      !passwordStrength.checks.weak && '避免常见弱密码',
+                      !passwordStrength.checks.username && '不要包含用户名/邮箱'
+                    ].filter(Boolean).join(' · ') || '✓ 密码强度良好'}
+                  </Text>
+                </div>
+              </div>
+            )}
+          </div>
         </Form.Item>
 
         <Form.Item

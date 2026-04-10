@@ -11,6 +11,7 @@ import {
   PlusOutlined,
   CloseOutlined,
 } from '@ant-design/icons'
+import { pwaStorage } from '../utils/storage'
 import './PWAInstallPrompt.less'
 
 const { Title, Text } = Typography
@@ -35,12 +36,12 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ onInstall, onDismis
     setIsStandalone(standalone)
 
     // 检查是否已Dismiss过
-    const dismissed = localStorage.getItem('pwa-install-dismissed')
-    const dismissedAt = dismissed ? parseInt(dismissed) : 0
-    const daysSinceDismissal = (Date.now() - dismissedAt) / (1000 * 60 * 60 * 24)
+    if (pwaStorage.isInstallDismissed()) {
+      return
+    }
 
     // 已安装或 7 天内手动关闭过则不显示
-    if (standalone || daysSinceDismissal < 7) {
+    if (standalone) {
       return
     }
 
@@ -59,7 +60,7 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ onInstall, onDismis
 
   const handleDismiss = () => {
     setVisible(false)
-    localStorage.setItem('pwa-install-dismissed', Date.now().toString())
+    pwaStorage.dismissInstall()
     onDismiss?.()
   }
 

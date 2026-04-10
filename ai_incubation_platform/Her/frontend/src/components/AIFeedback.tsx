@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { Tag, Typography, Progress } from 'antd'
-import { RobotOutlined, ThunderboltOutlined, HeartOutlined, CloseOutlined } from '@ant-design/icons'
+import { HeartOutlined, HeartFilled, ThunderboltOutlined, CloseOutlined } from '@ant-design/icons'
 import './AIFeedback.less'
 
 const { Text } = Typography
@@ -63,7 +63,7 @@ export const AIFeedback: React.FC<AIFeedbackProps> = ({ action, visible, onClose
       case 'super_like':
         return <ThunderboltOutlined />
       default:
-        return <RobotOutlined />
+        return <HeartFilled />
     }
   }
 
@@ -88,7 +88,7 @@ export const AIFeedback: React.FC<AIFeedbackProps> = ({ action, visible, onClose
         </div>
         <div className="ai-feedback-content">
           <div className="ai-feedback-header">
-            <RobotOutlined className="ai-icon" />
+            <HeartFilled className="ai-icon" style={{ color: '#FF8FAB' }} />
             <Text strong>AI 学习反馈</Text>
           </div>
           <Text className="ai-feedback-message">{message}</Text>
@@ -119,12 +119,12 @@ export const AIPreferenceUpdate: React.FC<AIPreferenceUpdateProps> = ({ preferen
   return (
     <div className="ai-preference-update">
       <div className="ai-preference-header">
-        <RobotOutlined className="ai-icon" />
+        <HeartFilled className="ai-icon" style={{ color: '#FF8FAB' }} />
         <Text strong>AI 发现你的偏好</Text>
       </div>
       <div className="ai-preference-tags">
         {preferences.map((pref, index) => (
-          <Tag key={index} color="blue" icon={<ThunderboltOutlined />}>
+          <Tag key={index} color="#C88B8B" icon={<ThunderboltOutlined />}>
             {pref}
           </Tag>
         ))}

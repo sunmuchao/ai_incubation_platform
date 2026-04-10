@@ -26,10 +26,10 @@ const localStorageMock = {
 Object.defineProperty(window, 'localStorage', { value: localStorageMock })
 
 // Mock WebSocket
-jest.mock('../services/websocket', () => ({
+jest.mock('../../services/websocket', () => ({
   websocketService: {
     connect: jest.fn(),
-    onMessage: jest.fn(),
+    onMessage: jest.fn(() => jest.fn()), // 返回 unsubscribe 函数
     disconnect: jest.fn(),
   },
 }))

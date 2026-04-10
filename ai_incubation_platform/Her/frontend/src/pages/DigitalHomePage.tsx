@@ -37,6 +37,7 @@ import {
 } from '@ant-design/icons'
 import { milestoneApi } from '../api/p10_api'
 import type { Milestone } from '../types/p10_types'
+import { authStorage } from '../utils/storage'
 import './DigitalHomePage.less'
 
 const { Text, Title, Paragraph } = Typography
@@ -98,7 +99,7 @@ const DigitalHomePage: React.FC<DigitalHomePageProps> = ({ userId, partnerId }) 
   const [unreadCount, setUnreadCount] = useState(0)
   const [hasNewMessage, setHasNewMessage] = useState(false)
 
-  const currentUserId = userId || localStorage.getItem('user_info')?.username || 'anonymous'
+  const currentUserId = userId || authStorage.getUserId()
   const currentPartnerId = partnerId || 'user_002' // TODO: 从关系状态获取
 
   useEffect(() => {

@@ -61,6 +61,9 @@ body {
   overscroll-behavior: none;
   /* 防止长按菜单 */
   touch-action: manipulation;
+  /* iOS 特定：防止页面缩放 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* ========== 触摸反馈优化 ========== */

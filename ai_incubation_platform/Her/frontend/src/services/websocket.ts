@@ -58,7 +58,17 @@ class WebSocketService {
         log('=== Message Received ===')
         log('Raw data:', event.data)
         try {
-          const message: WebSocketMessage = JSON.parse(event.data)
+          const rawMessage = JSON.parse(event.data)
+          // 兼容两种消息格式：
+          // 1. { type, payload } - 标准 WebSocketMessage 格式
+          // 2. { type, sender_id, content, ... } - 后端直接发送的格式
+          const message: WebSocketMessage = rawMessage.payload
+            ? rawMessage
+            : {
+                type: rawMessage.type as WebSocketMessage['type'],
+                payload: rawMessage,
+                timestamp: rawMessage.timestamp || new Date().toISOString()
+              }
           log('Parsed message type:', message.type)
           log('Parsed message payload:', message.payload)
           this.messageHandlers.forEach(handler => handler(message))
@@ -87,9 +97,17 @@ class WebSocketService {
   }
 
   private buildDefaultUrl(userId: string): string {
-    // 直接连接后端 WebSocket 端口 (8002)，不通过 Vite 代理
-    // 这样可以避免 Vite WebSocket 代理的兼容性问题
-    return `ws://localhost:8002/api/chat/ws/${userId}`
+    // 直接连接后端 WebSocket (端口 8000)
+    // Vite WebSocket 代理在某些情况下可能不稳定，直接连接更可靠
+    // 注意：开发环境使用 ws://，生产环境需要 wss://
+    const isDev = window.location.port === '3005'
+    if (isDev) {
+      // 开发环境：直接连接后端 8000 端口
+      return `ws://localhost:8000/api/chat/ws/${userId}`
+    }
+    // 生产环境：通过同源代理
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${protocol}//${window.location.host}/api/chat/ws/${userId}`
   }
 
   private attemptReconnect() {

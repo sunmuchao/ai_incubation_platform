@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Avatar, Badge, Button, Typography } from 'antd'
+import { Avatar, Button, Typography } from 'antd'
 import { CloseOutlined } from '@ant-design/icons'
 import HerAvatar from '../assets/her-avatar.svg'
 import QuickChatPanel from './QuickChatPanel'
@@ -24,7 +24,6 @@ interface ChatContext {
 
 interface AgentFloatingBallProps {
   visible?: boolean
-  unreadCount?: number
   hasNewMessage?: boolean
   chatContext?: ChatContext | null // 当前聊天上下文
 }
@@ -43,7 +42,6 @@ const PADDING = 16
 
 const AgentFloatingBall: React.FC<AgentFloatingBallProps> = ({
   visible = true,
-  unreadCount = 0,
   hasNewMessage = false,
   chatContext,
 }) => {
@@ -199,7 +197,6 @@ const AgentFloatingBall: React.FC<AgentFloatingBallProps> = ({
         onTouchStart={handleDragStart}
       >
         {/* 悬浮球本体 */}
-        <Badge count={unreadCount} offset={[-5, 5]} size="small" className="ball-badge">
           <Avatar
             size={BALL_SIZE}
             className="agent-ball"
@@ -210,7 +207,6 @@ const AgentFloatingBall: React.FC<AgentFloatingBallProps> = ({
               handleToggleExpand()
             }}
           />
-        </Badge>
       </div>
 
       {/* 展开的快速对话面板 */}

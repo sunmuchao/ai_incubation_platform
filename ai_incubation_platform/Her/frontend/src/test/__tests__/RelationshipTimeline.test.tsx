@@ -76,9 +76,10 @@ jest.mock('antd', () => {
     ),
     Space: ({ children }: any) => <div data-testid="space">{children}</div>,
     Typography: {
-      Title: ({ level, children }: any) => (
-        <h{level} data-testid="title">{children}</h{level}>
-      ),
+      Title: ({ level, children }: any) => {
+        const HeadingTag = `h${level || 1}` as keyof JSX.IntrinsicElements
+        return <HeadingTag data-testid="title">{children}</HeadingTag>
+      },
       Text: ({ children, strong, type }: any) => (
         <span data-testid="text" data-strong={strong} data-type={type}>
           {children}

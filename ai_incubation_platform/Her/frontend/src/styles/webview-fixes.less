@@ -1,0 +1,274 @@
+/**
+ * WebView 和国产浏览器适配样式
+ * 解决微信、支付宝、QQ、微博等内置浏览器特有问题
+ */
+
+/* ========== WebView 通用适配 ========== */
+
+/* WebView 模式下的通用优化 */
+.webview-mode,
+.in-app-browser {
+  /* WebView 禁用橡皮筋效果 */
+  overscroll-behavior: none;
+  /* WebView 禁用长按菜单 */
+  -webkit-touch-callout: none;
+  /* WebView 触摸优化 */
+  touch-action: manipulation;
+}
+
+/* ========== 微信内置浏览器适配 ========== */
+
+/* 微信 WebView 特有问题 */
+.wechat-webview {
+  /* 微信 WebView 地址栏适配 */
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+
+  /* 微信 WebView 底部工具栏适配 */
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+
+  /* 微信 WebView 禁用分享菜单长按 */
+  -webkit-touch-callout: none;
+}
+
+/* 微信 WebView 输入框优化 */
+.wechat-webview input,
+.wechat-webview textarea {
+  /* 微信 WebView 防止自动缩放 */
+  font-size: 16px !important;
+  /* 微信 WebView 移除默认样式 */
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* 微信 WebView 滚动优化 */
+.wechat-webview .messages-container,
+.wechat-webview .chat-room-messages {
+  /* 微信 WebView 平滑滚动 */
+  -webkit-overflow-scrolling: touch;
+  /* 微信 WebView 禁用下拉刷新 */
+  overscroll-behavior-y: contain;
+}
+
+/* ========== 支付宝内置浏览器适配 ========== */
+
+.alipay-webview {
+  /* 支付宝 WebView 顶部适配 */
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+
+  /* 支付宝 WebView 底部适配 */
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ========== QQ 浏览器适配 ========== */
+
+.qq-browser {
+  /* QQ 浏览器特有样式 */
+
+  /* QQ 浏览器输入框优化 */
+  input, textarea {
+    font-size: 16px !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* QQ 浏览器滚动优化 */
+  .messages-container,
+  .chat-room-messages {
+    -webkit-overflow-scrolling: touch;
+    transform: translateZ(0);
+  }
+}
+
+/* ========== UC 浏览器适配 ========== */
+
+.uc-browser {
+  /* UC 浏览器特有样式 */
+
+  /* UC 浏览器输入框优化 */
+  input, textarea {
+    font-size: 16px !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* UC 浏览器禁用夜间模式 */
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+/* ========== 360 浏览器适配 ========== */
+
+.browser-360 {
+  /* 360 浏览器特有样式 */
+
+  /* 360 浏览器输入框优化 */
+  input, textarea {
+    font-size: 16px !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}
+
+/* ========== 微博内置浏览器适配 ========== */
+
+.weibo-webview {
+  /* 微博 WebView 适配 */
+
+  /* 微博 WebView 输入框优化 */
+  input, textarea {
+    font-size: 16px !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}
+
+/* ========== WebView 通用问题修复 ========== */
+
+/* WebView 输入框焦点问题 */
+.webview-mode input:focus,
+.webview-mode textarea:focus {
+  /* WebView 禁用自动缩放 */
+  transform: none;
+  /* WebView 滚动到可见区域 */
+  scroll-margin-top: 60px;
+}
+
+/* WebView 键盘弹起问题 */
+.webview-mode .chat-room-input-area {
+  /* WebView 固定底部 */
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+  /* WebView 键盘适配 */
+  padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+}
+
+/* WebView 图片加载优化 */
+.webview-mode img {
+  /* WebView 禁用长按保存 */
+  -webkit-touch-callout: none;
+  /* WebView 图片优化渲染 */
+  image-rendering: -webkit-optimize-contrast;
+}
+
+/* WebView 触摸优化 */
+.webview-mode button,
+.webview-mode .ant-btn {
+  /* WebView 禁用点击高亮 */
+  -webkit-tap-highlight-color: transparent;
+  /* WebView 触摸优化 */
+  touch-action: manipulation;
+}
+
+/* ========== WebView 视口高度修复 ========== */
+
+/* WebView 地址栏导致的视口高度问题 */
+.webview-mode .home-layout,
+.webview-mode .chat-interface,
+.webview-mode .chat-room {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* ========== WebView 特定功能限制 ========== */
+
+/* WebView 禁用某些功能提示 */
+.webview-mode .pwa-install-prompt {
+  /* WebView 模式下隐藏 PWA 安装提示 */
+  display: none !important;
+}
+
+/* WebView 禁用下载功能提示 */
+.webview-mode .download-button {
+  /* WebView 模式下下载功能受限 */
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* ========== WebView 消息气泡优化 ========== */
+
+/* WebView 文本选择优化 */
+.webview-mode .message-bubble {
+  /* WebView 允许文本选择 */
+  -webkit-user-select: text;
+  user-select: text;
+  /* WebView 禁用长按菜单 */
+  -webkit-touch-callout: none;
+}
+
+/* ========== WebView 滚动性能优化 ========== */
+
+.webview-mode .messages-container,
+.webview-mode .chat-room-messages {
+  /* WebView 硬件加速 */
+  transform: translateZ(0);
+  will-change: transform;
+  /* WebView 平滑滚动 */
+  -webkit-overflow-scrolling: touch;
+  /* WebView 防止滚动卡顿 */
+  touch-action: pan-y;
+}
+
+/* ========== WebView 表情选择器优化 ========== */
+
+.webview-mode .emoji-picker-panel {
+  /* WebView 表情选择器适配 */
+  max-height: 180px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ========== WebView 图片预览优化 ========== */
+
+.webview-mode .ant-modal-content {
+  /* WebView Modal 适配 */
+  max-height: 75vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ========== WebView 响应式断点 ========== */
+
+@media (max-width: 768px) {
+  .webview-mode {
+    /* WebView 小屏幕适配 */
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .webview-mode .home-header {
+    padding-top: max(12px, env(safe-area-inset-top, 12px));
+  }
+
+  .webview-mode .chat-room-input-area {
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+  }
+}
+
+/* ========== WebView 暗色模式支持 ========== */
+
+@media (prefers-color-scheme: dark) {
+  .webview-mode {
+    /* WebView 暗色模式 */
+    color-scheme: dark;
+  }
+
+  .webview-mode input,
+  .webview-mode textarea {
+    color-scheme: dark;
+  }
+}
+
+/* ========== WebView 减少动画偏好 ========== */
+
+@media (prefers-reduced-motion: reduce) {
+  .webview-mode * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

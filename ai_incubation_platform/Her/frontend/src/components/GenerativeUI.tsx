@@ -34,6 +34,7 @@ import {
 } from 'antd'
 import {
   HeartOutlined,
+  HeartFilled,
   GiftOutlined,
   EnvironmentOutlined,
   ShopOutlined,
@@ -45,7 +46,6 @@ import {
   CalendarOutlined,
   ClockCircleOutlined,
   SafetyOutlined,
-  RobotOutlined,
   TrophyOutlined,
   LineChartOutlined,
   CloudOutlined,
@@ -617,7 +617,7 @@ export const LoveLanguageTranslationCard: React.FC<{
           <Paragraph>{original_expression}</Paragraph>
         </div>
         <div className="translation-arrow">
-          <ThunderboltOutlined style={{ color: '#1890ff', fontSize: 24 }} />
+          <ThunderboltOutlined style={{ color: '#C88B8B', fontSize: 24 }} />
         </div>
         <div className="translation-translated">
           <Text strong>爱之语表达：</Text>
@@ -1122,7 +1122,7 @@ export const PerformanceCoachDashboard: React.FC<{
             dataSource={suggestions}
             renderItem={(s: any) => (
               <List.Item>
-                <RobotOutlined style={{ marginRight: 8 }} />
+                <HeartFilled style={{ marginRight: 8, color: '#FF8FAB' }} />
                 {s.text}
               </List.Item>
             )}
@@ -1140,7 +1140,7 @@ export const CoachEmpty: React.FC<{ message?: string }> = ({ message }) => {
   return (
     <Card className="coach-empty-card">
       <Empty
-        image={<RobotOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />}
+        image={<HeartFilled style={{ fontSize: 48, color: '#FF8FAB' }} />}
         description={message || '暂无教练建议'}
       />
     </Card>
@@ -1680,7 +1680,7 @@ export const ConversationMatchmakerDashboard: React.FC<{
       className="conversation-matchmaker-dashboard"
       title={
         <Space>
-          <RobotOutlined />
+          <HeartFilled style={{ color: '#FF8FAB' }} />
           对话匹配
         </Space>
       }
@@ -2193,7 +2193,7 @@ export const SuggestionCards: React.FC<{
   }
 
   return (
-    <Card className="suggestion-cards-card" title={<><RobotOutlined /> 聊天建议</>}>
+    <Card className="suggestion-cards-card" title={<><HeartFilled style={{ color: '#FF8FAB' }} /> 聊天建议</>}>
       <List
         dataSource={suggestions}
         renderItem={(suggestion: any, index: number) => (

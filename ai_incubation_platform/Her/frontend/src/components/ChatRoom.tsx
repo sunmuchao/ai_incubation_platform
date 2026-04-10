@@ -8,13 +8,13 @@
  */
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Input, Button, Avatar, Typography, Space, Empty, Tooltip, message, Tag } from 'antd'
-import { SendOutlined, LeftOutlined, PictureOutlined, SmileOutlined, MoreOutlined, RobotOutlined } from '@ant-design/icons'
+import { Input, Button, Avatar, Typography, Space, Empty, Tooltip, message, Tag, Modal } from 'antd'
+import { SendOutlined, LeftOutlined, PictureOutlined, SmileOutlined, MoreOutlined } from '@ant-design/icons'
 import type { MatchCandidate } from '../types'
 import { chatApi } from '../api'
-import { chatAssistantSkill } from '../api/skillClient'
 import { websocketService } from '../services/websocket'
-import GenerativeUIRenderer from './GenerativeUI'
+import { authStorage } from '../utils/storage'
+import { isIOS, optimizeIOSScroll, optimizeIOSInput } from '../utils/iosUtils'
 import './ChatRoom.less'
 
 const { Text } = Typography
@@ -53,26 +53,198 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [showAiSuggestions, setShowAiSuggestions] = useState(false)
-  const [aiSuggestions, setAiSuggestions] = useState<Array<{ id: string; style: string; content: string }>>([])
-  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false)
-  const [aiSuggestionUi, setAiSuggestionUi] = useState<any>(null)
+
+  // 图片和表情功能状态
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [showImageUpload, setShowImageUpload] = useState(false)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<any>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
 
-  // 获取当前用户 ID
-  const currentUserId = useMemo(() => {
-    const userInfoStr = localStorage.getItem('user_info')
-    if (userInfoStr) {
-      try {
-        const userInfo = JSON.parse(userInfoStr)
-        return userInfo.id || userInfo.username
-      } catch {
-        return 'user-anonymous-dev'
+  // iOS 特定优化
+  useEffect(() => {
+    if (isIOS()) {
+      // 优化消息列表滚动
+      if (messagesContainerRef.current) {
+        optimizeIOSScroll(messagesContainerRef.current)
+      }
+
+      // 优化输入框
+      if (inputRef.current && inputRef.current.input) {
+        optimizeIOSInput(inputRef.current.input)
       }
     }
-    return 'user-anonymous-dev'
   }, [])
+
+  // 获取当前用户 ID - 必须在其他 useCallback 之前定义
+  const currentUserId = useMemo(() => {
+    const user = authStorage.getUser()
+    return user?.id || user?.username || 'user-anonymous-dev'
+  }, [])
+
+  // 常用表情列表
+  const EMOJI_LIST = [
+    '😀', '😃', '😄', '😁', '😊', '☺️', '😇', '🙂', '🙃', '😉',
+    '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😜',
+    '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐',
+    '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪',
+    '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶',
+    '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐', '😕', '😟',
+    '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨',
+    '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩',
+    '👍', '👎', '👏', '🙌', '🤝', '🙏', '💪', '❤️', '💔', '💕',
+    '💖', '💗', '💙', '💚', '💛', '🧡', '💜', '🖤', '💯', '💢'
+  ]
+
+  // 图片上传处理
+  const handleImageClick = useCallback(() => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
+    }
+  }, [])
+
+  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // 验证文件类型
+      if (!file.type.startsWith('image/')) {
+        message.error('请选择图片文件')
+        return
+      }
+      // 验证文件大小 (最大 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        message.error('图片大小不能超过 5MB')
+        return
+      }
+      setSelectedFile(file)
+      // 预览图片
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        setImagePreview(event.target?.result as string)
+        setShowImageUpload(true)
+      }
+      reader.readAsDataURL(file)
+    }
+    // 清空 input，允许重复选择同一文件
+    e.target.value = ''
+  }, [])
+
+  const handleImageSend = useCallback(async () => {
+    if (!selectedFile || !actualPartnerId || isUploadingImage) return
+
+    setIsUploadingImage(true)
+    setShowImageUpload(false)
+    setImagePreview(null)
+
+    try {
+      // 1. 先上传图片到照片服务
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      formData.append('photo_type', 'chat')
+
+      const token = authStorage.getToken()
+      const uploadResponse = await fetch('/api/photos/upload-file', {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      })
+
+      if (!uploadResponse.ok) {
+        // 如果后端不支持文件上传，使用本地预览作为临时方案
+        const tempImageUrl = imagePreview || ''
+        await chatApi.sendMessage({
+          receiver_id: actualPartnerId,
+          content: tempImageUrl,
+          message_type: 'image'
+        })
+        message.warning('图片已发送（临时预览模式）')
+        setSelectedFile(null)
+        setIsUploadingImage(false)
+        return
+      }
+
+      const uploadResult = await uploadResponse.json()
+      const imageUrl = uploadResult.photo_url || uploadResult.url
+
+      // 2. 发送图片消息
+      const result = await chatApi.sendMessage({
+        receiver_id: actualPartnerId,
+        content: imageUrl,
+        message_type: 'image'
+      })
+
+      // 添加到消息列表
+      const imageMessage: Message = {
+        id: result.id || `img-${Date.now()}`,
+        sender_id: currentUserId,
+        receiver_id: actualPartnerId,
+        message_type: 'image',
+        content: imageUrl,
+        is_read: true,
+        created_at: new Date().toISOString(),
+        status: 'sent'
+      }
+      setMessages(prev => [...prev, imageMessage])
+
+      message.success('图片已发送')
+    } catch (error) {
+      console.error('图片上传失败:', error)
+      message.error('图片上传失败，请稍后重试')
+    } finally {
+      setSelectedFile(null)
+      setIsUploadingImage(false)
+    }
+  }, [selectedFile, actualPartnerId, isUploadingImage, imagePreview, currentUserId])
+
+  // 表情选择处理
+  const handleEmojiClick = useCallback(() => {
+    setShowEmojiPicker(prev => !prev)
+  }, [])
+
+  const handleEmojiSelect = useCallback(async (emoji: string) => {
+    setShowEmojiPicker(false)
+
+    if (!actualPartnerId) return
+
+    try {
+      // 发送表情消息
+      const result = await chatApi.sendMessage({
+        receiver_id: actualPartnerId,
+        content: emoji,
+        message_type: 'emoji'
+      })
+
+      // 添加到消息列表
+      const emojiMessage: Message = {
+        id: result.id || `emoji-${Date.now()}`,
+        sender_id: currentUserId,
+        receiver_id: actualPartnerId,
+        message_type: 'emoji',
+        content: emoji,
+        is_read: true,
+        created_at: new Date().toISOString(),
+        status: 'sent'
+      }
+      setMessages(prev => [...prev, emojiMessage])
+    } catch (error) {
+      console.error('表情发送失败:', error)
+      message.error('表情发送失败')
+    }
+  }, [actualPartnerId, currentUserId])
+
+  // 使用 ref 追踪当前聊天对象（确保消息处理器使用最新值）
+  const actualPartnerIdRef = useRef(actualPartnerId)
+  actualPartnerIdRef.current = actualPartnerId
+
+  // WebSocket 连接状态追踪（避免 Strict Mode 重复连接）
+  const wsConnectedRef = useRef(false)
 
   // 连接 WebSocket 接收实时消息
   useEffect(() => {
@@ -81,29 +253,39 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
       return
     }
 
+    // 避免重复连接（React Strict Mode 会导致 useEffect 执行两次）
+    if (wsConnectedRef.current) {
+      console.log('[ChatRoom] WebSocket already connected, skip re-connection')
+      return
+    }
+
     console.log('[ChatRoom] === useEffect Start ===')
     console.log('[ChatRoom] currentUserId:', currentUserId)
-    console.log('[ChatRoom] actualPartnerId:', actualPartnerId)
+    console.log('[ChatRoom] actualPartnerId:', actualPartnerIdRef.current)
+
+    // 标记已连接
+    wsConnectedRef.current = true
 
     // 连接 WebSocket - 使用路径参数方式，与后端 /api/chat/ws/{user_id} 匹配
     websocketService.connect(currentUserId)
 
     console.log('[ChatRoom] WebSocket connection initiated')
 
-    // 订阅新消息
+    // 订阅新消息（使用 ref 确保获取最新的 partnerId）
     const unsubscribe = websocketService.onMessage((message) => {
+      const currentPartnerId = actualPartnerIdRef.current
       console.log('[ChatRoom] === onMessage Callback ===')
       console.log('[ChatRoom] message.type:', message.type)
       console.log('[ChatRoom] message.payload:', message.payload)
+      console.log('[ChatRoom] currentPartnerId (from ref):', currentPartnerId)
 
       if (message.type === 'new_message' && message.payload) {
         const payload = message.payload as any
         console.log('[ChatRoom] payload.sender_id:', payload.sender_id)
-        console.log('[ChatRoom] actualPartnerId:', actualPartnerId)
-        console.log('[ChatRoom] sender matches partner:', payload.sender_id === actualPartnerId)
+        console.log('[ChatRoom] sender matches partner:', payload.sender_id === currentPartnerId)
 
         // 只添加来自当前聊天对象的消息
-        if (payload.sender_id === actualPartnerId) {
+        if (payload.sender_id === currentPartnerId) {
           console.log('[ChatRoom] Adding message to state')
           setMessages(prev => {
             // 避免重复添加
@@ -114,7 +296,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
             const newMessage: Message = {
               id: payload.id || `ws-${Date.now()}`,
               sender_id: payload.sender_id,
-              receiver_id: payload.receiver_id || actualPartnerId,
+              receiver_id: payload.receiver_id || currentPartnerId,
               message_type: payload.message_type || 'text',
               content: payload.content,
               is_read: payload.is_read || false,
@@ -125,7 +307,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
             return [...prev, newMessage]
           })
         } else {
-          console.log('[ChatRoom] Skipping message - sender_id does not match actualPartnerId')
+          console.log('[ChatRoom] Skipping message - sender_id does not match currentPartnerId')
         }
       }
     })
@@ -133,10 +315,12 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
     console.log('[ChatRoom] Message subscription registered')
 
     return () => {
-      console.log('[ChatRoom] Cleanup - unsubscribing from messages')
-      unsubscribe()
+      // 仅在组件真正卸载时断开连接（不清理订阅，让 WebSocket 服务保持连接）
+      console.log('[ChatRoom] Cleanup - keeping WebSocket connection alive')
+      // 注意：不调用 unsubscribe() 和 disconnect()，避免 Strict Mode 问题
+      // WebSocket 服务是单例，会保持连接直到用户离开页面
     }
-  }, [currentUserId, actualPartnerId])
+  }, [currentUserId]) // 只依赖 currentUserId，不依赖 actualPartnerId（避免切换聊天对象时重连）
 
   // 滚动到底部 - 优化性能
   const scrollToBottom = () => {
@@ -194,7 +378,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
     }
   }
 
-  // 发送消息 - 使用 chatAssistant Skill
+  // 发送消息 - 使用 REST API
   const handleSend = useCallback(async () => {
     if (!inputValue.trim() || isLoading || !actualPartnerId) {
       return
@@ -218,55 +402,22 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
     setIsLoading(true)
 
     try {
-      // 使用 chatAssistant Skill 发送消息（AI Native 方式）
-      const result = await chatAssistantSkill.sendMessage(
-        currentUserId,
-        actualPartnerId,
-        messageContent,
-        'text'
-      )
+      // 使用 REST API 发送消息
+      const result = await chatApi.sendMessage({
+        receiver_id: actualPartnerId,
+        content: messageContent,
+        message_type: 'text'
+      })
 
-      // 更新为实际的消息 ID 和 Generative UI
+      // 更新为实际的消息 ID
       setMessages(prev => prev.map(msg =>
         msg.id === userMessage.id
-          ? { ...msg, id: result.chat_data?.message_id || msg.id }
+          ? { ...msg, id: result.id || msg.id, status: 'delivered' }
           : msg
       ))
 
-      // 如果有 AI 生成的 UI，显示出来
-      if (result.generative_ui) {
-        setAiSuggestionUi(result.generative_ui)
-      }
-
-      // 发送成功后，轮询获取对方回复（最多轮询 5 次，每次间隔 1 秒）
-      console.log('[ChatRoom] Starting reply polling...')
-      for (let i = 0; i < 5; i++) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        try {
-          const history = await chatApi.getHistory(actualPartnerId)
-          const latestMessage = history[history.length - 1]
-          if (latestMessage && latestMessage.sender_id === actualPartnerId) {
-            console.log('[ChatRoom] Reply received via polling:', latestMessage.content)
-            setMessages(prev => {
-              const exists = prev.some(m => m.id === latestMessage.id)
-              if (exists) return prev
-              return [...prev, {
-                id: latestMessage.id,
-                sender_id: latestMessage.sender_id,
-                receiver_id: latestMessage.receiver_id,
-                message_type: latestMessage.message_type || 'text',
-                content: latestMessage.content,
-                is_read: latestMessage.is_read,
-                created_at: latestMessage.created_at,
-                status: 'delivered'
-              }]
-            })
-            break
-          }
-        } catch (e) {
-          console.warn('[ChatRoom] Polling failed:', e)
-        }
-      }
+      // 后端会在开发环境自动触发模拟 Agent 回复
+      // 通过 WebSocket 推送回复，无需轮询
 
     } catch (error) {
       // 标记发送失败
@@ -277,7 +428,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
     } finally {
       setIsLoading(false)
     }
-  }, [inputValue, isLoading, actualPartnerId, currentUserId, setMessages, setInputValue, setIsLoading, setAiSuggestionUi])
+  }, [inputValue, isLoading, actualPartnerId, currentUserId])
 
   // 模拟对方回复 (开发环境)
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -291,104 +442,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value)
   }
-
-  // 生成 AI 回复建议 - 使用 chatAssistant Skill
-  const handleGenerateAiSuggestion = useCallback(async () => {
-    if (messages.length === 0) return
-
-    const lastMessage = messages[messages.length - 1]
-
-    // 只有当最后一条是对方发的消息时才生成建议
-    if (lastMessage.sender_id === currentUserId) {
-      message.info('等待对方回复再生成建议吧~')
-      return
-    }
-
-    setIsGeneratingSuggestion(true)
-    setShowAiSuggestions(true)
-
-    try {
-      // 使用 chatAssistant Skill 获取聊天建议
-      const result = await chatAssistantSkill.getSuggestions(currentUserId, actualPartnerId)
-
-      // 从 Skill 响应中提取建议
-      const suggestions = result.chat_data?.suggestions?.map((s: any, index: number) => ({
-        id: `suggestion-${index}`,
-        style: s.type === 'icebreaker' ? '破冰' : '话题',
-        content: s.content || ''
-      })) || []
-
-      setAiSuggestions(suggestions)
-
-      // 如果有 Generative UI，也渲染出来
-      if (result.generative_ui) {
-        setAiSuggestionUi(result.generative_ui)
-      }
-
-      if (suggestions.length === 0) {
-        message.warning('AI 暂时没想到好的回复，换个方式试试？')
-      }
-    } catch (error) {
-      console.error('AI 建议生成失败:', error)
-      message.error(error instanceof Error ? error.message : 'AI 思考失败，请稍后再试')
-    } finally {
-      setIsGeneratingSuggestion(false)
-    }
-  }, [messages, currentUserId, actualPartnerId])
-
-  // 记录 AI 建议反馈
-  const recordAiFeedback = useCallback(async (
-    suggestionId: string,
-    feedbackType: string,
-    suggestionContent: string,
-    suggestionStyle: string,
-    userActualReply?: string
-  ) => {
-    try {
-      await fetch('/api/quick_chat/feedback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-        },
-        body: JSON.stringify({
-          partnerId: actualPartnerId,
-          suggestionId,
-          feedbackType,
-          suggestionContent,
-          suggestionStyle,
-          userActualReply: userActualReply || null,
-        }),
-      })
-      console.log('[ChatRoom] Feedback recorded:', { suggestionId, feedbackType })
-    } catch (error) {
-      console.error('[ChatRoom] Record feedback failed:', error)
-      // 不阻断用户操作，静默失败
-    }
-  }, [actualPartnerId])
-
-  // 选择 AI 建议并发送
-  const handleSelectAiSuggestion = useCallback(async (suggestion: { id: string; style: string; content: string }) => {
-    const content = suggestion.content || ''
-
-    // 记录反馈 - 采纳建议
-    recordAiFeedback(
-      suggestion.id,
-      'adopted',
-      content,
-      suggestion.style,
-      content
-    )
-
-    setInputValue(content)
-    setShowAiSuggestions(false)
-    setAiSuggestions([])
-
-    // 延迟一点发送，让用户看到输入框内容变化
-    setTimeout(() => {
-      handleSend()
-    }, 100)
-  }, [recordAiFeedback, handleSend])
 
   // 按日期分组消息 - 使用 useMemo 缓存分组结果
   const groupedMessages = useMemo(() => {
@@ -425,6 +478,77 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
       minute: '2-digit'
     })
 
+    // 图片消息渲染
+    if (message.message_type === 'image') {
+      return (
+        <div key={message.id} className={`message-item ${isMe ? 'message-me' : 'message-other'}`}>
+          {!isMe && (
+            <Avatar
+              src={actualPartnerAvatar}
+              size={36}
+              className="message-avatar"
+            />
+          )}
+
+          <div className="message-content-wrapper">
+            <div className={`message-bubble ${isMe ? 'bubble-me' : 'bubble-other'} message-image`}>
+              <img src={message.content} alt="图片消息" style={{ maxWidth: '200px', borderRadius: '8px' }} />
+            </div>
+
+            <div className="message-meta">
+              <Text className="message-time">{timestamp}</Text>
+            </div>
+          </div>
+
+          {isMe && (
+            <Avatar
+              size={36}
+              className="message-avatar"
+              style={{ backgroundColor: '#1890ff' }}
+            >
+              我
+            </Avatar>
+          )}
+        </div>
+      )
+    }
+
+    // 表情消息渲染（单独表情放大显示）
+    if (message.message_type === 'emoji') {
+      return (
+        <div key={message.id} className={`message-item ${isMe ? 'message-me' : 'message-other'}`}>
+          {!isMe && (
+            <Avatar
+              src={actualPartnerAvatar}
+              size={36}
+              className="message-avatar"
+            />
+          )}
+
+          <div className="message-content-wrapper">
+            <div className={`message-bubble ${isMe ? 'bubble-me' : 'bubble-other'} emoji-bubble`}>
+              <Text className="emoji-text" style={{ fontSize: '32px' }}>{message.content}</Text>
+            </div>
+
+            <div className="message-meta">
+              <Text className="message-time">{timestamp}</Text>
+            </div>
+          </div>
+
+          {isMe && (
+            <Avatar
+              size={36}
+              className="message-avatar"
+              style={{ backgroundColor: '#1890ff' }}
+            >
+              我
+            </Avatar>
+          )}
+        </div>
+      )
+    }
+
+    // 文本消息渲染
     return (
       <div key={message.id} className={`message-item ${isMe ? 'message-me' : 'message-other'}`}>
         {!isMe && (
@@ -493,7 +617,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
       </div>
 
       {/* 消息列表 */}
-      <div className="chat-room-messages">
+      <div className="chat-room-messages" ref={messagesContainerRef}>
         {messages.length === 0 ? (
           <div className="empty-state">
             <Empty
@@ -517,86 +641,77 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* AI 回复建议面板 */}
-      {showAiSuggestions && aiSuggestions.length > 0 && (
-        <div className="ai-suggestion-panel">
-          <div className="ai-suggestion-header">
-            <RobotOutlined /> <Text strong>AI 建议回复</Text>
-            <Button
-              type="text"
-              size="small"
-              onClick={() => setShowAiSuggestions(false)}
-            >
-              收起
-            </Button>
-          </div>
-          {aiSuggestions.map((suggestion: { id: string; style: string; content: string }, index: number) => (
-            <Button
-              key={index}
-              className="suggestion-item"
-              onClick={() => handleSelectAiSuggestion(suggestion)}
-              block
-            >
-              <div className="suggestion-content">
-                <Tag color="blue" className="suggestion-style">{suggestion.style}</Tag>
-                <Text>{suggestion.content}</Text>
-              </div>
-            </Button>
-          ))}
-          <Button
-            size="small"
-            className="regenerate-btn"
-            onClick={handleGenerateAiSuggestion}
-            loading={isGeneratingSuggestion}
-          >
-            换一批
-          </Button>
-        </div>
-      )}
-
-      {/* Generative UI 渲染区域 - AI Native 动态生成的界面 */}
-      {aiSuggestionUi && (
-        <div className="generative-ui-section">
-          <GenerativeUIRenderer
-            uiConfig={aiSuggestionUi}
-            onAction={(action) => {
-              message.info(`AI 操作：${action.type}`)
-              // 处理 AI 建议的操作
-              if (action.type === 'send_message') {
-                handleGenerateAiSuggestion()
-              } else if (action.type === 'use_suggestion') {
-                // 使用建议
-              }
-            }}
-          />
-        </div>
-      )}
-
       {/* 输入区域 */}
       <div className="chat-room-input-area">
-        {/* AI 帮我回按钮 */}
-        {messages.length > 0 && messages[messages.length - 1].sender_id !== currentUserId && (
-          <div className="ai-suggestion-trigger">
-            <Button
-              size="small"
-              icon={<RobotOutlined />}
-              onClick={handleGenerateAiSuggestion}
-              loading={isGeneratingSuggestion}
-              type="primary"
-              ghost
-            >
-              AI 帮我回
-            </Button>
+        {/* 表情选择面板 */}
+        {showEmojiPicker && (
+          <div className="emoji-picker-panel">
+            <div className="emoji-picker-header">
+              <Text strong>选择表情</Text>
+              <Button type="text" size="small" onClick={() => setShowEmojiPicker(false)}>
+                收起
+              </Button>
+            </div>
+            <div className="emoji-grid">
+              {EMOJI_LIST.map((emoji, index) => (
+                <Button
+                  key={index}
+                  type="text"
+                  className="emoji-item"
+                  onClick={() => handleEmojiSelect(emoji)}
+                >
+                  {emoji}
+                </Button>
+              ))}
+            </div>
           </div>
         )}
+
+        {/* 图片上传预览弹窗 */}
+        <Modal
+          title="发送图片"
+          open={showImageUpload}
+          onCancel={() => {
+            setShowImageUpload(false)
+            setImagePreview(null)
+            setSelectedFile(null)
+          }}
+          footer={[
+            <Button key="cancel" onClick={() => {
+              setShowImageUpload(false)
+              setImagePreview(null)
+              setSelectedFile(null)
+            }}>
+              取消
+            </Button>,
+            <Button key="send" type="primary" loading={isUploadingImage} onClick={handleImageSend}>
+              发送
+            </Button>,
+          ]}
+        >
+          {imagePreview && (
+            <div style={{ textAlign: 'center' }}>
+              <img src={imagePreview} alt="预览" style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '8px' }} />
+            </div>
+          )}
+        </Modal>
+
+        {/* 隐藏的文件选择 input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleImageSelect}
+        />
 
         <div className="input-tools">
           <Space>
             <Tooltip title="图片">
-              <Button type="text" icon={<PictureOutlined />} />
+              <Button type="text" icon={<PictureOutlined />} onClick={handleImageClick} />
             </Tooltip>
             <Tooltip title="表情">
-              <Button type="text" icon={<SmileOutlined />} />
+              <Button type="text" icon={<SmileOutlined />} onClick={handleEmojiClick} />
             </Tooltip>
           </Space>
         </div>

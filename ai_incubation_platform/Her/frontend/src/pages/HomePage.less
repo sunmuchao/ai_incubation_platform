@@ -1,11 +1,13 @@
-/* AI Native 主页面样式 - 浪漫未来感 */
+// ==================== AI Native 主页面样式 - Apple/Linear 极简美学 ====================
+
+@import '../styles/design-tokens.less';
 
 // 退出按钮 - 全局强制覆盖 Ant Design 样式，移除旋转效果
 .home-layout .header-right .logout-btn,
 .home-layout .header-right .logout-btn:hover,
 .home-layout .header-right .logout-btn:active {
   transform: none !important;
-  transition: background 0.2s ease !important;
+  transition: background @transition-fast !important;
 }
 
 // 覆盖 Ant Design Layout 默认样式
@@ -15,136 +17,150 @@
 }
 
 .home-layout {
-  height: 100vh !important;  // 固定视口高度
-  min-height: unset !important;  // 覆盖 Ant Design 默认 min-height
-  background: linear-gradient(180deg, #FDFBFD 0%, #F8F1F3 100%);
+  height: 100vh !important;
+  min-height: unset !important;
+  background: linear-gradient(180deg, @bg-base 0%, #FDFBFD 50%, #F8F1F3 100%);
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
 
-  // 未来感背景光晕
+  // 柔和背景光晕
   &::before {
     content: '';
     position: absolute;
     top: -30%;
-    right: -20%;
-    width: 800px;
-    height: 800px;
-    background: radial-gradient(circle, rgba(212, 165, 154, 0.12) 0%, transparent 70%);
-    animation: homeAura 10s infinite ease-in-out;
+    right: -15%;
+    width: 700px;
+    height: 700px;
+    background: radial-gradient(circle, @color-primary-light 0%, transparent 70%);
+    animation: homeAura 12s infinite ease-in-out;
     pointer-events: none;
   }
 
   &::after {
     content: '';
     position: absolute;
-    bottom: -30%;
+    bottom: -20%;
     left: -10%;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(255, 143, 171, 0.08) 0%, transparent 70%);
-    animation: homeAura 10s infinite ease-in-out reverse;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, @color-accent-light 0%, transparent 70%);
+    animation: homeAura 12s infinite ease-in-out reverse;
     pointer-events: none;
   }
 
   @keyframes homeAura {
-    0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.5; }
-    50% { transform: scale(1.2) translate(-20px, 20px); opacity: 0.8; }
+    0%, 100% {
+      transform: scale(1) translate(0, 0);
+      opacity: 0.5;
+    }
+    50% {
+      transform: scale(1.1) translate(-15px, 15px);
+      opacity: 0.7;
+    }
   }
 }
 
+// ==================== Header ====================
+
 .home-header {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  padding: 0 28px;
+  .glass-morphism();
+  padding: 0 @space-7;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(212, 165, 154, 0.15);
-  height: 68px;
-  flex: 0 0 68px;  // 固定 header 高度
-  box-shadow: 0 2px 20px rgba(212, 165, 154, 0.08);
+  border-bottom: 1px solid @border-primary;
+  height: 64px;
+  flex: 0 0 64px;
+  box-shadow: @shadow-sm;
+  position: relative;
+  z-index: 10;
 
   .header-left {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: @space-4;
 
     .page-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #1a1a1a;
-      letter-spacing: -0.01em;
+      font-size: @font-size-xl;
+      font-weight: @font-weight-semibold;
+      color: @text-primary;
+      letter-spacing: @letter-spacing-tight;
     }
   }
 
   .header-right {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: @space-3;
 
-    // 退出按钮 - 移除旋转动画，保留悬浮效果
+    // 退出按钮
     .logout-btn {
-      transition: background 0.2s ease !important;
+      .button-base();
+      color: @text-secondary;
+      font-size: @font-size-sm;
 
       &:hover {
-        background: rgba(0, 0, 0, 0.05) !important;
-        transform: none !important;
-        box-shadow: none !important;
-      }
-
-      &:active {
-        transform: none !important;
+        background: @color-primary-light !important;
+        color: @color-primary;
       }
     }
 
+    // 通知按钮
     .notification-btn {
       position: relative;
-      padding: 10px !important;
-      border-radius: 50% !important;
-      transition: all 0.2s ease !important;
+      padding: @space-2 !important;
+      border-radius: @radius-full !important;
+      transition: all @transition-base !important;
 
       &:hover {
-        background: rgba(212, 165, 154, 0.1) !important;
+        background: @color-primary-light !important;
         transform: scale(1.05);
-        box-shadow: 0 0 15px rgba(212, 165, 154, 0.3);
+        box-shadow: @shadow-primary;
+      }
+
+      &:active {
+        transform: scale(0.95);
       }
 
       .notification-badge {
         position: absolute;
-        top: 6px;
-        right: 6px;
-        width: 10px;
-        height: 10px;
-        background: linear-gradient(135deg, #FF8FAB 0%, #D4A59A 100%);
-        border-radius: 50%;
+        top: 5px;
+        right: 5px;
+        width: 8px;
+        height: 8px;
+        background: linear-gradient(135deg, @color-accent 0%, @color-primary 100%);
+        border-radius: @radius-full;
         border: 2px solid white;
-        box-shadow: 0 0 8px rgba(255, 143, 171, 0.5);
+        box-shadow: @shadow-accent;
       }
     }
 
+    // 用户头像
     .user-avatar {
       cursor: pointer;
-      transition: transform 0.2s ease;
+      transition: all @transition-base;
       border: 2px solid white;
-      box-shadow: 0 2px 12px rgba(212, 165, 154, 0.2);
+      box-shadow: @shadow-sm;
+      border-radius: @radius-lg;
 
       &:hover {
         transform: scale(1.05);
-        box-shadow: 0 4px 20px rgba(212, 165, 154, 0.3);
+        box-shadow: @shadow-primary;
       }
     }
   }
 }
 
+// ==================== Content ====================
+
 .home-content {
   flex: 1;
-  overflow: hidden;  // 防止内容溢出
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  min-height: 0;  // 关键：允许 flex 子项滚动
+  min-height: 0;
 
   .content-wrapper {
     background: transparent;
@@ -154,27 +170,29 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    min-height: 0;  // 关键：允许 flex 滚动
+    min-height: 0;
     overflow: hidden;
   }
 }
+
+// ==================== Chat View ====================
 
 .chat-view {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(10px) saturate(180%);
-  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
   border-radius: 0;
-  border: 1px solid rgba(212, 165, 154, 0.1);
-  box-shadow: 0 4px 24px rgba(212, 165, 154, 0.06);
+  border: 1px solid @border-light;
+  box-shadow: @shadow-sm;
   overflow: hidden;
-  min-height: 0;  // 关键：允许 flex 滚动
+  min-height: 0;
 
   > .chat-interface {
     flex: 1;
-    min-height: 0;  // 关键：允许内部滚动
+    min-height: 0;
     background: transparent;
     display: flex;
     flex-direction: column;
@@ -182,10 +200,11 @@
 }
 
 .chat-room-view {
-  height: 100%;  // 使用 100% 填充父容器
+  height: 100%;
   overflow: hidden;
 }
 
+// 其他视图
 .discover-view,
 .timeline-view,
 .love-language-view,
@@ -196,11 +215,12 @@
   height: 100%;
 }
 
-/* Generative UI 动画 */
+// ==================== Generative UI 动画 ====================
+
 @keyframes cardAppear {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.95);
+    transform: translateY(16px) scale(0.96);
   }
   to {
     opacity: 1;
@@ -209,18 +229,14 @@
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(24px);
   }
   to {
     opacity: 1;
@@ -229,7 +245,7 @@
 }
 
 .generative-ui-container {
-  animation: cardAppear 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: cardAppear 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
   &.animating {
     opacity: 0.8;
@@ -238,7 +254,7 @@
 
 // 卡片进入动画
 .card-enter {
-  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: slideUp 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 // 按钮点击波纹效果
@@ -254,9 +270,9 @@
     width: 0;
     height: 0;
     background: rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
+    border-radius: @radius-full;
     transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
+    transition: width 0.5s, height 0.5s;
   }
 
   &:active::after {
@@ -265,19 +281,21 @@
   }
 }
 
-// 悬浮球容器
+// ==================== 悬浮球容器 ====================
+
 .floating-ball-container {
   position: fixed;
-  z-index: 999;
+  z-index: @z-index-float;
   animation: float 3s ease-in-out infinite;
 
   @keyframes float {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+    50% { transform: translateY(-8px); }
   }
 }
 
-// 通知动画
+// ==================== 通知动画 ====================
+
 @keyframes notificationSlide {
   from {
     opacity: 0;
@@ -290,26 +308,19 @@
 }
 
 .notification-slide {
-  animation: notificationSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: notificationSlide 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-// 加载骨架屏
+// ==================== 加载骨架屏 ====================
+
 .skeleton-loading {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: skeletonPulse 1.5s infinite;
-
-  @keyframes skeletonPulse {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
+  .skeleton-loading();
 }
 
-// 玻璃态效果
+// ==================== 玻璃态效果 ====================
+
 .glass-effect {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  .glass-morphism();
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
@@ -317,15 +328,15 @@
 .gradient-border {
   position: relative;
   background: white;
-  border-radius: 16px;
+  border-radius: @radius-xl;
 
   &::before {
     content: '';
     position: absolute;
     inset: 0;
-    border-radius: 16px;
-    padding: 2px;
-    background: linear-gradient(135deg, #D4A59A 0%, #C88B8B 100%);
+    border-radius: @radius-xl;
+    padding: 1.5px;
+    background: linear-gradient(135deg, @color-primary 0%, @color-primary-hover 100%);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
@@ -333,14 +344,15 @@
   }
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
+// ==================== 响应式设计 ====================
+
+@media (max-width: @breakpoint-md) {
   .home-sider {
     display: none;
   }
 
   .home-content {
-    padding: 0;  // 移除移动端 padding，使用全屏
+    padding: 0;
 
     .content-wrapper {
       border-radius: 0;
@@ -349,38 +361,37 @@
   }
 
   .home-header {
-    padding: 0 16px;
+    padding: 0 @space-4;
     height: 56px;
-    flex: 0 0 56px;  // 固定 header 高度
+    flex: 0 0 56px;
 
     .page-title {
-      font-size: 16px !important;
+      font-size: @font-size-lg !important;
     }
 
     .header-right {
       .logout-btn {
-        font-size: 13px !important;
-        padding: 4px 8px !important;
+        font-size: @font-size-xs !important;
+        padding: @space-1 @space-2 !important;
       }
     }
   }
 
   // 移动端安全区域适配
   .home-layout {
-    padding-top: env(safe-area-inset-top, 0);
-    padding-bottom: env(safe-area-inset-bottom, 0);
+    .safe-area-top();
+    .safe-area-bottom();
   }
 
   .home-header {
-    padding-left: max(16px, env(safe-area-inset-left));
-    padding-right: max(16px, env(safe-area-inset-right));
+    padding-left: max(@space-4, env(safe-area-inset-left));
+    padding-right: max(@space-4, env(safe-area-inset-right));
   }
 }
 
-/* iPhone 特定适配 */
+// iPhone 特定适配
 @supports (-webkit-touch-callout: none) {
   .home-layout {
-    // iOS Safari 地址栏适配
     height: 100vh;
     height: -webkit-fill-available;
   }
@@ -390,15 +401,15 @@
   }
 }
 
-/* 超小屏幕适配（iPhone SE 等） */
-@media (max-width: 375px) {
+// 超小屏幕适配（iPhone SE 等）
+@media (max-width: @breakpoint-xs) {
   .home-header {
     height: 52px;
     flex: 0 0 52px;
-    padding: 0 12px;
+    padding: 0 @space-3;
 
     .page-title {
-      font-size: 15px !important;
+      font-size: @font-size-base !important;
     }
 
     .ant-avatar {
@@ -407,7 +418,7 @@
   }
 
   .header-right {
-    gap: 8px !important;
+    gap: @space-2 !important;
 
     .logout-btn {
       display: none;  // 超小屏幕隐藏退出按钮文字，只保留图标
@@ -415,7 +426,7 @@
   }
 }
 
-/* 横屏模式提示 */
+// 横屏模式
 @media (orientation: landscape) and (max-height: 500px) {
   .home-header {
     height: 44px !important;
@@ -423,6 +434,6 @@
   }
 
   .page-title {
-    display: none;  // 横屏模式隐藏标题
+    display: none;
   }
 }
