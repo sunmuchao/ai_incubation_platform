@@ -3,6 +3,10 @@
 .env.local
 .env.*.local
 
+# 自动生成的 JWT 密钥文件（开发环境）
+.jwt_secret
+src/.jwt_secret
+
 # 数据库文件
 *.db
 *.sqlite
@@ -41,3 +45,16 @@ htmlcov/
 # 操作系统文件
 .DS_Store
 Thumbs.db
+
+# 测试数据库（已在 *.db 中覆盖，但显式声明）
+test_*.db
+:memory:*
+
+# 前端构建产物
+frontend/dist/
+frontend/coverage/
+
+# 临时报告文件
+*_REPORT.md
+*_TEST_REPORT.md
+*_BAK.md
