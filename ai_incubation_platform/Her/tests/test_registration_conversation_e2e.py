@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from main import app
 from db.database import SessionLocal, engine, Base
 from db.repositories import UserRepository
+from db.models import UserDB
 from models.user import User
 from services.registration_conversation_service import registration_conversation_service
 
@@ -31,20 +32,17 @@ def test_db():
 @pytest.fixture(scope="function")
 def registered_user(test_db):
     """创建已注册但未完成对话的用户"""
-    user = User(
+    user = UserDB(
         id="e2e-user-001",
-        username="e2etest",
-        email="e2e@example.com",
-        password="hashed_password",
         name="端到端测试用户",
+        email="e2e@example.com",
+        password_hash="hashed_password",
         age=28,
         gender="female",
         location="上海市",
         bio="喜欢旅行和摄影",
-        interests='["旅行", "摄影", "美食"]',
-        goal=None,  # 初始为空，等待对话收集
-        values='{}',  # 初始为空
-        ideal_partner_desc=None,  # 初始为空
+        interests='["旅行", "摄影", "美食"]',  # JSON 字符串
+        values='{}',  # JSON 字符串
     )
     test_db.add(user)
     test_db.commit()

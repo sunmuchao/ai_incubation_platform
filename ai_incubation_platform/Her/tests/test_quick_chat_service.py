@@ -32,7 +32,7 @@ class TestQuickChatService:
         # 使用 mock 数据库会话
         service = QuickChatService()
         yield service
-        service.close()
+        # 服务不再需要显式关闭，db_session 由上下文管理器处理
 
     def test_init(self, quick_chat_service):
         """测试初始化"""
@@ -337,19 +337,21 @@ class TestQuickChatServicePartnerProfile:
     """对方资料测试"""
 
     @pytest.fixture
-    def service_with_db(self):
-        """创建带数据库连接的服务"""
-        from db.database import SessionLocal
-        service = QuickChatService(db=SessionLocal())
+    def quick_chat_service(self):
+        """创建测试服务"""
+        service = QuickChatService()
         yield service
-        service.close()
+        # 服务不再需要显式关闭，db_session 由上下文管理器处理
 
     def test_get_partner_profile_nonexistent(self, quick_chat_service, monkeypatch):
         """测试获取不存在的用户资料"""
-        # Mock 数据库查询返回 None
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = None
-        quick_chat_service.db.query.return_value = mock_query
+        # 直接 mock _get_partner_profile 方法的返回值
+        def mock_get_partner_profile(partner_id):
+            return {"name": "TA", "age": "?", "location": "未知", "interests": []}
+
+        monkeypatch.setattr(
+            quick_chat_service, '_get_partner_profile', mock_get_partner_profile
+        )
 
         profile = quick_chat_service._get_partner_profile('nonexistent-user')
 

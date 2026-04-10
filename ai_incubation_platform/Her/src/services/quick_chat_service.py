@@ -97,8 +97,6 @@ class QuickChatService:
                 "suggestions": [],
                 "analysis": {},
             }
-        finally:
-            self.close()
 
     def suggest_reply(
         self,
@@ -191,8 +189,6 @@ class QuickChatService:
                     {"style": "默认", "content": "抱歉，AI 思考中，请稍后再试～", "id": str(__import__('uuid').uuid4())},
                 ],
             }
-        finally:
-            self.close()
 
     def record_suggestion_feedback(
         self,
@@ -521,4 +517,3 @@ if __name__ == "__main__":
     )
 
     print(f"Result: {result}")
-    service.close()
