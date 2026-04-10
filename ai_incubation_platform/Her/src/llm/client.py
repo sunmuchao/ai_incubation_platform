@@ -128,7 +128,7 @@ def call_llm(
 
     except Exception as e:
         logger.error(f"LLM call failed: {e}")
-        return "抱歉，我刚才走神了，你能再说一遍吗？😊"
+        raise RuntimeError(f"LLM call failed: {e}") from e
 
 
 def call_llm_stream(
@@ -276,20 +276,28 @@ async def call_llm_stream_async(
                     json=payload,
                 ) as response:
                     response.raise_for_status()
-                    async for line in response.aiter_lines():
-                        if line.startswith("data: "):
-                            data_str = line[6:]
-                            if data_str == "[DONE]":
-                                break
-                            try:
-                                data = json.loads(data_str)
-                                if data.get("choices") and data["choices"][0].get("delta", {}).get("content"):
-                                    content = data["choices"][0]["delta"]["content"]
-                                    # 逐字符 yield，前端实现打字动画
-                                    for char in content:
-                                        yield char
-                            except json.JSONDecodeError:
-                                continue
+                    # 使用 aiter_bytes 读取原始字节流，避免按行缓冲
+                    buffer = ""
+                    async for byte_chunk in response.aiter_bytes():
+                        # 将字节转换为文本并累积
+                        buffer += byte_chunk.decode("utf-8", errors="ignore")
+                        # 处理 SSE 格式：每个事件以 \n\n 结尾
+                        while "\n\n" in buffer:
+                            event, buffer = buffer.split("\n\n", 1)
+                            for line in event.split("\n"):
+                                if line.startswith("data: "):
+                                    data_str = line[6:]
+                                    if data_str == "[DONE]":
+                                        return
+                                    try:
+                                        data = json.loads(data_str)
+                                        if data.get("choices") and data["choices"][0].get("delta", {}).get("content"):
+                                            content = data["choices"][0]["delta"]["content"]
+                                            # 逐字符 yield，实现真正的流式效果
+                                            for char in content:
+                                                yield char
+                                    except json.JSONDecodeError:
+                                        continue
         else:
             # 降级：同步调用后逐字输出
             result = call_llm(prompt, system_prompt, temperature, max_tokens, **kwargs)

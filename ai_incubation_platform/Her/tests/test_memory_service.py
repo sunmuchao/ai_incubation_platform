@@ -187,9 +187,9 @@ class TestMemoryService:
         用户：金毛，很喜欢运动
         """
 
-        # Mock call_llm 函数
+        # Mock call_llm 函数（从 llm.client 导入）
         mock_response = '[{"content": "用户有只狗", "category": "user_info", "importance": 4}]'
-        with patch('services.memory_service.call_llm', return_value=mock_response):
+        with patch('llm.client.call_llm', return_value=mock_response):
             results = memory_service.extract_memory_from_dialogue(
                 dialogue=dialogue,
                 user_id='test_user_001'

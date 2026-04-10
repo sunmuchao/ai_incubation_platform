@@ -6,6 +6,11 @@ P12 行为实验室 API
 包含：
 1. 时机感知破冰 API
 2. 情感调解 API
+
+架构说明：
+- API 层仅做参数校验、鉴权和响应格式化
+- 业务逻辑在 Skill 层（EmotionMediatorSkill, LoveLanguageTranslatorSkill）
+- Service 层提供数据库操作和外部服务调用
 """
 from fastapi import APIRouter, HTTPException, Depends, Query, Body
 from typing import Optional, List, Dict, Any
@@ -15,7 +20,12 @@ import uuid
 from db.database import get_db
 from db.models import UserDB, ConversationDB
 
-# 导入服务
+# 导入 Skills（AI 决策逻辑）
+from agent.skills.emotion_mediator_skill import get_emotion_mediator_skill
+from agent.skills.love_language_translator_skill import get_love_language_translator_skill
+from agent.skills.silence_breaker_skill import get_silence_breaker_skill
+
+# 导入服务（CRUD 操作）
 from services.p12_behavior_lab_service import (
     shared_experience_service,
     silence_detection_service,
@@ -220,23 +230,30 @@ async def generate_icebreaker(
     """
     生成个性化破冰话题
 
-    请求体:
-    - conversation_id: 对话 ID
-    - user_a_id: 用户 A ID
-    - user_b_id: 用户 B ID
-    - context: 上下文信息 (包含 scenario, recent_topics 等)
+    通过 SilenceBreakerSkill 处理 AI 决策逻辑。
     """
-    result = icebreaker_topic_service.generate_personalized_icebreaker(
-        conversation_id, user_a_id, user_b_id, context, db
-    )
+    try:
+        # 调用 Skill 层处理业务逻辑
+        skill = get_silence_breaker_skill()
+        result = await skill.execute(
+            conversation_id=conversation_id,
+            user_a_id=user_a_id,
+            user_b_id=user_b_id,
+            context=context
+        )
 
-    if not result:
-        raise HTTPException(status_code=400, detail="Failed to generate icebreaker")
+        generated_topics = result.get("generated_topics", [])
 
-    return {
-        "success": True,
-        "icebreaker": result
-    }
+        return {
+            "success": True,
+            "icebreaker": {
+                "topics": generated_topics,
+                "ai_message": result.get("ai_message"),
+                "silence_analysis": result.get("silence_analysis")
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router_icebreaker.post("/{icebreaker_id}/feedback")
@@ -268,6 +285,7 @@ async def submit_icebreaker_feedback(
 
 
 # ==================== 情感调解 API ====================
+# API 层仅做参数校验和响应格式化，业务逻辑在 Skill 层
 
 router_emotion = APIRouter(prefix="/api/p12/emotion", tags=["P12-情感调解"])
 router_love_language = APIRouter(prefix="/api/p12/love-language", tags=["P12-爱之语翻译"])
@@ -285,23 +303,44 @@ async def analyze_conversation_emotion(
     """
     分析对话情绪，检测争吵风险
 
-    请求体:
-    - conversation_id: 对话 ID
-    - user_a_id: 用户 A ID
-    - user_b_id: 用户 B ID
-    - window_messages: 分析最近多少条消息
+    通过 EmotionMediatorSkill 处理 AI 决策逻辑。
     """
-    result = emotion_warning_service.analyze_conversation_emotion(
-        conversation_id, user_a_id, user_b_id, window_messages, db
-    )
+    try:
+        # 获取对话历史
+        messages = db.query(ConversationDB).filter(
+            ConversationDB.id == conversation_id
+        ).first()
 
-    if not result:
-        raise HTTPException(status_code=400, detail="Failed to analyze conversation emotion")
+        conversation_history = []
+        if messages:
+            # 构建对话历史格式
+            conversation_history = [{"content": msg.get("content", ""), "sender_id": msg.get("sender_id")}
+                                    for msg in messages.messages[-window_messages:]] if hasattr(messages, 'messages') else []
 
-    return {
-        "success": True,
-        "analysis": result
-    }
+        # 调用 Skill 层处理业务逻辑
+        skill = get_emotion_mediator_skill()
+        result = await skill.execute(
+            conversation_id=conversation_id,
+            user_a_id=user_a_id,
+            user_b_id=user_b_id,
+            service_type="conflict_detection",
+            conversation_history=conversation_history
+        )
+
+        mediation_result = result.get("mediation_result", {})
+
+        return {
+            "success": True,
+            "analysis": {
+                "warning_level": mediation_result.get("warning_level"),
+                "warning_score": mediation_result.get("warning_score", 0),
+                "detected_issues": mediation_result.get("detected_issues", []),
+                "calming_suggestions": mediation_result.get("calming_suggestions", []),
+                "ai_message": result.get("ai_message")
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router_emotion.post("/{warning_id}/acknowledge")
@@ -370,22 +409,34 @@ async def translate_expression(
     """
     翻译爱的表达，解读真实意图
 
-    请求体:
-    - user_id: 表达者 ID
-    - target_user_id: 接收者 ID
-    - expression: 原始表达
+    通过 LoveLanguageTranslatorSkill 处理 AI 决策逻辑。
     """
-    result = love_language_service.translate_expression(
-        user_id, target_user_id, expression, db
-    )
+    try:
+        # 调用 Skill 层处理业务逻辑
+        skill = get_love_language_translator_skill()
+        result = await skill.execute(
+            user_id=user_id,
+            target_user_id=target_user_id,
+            expression=expression,
+            translation_type="expression"
+        )
 
-    if not result:
-        raise HTTPException(status_code=400, detail="Failed to translate expression")
+        translation_result = result.get("translation_result", {})
 
-    return {
-        "success": True,
-        "translation": result
-    }
+        return {
+            "success": True,
+            "translation": {
+                "original_expression": translation_result.get("original_expression"),
+                "detected_love_language": translation_result.get("detected_love_language"),
+                "love_language_name": translation_result.get("love_language_name"),
+                "true_intention": translation_result.get("true_intention"),
+                "suggested_response": translation_result.get("suggested_response"),
+                "response_examples": translation_result.get("response_examples", []),
+                "ai_message": result.get("ai_message")
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router_love_language.post("/{translation_id}/feedback")
@@ -432,22 +483,34 @@ async def generate_weather_report(
     """
     生成关系气象报告
 
-    请求体:
-    - user_a_id: 用户 A ID
-    - user_b_id: 用户 B ID
-    - report_period: 报告周期 (daily, weekly, monthly)
+    通过 EmotionMediatorSkill 处理 AI 决策逻辑。
     """
-    result = relationship_weather_service.generate_weather_report(
-        user_a_id, user_b_id, report_period, db
-    )
+    try:
+        # 调用 Skill 层处理业务逻辑
+        skill = get_emotion_mediator_skill()
+        result = await skill.execute(
+            conversation_id=f"weather_{user_a_id}_{user_b_id}",
+            user_a_id=user_a_id,
+            user_b_id=user_b_id,
+            service_type="weather_report"
+        )
 
-    if not result:
-        raise HTTPException(status_code=400, detail="Failed to generate weather report")
+        weather_result = result.get("mediation_result", {}).get("relationship_weather", {})
 
-    return {
-        "success": True,
-        "report": result
-    }
+        return {
+            "success": True,
+            "report": {
+                "weather": weather_result.get("weather"),
+                "weather_cn": weather_result.get("weather_cn"),
+                "temperature": weather_result.get("temperature", 50),
+                "description": weather_result.get("description"),
+                "trend": weather_result.get("trend"),
+                "trend_cn": weather_result.get("trend_cn"),
+                "ai_message": result.get("ai_message")
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router_weather.get("/history/{user_id}")

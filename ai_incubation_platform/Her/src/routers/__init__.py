@@ -211,6 +211,8 @@ def register_all_routers(app: FastAPI) -> None:
     from services.scene_detection_service import router as scene_detection_router  # 场景检测
     from utils.api_checker import router as api_checker_router  # API 检查
     from utils.skills_checker import router as skills_checker_router  # Skills 检查
+    from api.wish_mode import router as wish_mode_router  # 许愿模式
+    from api.progressive_profile import router as progressive_profile_router  # 渐进式画像
 
     app.include_router(conversation_matching_router)
     app.include_router(ai_awareness_router)
@@ -227,8 +229,10 @@ def register_all_routers(app: FastAPI) -> None:
     app.include_router(scene_detection_router)
     app.include_router(api_checker_router)
     app.include_router(skills_checker_router)
-    registered_count += 15
-    logger.debug(f"Registered AI Native routers: 15 routers")
+    app.include_router(wish_mode_router)
+    app.include_router(progressive_profile_router)
+    registered_count += 17
+    logger.debug(f"Registered AI Native routers: 17 routers")
 
     logger.info(f"All routers registered successfully. Total routers: {registered_count}")
 

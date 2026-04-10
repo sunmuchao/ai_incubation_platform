@@ -4,16 +4,20 @@ P11 感官洞察 API 端点
 包含：
 1. AI 视频面诊（情感翻译官）- 微表情捕捉、语音情感分析、情感报告生成
 2. 物理安全守护神 - 位置安全监测、语音异常检测、分级响应机制
+
+架构说明：
+- API 层仅做参数校验、鉴权和响应格式化
+- 业务逻辑在 Skill 层（EmotionAnalysisSkill, SafetyGuardianSkill）
+- Service 层提供数据库操作和外部服务调用
 """
 from fastapi import APIRouter, HTTPException, Depends, Body
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
 
-from services.p11_services import (
-    emotion_analysis_service,
-    emotion_report_service
-)
+from agent.skills.emotion_analysis_skill import get_emotion_analysis_skill
+from agent.skills.safety_guardian_skill import get_safety_guardian_skill
+from services.p11_services import emotion_report_service
 from services.p11_safety_service import safety_monitoring_service
 from models.p11_models import EmotionAnalysisDB, EmotionReportDB, SafetyCheckDB, SafetyAlertDB, SafetyPlanDB, DateSafetySessionDB
 
@@ -125,6 +129,7 @@ class SafetyAlertResponse(BaseModel):
 
 
 # ============= 情感分析 API =============
+# API 层仅做参数校验和响应格式化，业务逻辑在 Skill 层
 
 @router_emotion_analysis.post("/analyze/micro-expression", response_model=AnalysisResponse)
 async def analyze_micro_expression(
@@ -135,23 +140,27 @@ async def analyze_micro_expression(
     分析微表情
 
     接收计算机视觉模型输出的面部数据，分析用户的微表情情感。
+    通过 EmotionAnalysisSkill 处理 AI 决策逻辑。
     """
     try:
-        analysis_id = emotion_analysis_service.analyze_micro_expression(
-            user_id=user_id,
+        import uuid
+        # 调用 Skill 层处理业务逻辑
+        skill = get_emotion_analysis_skill()
+        result = await skill.execute(
             session_id=request.session_id,
-            facial_data=request.facial_data
+            analysis_type="micro_expression",
+            facial_data=request.facial_data,
+            context={"user_id": user_id}
         )
 
-        # 获取分析结果
-        analysis = emotion_analysis_service.get_analysis_by_session(request.session_id)
+        analysis_result = result.get("analysis_result", {})
 
         return AnalysisResponse(
-            analysis_id=analysis_id,
-            dominant_emotion=analysis.combined_emotion if analysis else None,
-            confidence=analysis.emotion_confidence if analysis else 0,
-            emotional_state_summary=analysis.emotional_state_summary if analysis else None,
-            ai_insights=analysis.ai_insights if analysis else None
+            analysis_id=str(uuid.uuid4()),
+            dominant_emotion=analysis_result.get("dominant_emotion"),
+            confidence=analysis_result.get("emotion_confidence", 0),
+            emotional_state_summary=analysis_result.get("ai_insights"),
+            ai_insights=result.get("ai_message")
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -166,22 +175,27 @@ async def analyze_voice_emotion(
     分析语音情感
 
     接收语音分析模型输出的特征数据，分析用户的语音情感。
+    通过 EmotionAnalysisSkill 处理 AI 决策逻辑。
     """
     try:
-        analysis_id = emotion_analysis_service.analyze_voice_emotion(
-            user_id=user_id,
+        import uuid
+        # 调用 Skill 层处理业务逻辑
+        skill = get_emotion_analysis_skill()
+        result = await skill.execute(
             session_id=request.session_id,
-            voice_data=request.voice_data
+            analysis_type="voice_emotion",
+            voice_data=request.voice_data,
+            context={"user_id": user_id}
         )
 
-        analysis = emotion_analysis_service.get_analysis_by_session(request.session_id)
+        analysis_result = result.get("analysis_result", {})
 
         return AnalysisResponse(
-            analysis_id=analysis_id,
-            dominant_emotion=analysis.combined_emotion if analysis else None,
-            confidence=analysis.emotion_confidence if analysis else 0,
-            emotional_state_summary=analysis.emotional_state_summary if analysis else None,
-            ai_insights=analysis.ai_insights if analysis else None
+            analysis_id=str(uuid.uuid4()),
+            dominant_emotion=analysis_result.get("dominant_emotion"),
+            confidence=analysis_result.get("emotion_confidence", 0),
+            emotional_state_summary=analysis_result.get("ai_insights"),
+            ai_insights=result.get("ai_message")
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -196,23 +210,28 @@ async def analyze_combined(
     综合分析（微表情 + 语音）
 
     同时分析面部表情和语音情感，生成综合的情感分析报告。
+    通过 EmotionAnalysisSkill 处理 AI 决策逻辑。
     """
     try:
-        analysis_id = emotion_analysis_service.combined_analysis(
-            user_id=user_id,
+        import uuid
+        # 调用 Skill 层处理业务逻辑
+        skill = get_emotion_analysis_skill()
+        result = await skill.execute(
             session_id=request.session_id,
+            analysis_type="combined",
             facial_data=request.facial_data,
-            voice_data=request.voice_data
+            voice_data=request.voice_data,
+            context={"user_id": user_id}
         )
 
-        analysis = emotion_analysis_service.get_analysis_by_session(request.session_id)
+        analysis_result = result.get("analysis_result", {})
 
         return AnalysisResponse(
-            analysis_id=analysis_id,
-            dominant_emotion=analysis.combined_emotion if analysis else None,
-            confidence=analysis.emotion_confidence if analysis else 0,
-            emotional_state_summary=analysis.emotional_state_summary if analysis else None,
-            ai_insights=analysis.ai_insights if analysis else None
+            analysis_id=str(uuid.uuid4()),
+            dominant_emotion=analysis_result.get("dominant_emotion"),
+            confidence=analysis_result.get("emotion_confidence", 0),
+            emotional_state_summary=analysis_result.get("ai_insights"),
+            ai_insights=result.get("ai_message")
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -223,8 +242,9 @@ async def get_user_analysis_history(
     user_id: str,
     limit: int = 10
 ):
-    """获取用户的情感分析历史"""
+    """获取用户的情感分析历史（直接查询数据库）"""
     try:
+        from services.p11_services import emotion_analysis_service
         analyses = emotion_analysis_service.get_user_analyses(user_id, limit)
         return [{
             "id": a.id,
@@ -240,6 +260,7 @@ async def get_user_analysis_history(
 
 
 # ============= 安全监测 API =============
+# API 层仅做参数校验和响应格式化，业务逻辑在 Skill 层
 
 @router_safety.post("/check/location", response_model=SafetyCheckResponse)
 async def check_location_safety(
@@ -249,26 +270,28 @@ async def check_location_safety(
     """
     执行位置安全检查
 
-    评估当前位置的安全性，包括：
-    - 是否在预设的安全区域
-    - 是否是公共场所
-    - 是否偏僻
-    - 附近是否有安全设施
+    评估当前位置的安全性，通过 SafetyGuardianSkill 处理 AI 决策逻辑。
     """
     try:
-        result = safety_monitoring_service.perform_location_safety_check(
+        import uuid
+        # 调用 Skill 层处理业务逻辑
+        skill = get_safety_guardian_skill()
+        result = await skill.execute(
+            session_id=request.session_id or f"loc_{datetime.now().timestamp()}",
+            check_type="location",
             user_id=user_id,
             location_data=request.location_data,
-            session_id=request.session_id,
             partner_user_id=request.partner_user_id
         )
 
+        safety_result = result.get("safety_check_result", {})
+
         return SafetyCheckResponse(
-            check_id=result["check_id"],
-            risk_level=result["risk_level"],
-            risk_score=result["risk_score"],
-            alert_triggered=result["alert_triggered"],
-            alert_id=result.get("alert_id")
+            check_id=safety_result.get("check_id") or str(uuid.uuid4()),
+            risk_level=result.get("alert_level") or "low",
+            risk_score=safety_result.get("risk_score", 0),
+            alert_triggered=result.get("alert_triggered", False),
+            alert_id=result.get("emergency_id")
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -282,25 +305,28 @@ async def check_voice_anomaly(
     """
     执行语音异常检测
 
-    分析语音中的异常信号，包括：
-    - 求救关键词检测
-    - 压力水平分析
-    - 背景噪音评估
+    分析语音中的异常信号，通过 SafetyGuardianSkill 处理 AI 决策逻辑。
     """
     try:
-        result = safety_monitoring_service.perform_voice_anomaly_check(
+        import uuid
+        # 调用 Skill 层处理业务逻辑
+        skill = get_safety_guardian_skill()
+        result = await skill.execute(
+            session_id=request.session_id or f"voice_{datetime.now().timestamp()}",
+            check_type="voice",
             user_id=user_id,
-            voice_data=request.voice_data,
-            session_id=request.session_id,
+            audio_features=request.voice_data,
             partner_user_id=request.partner_user_id
         )
 
+        safety_result = result.get("safety_check_result", {})
+
         return SafetyCheckResponse(
-            check_id=result["check_id"],
-            risk_level=result["risk_level"],
-            risk_score=result["risk_score"],
-            alert_triggered=result["alert_triggered"],
-            alert_id=result.get("alert_id")
+            check_id=safety_result.get("check_id") or str(uuid.uuid4()),
+            risk_level=result.get("alert_level") or "low",
+            risk_score=safety_result.get("risk_score", 0),
+            alert_triggered=result.get("alert_triggered", False),
+            alert_id=result.get("emergency_id")
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -314,22 +340,34 @@ async def perform_checkin(
     """
     执行定时签到
 
-    用户主动签到报告安全状态。
+    用户主动签到报告安全状态，通过 SafetyGuardianSkill 处理。
     """
     try:
-        result = safety_monitoring_service.perform_scheduled_checkin(
-            user_id=user_id,
+        import uuid
+        # 调用 Skill 层处理业务逻辑
+        skill = get_safety_guardian_skill()
+        result = await skill.execute(
             session_id=request.session_id,
-            user_status=request.user_status,
-            note=request.note
+            check_type="scheduled_checkin",
+            user_id=user_id,
+            context={"user_status": request.user_status, "note": request.note}
         )
 
+        safety_result = result.get("safety_check_result", {})
+
+        # 根据用户状态调整风险等级
+        risk_level = safety_result.get("risk_level") or "low"
+        if request.user_status == "need_help":
+            risk_level = "high"
+        elif request.user_status == "concern":
+            risk_level = "medium"
+
         return SafetyCheckResponse(
-            check_id=result["check_id"],
-            risk_level=result["risk_level"],
-            risk_score=result["risk_score"],
-            alert_triggered=result["alert_triggered"],
-            alert_id=result.get("alert_id")
+            check_id=safety_result.get("check_id") or str(uuid.uuid4()),
+            risk_level=risk_level,
+            risk_score=safety_result.get("risk_score", 0),
+            alert_triggered=request.user_status == "need_help",
+            alert_id=None
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -563,26 +601,30 @@ async def trigger_emergency(
     """
     触发紧急求助
 
-    移动端专用的紧急求助按钮，触发后：
+    移动端专用的紧急求助按钮，通过 SafetyGuardianSkill 处理 AI 决策：
     1. 立即创建安全警报
     2. 通知所有紧急联系人
     3. 记录当前位置和时间
     """
     try:
-        result = safety_monitoring_service.trigger_emergency(
+        # 调用 Skill 层处理紧急求助逻辑
+        skill = get_safety_guardian_skill()
+        result = await skill.trigger_emergency(
             user_id=user_id,
-            session_id=request.session_id,
-            location_data=request.location_data,
             emergency_type=request.emergency_type,
-            note=request.note
+            location_data=request.location_data,
+            note=request.note,
+            session_id=request.session_id
         )
 
+        emergency_data = result.get("emergency_data", {})
+
         return EmergencyResponse(
-            emergency_id=result["emergency_id"],
-            alert_level=result["alert_level"],
-            status=result["status"],
-            emergency_contacts_notified=result["contacts_notified"],
-            message=result["message"]
+            emergency_id=emergency_data.get("emergency_id", ""),
+            alert_level=emergency_data.get("alert_level", "critical"),
+            status=emergency_data.get("status", "active"),
+            emergency_contacts_notified=emergency_data.get("contacts_notified", 0),
+            message=result.get("ai_message", "紧急求助已触发")
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -615,24 +657,29 @@ async def notify_emergency_contact(
     """
     通知紧急联系人
 
-    手动触发通知指定的紧急联系人，可选择是否分享当前位置。
+    手动触发通知指定的紧急联系人，通过 SafetyGuardianSkill 处理。
     """
     try:
-        result = safety_monitoring_service.notify_emergency_contact(
+        # 调用 Skill 层处理通知逻辑
+        skill = get_safety_guardian_skill()
+        result = await skill.notify_emergency_contact(
             user_id=user_id,
-            session_id=request.session_id,
             contact_index=request.contact_index,
-            custom_message=request.message,
-            location_data=request.location_data if request.share_location else None
+            session_id=request.session_id,
+            message=request.message,
+            location_data=request.location_data if request.share_location else None,
+            share_location=request.share_location
         )
 
+        notification_data = result.get("notification_data", {})
+
         return NotifyContactResponse(
-            notification_id=result["notification_id"],
-            contact_name=result["contact_name"],
-            contact_phone=result["contact_phone"],
-            notified_at=result["notified_at"],
-            location_shared=result["location_shared"],
-            message=result["message"]
+            notification_id=notification_data.get("notification_id", ""),
+            contact_name=notification_data.get("contact_name", ""),
+            contact_phone=notification_data.get("contact_phone", ""),
+            notified_at=notification_data.get("notified_at", datetime.now().isoformat()),
+            location_shared=request.share_location,
+            message=result.get("ai_message", "已通知紧急联系人")
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

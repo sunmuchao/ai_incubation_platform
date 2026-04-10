@@ -397,19 +397,8 @@ class ProfileCollectionSkill:
 
 只返回 JSON。'''
 
-            import asyncio
-            from concurrent.futures import ThreadPoolExecutor
-
-            try:
-                loop = asyncio.get_running_loop()
-                with ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run,
-                        llm_service._call_llm(prompt)
-                    )
-                    response = future.result(timeout=15)
-            except RuntimeError:
-                response = asyncio.run(llm_service._call_llm(prompt))
+            from services.llm_semantic_service import call_llm_sync
+            response = call_llm_sync(prompt, timeout=15)
 
             if response and not response.startswith('{"fallback"'):
                 response = response.strip()
@@ -568,19 +557,8 @@ class ProfileCollectionSkill:
 3. 保持轻松自然的语气，避免审问式
 4. 只返回 JSON'''
 
-            import asyncio
-            from concurrent.futures import ThreadPoolExecutor
-
-            try:
-                loop = asyncio.get_running_loop()
-                with ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run,
-                        llm_service._call_llm(prompt)
-                    )
-                    response = future.result(timeout=15)
-            except RuntimeError:
-                response = asyncio.run(llm_service._call_llm(prompt))
+            from services.llm_semantic_service import call_llm_sync
+            response = call_llm_sync(prompt, timeout=15)
 
             if response and not response.startswith('{"fallback"'):
                 response = response.strip()
@@ -760,19 +738,8 @@ class ProfileCollectionSkill:
 4. question_type 根据维度选择：单选用 single_choice，多选用 multiple_choice
 5. 只返回 JSON，不要其他内容'''
 
-            import asyncio
-            from concurrent.futures import ThreadPoolExecutor
-
-            try:
-                loop = asyncio.get_running_loop()
-                with ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run,
-                        llm_service._call_llm(prompt)
-                    )
-                    response = future.result(timeout=15)
-            except RuntimeError:
-                response = asyncio.run(llm_service._call_llm(prompt))
+            from services.llm_semantic_service import call_llm_sync
+            response = call_llm_sync(prompt, timeout=15)
 
             if response and not response.startswith('{"fallback"'):
                 response = response.strip()

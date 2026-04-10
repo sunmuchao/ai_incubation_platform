@@ -219,28 +219,8 @@ class MatchmakingSkill:
 
     def _call_llm_sync(self, llm_service, prompt: str) -> str:
         """同步调用 LLM"""
-        import asyncio
-
-        try:
-            # 检查是否有运行的事件循环
-            try:
-                loop = asyncio.get_running_loop()
-                # 在有运行循环的环境中（如 FastAPI），创建新线程运行
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(asyncio.run, llm_service._call_llm(prompt))
-                    return future.result(timeout=30)
-            except RuntimeError:
-                # 没有运行中的事件循环，直接创建
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    return loop.run_until_complete(llm_service._call_llm(prompt))
-                finally:
-                    loop.close()
-        except Exception as e:
-            logger.error(f"MatchmakingSkill: LLM sync call failed: {e}")
-            raise
+        from services.llm_semantic_service import call_llm_sync
+        return call_llm_sync(prompt, timeout=30)
 
     def _extract_json_from_response(self, response: str) -> dict:
         """从 LLM 响应中提取 JSON"""

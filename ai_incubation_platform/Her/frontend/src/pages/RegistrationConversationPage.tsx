@@ -164,35 +164,6 @@ const RegistrationConversationPage: React.FC<{
       },
     ])
 
-    // 打字动画状态
-    let displayedText = ''
-    let bufferText = ''
-    let animationInterval: NodeJS.Timeout | null = null
-    const TYPING_SPEED = 30 // 每个字符 30ms
-
-    // 启动打字动画
-    const startTypingAnimation = () => {
-      animationInterval = setInterval(() => {
-        if (bufferText.length > displayedText.length) {
-          displayedText = bufferText.slice(0, displayedText.length + 1)
-          setConversationHistory((prev) => {
-            const updated = [...prev]
-            const lastIndex = updated.length - 1
-            if (lastIndex >= 0 && updated[lastIndex].type === 'ai') {
-              updated[lastIndex] = {
-                ...updated[lastIndex],
-                message: displayedText,
-              }
-            }
-            return updated
-          })
-        } else if (animationInterval) {
-          clearInterval(animationInterval)
-          animationInterval = null
-        }
-      }, TYPING_SPEED)
-    }
-
     try {
       const userId = currentUser.id || currentUser.username
       const token = authStorage.getToken()
@@ -220,10 +191,9 @@ const RegistrationConversationPage: React.FC<{
 
       const decoder = new TextDecoder()
       let buffer = ''
+      let fullText = '' // 累积完整文本用于最终状态
 
-      // 启动打字动画
-      startTypingAnimation()
-
+      // 真正的流式显示：收到 chunk 立即显示
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
@@ -238,28 +208,37 @@ const RegistrationConversationPage: React.FC<{
               const data = JSON.parse(line.slice(6))
 
               if (data.type === 'chunk') {
-                // 添加到 buffer，让打字动画逐字显示
-                bufferText += data.content
-              } else if (data.type === 'done') {
-                // 清理动画
-                if (animationInterval) {
-                  clearInterval(animationInterval)
-                  animationInterval = null
-                }
-                // 确保显示完整内容
+                // 直接追加显示，实现真正的 LLM 流式效果
+                fullText += data.content
                 setConversationHistory((prev) => {
                   const updated = [...prev]
                   const lastIndex = updated.length - 1
                   if (lastIndex >= 0 && updated[lastIndex].type === 'ai') {
                     updated[lastIndex] = {
                       ...updated[lastIndex],
-                      message: data.data.ai_message,
+                      message: fullText,
+                    }
+                  }
+                  return updated
+                })
+              } else if (data.type === 'done') {
+                // 收到 done 事件，立即清除 sending 状态（不依赖 finally）
+                setSending(false)
+
+                // 确保 finalData 中的完整消息一致
+                const finalData = data.data
+                setConversationHistory((prev) => {
+                  const updated = [...prev]
+                  const lastIndex = updated.length - 1
+                  if (lastIndex >= 0 && updated[lastIndex].type === 'ai') {
+                    updated[lastIndex] = {
+                      ...updated[lastIndex],
+                      message: finalData.ai_message,
                     }
                   }
                   return updated
                 })
 
-                const finalData = data.data
                 setIsCompleted(finalData.is_completed)
                 setUnderstandingLevel(finalData.understanding_level)
                 setCollectedDimensions(
@@ -284,10 +263,6 @@ const RegistrationConversationPage: React.FC<{
       }
     } catch (error: unknown) {
       console.error('Failed to send message:', error)
-      // 清理动画
-      if (animationInterval) {
-        clearInterval(animationInterval)
-      }
       setConversationHistory((prev) => {
         const updated = [...prev]
         const lastIndex = updated.length - 1

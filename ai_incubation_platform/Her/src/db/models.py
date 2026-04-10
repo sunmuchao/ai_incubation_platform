@@ -1158,3 +1158,156 @@ class UserReportDB(Base):
     # 时间戳
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+# ============= 渐进式智能收集架构：用户向量画像模型 =============
+
+class UserVectorProfileDB(Base):
+    """用户向量画像 - 144维向量存储"""
+    __tablename__ = "user_vector_profiles"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+
+    # 完整向量 (144维)
+    vector = Column(Text, nullable=False)  # JSON 字符串，144维向量
+
+    # 维度详情 (包含置信度、来源等)
+    dimensions_detail = Column(Text, default="")  # JSON 字符串
+
+    # 完整度信息
+    completeness_ratio = Column(Float, default=0.0)  # 完整度比例
+    weighted_completeness = Column(Float, default=0.0)  # 加权完整度
+    recommended_strategy = Column(String(20), default="cold_start")  # cold_start, basic, vector, precise
+
+    # 各分类完整度
+    category_completeness = Column(Text, default="")  # JSON 字符串
+
+    # 关键维度状态
+    critical_dimensions_filled = Column(Boolean, default=False)
+    missing_critical_dimensions = Column(Text, default="")  # JSON 字符串
+
+    # 数据来源统计
+    source_stats = Column(Text, default="")  # JSON 字符串
+
+    # 元数据
+    version = Column(String(20), default="v1.0")
+
+    # 时间戳
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class ProfileInferenceRecordDB(Base):
+    """画像推断记录"""
+    __tablename__ = "profile_inference_records"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+
+    # 推断来源
+    inference_source = Column(String(50), nullable=False)  # chat_inference, behavior_inference, wechat_basic, etc.
+    inference_method = Column(String(100), nullable=False)  # 具体方法名
+
+    # 推断结果
+    inferred_dimensions = Column(Text, nullable=False)  # JSON 字符串，推断的维度
+    overall_confidence = Column(Float, default=0.0)
+
+    # 推断依据
+    evidence = Column(Text, nullable=True)  # 原始数据摘要（脱敏）
+    sample_size = Column(Integer, default=0)  # 样本数量
+
+    # LLM 相关
+    llm_model = Column(String(100), nullable=True)
+    llm_tokens_used = Column(Integer, default=0)
+
+    # 时间戳
+    inferred_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class ThirdPartyAuthRecordDB(Base):
+    """第三方授权记录"""
+    __tablename__ = "third_party_auth_records"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+
+    # 授权平台
+    provider = Column(String(50), nullable=False, index=True)  # wechat, weibo, douban, zhihu
+
+    # 授权信息（加密存储）
+    provider_user_id = Column(String(100), nullable=True)  # 第三方用户ID（加密）
+    access_token_hash = Column(String(64), nullable=True)  # access_token 哈希
+
+    # 授权范围
+    auth_scope = Column(Text, default="")  # JSON 字符串，授权范围
+
+    # 状态
+    status = Column(String(20), default="active")  # active, expired, revoked
+
+    # 数据使用记录
+    data_used_for = Column(Text, default="")  # JSON 字符串，数据用途
+
+    # 时间戳
+    authorized_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class GameTestRecordDB(Base):
+    """游戏化测试记录"""
+    __tablename__ = "game_test_records"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+
+    # 测试类型
+    test_type = Column(String(50), nullable=False, index=True)  # personality, attachment, values
+
+    # 测试结果
+    dimension_scores = Column(Text, nullable=False)  # JSON 字符串，维度分数
+    test_report = Column(Text, nullable=True)  # 测试报告
+
+    # 答案记录
+    answers = Column(Text, default="")  # JSON 字符串，答案列表
+
+    # 奖励
+    reward_given = Column(Boolean, default=False)
+    reward_type = Column(String(50), nullable=True)
+
+    # 时间戳
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # 统计
+    time_spent_seconds = Column(Integer, default=0)
+
+
+# ============= AI Native 对话会话持久化模型 =============
+
+class ConversationSessionDB(Base):
+    """AI Native 对话会话状态持久化"""
+    __tablename__ = "conversation_sessions"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+
+    # 对话历史 (JSON 存储)
+    conversation_history = Column(Text, default="[]")  # JSON 字符串，对话消息列表
+
+    # 知识库状态 (JSON 存储)
+    knowledge_base = Column(Text, default="{}")  # JSON 字符串，各维度收集状态
+
+    # 当前话题
+    current_topic = Column(String(100), nullable=True)
+
+    # 整体了解度
+    understanding_level = Column(Float, default=0.0)
+
+    # 是否已完成
+    is_completed = Column(Boolean, default=False)
+
+    # 时间戳
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    last_active_at = Column(DateTime(timezone=True), server_default=func.now())

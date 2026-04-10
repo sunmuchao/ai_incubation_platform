@@ -513,9 +513,7 @@ class TestGenerateWelcomeMessage:
 
     @patch('services.ai_native_conversation_service.call_llm')
     def test_generate_welcome_with_profile(self, mock_call_llm):
-        """测试有资料时生成欢迎消息"""
-        mock_call_llm.return_value = "小明你好呀～看到你28岁在北京，想找个认真恋爱的对象吧？😊"
-
+        """测试有资料时生成欢迎消息（硬编码实现，不调用 LLM）"""
         service = AINativeConversationService()
 
         existing_profile = {
@@ -526,32 +524,35 @@ class TestGenerateWelcomeMessage:
 
         message = service._generate_welcome_message("小明", existing_profile)
 
-        assert "小明" in message or "你好" in message
-        mock_call_llm.assert_called_once()
+        # 硬编码实现会包含用户名或欢迎语
+        assert "小明" in message or "你好" in message or "欢迎" in message
+        # 不再调用 LLM（硬编码实现）
+        mock_call_llm.assert_not_called()
 
     @patch('services.ai_native_conversation_service.call_llm')
     def test_generate_welcome_without_profile(self, mock_call_llm):
-        """测试无资料时生成欢迎消息"""
-        mock_call_llm.return_value = "你好呀～很高兴认识你！让我了解一下你吧～"
-
+        """测试无资料时生成欢迎消息（硬编码实现，不调用 LLM）"""
         service = AINativeConversationService()
 
         message = service._generate_welcome_message("小红", None)
 
+        # 硬编码实现会返回默认欢迎语
         assert len(message) > 0
-        mock_call_llm.assert_called_once()
+        assert "你好" in message or "欢迎" in message or "很高兴" in message
+        # 不再调用 LLM（硬编码实现）
+        mock_call_llm.assert_not_called()
 
     @patch('services.ai_native_conversation_service.call_llm')
     def test_generate_welcome_llm_failure(self, mock_call_llm):
-        """测试 LLM 失败时的降级消息"""
+        """测试欢迎消息生成（硬编码实现，LLM 失败不影响）"""
         mock_call_llm.side_effect = Exception("LLM Error")
 
         service = AINativeConversationService()
 
         message = service._generate_welcome_message("小明", None)
 
-        # 应该返回默认消息
-        assert "你好" in message or "很高兴" in message
+        # 硬编码实现总是返回默认消息，不受 LLM 影响
+        assert "你好" in message or "欢迎" in message or "很高兴" in message
 
 
 class TestBuildStreamPrompt:

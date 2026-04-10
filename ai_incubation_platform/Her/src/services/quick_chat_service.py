@@ -26,6 +26,17 @@ class QuickChatService:
         # 使用延迟导入避免模块加载顺序问题
         from db.database import SessionLocal
         self.db = db or SessionLocal()
+        self._should_close_db = db is None
+
+    def close(self):
+        """关闭数据库会话"""
+        if self._should_close_db and self.db is not None:
+            try:
+                self.db.close()
+            except Exception as e:
+                logger.error(f"Error closing database session: {e}")
+            finally:
+                self.db = None
 
     def get_ai_advice(
         self,

@@ -107,7 +107,7 @@ class DateCoachSkill(BaseSkill):
                 },
                 "service_type": {
                     "type": "string",
-                    "enum": ["date_simulation", "outfit_recommendation", "venue_strategy", "topic_kit", "pre_date_prep", "post_date_review"],
+                    "enum": ["date_simulation", "outfit_recommendation", "venue_strategy", "topic_kit", "pre_date_prep", "post_date_review", "realtime_help"],
                     "description": "服务类型"
                 },
                 "date_context": {
@@ -312,6 +312,14 @@ class DateCoachSkill(BaseSkill):
                     date_context=date_context
                 )
                 result["review_summary"] = review_summary
+
+            elif service_type == "realtime_help":
+                # 实时指导（原 DateAssistantSkill 功能）
+                realtime_tips = self._provide_realtime_help(
+                    date_context=date_context,
+                    conversation_history=conversation_history
+                )
+                result["realtime_tips"] = realtime_tips
 
             return result
 
@@ -793,19 +801,8 @@ class DateCoachSkill(BaseSkill):
 
 只返回 JSON，不要其他内容。'''
 
-            import asyncio
-            from concurrent.futures import ThreadPoolExecutor
-
-            try:
-                loop = asyncio.get_running_loop()
-                with ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run,
-                        llm_service._call_llm(prompt)
-                    )
-                    response = future.result(timeout=20)
-            except RuntimeError:
-                response = asyncio.run(llm_service._call_llm(prompt))
+            from services.llm_semantic_service import call_llm_sync
+            response = call_llm_sync(prompt, timeout=20)
 
             if response and not response.startswith('{"fallback"'):
                 response = response.strip()
@@ -880,6 +877,68 @@ class DateCoachSkill(BaseSkill):
             ]
         }
 
+    def _provide_realtime_help(
+        self,
+        date_context: Optional[Dict],
+        conversation_history: Optional[List[Dict]]
+    ) -> Dict[str, Any]:
+        """
+        提供实时约会指导（原 DateAssistantSkill 功能）
+
+        在约会过程中提供实时建议和技巧。
+        """
+        tips = [
+            "放松，做真实的自己",
+            "保持眼神交流，但不要盯着看",
+            "多问开放性问题，让对方多说",
+            "积极倾听，适时回应和追问",
+            "注意对方的肢体语言，调整自己的节奏"
+        ]
+
+        context_tips = []
+
+        if date_context:
+            stage = date_context.get("relationship_stage", "getting_to_know")
+            date_type = date_context.get("date_type", "first_date")
+
+            if date_type == "first_date":
+                context_tips.extend([
+                    "初次约会：保持轻松自然，不要过于紧张",
+                    "找一个共同话题开始，比如今天怎么来的",
+                    "结束时表达感谢，并暗示想再见面"
+                ])
+            elif date_type == "romantic_date":
+                context_tips.extend([
+                    "浪漫约会：营造氛围，但不要过于刻意",
+                    "适时表达感受，可以说'和你在一起很开心'",
+                    "注意对方的反应，尊重边界"
+                ])
+
+        # 根据对话历史提供针对性建议
+        if conversation_history:
+            last_msg = conversation_history[-1] if conversation_history else None
+            if last_msg:
+                content = last_msg.get("content", "").lower()
+                if "？" in content or "?" in content:
+                    context_tips.append("对方问了问题，真诚回答并可以反问")
+                if len(content) < 10:
+                    context_tips.append("对方回复较短，可以主动开启新话题")
+
+        return {
+            "general_tips": tips[:3],
+            "context_specific_tips": context_tips[:3],
+            "emergency_topics": [
+                "最近有什么有趣的事情发生吗？",
+                "你平时喜欢做什么消遣？",
+                "有没有什么推荐的好电影或好书？"
+            ],
+            "do_not_say": [
+                "不要一直看手机",
+                "避免谈论前任",
+                "不要抱怨或说负面的话"
+            ]
+        }
+
     def _generate_message(self, coach_result: Dict, service_type: str) -> str:
         """生成自然语言建议"""
         if service_type == "date_simulation":
@@ -951,6 +1010,24 @@ class DateCoachSkill(BaseSkill):
                     message += f"- {step}\n"
             return message
 
+        elif service_type == "realtime_help":
+            realtime_tips = coach_result.get("realtime_tips", {})
+            message = f"💡 实时约会指导\n\n"
+
+            general_tips = realtime_tips.get("general_tips", [])
+            if general_tips:
+                message += f"通用建议：\n"
+                for tip in general_tips[:3]:
+                    message += f"- {tip}\n"
+                message += "\n"
+
+            context_tips = realtime_tips.get("context_specific_tips", [])
+            if context_tips:
+                message += f"情境建议：\n"
+                for tip in context_tips[:3]:
+                    message += f"- {tip}\n"
+            return message
+
         return "约会教练已就绪，随时为你提供帮助！"
 
     def _build_ui(self, coach_result: Dict, service_type: str) -> Dict[str, Any]:
@@ -984,6 +1061,11 @@ class DateCoachSkill(BaseSkill):
             return {
                 "component_type": "date_review",
                 "props": coach_result.get("review_summary", {})
+            }
+        elif service_type == "realtime_help":
+            return {
+                "component_type": "realtime_coaching",
+                "props": {"tips": coach_result.get("realtime_tips", {})}
             }
         return {"component_type": "coach_empty", "props": {}}
 

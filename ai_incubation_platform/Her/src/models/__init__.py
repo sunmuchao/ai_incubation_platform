@@ -401,6 +401,12 @@ from models.l4_learning_models import (
     UserLearningProfile,
 )
 
+# AI 反馈模型
+from models.ai_feedback_models import (
+    AIFeedbackDB,
+    AIFeedbackOutcomeDB,
+)
+
 __all__.extend([
     'AIChatSession', 'AIChatSessionResult', 'ConsumptionProfile',
     'GeoTrajectory', 'AuthenticMatchResult', 'BehaviorCredit',
@@ -421,6 +427,8 @@ __all__.extend([
     'DigitalTwinProfile', 'DigitalTwinSimulation', 'DigitalTwinReport',
     # L4: AI 持续学习模型
     'UserPreferenceMemory', 'BehaviorLearningPattern', 'MatchingWeightAdjustment', 'UserLearningProfile',
+    # AI 反馈模型
+    'AIFeedbackDB', 'AIFeedbackOutcomeDB',
 ])
 
 # ============================================

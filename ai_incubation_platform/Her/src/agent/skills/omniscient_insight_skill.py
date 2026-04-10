@@ -561,19 +561,8 @@ class OmniscientInsightSkill:
 
 只返回建议文字，不要其他内容。'''
 
-            import asyncio
-            from concurrent.futures import ThreadPoolExecutor
-
-            try:
-                loop = asyncio.get_running_loop()
-                with ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run,
-                        llm_service._call_llm(prompt)
-                    )
-                    response = future.result(timeout=10)
-            except RuntimeError:
-                response = asyncio.run(llm_service._call_llm(prompt))
+            from services.llm_semantic_service import call_llm_sync
+            response = call_llm_sync(prompt, timeout=10)
 
             if response and not response.startswith('{"fallback"'):
                 # 清理响应

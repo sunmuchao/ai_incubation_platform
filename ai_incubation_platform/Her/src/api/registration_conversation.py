@@ -311,7 +311,10 @@ async def complete_conversation(user_id: str):
     result = ai_native_conversation_service.get_session_status(user_id)
 
     if result.get("exists"):
-        ai_native_conversation_service.sessions[user_id].is_completed = True
+        state = ai_native_conversation_service.sessions[user_id]
+        state.is_completed = True
+        # 持久化完成状态到数据库
+        ai_native_conversation_service._save_session_to_db(state)
         logger.info(f"Conversation marked as completed for user {user_id}")
 
     return {

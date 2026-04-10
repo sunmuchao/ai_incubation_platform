@@ -156,21 +156,21 @@ class WishModeAdvisor:
    感情需要经营
 
 【输出格式】请返回 JSON 格式：
-{
+{{
     "core_needs": ["核心需求 1", "核心需求 2"],
     "hard_conditions": ["硬性条件 1", "硬性条件 2"],
     "soft_preferences": ["软性偏好 1", "软性偏好 2"],
-    "risk_analysis": {
+    "risk_analysis": {{
         "level": "low/medium/high/extreme",
         "description": "风险描述",
         "warning": "警告信息（如有）",
         "pool_size_estimate": 100,
         "competition_level": "low/medium/high/extreme",
         "potential_risks": ["风险 1", "风险 2"]
-    },
+    }},
     "suggestions": ["建议 1", "建议 2"],
     "disclaimer": "AI只负责帮你找和分析，最终能否聊得来取决于你们双方。感情需要经营。"
-}
+}}
 """
 
     def _parse_wish_analysis_response(
@@ -295,12 +295,12 @@ class WishModeAdvisor:
 5. 建议的沟通方向
 
 【输出格式】请返回 JSON 格式：
-{
+{{
     "match_points": ["匹配点 1", "匹配点 2"],
     "attention_points": ["注意事项 1", "注意事项 2"],
     "risk_warnings": ["风险 1", "风险 2"],
     "communication_suggestions": ["沟通建议 1", "沟通建议 2"]
-}
+}}
 """
 
     def _parse_candidate_warning_response(self, response: str) -> List[str]:

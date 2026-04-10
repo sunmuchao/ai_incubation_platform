@@ -9,7 +9,8 @@ from db.models import (
     BehaviorEventDB,
     UserProfileUpdateDB,
     RelationshipProgressDB,
-    SavedLocationDB
+    SavedLocationDB,
+    ConversationSessionDB,
 )
 from db.repositories import UserRepository, MatchHistoryRepository
 
@@ -25,6 +26,7 @@ __all__ = [
     "UserProfileUpdateDB",
     "RelationshipProgressDB",
     "SavedLocationDB",
+    "ConversationSessionDB",
     "UserRepository",
     "MatchHistoryRepository",
 ]

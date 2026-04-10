@@ -1,7 +1,16 @@
 """
 约会助手 Skill - 约会实战辅助
 
-AI 约会助手核心 Skill - 穿搭推荐、场所策略、话题锦囊
+⚠️ DEPRECATED: 此 Skill 已废弃，请使用 DateCoachSkill 替代。
+DateCoachSkill 已整合所有功能，包括新增的 realtime_help 服务类型。
+
+迁移指南:
+- DateAssistantSkill.outfit → DateCoachSkill.outfit_recommendation
+- DateAssistantSkill.venue → DateCoachSkill.venue_strategy
+- DateAssistantSkill.topics → DateCoachSkill.topic_kit
+- DateAssistantSkill.realtime_help → DateCoachSkill.realtime_help
+
+将在下一个版本移除。
 """
 from typing import Dict, Any, Optional, List
 from datetime import datetime

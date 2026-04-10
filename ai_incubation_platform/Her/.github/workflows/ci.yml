@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ========== 后端检查 ==========
+  backend-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: Her
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check API Registration
+        working-directory: Her/src
+        run: |
+          python -c "
+          from utils.api_checker import check_api_registration, get_api_checker_report
+
+          report = get_api_checker_report()
+          print('=== API Registration Check ===')
+          print(f'Total defined: {report[\"total_defined\"]}')
+          print(f'Total registered: {report[\"total_registered\"]}')
+
+          if report['missing_routers']:
+              print(f'❌ Missing routers: {report[\"missing_routers\"]}')
+              exit(1)
+
+          print('✅ All API routers are properly registered')
+          "
+
+      - name: Check Skills Sync
+        working-directory: Her/src
+        run: |
+          python -c "
+          from utils.skills_checker import check_skills_sync, get_skills_sync_report
+
+          report = get_skills_sync_report()
+          print('=== Skills Sync Check ===')
+          print(f'Backend skills: {report[\"backend_total\"]}')
+          print(f'Frontend skills: {report[\"frontend_total\"]}')
+
+          # 只检查前端是否有已删除的 Skills（前端残留引用）
+          if report['frontend_only']:
+              print(f'❌ Frontend has deleted Skills: {report[\"frontend_only\"]}')
+              exit(1)
+
+          print('✅ No stale frontend Skills references')
+          "
+
+      - name: Lint with flake8
+        working-directory: Her
+        run: |
+          pip install flake8
+          flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings
+          flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+  # ========== 前端检查 ==========
+  frontend-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: Her/frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: Her/frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: Her/frontend
+        run: npm run build
+
+      - name: Type check
+        working-directory: Her/frontend
+        run: npm run type-check || true  # 允许类型检查失败，仅作警告
+
+  # ========== 综合报告 ==========
+  report:
+    needs: [backend-check, frontend-check]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate Coverage Report
+        working-directory: Her/src
+        run: |
+          python -c "
+          from utils.api_checker import get_api_checker_report
+          from utils.skills_checker import get_skills_sync_report
+
+          print('========== CI Coverage Report ==========')
+
+          api_report = get_api_checker_report()
+          print()
+          print('API Registration:')
+          print(f'  - Defined: {api_report[\"total_defined\"]}')
+          print(f'  - Registered: {api_report[\"total_registered\"]}')
+          print(f'  - Status: {\"✅ PASS\" if api_report[\"success\"] else \"❌ FAIL\"}')
+
+          skills_report = get_skills_sync_report()
+          print()
+          print('Skills Sync:')
+          print(f'  - Backend: {skills_report[\"backend_total\"]}')
+          print(f'  - Frontend: {skills_report[\"frontend_total\"]}')
+          print(f'  - Common: {len(skills_report[\"common\"])}')
+          print(f'  - Frontend only (stale): {skills_report[\"frontend_only\"]}')
+          print(f'  - Backend only (new): {skills_report[\"backend_only\"]}')
+
+          print()
+          print('========================================')
+          "

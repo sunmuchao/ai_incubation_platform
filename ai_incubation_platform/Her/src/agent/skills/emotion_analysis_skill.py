@@ -590,20 +590,8 @@ class EmotionAnalysisSkill:
 
 只返回 JSON，不要其他内容。'''
 
-            # 同步调用 LLM
-            import asyncio
-            from concurrent.futures import ThreadPoolExecutor
-
-            try:
-                loop = asyncio.get_running_loop()
-                with ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run,
-                        llm_service._call_llm(prompt)
-                    )
-                    response = future.result(timeout=15)
-            except RuntimeError:
-                response = await llm_service._call_llm(prompt)
+            # 直接 await 异步调用（当前已在异步上下文中）
+            response = await llm_service._call_llm(prompt)
 
             if response and not response.startswith('{"fallback"'):
                 return self._parse_emotion_response(response)

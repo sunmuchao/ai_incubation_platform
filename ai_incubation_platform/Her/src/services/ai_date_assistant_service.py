@@ -259,19 +259,8 @@ class ChatAssistantService:
 4. 如果对方开心，积极回应
 5. 只返回 JSON，不要其他内容'''
 
-            import asyncio
-            from concurrent.futures import ThreadPoolExecutor
-
-            try:
-                loop = asyncio.get_running_loop()
-                with ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run,
-                        llm_service._call_llm(prompt)
-                    )
-                    response = future.result(timeout=15)
-            except RuntimeError:
-                response = asyncio.run(llm_service._call_llm(prompt))
+            from services.llm_semantic_service import call_llm_sync
+            response = call_llm_sync(prompt, timeout=15)
 
             if response and not response.startswith('{"fallback"'):
                 import re

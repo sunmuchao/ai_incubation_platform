@@ -1009,3 +1009,41 @@ def get_llm_semantic_service() -> LLMSemanticService:
     if _llm_semantic_service is None:
         _llm_semantic_service = LLMSemanticService()
     return _llm_semantic_service
+
+
+def call_llm_sync(prompt: str, timeout: float = 30.0) -> str:
+    """
+    从同步上下文安全地调用异步 LLM
+
+    正确处理事件循环场景：
+    - 如果已在异步上下文中，使用 asyncio.to_thread
+    - 如果没有事件循环，使用 asyncio.run
+
+    Args:
+        prompt: LLM 提示词
+        timeout: 超时时间（秒）
+
+    Returns:
+        LLM 响应文本
+    """
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+
+    llm_service = get_llm_semantic_service()
+
+    async def _call():
+        return await llm_service._call_llm(prompt)
+
+    try:
+        # 尝试获取运行中的事件循环
+        loop = asyncio.get_running_loop()
+        # 已在异步上下文中，使用线程池执行
+        with ThreadPoolExecutor() as executor:
+            future = executor.submit(asyncio.run, _call())
+            return future.result(timeout=timeout)
+    except RuntimeError:
+        # 没有运行中的事件循环，直接创建
+        return asyncio.run(_call())
+    except Exception as e:
+        logger.error(f"call_llm_sync failed: {e}")
+        return json.dumps({"fallback": True, "error": str(e)}, ensure_ascii=False)

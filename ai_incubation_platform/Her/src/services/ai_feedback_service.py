@@ -237,16 +237,24 @@ class AIFeedbackService:
             outcome_type: 结果类型
             outcome_data: 结果详情
         """
+        db = self._get_db()
         try:
-            outcome_data = {
-                "feedback_id": feedback_id,
-                "outcome_type": outcome_type,
-                "outcome_data": outcome_data or {},
-                "created_at": datetime.now().isoformat(),
-            }
+            import uuid
+            outcome_id = str(uuid.uuid4())
 
-            # 追加到反馈记录
-            self._append_outcome(feedback_id, outcome_data)
+            # 提取 outcome_data 中的字段
+            follow_up_messages = outcome_data.get('messages_after', 0) if outcome_data else 0
+
+            outcome = AIFeedbackOutcomeDB(
+                id=outcome_id,
+                feedback_id=feedback_id,
+                user_id=user_id,
+                outcome_type=outcome_type,
+                follow_up_messages=follow_up_messages,
+                metadata_json=json.dumps(outcome_data) if outcome_data else None,
+            )
+            db.add(outcome)
+            db.commit()
 
             logger.info(
                 f"Recorded AI outcome: {outcome_type} - "
@@ -254,22 +262,13 @@ class AIFeedbackService:
             )
 
         except Exception as e:
+            db.rollback()
             logger.error(f"Record outcome failed: {e}")
+        finally:
+            self.close()
 
-    def _append_outcome(self, feedback_id: str, outcome_data: Dict):
-        """追加结果到反馈记录"""
-        import os
-
-        # 使用实例的 data_dir 或默认路径
-        if self.data_dir:
-            data_dir = self.data_dir
-        else:
-            data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
-
-        outcomes_file = os.path.join(data_dir, "ai_outcomes.jsonl")
-
-        with open(outcomes_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(outcome_data, ensure_ascii=False) + "\n")
+    # 删除不再使用的文件操作方法
+    # _append_outcome 已废弃，改用数据库存储
 
     def get_adoption_rate(
         self,
@@ -431,97 +430,59 @@ class AIFeedbackService:
             return {"effectiveness_score": 0, "sample_size": 0}
 
     def _load_feedbacks(self, user_id: str, days: int) -> List[Dict]:
-        """加载用户反馈"""
-        import os
+        """加载用户反馈（从数据库）"""
+        db = self._get_db()
+        try:
+            cutoff = datetime.now() - timedelta(days=days)
 
-        # 使用实例的 data_dir 或默认路径
-        if self.data_dir:
-            data_dir = self.data_dir
-        else:
-            data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+            feedbacks = db.query(AIFeedbackDB).filter(
+                AIFeedbackDB.user_id == user_id,
+                AIFeedbackDB.created_at >= cutoff
+            ).order_by(desc(AIFeedbackDB.created_at)).all()
 
-        feedback_file = os.path.join(data_dir, "ai_feedback.jsonl")
+            return [fb.to_dict() for fb in feedbacks]
 
-        if not os.path.exists(feedback_file):
+        except Exception as e:
+            logger.error(f"Load feedbacks failed: {e}")
             return []
-
-        feedbacks = []
-        cutoff = datetime.now() - timedelta(days=days)
-
-        with open(feedback_file, "r", encoding="utf-8") as f:
-            for line in f:
-                try:
-                    feedback = json.loads(line.strip())
-                    # 检查是否是指定用户
-                    if feedback.get("user_id") == user_id:
-                        # 检查时间
-                        created_at = datetime.fromisoformat(feedback.get("created_at"))
-                        if created_at >= cutoff:
-                            feedbacks.append(feedback)
-                except (json.JSONDecodeError, ValueError):
-                    continue
-
-        return feedbacks
+        finally:
+            self.close()
 
     def _load_all_feedbacks(self, days: int) -> List[Dict]:
-        """加载所有反馈"""
-        import os
+        """加载所有反馈（从数据库）"""
+        db = self._get_db()
+        try:
+            cutoff = datetime.now() - timedelta(days=days)
 
-        # 使用实例的 data_dir 或默认路径
-        if self.data_dir:
-            data_dir = self.data_dir
-        else:
-            data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+            feedbacks = db.query(AIFeedbackDB).filter(
+                AIFeedbackDB.created_at >= cutoff
+            ).order_by(desc(AIFeedbackDB.created_at)).all()
 
-        feedback_file = os.path.join(data_dir, "ai_feedback.jsonl")
+            return [fb.to_dict() for fb in feedbacks]
 
-        if not os.path.exists(feedback_file):
+        except Exception as e:
+            logger.error(f"Load all feedbacks failed: {e}")
             return []
-
-        feedbacks = []
-        cutoff = datetime.now() - timedelta(days=days)
-
-        with open(feedback_file, "r", encoding="utf-8") as f:
-            for line in f:
-                try:
-                    feedback = json.loads(line.strip())
-                    created_at = datetime.fromisoformat(feedback.get("created_at"))
-                    if created_at >= cutoff:
-                        feedbacks.append(feedback)
-                except (json.JSONDecodeError, ValueError):
-                    continue
-
-        return feedbacks
+        finally:
+            self.close()
 
     def _load_outcomes(self, days: int) -> List[Dict]:
-        """加载结果数据"""
-        import os
+        """加载结果数据（从数据库）"""
+        db = self._get_db()
+        try:
+            cutoff = datetime.now() - timedelta(days=days)
 
-        # 使用实例的 data_dir 或默认路径
-        if self.data_dir:
-            data_dir = self.data_dir
-        else:
-            data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+            outcomes = db.query(AIFeedbackOutcomeDB).filter(
+                AIFeedbackOutcomeDB.created_at >= cutoff
+            ).order_by(desc(AIFeedbackOutcomeDB.created_at)).all()
 
-        outcomes_file = os.path.join(data_dir, "ai_outcomes.jsonl")
+            return [o.to_dict() for o in outcomes]
 
-        if not os.path.exists(outcomes_file):
+        except Exception as e:
+            logger.error(f"Load outcomes failed: {e}")
             return []
-
-        outcomes = []
-        cutoff = datetime.now() - timedelta(days=days)
-
-        with open(outcomes_file, "r", encoding="utf-8") as f:
-            for line in f:
-                try:
-                    outcome = json.loads(line.strip())
-                    created_at = datetime.fromisoformat(outcome.get("created_at"))
-                    if created_at >= cutoff:
-                        outcomes.append(outcome)
-                except (json.JSONDecodeError, ValueError):
-                    continue
-
-        return outcomes
+        finally:
+            self.close()
 
 
 # 全局服务实例

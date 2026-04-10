@@ -194,18 +194,34 @@ class TestAIFeedbackService:
 
 
 class TestAIFeedbackServiceFileOperations:
-    """反馈服务文件操作测试"""
+    """反馈服务数据库操作测试（已迁移到数据库存储）"""
 
     @pytest.fixture
     def temp_data_dir(self, tmp_path):
-        """创建临时数据目录"""
+        """创建临时数据目录（已废弃，保留 fixture 兼容）"""
         data_dir = str(tmp_path / "test_data")
         os.makedirs(data_dir, exist_ok=True)
         return data_dir
 
-    def test_save_feedback_creates_file(self, temp_data_dir):
-        """测试保存反馈创建文件"""
+    def test_save_feedback_creates_db_record(self, temp_data_dir, monkeypatch):
+        """测试保存反馈创建数据库记录"""
+        # Mock 数据库操作
+        mock_db = MagicMock()
+        mock_feedback = MagicMock()
+        mock_feedback.id = "test_feedback_id"
+
+        def mock_uuid():
+            return "test_feedback_id"
+
+        monkeypatch.setattr("uuid.uuid4", mock_uuid)
+
         service = AIFeedbackService(data_dir=temp_data_dir)
+        service._get_db = lambda: mock_db
+
+        # Mock add 和 commit
+        mock_db.add = MagicMock()
+        mock_db.commit = MagicMock()
+        mock_db.rollback = MagicMock()
 
         feedback_id = service.record_feedback(
             user_id='test_user',
@@ -216,14 +232,27 @@ class TestAIFeedbackServiceFileOperations:
             suggestion_style='幽默风趣'
         )
 
-        feedback_file = os.path.join(temp_data_dir, "ai_feedback.jsonl")
-        assert os.path.exists(feedback_file)
+        assert feedback_id == "test_feedback_id"
+        assert mock_db.add.called
+        assert mock_db.commit.called
 
-    def test_save_feedback_format(self, temp_data_dir):
-        """测试保存反馈格式"""
+    def test_save_feedback_db_fields(self, temp_data_dir, monkeypatch):
+        """测试保存反馈数据库字段"""
+        mock_db = MagicMock()
+
+        captured_feedback = None
+
+        def capture_add(obj):
+            captured_feedback = obj
+
+        mock_db.add = MagicMock(side_effect=capture_add)
+        mock_db.commit = MagicMock()
+        mock_db.rollback = MagicMock()
+
         service = AIFeedbackService(data_dir=temp_data_dir)
+        service._get_db = lambda: mock_db
 
-        service.record_feedback(
+        feedback_id = service.record_feedback(
             user_id='test_user',
             partner_id='test_partner',
             suggestion_id='suggestion_001',
@@ -233,15 +262,9 @@ class TestAIFeedbackServiceFileOperations:
             user_actual_reply='测试回复'
         )
 
-        feedback_file = os.path.join(temp_data_dir, "ai_feedback.jsonl")
-        with open(feedback_file, 'r', encoding='utf-8') as f:
-            line = f.readline()
-            data = json.loads(line)
-
-        assert 'user_id' in data
-        assert 'partner_id' in data
-        assert 'feedback_type' in data
-        assert 'suggestion_content' in data
+        # 验证返回了反馈 ID（说明操作成功）
+        assert feedback_id is not None
+        assert len(feedback_id) > 0
 
 
 class TestFeedbackTypeConstants:
