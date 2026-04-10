@@ -18,8 +18,7 @@ from agent.skills.omniscient_insight_skill import get_omniscient_insight_skill
 from agent.skills.relationship_coach_skill import get_relationship_coach_skill
 from agent.skills.date_planning_skill import get_date_planning_skill
 from agent.skills.bill_analysis_skill import get_bill_analysis_skill
-from agent.skills.geo_location_skill import get_geo_location_skill
-from agent.skills.gift_ordering_skill import get_gift_ordering_skill
+# 注：geo_location_skill, gift_ordering_skill 已删除，改用 REST API
 from agent.skills.registry import get_skill_registry, initialize_default_skills
 
 
@@ -43,16 +42,7 @@ def bill_analysis_skill():
     return get_bill_analysis_skill()
 
 
-@pytest.fixture
-def geo_location_skill():
-    """获取地理位置 Skill"""
-    return get_geo_location_skill()
-
-
-@pytest.fixture
-def gift_ordering_skill():
-    """获取礼物订购 Skill"""
-    return get_gift_ordering_skill()
+# 注：geo_location_skill, gift_ordering_skill 已删除，相关测试已移除
 
 
 # ========== 测试 Skill 注册表 ==========
@@ -101,14 +91,39 @@ class TestMatchmakingSkill:
     @pytest.mark.asyncio
     async def test_execute_with_user_intent(self, matchmaking_skill):
         """测试基于用户意图执行匹配"""
-        result = await matchmaking_skill.execute(
-            user_intent="帮我找一个喜欢旅行的女生",
-            context={"user_id": "user-test-123"}
-        )
+        # Mock the internal methods to avoid LLM calls and workflow execution
+        mock_intent_result = {
+            "intent_type": "interest_match",
+            "limit": 5,
+            "min_score": 0.6,
+            "hard_requirements": [],
+            "soft_preferences": ["喜欢旅行"],
+            "emotional_state": "normal",
+            "confidence": 0.8
+        }
 
-        assert result["success"] is True
-        assert "ai_message" in result
-        assert "matches" in result or "generative_ui" in result
+        mock_workflow_result = {
+            "recommendations": [
+                {"user_id": "match-1", "name": "Test Match", "score": 0.85}
+            ]
+        }
+
+        # Patch the internal methods directly on the skill instance
+        matchmaking_skill._parse_intent = MagicMock(return_value=mock_intent_result)
+
+        with patch("agent.workflows.autonomous_workflows.AutoMatchRecommendWorkflow") as MockWorkflow:
+            mock_instance = MagicMock()
+            mock_instance.execute.return_value = mock_workflow_result
+            MockWorkflow.return_value = mock_instance
+
+            result = await matchmaking_skill.execute(
+                user_intent="帮我找一个喜欢旅行的女生",
+                context={"user_id": "user-test-123"}
+            )
+
+            assert result["success"] is True
+            assert "ai_message" in result
+            assert "matches" in result or "generative_ui" in result
 
     @pytest.mark.asyncio
     async def test_daily_recommendation(self, matchmaking_skill):
@@ -212,167 +227,7 @@ class TestBillAnalysisSkill:
         assert "level" in features
 
 
-# ========== 测试地理位置 Skill ==========
-
-class TestGeoLocationSkill:
-    """测试地理位置 Skill"""
-
-    @pytest.mark.asyncio
-    async def test_analyze_trajectory(self, geo_location_skill):
-        """测试轨迹分析"""
-        result = await geo_location_skill.execute(
-            user_id="user-test-123",
-            action="analyze_trajectory",
-            time_range="month"
-        )
-
-        assert result["success"] is True
-        assert "ai_message" in result
-
-    @pytest.mark.asyncio
-    async def test_autonomous_nearby_match(self, geo_location_skill):
-        """测试自主触发：附近匹配提醒"""
-        result = await geo_location_skill.autonomous_trigger(
-            user_id="user-test-123",
-            trigger_type="nearby_match_alert",
-            context={"nearby_user_id": "user-test-456"}
-        )
-
-        assert "triggered" in result
-
-
-# ========== 测试礼物订购 Skill ==========
-
-class TestGiftOrderingSkill:
-    """测试礼物订购 Skill"""
-
-    @pytest.mark.asyncio
-    async def test_get_gift_suggestions(self, gift_ordering_skill):
-        """测试获取礼物推荐"""
-        result = await gift_ordering_skill.execute(
-            match_id="match-test-123",
-            action="get_suggestions",
-            occasion="birthday",
-            budget_range="100_300"
-        )
-
-        assert result["success"] is True
-        assert "ai_message" in result
-        assert "gift_suggestions" in result
-
-    @pytest.mark.asyncio
-    async def test_compare_options(self, gift_ordering_skill):
-        """测试比较礼物选项"""
-        # 先获取推荐
-        suggestions_result = await gift_ordering_skill.execute(
-            match_id="match-test-123",
-            action="get_suggestions"
-        )
-
-        if suggestions_result.get("gift_suggestions"):
-            gift_id = suggestions_result["gift_suggestions"][0]["gift_id"]
-
-            result = await gift_ordering_skill.execute(
-                match_id="match-test-123",
-                action="compare_options",
-                preferences={"gift_id": gift_id}
-            )
-
-            assert result["success"] is True
-
-    @pytest.mark.asyncio
-    async def test_place_order(self, gift_ordering_skill):
-        """测试下订单"""
-        # 先获取推荐
-        suggestions_result = await gift_ordering_skill.execute(
-            match_id="match-test-123",
-            action="get_suggestions"
-        )
-
-        if suggestions_result.get("gift_suggestions"):
-            gift_id = suggestions_result["gift_suggestions"][0]["gift_id"]
-
-            result = await gift_ordering_skill.execute(
-                match_id="match-test-123",
-                action="place_order",
-                gift_id=gift_id
-            )
-
-            assert result["success"] is True
-            assert "order_info" in result
-
-    @pytest.mark.asyncio
-    async def test_track_delivery(self, gift_ordering_skill):
-        """测试追踪物流"""
-        # 先下订单
-        suggestions_result = await gift_ordering_skill.execute(
-            match_id="match-test-123",
-            action="get_suggestions"
-        )
-
-        if suggestions_result.get("gift_suggestions"):
-            gift_id = suggestions_result["gift_suggestions"][0]["gift_id"]
-            order_result = await gift_ordering_skill.execute(
-                match_id="match-test-123",
-                action="place_order",
-                gift_id=gift_id
-            )
-
-            if order_result.get("order_info"):
-                order_id = order_result["order_info"]["order_id"]
-
-                result = await gift_ordering_skill.execute(
-                    match_id="match-test-123",
-                    action="track_delivery",
-                    order_id=order_id
-                )
-
-                assert result["success"] is True
-
-    @pytest.mark.asyncio
-    async def test_get_occasion_reminder(self, gift_ordering_skill):
-        """测试获取场合提醒"""
-        result = await gift_ordering_skill.execute(
-            match_id="match-test-123",
-            action="get_occasion_reminder"
-        )
-
-        assert result["success"] is True
-
-    @pytest.mark.asyncio
-    async def test_autonomous_occasion_reminder(self, gift_ordering_skill):
-        """测试自主触发：纪念日提醒"""
-        result = await gift_ordering_skill.autonomous_trigger(
-            match_id="match-test-123",
-            trigger_type="occasion_reminder",
-            context={}
-        )
-
-        assert "triggered" in result
-
-    @pytest.mark.asyncio
-    async def test_autonomous_birthday_reminder(self, gift_ordering_skill):
-        """测试自主触发：生日提醒"""
-        result = await gift_ordering_skill.autonomous_trigger(
-            match_id="match-test-123",
-            trigger_type="partner_birthday_approaching",
-            context={"partner_birthday": "2026-04-20"}
-        )
-
-        assert "triggered" in result
-
-    def test_mock_gifts_generation(self, gift_ordering_skill):
-        """测试模拟礼物生成"""
-        gifts = gift_ordering_skill._generate_mock_gifts(
-            occasion="birthday",
-            budget_range="100_300",
-            partner_preferences={"hobbies": ["阅读", "咖啡"]}
-        )
-
-        assert len(gifts) > 0
-        assert all("gift_id" in g for g in gifts)
-        assert all("name" in g for g in gifts)
-        assert all("price" in g for g in gifts)
+# 注：TestGeoLocationSkill, TestGiftOrderingSkill 已删除，改用 REST API 测试
 
 
 # ========== 测试 LLM 增强器 ==========
@@ -450,94 +305,10 @@ class TestSkillEnhancer:
 
 
 # ========== 测试外部服务集成 ==========
+# 注：external_services.py 已移除，相关测试迁移至具体服务测试文件
 
-class TestExternalServices:
-    """测试外部服务集成"""
-
-    @pytest.fixture
-    def bill_service(self):
-        """获取账单服务客户端"""
-        from integration.external_services import get_bill_service
-        return get_bill_service()
-
-    @pytest.fixture
-    def geo_service(self):
-        """获取地理位置服务客户端"""
-        from integration.external_services import get_geo_service
-        return get_geo_service()
-
-    @pytest.fixture
-    def gift_service(self):
-        """获取礼物订购服务客户端"""
-        from integration.external_services import get_gift_service
-        return get_gift_service()
-
-    def test_bill_service_mock_mode(self, bill_service):
-        """测试账单服务 mock 模式"""
-        assert bill_service._mock_mode is True
-
-        features = asyncio.run(bill_service.fetch_bill_features("user-test-123"))
-
-        assert features is not None
-        assert "level" in features
-        assert features["source"] == "mock"
-
-    def test_geo_service_trajectory(self, geo_service):
-        """测试地理服务轨迹分析"""
-        assert geo_service._mock_mode is True
-
-        trajectory = asyncio.run(geo_service.analyze_trajectory("user-test-123"))
-
-        assert trajectory is not None
-        assert "home_district" in trajectory
-        assert "frequent_areas" in trajectory
-
-    def test_geo_service_poi(self, geo_service):
-        """测试地理服务 POI 推荐"""
-        pois = asyncio.run(geo_service.get_poi_recommendations(
-            lat=39.9,
-            lng=116.4,
-            poi_type="restaurant"
-        ))
-
-        assert len(pois) > 0
-        assert all("name" in p for p in pois)
-
-    def test_gift_service_suggestions(self, gift_service):
-        """测试礼物服务推荐"""
-        assert gift_service._mock_mode is True
-
-        gifts = asyncio.run(gift_service.get_gift_suggestions(
-            occasion="birthday",
-            budget_range="100_300"
-        ))
-
-        assert len(gifts) > 0
-        assert all("gift_id" in g for g in gifts)
-
-    def test_gift_service_order(self, gift_service):
-        """测试礼物服务下单"""
-        gifts = asyncio.run(gift_service.get_gift_suggestions(
-            occasion="birthday",
-            budget_range="100_300"
-        ))
-
-        if gifts:
-            order = asyncio.run(gift_service.place_order(
-                gift_id=gifts[0]["gift_id"],
-                shipping_info={"address": "测试地址"}
-            ))
-
-            assert order is not None
-            assert "order_id" in order
-
-    def test_gift_service_tracking(self, gift_service):
-        """测试礼物服务物流追踪"""
-        tracking = asyncio.run(gift_service.track_order("ORD202604080001"))
-
-        assert tracking is not None
-        assert "status" in tracking
-        assert "tracking_number" in tracking
+# class TestExternalServices:
+#     """测试外部服务集成 - 已迁移到具体服务测试"""
 
 
 # ========== AI Native 特性测试 ==========

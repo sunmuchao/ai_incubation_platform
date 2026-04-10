@@ -37,3 +37,14 @@ def test_db():
         yield db
     finally:
         db.close()
+
+
+@pytest.fixture(scope="function")
+def db_session():
+    """创建测试数据库会话 - 别名"""
+    Base.metadata.create_all(bind=test_engine)
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

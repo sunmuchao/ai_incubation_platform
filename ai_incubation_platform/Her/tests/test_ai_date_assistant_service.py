@@ -38,11 +38,14 @@ class TestChatAssistantService:
         mock_suggestion.tone = "caring"
         mock_db.refresh.return_value = mock_suggestion
 
-        result = service.generate_reply_suggestion(
-            user_id="user_001",
-            received_message="今天好累啊，工作辛苦了",
-            target_user_id="user_002"
-        )
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('services.ai_date_assistant_service.analyze_text_emotion_sync',
+                   return_value={"mood": "neutral", "emotion": "neutral", "is_tired": True}):
+            result = service.generate_reply_suggestion(
+                user_id="user_001",
+                received_message="今天好累啊，工作辛苦了",
+                target_user_id="user_002"
+            )
 
         assert result is not None
         assert result.tone == "caring"
@@ -53,11 +56,14 @@ class TestChatAssistantService:
         mock_suggestion.tone = "cheerful"
         mock_db.refresh.return_value = mock_suggestion
 
-        result = service.generate_reply_suggestion(
-            user_id="user_001",
-            received_message="今天好开心，嘻嘻",
-            target_user_id="user_002"
-        )
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('services.ai_date_assistant_service.analyze_text_emotion_sync',
+                   return_value={"mood": "positive", "emotion": "happiness"}):
+            result = service.generate_reply_suggestion(
+                user_id="user_001",
+                received_message="今天好开心，嘻嘻",
+                target_user_id="user_002"
+            )
 
         assert result is not None
         assert result.tone == "cheerful"
@@ -68,11 +74,14 @@ class TestChatAssistantService:
         mock_suggestion.tone = "thoughtful"
         mock_db.refresh.return_value = mock_suggestion
 
-        result = service.generate_reply_suggestion(
-            user_id="user_001",
-            received_message="你知道为什么吗？",
-            target_user_id="user_002"
-        )
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('services.ai_date_assistant_service.analyze_text_emotion_sync',
+                   return_value={"mood": "neutral", "emotion": "neutral"}):
+            result = service.generate_reply_suggestion(
+                user_id="user_001",
+                received_message="你知道为什么吗？",
+                target_user_id="user_002"
+            )
 
         assert result is not None
         assert result.tone == "thoughtful"
@@ -83,36 +92,50 @@ class TestChatAssistantService:
         mock_suggestion.tone = "casual"
         mock_db.refresh.return_value = mock_suggestion
 
-        # 使用不包含情绪词的测试用例
-        result = service.generate_reply_suggestion(
-            user_id="user_001",
-            received_message="哦哦知道了",
-            target_user_id="user_002"
-        )
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('services.ai_date_assistant_service.analyze_text_emotion_sync',
+                   return_value={"mood": "neutral", "emotion": "neutral"}):
+            # 使用不包含情绪词的测试用例
+            result = service.generate_reply_suggestion(
+                user_id="user_001",
+                received_message="哦哦知道了",
+                target_user_id="user_002"
+            )
 
         assert result is not None
-        # 注意：实际语气取决于情绪分析结果
 
     def test_analyze_message_mood_positive(self, service):
         """测试分析消息情绪 - 正向"""
-        result = service._analyze_message_mood("今天好开心，棒棒哒")
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('services.ai_date_assistant_service.analyze_text_emotion_sync',
+                   return_value={"mood": "positive", "emotion": "happiness"}):
+            result = service._analyze_message_mood("今天好开心，棒棒哒")
         assert result["mood"] == "positive"
         assert result["is_tired"] == False
 
     def test_analyze_message_mood_negative(self, service):
         """测试分析消息情绪 - 负向"""
-        result = service._analyze_message_mood("今天好难过，伤心")
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('services.ai_date_assistant_service.analyze_text_emotion_sync',
+                   return_value={"mood": "negative", "emotion": "sadness"}):
+            result = service._analyze_message_mood("今天好难过，伤心")
         assert result["mood"] == "negative"
 
     def test_analyze_message_mood_tired(self, service):
         """测试分析消息情绪 - 累"""
-        result = service._analyze_message_mood("好累啊，想睡觉")
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('services.ai_date_assistant_service.analyze_text_emotion_sync',
+                   return_value={"mood": "neutral", "emotion": "neutral", "is_tired": True}):
+            result = service._analyze_message_mood("好累啊，想睡觉")
         assert result["is_tired"] == True
 
     def test_analyze_message_mood_neutral(self, service):
         """测试分析消息情绪 - 中性"""
-        # 使用不包含情绪词的测试用例（避免"好"字匹配 positive_words）
-        result = service._analyze_message_mood("哦哦知道了")
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('services.ai_date_assistant_service.analyze_text_emotion_sync',
+                   return_value={"mood": "neutral", "emotion": "neutral"}):
+            # 使用不包含情绪词的测试用例（避免"好"字匹配 positive_words）
+            result = service._analyze_message_mood("哦哦知道了")
         assert result["mood"] == "neutral"
 
     def test_analyze_message_intent_question(self, service):

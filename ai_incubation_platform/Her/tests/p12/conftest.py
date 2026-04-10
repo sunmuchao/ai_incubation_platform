@@ -4,6 +4,7 @@ P12 测试专用配置
 使用独立的内存数据库，避免与主测试配置冲突
 """
 import pytest
+import uuid
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -17,21 +18,19 @@ from db import models as db_models  # 导入主模型以获取 UserDB, Conversat
 from models import p12_models
 
 
-# 创建测试数据库引擎
-test_engine = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-)
-TestingSessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=test_engine,
-)
-
-
 @pytest.fixture(scope="function")
 def db_session():
-    """创建测试数据库会话"""
+    """创建测试数据库会话 - 每个测试独立的数据库"""
+    # 每个测试使用独立的内存数据库
+    test_engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+    )
+    TestingSessionLocal = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=test_engine,
+    )
     Base.metadata.create_all(bind=test_engine)
     db = TestingSessionLocal()
     try:
@@ -42,19 +41,24 @@ def db_session():
 
 @pytest.fixture
 def sample_users(db_session):
-    """创建测试用户"""
+    """创建测试用户 - 使用唯一 ID 避免冲突"""
+    unique_id = uuid.uuid4().hex[:8]
     user_a = db_models.UserDB(
-        id="user_a_001",
-        username="test_user_a",
-        email="user_a@test.com",
+        id=f"user_a_{unique_id}",
+        name="test_user_a",
+        email=f"user_a_{unique_id}@test.com",
+        password_hash="hashed_password_123",
         age=28,
+        gender="male",
         location="北京"
     )
     user_b = db_models.UserDB(
-        id="user_b_001",
-        username="test_user_b",
-        email="user_b@test.com",
+        id=f"user_b_{unique_id}",
+        name="test_user_b",
+        email=f"user_b_{unique_id}@test.com",
+        password_hash="hashed_password_456",
         age=26,
+        gender="female",
         location="北京"
     )
     db_session.add(user_a)
@@ -68,10 +72,11 @@ def sample_conversation(db_session, sample_users):
     """创建测试对话"""
     user_a, user_b = sample_users
     conversation = db_models.ConversationDB(
-        id="conv_001",
-        user_a_id=user_a.id,
-        user_b_id=user_b.id,
-        status="active"
+        id=f"conv_{uuid.uuid4().hex[:8]}",
+        user_id_1=user_a.id,
+        user_id_2=user_b.id,
+        message_content="测试对话内容",
+        sender_id=user_a.id
     )
     db_session.add(conversation)
     db_session.commit()
@@ -87,7 +92,7 @@ def sample_messages(db_session, sample_conversation, sample_users):
 
     for i in range(10):
         msg = db_models.ChatMessageDB(
-            id=f"msg_{i}",
+            id=f"msg_{uuid.uuid4().hex[:8]}_{i}",
             conversation_id=sample_conversation.id,
             sender_id=user_a.id if i % 2 == 0 else user_b.id,
             receiver_id=user_b.id if i % 2 == 0 else user_a.id,

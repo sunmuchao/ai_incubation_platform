@@ -423,7 +423,11 @@ class TestAICompanionServiceSentimentAnalysis:
 
         mock_db = MagicMock()
         service = AICompanionService(mock_db)
-        result = service._analyze_sentiment("今天很开心，太棒了！")
+
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('src.services.ai_companion_service.analyze_text_emotion_sync',
+                   return_value={"mood": "positive", "intensity": 0.8}):
+            result = service._analyze_sentiment("今天很开心，太棒了！")
 
         assert result > 0
 
@@ -433,7 +437,11 @@ class TestAICompanionServiceSentimentAnalysis:
 
         mock_db = MagicMock()
         service = AICompanionService(mock_db)
-        result = service._analyze_sentiment("今天很难过，太糟糕了！")
+
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('src.services.ai_companion_service.analyze_text_emotion_sync',
+                   return_value={"mood": "negative", "intensity": 0.7}):
+            result = service._analyze_sentiment("今天很难过，太糟糕了！")
 
         assert result < 0
 
@@ -443,7 +451,11 @@ class TestAICompanionServiceSentimentAnalysis:
 
         mock_db = MagicMock()
         service = AICompanionService(mock_db)
-        result = service._analyze_sentiment("今天是星期一")
+
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('src.services.ai_companion_service.analyze_text_emotion_sync',
+                   return_value={"mood": "neutral", "intensity": 0.5}):
+            result = service._analyze_sentiment("今天是星期一")
 
         assert result == 0.0
 
@@ -454,15 +466,20 @@ class TestAICompanionServiceSentimentAnalysis:
         mock_db = MagicMock()
         service = AICompanionService(mock_db)
 
-        # 测试上限
-        very_positive = "开心 高兴 棒 喜欢 爱 快乐 幸福 美好 期待 太好了" * 10
-        result = service._analyze_sentiment(very_positive)
-        assert result <= 1.0
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('src.services.ai_companion_service.analyze_text_emotion_sync',
+                   return_value={"mood": "positive", "intensity": 1.0}):
+            # 测试上限
+            very_positive = "开心 高兴 棒 喜欢 爱 快乐 幸福 美好 期待 太好了" * 10
+            result = service._analyze_sentiment(very_positive)
+            assert result <= 1.0
 
-        # 测试下限
-        very_negative = "难过 伤心 痛苦 讨厌 恨 糟糕 差 失望 绝望 累" * 10
-        result = service._analyze_sentiment(very_negative)
-        assert result >= -1.0
+        with patch('src.services.ai_companion_service.analyze_text_emotion_sync',
+                   return_value={"mood": "negative", "intensity": 1.0}):
+            # 测试下限
+            very_negative = "难过 伤心 痛苦 讨厌 恨 糟糕 差 失望 绝望 累" * 10
+            result = service._analyze_sentiment(very_negative)
+            assert result >= -1.0
 
 
 class TestAICompanionServiceEmotionDetection:
@@ -474,7 +491,11 @@ class TestAICompanionServiceEmotionDetection:
 
         mock_db = MagicMock()
         service = AICompanionService(mock_db)
-        result = service._detect_emotion("今天很开心，笑得合不拢嘴")
+
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('src.services.ai_companion_service.analyze_text_emotion_sync',
+                   return_value={"emotion": "happiness"}):
+            result = service._detect_emotion("今天很开心，笑得合不拢嘴")
 
         assert result == "happy"
 
@@ -484,7 +505,11 @@ class TestAICompanionServiceEmotionDetection:
 
         mock_db = MagicMock()
         service = AICompanionService(mock_db)
-        result = service._detect_emotion("今天很难过，想哭")
+
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('src.services.ai_companion_service.analyze_text_emotion_sync',
+                   return_value={"emotion": "sadness"}):
+            result = service._detect_emotion("今天很难过，想哭")
 
         assert result == "sad"
 
@@ -494,7 +519,11 @@ class TestAICompanionServiceEmotionDetection:
 
         mock_db = MagicMock()
         service = AICompanionService(mock_db)
-        result = service._detect_emotion("感到害怕和担心")
+
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('src.services.ai_companion_service.analyze_text_emotion_sync',
+                   return_value={"emotion": "fear"}):
+            result = service._detect_emotion("感到害怕和担心")
 
         assert result == "anxious"
 
@@ -504,7 +533,11 @@ class TestAICompanionServiceEmotionDetection:
 
         mock_db = MagicMock()
         service = AICompanionService(mock_db)
-        result = service._detect_emotion("很生气，非常愤怒")
+
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('src.services.ai_companion_service.analyze_text_emotion_sync',
+                   return_value={"emotion": "anger"}):
+            result = service._detect_emotion("很生气，非常愤怒")
 
         assert result == "angry"
 
@@ -514,7 +547,11 @@ class TestAICompanionServiceEmotionDetection:
 
         mock_db = MagicMock()
         service = AICompanionService(mock_db)
-        result = service._detect_emotion("很兴奋，非常期待")
+
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('src.services.ai_companion_service.analyze_text_emotion_sync',
+                   return_value={"emotion": "surprise"}):
+            result = service._detect_emotion("很兴奋，非常期待")
 
         assert result == "excited"
 
@@ -524,7 +561,11 @@ class TestAICompanionServiceEmotionDetection:
 
         mock_db = MagicMock()
         service = AICompanionService(mock_db)
-        result = service._detect_emotion("今天是晴天")
+
+        # Mock analyze_text_emotion_sync to avoid LLM API timeout
+        with patch('src.services.ai_companion_service.analyze_text_emotion_sync',
+                   return_value={"emotion": "neutral"}):
+            result = service._detect_emotion("今天是晴天")
 
         assert result == "neutral"
 

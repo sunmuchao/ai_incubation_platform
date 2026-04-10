@@ -369,10 +369,12 @@ class TestUserSimulationAgentReplyLogic:
         profile = {"name": "测试用户", "age": 25, "interests": ["旅行"]}
         agent = UserSimulationAgent(profile)
 
-        greeting_messages = ["你好", "hi", "hello", "嗨", "哈喽", "早", "好"]
-        for msg in greeting_messages:
-            reply = agent.generate_reply(msg)
-            assert len(reply) > 0
+        # Mock LLM 调用，避免真实的 API 请求
+        with patch.object(agent, '_generate_reply_with_llm', return_value=None):
+            greeting_messages = ["你好", "hi", "hello", "嗨", "哈喽", "早", "好"]
+            for msg in greeting_messages:
+                reply = agent.generate_reply(msg)
+                assert len(reply) > 0
 
     def test_generate_reply_interest(self):
         """测试生成兴趣相关回复"""
@@ -381,8 +383,10 @@ class TestUserSimulationAgentReplyLogic:
         profile = {"name": "测试用户", "age": 25, "interests": ["旅行", "摄影"]}
         agent = UserSimulationAgent(profile)
 
-        reply = agent.generate_reply("我也很喜欢旅行")
-        assert len(reply) > 0
+        # Mock LLM 调用
+        with patch.object(agent, '_generate_reply_with_llm', return_value=None):
+            reply = agent.generate_reply("我也很喜欢旅行")
+            assert len(reply) > 0
 
     def test_generate_reply_travel(self):
         """测试生成旅行话题回复"""
@@ -391,8 +395,10 @@ class TestUserSimulationAgentReplyLogic:
         profile = {"name": "测试用户", "age": 25, "interests": ["旅行"]}
         agent = UserSimulationAgent(profile)
 
-        reply = agent.generate_reply("我上周去了云南旅行")
-        assert len(reply) > 0
+        # Mock LLM 调用
+        with patch.object(agent, '_generate_reply_with_llm', return_value=None):
+            reply = agent.generate_reply("我上周去了云南旅行")
+            assert len(reply) > 0
 
     def test_generate_reply_food(self):
         """测试生成美食话题回复"""
@@ -401,8 +407,10 @@ class TestUserSimulationAgentReplyLogic:
         profile = {"name": "测试用户", "age": 25, "interests": ["美食"]}
         agent = UserSimulationAgent(profile)
 
-        reply = agent.generate_reply("今天吃了一家很好吃的餐厅")
-        assert len(reply) > 0
+        # Mock LLM 调用
+        with patch.object(agent, '_generate_reply_with_llm', return_value=None):
+            reply = agent.generate_reply("今天吃了一家很好吃的餐厅")
+            assert len(reply) > 0
 
     def test_generate_reply_work(self):
         """测试生成工作话题回复"""
@@ -411,10 +419,12 @@ class TestUserSimulationAgentReplyLogic:
         profile = {"name": "测试用户", "age": 25, "interests": []}
         agent = UserSimulationAgent(profile)
 
-        work_messages = ["工作好累", "今天加班了", "最近工作很忙", "辛苦了"]
-        for msg in work_messages:
-            reply = agent.generate_reply(msg)
-            assert len(reply) > 0
+        # Mock LLM 调用
+        with patch.object(agent, '_generate_reply_with_llm', return_value=None):
+            work_messages = ["工作好累", "今天加班了", "最近工作很忙", "辛苦了"]
+            for msg in work_messages:
+                reply = agent.generate_reply(msg)
+                assert len(reply) > 0
 
     def test_generate_reply_question(self):
         """测试生成问题回复"""
@@ -423,10 +433,12 @@ class TestUserSimulationAgentReplyLogic:
         profile = {"name": "测试用户", "age": 25, "interests": []}
         agent = UserSimulationAgent(profile)
 
-        questions = ["你喜欢什么？", "你去过那里吗？", "这是什么意思？"]
-        for q in questions:
-            reply = agent.generate_reply(q)
-            assert len(reply) > 0
+        # Mock LLM 调用
+        with patch.object(agent, '_generate_reply_with_llm', return_value=None):
+            questions = ["你喜欢什么？", "你去过那里吗？", "这是什么意思？"]
+            for q in questions:
+                reply = agent.generate_reply(q)
+                assert len(reply) > 0
 
     def test_generate_reply_short_config(self):
         """测试短回复配置"""
@@ -436,8 +448,10 @@ class TestUserSimulationAgentReplyLogic:
         agent = UserSimulationAgent(profile)
         agent.reply_config["message_length"] = "short"
 
-        reply = agent.generate_reply("你好")
-        assert len(reply) <= 5  # 短回复应该比较简短
+        # Mock LLM 调用
+        with patch.object(agent, '_generate_reply_with_llm', return_value=None):
+            reply = agent.generate_reply("你好")
+            assert len(reply) <= 5  # 短回复应该比较简短
 
     def test_generate_reply_with_frequent_emoji(self):
         """测试频繁使用表情的回复"""
@@ -449,15 +463,10 @@ class TestUserSimulationAgentReplyLogic:
         # 年轻人应该频繁使用表情
         assert agent.reply_config["emoji_usage"] == "frequent"
 
-        reply = agent.generate_reply("你好")
-        # 应该包含表情符号
-        emoji_chars = ["😊", "😄", "😁", "😍", "🥰", "✨", "🌟", "💕", "💖"]
-        has_emoji = any(emoji in reply for emoji in emoji_chars)
-        # 由于是随机添加，多次尝试至少一次有表情
-        if not has_emoji:
-            reply2 = agent.generate_reply("今天天气不错")
-            has_emoji = any(emoji in reply2 for emoji in emoji_chars)
-        # 注意：由于随机性，这个断言可能偶尔失败，但大多数情况下应该有表情
+        # Mock LLM 调用
+        with patch.object(agent, '_generate_reply_with_llm', return_value=None):
+            reply = agent.generate_reply("你好")
+            # 由于是随机添加，不强制检查表情
 
     def test_generate_reply_default(self):
         """测试生成默认回复"""
@@ -466,8 +475,10 @@ class TestUserSimulationAgentReplyLogic:
         profile = {"name": "测试用户", "age": 25, "interests": []}
         agent = UserSimulationAgent(profile)
 
-        reply = agent.generate_reply("今天天气不错")
-        assert len(reply) > 0
+        # Mock LLM 调用
+        with patch.object(agent, '_generate_reply_with_llm', return_value=None):
+            reply = agent.generate_reply("今天天气不错")
+            assert len(reply) > 0
 
 
 class TestUserSimulationAgentMessageSimulation:
@@ -481,12 +492,14 @@ class TestUserSimulationAgentMessageSimulation:
         agent = UserSimulationAgent(profile)
         agent.reply_config["reply_probability"] = 1.0  # 确保回复
 
-        result = agent.simulate_receive_message(
-            conversation_id="conv-123",
-            message_content="你好，很高兴认识你",
-            sender_id="user-456",
-            sender_name="张三"
-        )
+        # Mock LLM 调用
+        with patch.object(agent, '_generate_reply_with_llm', return_value=None):
+            result = agent.simulate_receive_message(
+                conversation_id="conv-123",
+                message_content="你好，很高兴认识你",
+                sender_id="user-456",
+                sender_name="张三"
+            )
 
         assert result is not None
         assert result["conversation_id"] == "conv-123"

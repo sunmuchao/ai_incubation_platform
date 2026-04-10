@@ -172,7 +172,10 @@ class TestMembershipServiceCheckActionLimit:
         from src.services.membership_service import MembershipService
 
         mock_db = MagicMock()
-        mock_db.query().filter().order_by().first.return_value = None
+        # 设置完整的 mock 链式调用
+        mock_db.query.return_value.filter.return_value.order_by.return_value.first.return_value = None
+        # 模拟 usage tracker 查询返回 None（没有使用记录）
+        mock_db.query.return_value.filter.return_value.first.return_value = None
 
         service = MembershipService(mock_db)
         allowed, message = service.check_action_limit("user-123", "like")
@@ -184,7 +187,8 @@ class TestMembershipServiceCheckActionLimit:
         from src.services.membership_service import MembershipService
 
         mock_db = MagicMock()
-        mock_db.query().filter().order_by().first.return_value = None
+        mock_db.query.return_value.filter.return_value.order_by.return_value.first.return_value = None
+        mock_db.query.return_value.filter.return_value.first.return_value = None
 
         service = MembershipService(mock_db)
         allowed, message = service.check_action_limit("user-123", "super_like")
@@ -210,7 +214,11 @@ class TestMembershipServiceCheckActionLimit:
         mock_membership_db.subscription_id = None
         mock_membership_db.created_at = datetime.now() - timedelta(days=30)
         mock_membership_db.updated_at = datetime.now()
-        mock_db.query().filter().order_by().first.return_value = mock_membership_db
+
+        # 设置会员查询返回高级会员
+        mock_db.query.return_value.filter.return_value.order_by.return_value.first.return_value = mock_membership_db
+        # 设置 usage tracker 查询返回 None（没有使用记录）
+        mock_db.query.return_value.filter.return_value.first.return_value = None
 
         service = MembershipService(mock_db)
         allowed, message = service.check_action_limit("user-123", "super_like")
@@ -511,13 +519,15 @@ class TestMembershipServiceActivateMembership:
         mock_cursor.fetchone.return_value = None
         mock_db.cursor.return_value = mock_cursor
 
-        service = MembershipService(mock_db)
-        service._activate_membership(
-            user_id="user-123",
-            tier=MembershipTier.PREMIUM,
-            duration_months=1,
-            payment_method="wechat"
-        )
+        with patch('src.services.membership_service.cache_manager') as mock_cache:
+            mock_cache.get_instance.return_value.invalidate_on_membership_change.return_value = {"success": True}
+            service = MembershipService(mock_db)
+            service._activate_membership(
+                user_id="user-123",
+                tier=MembershipTier.PREMIUM,
+                duration_months=1,
+                payment_method="wechat"
+            )
 
         mock_db.cursor.assert_called()
         mock_db.commit.assert_called()
@@ -538,12 +548,14 @@ class TestMembershipServiceActivateMembership:
         mock_cursor.fetchone.return_value = existing
         mock_db.cursor.return_value = mock_cursor
 
-        service = MembershipService(mock_db)
-        service._activate_membership(
-            user_id="user-123",
-            tier=MembershipTier.PREMIUM,
-            duration_months=1,
-        )
+        with patch('src.services.membership_service.cache_manager') as mock_cache:
+            mock_cache.get_instance.return_value.invalidate_on_membership_change.return_value = {"success": True}
+            service = MembershipService(mock_db)
+            service._activate_membership(
+                user_id="user-123",
+                tier=MembershipTier.PREMIUM,
+                duration_months=1,
+            )
 
         mock_db.cursor.assert_called()
         mock_db.commit.assert_called()
@@ -624,6 +636,7 @@ class TestMembershipServiceUseFeature:
         """测试使用有权限的会员权益"""
         from src.services.membership_service import MembershipService
         from db.models import UserMembershipDB
+        from models.membership import MembershipFeature
 
         mock_db = MagicMock()
         mock_membership_db = MagicMock(spec=UserMembershipDB)
@@ -638,7 +651,11 @@ class TestMembershipServiceUseFeature:
         mock_membership_db.subscription_id = None
         mock_membership_db.created_at = datetime.now() - timedelta(days=30)
         mock_membership_db.updated_at = datetime.now()
-        mock_db.query().filter().order_by().first.return_value = mock_membership_db
+
+        # 设置会员查询返回高级会员
+        mock_db.query.return_value.filter.return_value.order_by.return_value.first.return_value = mock_membership_db
+        # 设置 usage tracker 查询返回 None
+        mock_db.query.return_value.filter.return_value.first.return_value = None
 
         service = MembershipService(mock_db)
         success, message = service.use_feature("user-123", MembershipFeature.SUPER_LIKES)
@@ -648,9 +665,10 @@ class TestMembershipServiceUseFeature:
     def test_use_feature_without_permission(self):
         """测试使用无权限的会员权益"""
         from src.services.membership_service import MembershipService
+        from models.membership import MembershipFeature
 
         mock_db = MagicMock()
-        mock_db.query().filter().order_by().first.return_value = None
+        mock_db.query.return_value.filter.return_value.order_by.return_value.first.return_value = None
 
         service = MembershipService(mock_db)
         success, message = service.use_feature("user-123", MembershipFeature.SUPER_LIKES)
