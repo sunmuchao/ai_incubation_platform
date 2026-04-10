@@ -2,7 +2,47 @@
   "permissions": {
     "allow": [
       "Bash(ls:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(export OPENAI_API_KEY='sk-sp-5b3a4ac5243440b0b39372f84d543d4a')",
+      "Bash(export OPENAI_API_BASE='https://coding.dashscope.aliyuncs.com/v1')",
+      "Bash(export OPENAI_MODEL='kimi-k2.5')",
+      "Bash(curl -s http://localhost:8002/health)",
+      "Bash(curl -s http://localhost:3006/)",
+      "Bash(npm run:*)",
+      "Bash(lsof -ti:8002)",
+      "Bash(curl -s http://localhost:8002/)",
+      "Bash(curl -s \"http://localhost:8002/api/conversation-matching/ai/push/recommendations?user_id=test_user\")",
+      "Bash(curl -s \"http://localhost:8002/api/matching/candidates?user_id=test\")",
+      "Bash(curl -s \"http://localhost:8002/api/users\")",
+      "Bash(curl -s \"http://localhost:8002/api/matching/candidates?user_id=user-test-001&limit=5\")",
+      "Bash(curl -s -X POST \"http://localhost:8002/api/conversation-matching/match\" -H \"Content-Type: application/json\" -d '{\"user_intent\": \"帮我找对象\"}')",
+      "Bash(sqlite3 matchmaker_agent.db \"SELECT id, name, age, gender, location, goal FROM users LIMIT 5;\")",
+      "Bash(sqlite3 -version)",
+      "Bash(sqlite3 /Users/sunmuchao/Downloads/ai_incubation_platform/matchmaker-agent/matchmaker_agent.db \"SELECT COUNT\\(*\\) FROM users;\")",
+      "Bash(rm -f matchmaker_agent.db)",
+      "Bash(xargs kill:*)",
+      "Bash(pip install:*)",
+      "Bash(export LLM_API_KEY='sk-sp-5b3a4ac5243440b0b39372f84d543d4a')",
+      "Bash(export LLM_BASE_URL='https://coding.dashscope.aliyuncs.com/v1')",
+      "Bash(export LLM_PROVIDER='openai')",
+      "Bash(export LLM_MODEL='kimi-k2.5')",
+      "Bash(pip show:*)",
+      "Bash(export LOG_LEVEL='info')",
+      "Bash(lsof -ti:3006)",
+      "Bash(curl -s http://localhost:8005/health)",
+      "Bash(export VITE_API_BASE_URL='http://localhost:8005')",
+      "Bash(curl -s http://localhost:8005/)",
+      "Bash(uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload)",
+      "Bash(python3 -c \"from api.conversation_matching import _check_profile_gaps; print\\('conversation_matching imports OK'\\)\")",
+      "Bash(git add:*)",
+      "Bash(curl -s -X POST http://localhost:8000/api/users/register -H 'Content-Type: application/json' -d '{\"username\":\"testuser123\",\"password\":\"testpassword123\",\"email\":\"test123@example.com\",\"name\":\"测试用户\",\"age\":25,\"gender\":\"male\",\"location\":\"北京\",\"bio\":\"\",\"interests\":[]}')",
+      "Bash(curl -s -X POST http://localhost:8000/api/users/register -H 'Content-Type: application/json' -d '{\"username\":\"test_timeout_user\",\"password\":\"test123\",\"name\":\"测试用户\",\"age\":25,\"city\":\"北京\"}')",
+      "Bash(curl -s -X POST http://localhost:8000/api/users/register -H 'Content-Type: application/json' -d '{\"username\":\"test_timeout_fix\",\"password\":\"test123\",\"email\":\"test@test.com\",\"name\":\"测试用户\",\"age\":25,\"gender\":\"male\",\"location\":\"北京\",\"interests\":[\"音乐\",\"阅读\"]}')",
+      "Bash(curl -s -X POST http://localhost:8000/api/registration-conversation/start -H 'Content-Type: application/json' -H 'Authorization: Bearer test-token' -d '{\"user_id\":\"2477f820-a146-440f-816b-ece47b40ee6c\",\"user_name\":\"测试用户\"}')",
+      "Bash(du -sh /Users/sunmuchao/Downloads/ai_incubation_platform/Her/:memory*)"
+    ],
+    "additionalDirectories": [
+      "/Users/sunmuchao/Downloads/ai_incubation_platform/Her"
     ]
   }
 }

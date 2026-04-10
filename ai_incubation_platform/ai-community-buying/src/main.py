@@ -251,6 +251,12 @@ from models.pricing_entities import (
     # 竞品价格
     CompetitorPriceEntity
 )
+# 导入 AI Native 核心功能新增实体（记忆系统/Generative UI）
+from models.memory_entities import (
+    UserMemoryEntity, UserProfileEntity, MemoryVectorEntity,
+    MemoryExtractionLogEntity, MemoryApplicationLogEntity
+)
+
 # 导入 P5 营销自动化系统新增实体
 from models.p5_entities import (
     # 用户分群
@@ -265,6 +271,20 @@ from models.p5_entities import (
     SmartCouponStrategyEntity, UserCouponPreferenceEntity,
     # 营销事件
     MarketingEventEntity
+)
+
+# 导入 P10 业务功能新增实体（阶段 3&4）
+from models.p10_business_entities import (
+    # 意向预归集
+    DemandAggregationEntity, DemandRecordEntity,
+    # 消费周期推断
+    PurchaseCycleEntity,
+    # 团长 AI 助教
+    OperatorSuggestionEntity, OperatorCopyTemplateEntity,
+    # 售后代理人
+    ClaimsCaseEntity,
+    # 团长影子经营
+    ShadowHostingConfigEntity, ShadowAutoReplyEntity, ShadowUrgeLogEntity
 )
 
 # 导入增强模块
@@ -336,8 +356,8 @@ def init_notification_adapters():
 # 创建 FastAPI 应用
 app = FastAPI(
     title="AI Community Buying - AI Native 版",
-    description="AI 驱动的社区团购平台 - P10+AI Native 转型 (DeerFlow 2.0 Agent/对话式交互/自主团购) + P9 智能履约调度系统 + P8 智能风控/信用体系 + P7 游戏化运营 + P6 数据分析增强 + P5 营销自动化系统 + P4 供应链与履约优化 + P3 用户增长与运营工具 + P2 个性化推荐 (Wide&Deep 深度排序) + P1 动态定价引擎 + P1 需求预测 (Prophet+LSTM) + P0 AI 选品顾问",
-    version="4.0.0",
+    description="AI 驱动的社区团购平台 - P10+AI Native 转型 (阶段 3&4 业务功能完成：意向预归集/消费周期推断/团长 AI 助教/售后代理人/团长影子经营) + P9 智能履约调度系统 + P8 智能风控/信用体系 + P7 游戏化运营 + P6 数据分析增强 + P5 营销自动化系统 + P4 供应链与履约优化 + P3 用户增长与运营工具 + P2 个性化推荐 (Wide&Deep 深度排序) + P1 动态定价引擎 + P1 需求预测 (Prophet+LSTM) + P0 AI 选品顾问",
+    version="5.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan
@@ -445,9 +465,15 @@ app.include_router(custom_report_router)
 
 # AI Native 对话式交互路由（P10+ 智能团购管家）
 from api.chat import router as chat_router
+from api.chat_native import router as chat_native_router
 app.include_router(chat_router)
+app.include_router(chat_native_router)
 
-logger.info("所有路由注册完成（含 P3 邀请裂变/任务中心/会员成长/运营活动/P4 供应链与履约优化/P5 营销自动化/P6 数据分析增强/P7 游戏化运营/P8 智能风控/P9 多平台集成/P10+AI Native 对话式交互）")
+# P10 业务功能路由（阶段 3&4）
+from api.p10_business_apis import router as p10_business_router
+app.include_router(p10_business_router)
+
+logger.info("所有路由注册完成（含 P3 邀请裂变/任务中心/会员成长/运营活动/P4 供应链与履约优化/P5 营销自动化/P6 数据分析增强/P7 游戏化运营/P8 智能风控/P9 多平台集成/P10+AI Native 对话式交互/语义潜台词理解/结构化记忆/Generative UI/P10 业务功能）")
 
 
 @app.get("/")
@@ -455,10 +481,14 @@ async def root():
     return {
         "message": "欢迎使用 AI 社区团购平台 - AI Native 版",
         "status": "running",
-        "version": "4.0.0",
-        "stage": "P10+ AI Native 转型 (DeerFlow 2.0 Agent)",
+        "version": "5.0.0",
+        "stage": "P10+ AI Native 转型 (阶段 3&4 业务功能完成)",
         "endpoints": {
             "AI 对话交互": "/api/chat",
+            "AI Native 对话增强": "/api/chat-native",
+            "用户记忆查询": "/api/chat-native/memory/{user_id}",
+            "记忆提取": "/api/chat-native/memory/extract",
+            "推荐理由": "/api/chat-native/explain/{product_id}",
             "快捷发起团购": "/api/chat/quick-start",
             "商品管理": "/api/products",
             "团购管理": "/api/groups",
@@ -514,6 +544,12 @@ async def root():
             "订单风控": "/api/p8/order-risk",
             "动态定价": "/api/dynamic-pricing",
             "多平台/小程序集成": "/api/platform",
+            "P10 业务功能": "/api/p10",
+            "意向预归集": "/api/p10/demand",
+            "消费周期推断": "/api/p10/forecast",
+            "团长 AI 助教": "/api/p10/operator",
+            "售后代理人": "/api/p10/claims",
+            "团长影子经营": "/api/p10/shadow",
             "接口文档": "/docs",
             "健康检查": "/health"
         },
@@ -528,7 +564,9 @@ async def root():
             "P7": "游戏化运营 (成就/排行榜)、砍价玩法",
             "P8": "智能风控/信用体系 (用户信用评分/欺诈检测/订单风控/黑名单管理/风控规则引擎)",
             "P9": "智能履约调度系统 (路径优化/人流预测/时间窗口推荐) + 多平台/小程序集成 (微信/支付宝小程序/账号同步/跨平台订单)",
-            "P10+": "AI Native 转型 - DeerFlow 2.0 Agent 框架/对话式交互/自主团购/智能选品/主动邀请"
+            "P10 阶段 1&2": "AI Native 转型 - 语义潜台词理解/结构化长期记忆/Generative UI/AI 决策透明化",
+            "P10 阶段 3": "业务功能 - 意向预归集/消费周期推断/团长 AI 助教",
+            "P10 阶段 4": "高级功能 - 售后代理人 (AI 视觉识别/自动理赔)/团长影子经营 (自动回复/自动催单)"
         }
     }
 
