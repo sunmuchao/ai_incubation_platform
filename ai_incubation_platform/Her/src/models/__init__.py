@@ -425,26 +425,15 @@ __all__.extend([
 
 # ============================================
 # P18-P22 别名映射（兼容旧代码引用）
+# 注意：以下别名仅保留被实际引用的，已删除未使用的别名
 # ============================================
 PreCommunicationSessionDB = AIChatSession
 ConsumptionProfileDB = ConsumptionProfile
-GeoTrajectoryDB = GeoTrajectory
-BehaviorCreditDB = BehaviorCredit
-FeedbackDB = DateFeedback
-BanRecordDB = RiskFlag
-DynamicCoupleProfileDB = DynamicProfile
-PreferenceDialDB = PreferenceDial
-PrivacySettingDB = PrivacySetting
-AIAuditLogDB = AIAuditLog
-ConversionFunnelDB = OfflineConversionFunnel
-CoupleModeDB = CoupleMode
+# 注意：BehaviorCreditDB 在 p20_models.py 中有真实定义，此处不再创建别名以避免覆盖
 
 # 添加到 __all__
 __all__.extend([
-    'PreCommunicationSessionDB', 'ConsumptionProfileDB', 'GeoTrajectoryDB',
-    'BehaviorCreditDB', 'FeedbackDB', 'BanRecordDB', 'DynamicCoupleProfileDB',
-    'PreferenceDialDB', 'PrivacySettingDB', 'AIAuditLogDB',
-    'ConversionFunnelDB', 'CoupleModeDB',
+    'PreCommunicationSessionDB', 'ConsumptionProfileDB',
 ])
 
 # ============================================
