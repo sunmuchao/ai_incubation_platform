@@ -17,13 +17,14 @@ from db.models import (
     UserBehaviorFeatureDB, MatchInteractionDB, UserDB,
     MatchHistoryDB, SwipeActionDB, BehaviorEventDB
 )
+from services.base_service import BaseService
 
 
-class BehaviorLearningService:
+class BehaviorLearningService(BaseService):
     """行为学习推荐服务"""
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
 
         # 推荐配置
         self.config = {

@@ -1,5 +1,5 @@
 """
-P10-001: 关系里程碑追踪增强服务
+Milestone-001: 关系里程碑追踪增强服务
 
 基于现有关系进展服务，增强以下功能：
 - AI 识别关系节点（如第一次约会、确定关系、纪念日等）
@@ -15,7 +15,7 @@ import uuid
 from sqlalchemy.orm import Session
 from utils.db_session_manager import db_session, db_session_readonly
 from db.database import SessionLocal
-from models.p10_models import (
+from models.milestone_models import (
     RelationshipMilestoneDB,
     RelationshipStageHistoryDB,
     RelationshipInsightDB

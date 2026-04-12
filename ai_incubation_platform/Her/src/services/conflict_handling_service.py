@@ -1,5 +1,5 @@
 """
-P1: 冲突处理服务
+Values: 冲突处理服务
 
 从"静态标签匹配"转向"动态共鸣演算法"的核心服务。
 
@@ -16,14 +16,15 @@ from datetime import datetime
 import json
 import uuid
 
-from models.p1_conflict_models import (
+from models.conflict_models import (
     ConflictStyleDB,
     ConflictHistoryDB,
     ConflictCompatibilityDB,
     ConflictResolutionTipDB,
     CommunicationPatternDB,
 )
-from models.p17_models import TrustScoreDB
+from models.stress_test_models import TrustScoreDB
+from services.base_service import BaseService
 
 
 # ============= 冲突处理风格兼容性矩阵 =============
@@ -85,11 +86,11 @@ STYLE_DESCRIPTIONS = {
 }
 
 
-class ConflictHandlingService:
+class ConflictHandlingService(BaseService):
     """冲突处理服务"""
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
 
     # ============= 冲突处理风格评估 =============
 

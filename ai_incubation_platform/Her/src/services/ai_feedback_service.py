@@ -21,6 +21,7 @@ from sqlalchemy import desc
 
 from db.database import SessionLocal
 from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
+from services.base_service import BaseService
 from utils.logger import logger
 
 # 数据库模型
@@ -29,7 +30,7 @@ from models.ai_feedback_models import AIFeedbackDB, AIFeedbackOutcomeDB
 from sqlalchemy import and_, or_
 
 
-class AIFeedbackService:
+class AIFeedbackService(BaseService):
     """AI 反馈闭环服务"""
 
     # 反馈类型
@@ -58,7 +59,7 @@ class AIFeedbackService:
                 service = AIFeedbackService(db=db)
                 service.record_feedback(...)
         """
-        self._db = db
+        super().__init__(db)
         self._should_close_db = db is None  # 如果自己创建的，需要负责关闭
         self.data_dir = data_dir
 

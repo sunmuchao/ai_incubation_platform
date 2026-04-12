@@ -8,6 +8,33 @@ from services.relationship_progress_service import relationship_progress_service
 from services.activity_recommendation_service import activity_recommendation_service, ActivityRecommendationService, MapAPIService, GeoService
 from services.behavior_log_service import BehaviorLogService, get_behavior_log_service
 from services.report_service import ReportService, get_report_service, ReportStatus, ReportType
+from services.quick_start_service import (
+    QuickStartService,
+    FeedbackLearningService,
+    SocialProofService,
+    get_quick_start_service,
+    get_feedback_learning_service,
+    get_social_proof_service,
+)
+from services.vector_adjustment_service import (
+    VectorAdjustmentService,
+    BehaviorSignalCollector,
+    get_vector_adjustment_service,
+    get_behavior_signal_collector,
+    VectorAdjustment,
+    LearningResult,
+    FEEDBACK_TO_VECTOR_MAPPING,
+    BEHAVIOR_TO_VECTOR_MAPPING,
+)
+from services.grayscale_config_service import (
+    GrayscaleConfigService,
+    get_grayscale_config_service,
+    FeatureFlag,
+    ExperimentVariant,
+    ExperimentResult,
+    init_default_feature_flags,
+    init_default_ab_experiments,
+)
 
 __all__ = [
     "behavior_service",
@@ -29,4 +56,28 @@ __all__ = [
     "get_report_service",
     "ReportStatus",
     "ReportType",
+    # 渐进式智能匹配服务
+    "QuickStartService",
+    "FeedbackLearningService",
+    "SocialProofService",
+    "get_quick_start_service",
+    "get_feedback_learning_service",
+    "get_social_proof_service",
+    # 向量调整服务
+    "VectorAdjustmentService",
+    "BehaviorSignalCollector",
+    "get_vector_adjustment_service",
+    "get_behavior_signal_collector",
+    "VectorAdjustment",
+    "LearningResult",
+    "FEEDBACK_TO_VECTOR_MAPPING",
+    "BEHAVIOR_TO_VECTOR_MAPPING",
+    # 灰度配置服务
+    "GrayscaleConfigService",
+    "get_grayscale_config_service",
+    "FeatureFlag",
+    "ExperimentVariant",
+    "ExperimentResult",
+    "init_default_feature_flags",
+    "init_default_ab_experiments",
 ]

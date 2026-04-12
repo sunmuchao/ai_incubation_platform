@@ -1,7 +1,7 @@
 """
 AI 预沟通服务（AI Interlocutor Service）
 
-P18 核心功能：替你先聊 50 句，只聊有价值的后半段
+EmotionWeather 核心功能：替你先聊 50 句，只聊有价值的后半段
 
 核心理念:
 - 用户不再需要重复回答基础问题
@@ -30,6 +30,7 @@ from db.models import (
 )
 from utils.logger import logger
 from agent.user_simulation_agent import UserSimulationAgent
+from services.base_service import BaseService
 
 
 # ============= 硬指标校验配置 =============
@@ -115,11 +116,11 @@ KEY_INFO_CATEGORIES = {
 }
 
 
-class AIInterlocutorService:
+class AIInterlocutorService(BaseService):
     """AI 预沟通服务"""
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
         self.agents_cache: Dict[str, UserSimulationAgent] = {}
 
     # ============= 核心流程 =============

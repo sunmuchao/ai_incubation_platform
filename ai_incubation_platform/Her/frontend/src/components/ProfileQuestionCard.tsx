@@ -5,8 +5,8 @@
  */
 
 import React from 'react'
-import { Card, Button, Space, Typography, Tag, Checkbox, Radio, message } from 'antd'
-import { CheckCircleOutlined } from '@ant-design/icons'
+import { Card, Button, Space, Typography, Tag, Checkbox, Radio, message, Spin } from 'antd'
+import { CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons'
 import './ProfileQuestionCard.less'
 
 const { Text, Title } = Typography
@@ -24,7 +24,7 @@ interface ProfileQuestionCardProps {
   options: QuestionOption[]
   dimension: string
   depth?: number  // 追问深度，0=首次提问，1+=追问
-  onAnswer: (dimension: string, value: string | string[], depth: number) => void
+  onAnswer: (dimension: string, value: string | string[], depth: number) => Promise<void>  // 改为 Promise
 }
 
 const ProfileQuestionCard: React.FC<ProfileQuestionCardProps> = ({
@@ -38,21 +38,30 @@ const ProfileQuestionCard: React.FC<ProfileQuestionCardProps> = ({
 }) => {
   const [selectedValues, setSelectedValues] = React.useState<string[]>([])
   const [submitted, setSubmitted] = React.useState(false)
+  const [loading, setLoading] = React.useState(false)  // 新增 loading 状态
+  const [error, setError] = React.useState<string | null>(null)  // 新增 error 状态
 
   // 单选点击
-  const handleSingleSelect = (value: string) => {
-    if (submitted) return
+  const handleSingleSelect = async (value: string) => {
+    if (submitted || loading) return
     setSelectedValues([value])
-    // 单选自动提交
-    setTimeout(() => {
-      setSubmitted(true)
-      onAnswer(dimension, value, depth)
-    }, 200)
+    setSubmitted(true)
+    setLoading(true)  // 开始 loading
+    setError(null)  // 清除错误
+
+    try {
+      await onAnswer(dimension, value, depth)
+    } catch (err) {
+      console.error('Failed to submit answer:', err)
+      setError('提交失败，请重试')
+      setSubmitted(false)  // 允许重新选择
+      setLoading(false)
+    }
   }
 
   // 多选/标签点击
   const handleMultiSelect = (value: string) => {
-    if (submitted) return
+    if (submitted || loading) return
 
     setSelectedValues(prev => {
       if (prev.includes(value)) {
@@ -63,19 +72,44 @@ const ProfileQuestionCard: React.FC<ProfileQuestionCardProps> = ({
   }
 
   // 多选确认
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (selectedValues.length === 0) {
       message.warning('请至少选择一个选项')
       return
     }
+    if (submitted || loading) return
+
     setSubmitted(true)
-    onAnswer(dimension, selectedValues, depth)
+    setLoading(true)  // 开始 loading
+    setError(null)
+
+    try {
+      await onAnswer(dimension, selectedValues, depth)
+    } catch (err) {
+      console.error('Failed to submit answer:', err)
+      setError('提交失败，请重试')
+      setSubmitted(false)  // 允许重新选择
+      setLoading(false)
+    }
   }
 
   // 渲染单选
   const renderSingleChoice = () => (
     <div className="question-options single-choice">
-      <div className="options-grid">
+      {/* Loading 状态显示 */}
+      {loading && (
+        <div className="loading-overlay">
+          <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
+          <Text type="secondary" style={{ marginTop: 12 }}>正在处理...</Text>
+        </div>
+      )}
+      {/* 错误提示 */}
+      {error && (
+        <div className="error-overlay">
+          <Text type="danger">{error}</Text>
+        </div>
+      )}
+      <div className={`options-grid ${loading ? 'hidden' : ''}`}>
         {options.map(opt => (
           <div
             key={opt.value}
@@ -84,7 +118,7 @@ const ProfileQuestionCard: React.FC<ProfileQuestionCardProps> = ({
           >
             {opt.icon && <span className="option-icon">{opt.icon}</span>}
             <span className="option-label">{opt.label}</span>
-            {selectedValues.includes(opt.value) && (
+            {selectedValues.includes(opt.value) && !loading && (
               <CheckCircleOutlined className="check-icon" />
             )}
           </div>

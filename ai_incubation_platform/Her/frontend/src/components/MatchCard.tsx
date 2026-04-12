@@ -16,6 +16,8 @@ import {
 import type { MatchCandidate } from '../types'
 import { aiAwarenessApi } from '../api'
 import { AIFeedback } from './AIFeedback'
+import RoseButton from './RoseButton'
+import VerificationBadge from './VerificationBadge'
 import { authStorage } from '../utils/storage'
 import './MatchCard.less'
 
@@ -121,6 +123,19 @@ const MatchCard: React.FC<MatchCardProps> = ({
         icon={<CloseOutlined />}
         onClick={(e) => { e.stopPropagation(); handlePass() }}
       />
+      {/* 玫瑰按钮 - 稀缺表达 */}
+      <RoseButton
+        targetUser={match.user}
+        compatibilityScore={match.compatibility_score || match.score}
+        size="large"
+        showRemaining={false}
+        onRoseSent={(result) => {
+          if (result.success && result.isMatch) {
+            setFeedbackAction('like')
+            setFeedbackVisible(true)
+          }
+        }}
+      />
       <Button
         className="action-btn super-like-btn"
         shape="circle"
@@ -155,7 +170,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
               className="main-avatar"
             />
             {match.user?.verified && (
-              <Tag color="blue" className="verified-badge" icon={<CheckCircleOutlined />} />
+              <VerificationBadge verified size="small" className="verified-badge" />
             )}
           </div>
           {renderCompatibilityBadge()}

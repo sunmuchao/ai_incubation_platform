@@ -7,7 +7,7 @@ P4 新增:
 - 认证状态管理
 - 认证标识体系
 
-P0 增强：
+Identity 增强：
 - 多源身份核验（学历/职业/收入/房产/无犯罪记录）
 - 信任勋章体系
 - 信任分计算
@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from utils.logger import logger
 from db.models import IdentityVerificationDB, UserDB
-from models.p0_identity_models import (
+from models.identity_models import (
     TrustBadgeDB,
     TrustBadgeHistoryDB,
     EducationCredentialDB,
@@ -29,10 +29,11 @@ from models.p0_identity_models import (
     IncomeCredentialDB,
     PropertyCredentialDB,
 )
-from models.p17_models import TrustScoreDB
+from models.stress_test_models import TrustScoreDB
+from services.base_service import BaseService
 
 
-class IdentityVerificationService:
+class IdentityVerificationService(BaseService):
     """实名认证服务"""
 
     # 认证状态
@@ -50,7 +51,7 @@ class IdentityVerificationService:
     BADGE_PREMIUM = "premium"
     BADGE_VIP = "vip"
 
-    # P0: 多源身份核验配置
+    # Identity: 多源身份核验配置
     VERIFICATION_TYPES = {
         "real_name": {
             "name": "实名认证",
@@ -91,7 +92,7 @@ class IdentityVerificationService:
     }
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
         # 模拟第三方服务配置 (实际应使用阿里云/腾讯云等)
         self.ocr_service_url = "https://api.example.com/ocr"
         self.face_verify_url = "https://api.example.com/face-verify"
@@ -411,7 +412,7 @@ class IdentityVerificationService:
         }
 
     # ============================================
-    # P0: 多源身份核验方法
+    # Identity: 多源身份核验方法
     # ============================================
 
     def get_user_trust_badges(self, user_id: str) -> List[Dict]:
@@ -757,7 +758,7 @@ class IdentityVerificationService:
         }
 
     # ============================================
-    # P0: 收入认证方法
+    # Identity: 收入认证方法
     # ============================================
 
     def submit_income_verification(
@@ -851,7 +852,7 @@ class IdentityVerificationService:
             return False, str(e)
 
     # ============================================
-    # P0: 房产认证方法
+    # Identity: 房产认证方法
     # ============================================
 
     def submit_property_verification(
@@ -951,7 +952,7 @@ class IdentityVerificationService:
             return False, str(e)
 
     # ============================================
-    # P0: 无犯罪记录认证方法
+    # Identity: 无犯罪记录认证方法
     # ============================================
 
     def submit_criminal_record_verification(
@@ -972,7 +973,7 @@ class IdentityVerificationService:
             (success, message, credential_id)
         """
         try:
-            from models.p0_identity_models import OccupationCredentialDB
+            from models.identity_models import OccupationCredentialDB
 
             credential = OccupationCredentialDB(
                 id=str(uuid.uuid4()),
@@ -1031,7 +1032,7 @@ class IdentityVerificationService:
             return False, str(e)
 
     # ============================================
-    # P0: 外部 API 对接方法
+    # Identity: 外部 API 对接方法
     # ============================================
 
     def call_external_verification_api(
@@ -1050,7 +1051,7 @@ class IdentityVerificationService:
             (success, result, error_message)
         """
         # 获取 API 配置
-        from models.p0_identity_models import ExternalVerificationAPIConfigDB
+        from models.identity_models import ExternalVerificationAPIConfigDB
 
         config = self.db.query(ExternalVerificationAPIConfigDB).filter(
             ExternalVerificationAPIConfigDB.api_name == api_name,

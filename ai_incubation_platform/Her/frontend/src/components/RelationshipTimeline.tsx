@@ -18,8 +18,8 @@ import {
   LikeOutlined,
   UserAddOutlined,
 } from '@ant-design/icons'
-import type { Milestone, MilestoneTimeline, MilestoneStatistics } from '../types/p10_types'
-import { milestoneApi } from '../api/p10_api'
+import type { Milestone, MilestoneTimeline, MilestoneStatistics } from '../types/milestoneTypes'
+import { milestoneApi } from '../api/milestoneApi'
 import './RelationshipTimeline.less'
 
 const { Text, Paragraph, Title } = Typography

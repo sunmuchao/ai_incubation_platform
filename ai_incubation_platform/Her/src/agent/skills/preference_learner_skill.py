@@ -1,7 +1,7 @@
 """
 偏好学习 Skill
 
-P2 功能：从用户行为中学习偏好，支持显式和隐式学习
+DigitalTwin 功能：从用户行为中学习偏好，支持显式和隐式学习
 """
 from typing import Dict, Any, Optional, List
 from datetime import datetime

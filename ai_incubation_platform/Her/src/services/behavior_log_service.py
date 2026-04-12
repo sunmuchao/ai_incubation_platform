@@ -9,6 +9,7 @@ from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, JSO
 from sqlalchemy.orm import Session, relationship
 from db.database import Base, get_db
 from utils.logger import logger
+from services.base_service import BaseService
 import json
 
 
@@ -101,11 +102,11 @@ class UserBehaviorDailyStatsDB(Base):
     )
 
 
-class BehaviorLogService:
+class BehaviorLogService(BaseService):
     """行为日志服务"""
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
 
     def log_event(
         self,

@@ -1,7 +1,7 @@
 """
 自适应 UI 渲染 Skill
 
-P2 功能：根据情境动态选择和渲染最适合的 UI 组件
+DigitalTwin 功能：根据情境动态选择和渲染最适合的 UI 组件
 """
 from typing import Dict, Any, Optional, List
 from agent.skills.base import BaseSkill

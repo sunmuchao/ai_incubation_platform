@@ -35,6 +35,18 @@ class UserDB(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # ===== 注册对话收集的用户画像字段（单一数据源）=====
+    # 关系目标：serious_relationship(认真恋爱), marriage(结婚), dating(交友), casual(随意)
+    relationship_goal = Column(String(50), nullable=True, index=True)
+    # 性格特点（JSON 字符串）
+    personality = Column(Text, nullable=True)
+    # 理想型描述（JSON 字符串）
+    ideal_type = Column(Text, nullable=True)
+    # 生活方式（JSON 字符串）
+    lifestyle = Column(Text, nullable=True)
+    # 底线禁忌（JSON 字符串）
+    deal_breakers = Column(Text, nullable=True)
+
     # 偏好设置
     preferred_age_min = Column(Integer, default=18)
     preferred_age_max = Column(Integer, default=60)
@@ -528,6 +540,9 @@ class SwipeActionDB(Base):
     # 滑动动作
     action = Column(String(20), nullable=False)  # like, pass, super_like
 
+    # 匹配状态（双向 like 后变为 matched）
+    is_matched = Column(Boolean, default=False, index=True)
+
     # 时间戳
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -723,7 +738,7 @@ class MatchInteractionDB(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
-# ============= P1 新增 (v1.3): 视频约会功能模型 =============
+# ============= Values 新增 (v1.3): 视频约会功能模型 =============
 
 class VideoDateDB(Base):
     """视频约会记录 - v1.3 视频约会功能"""
@@ -1045,7 +1060,7 @@ class TrustedContactDB(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
-# ============= P18 新增：AI 预沟通模型 =============
+# ============= EmotionWeather 新增：AI 预沟通模型 =============
 
 class AIPreCommunicationSessionDB(Base):
     """AI 预沟通会话 - AI 替身代聊"""
@@ -1311,3 +1326,214 @@ class ConversationSessionDB(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     last_active_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# ============= 渐进式智能匹配系统新增模型 =============
+
+class QuickStartRecordDB(Base):
+    """快速入门记录 - 30秒入门流程"""
+    __tablename__ = "quick_start_records"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+
+    # 快速入门输入（4个硬条件）
+    age = Column(Integer, nullable=False)
+    gender = Column(String(20), nullable=False)  # male, female, other
+    location = Column(String(200), nullable=False)
+    relationship_goal = Column(String(50), nullable=False)  # serious, marriage, dating, casual
+
+    # 初始推荐结果
+    initial_match_ids = Column(Text, default="")  # JSON字符串，初始推荐的候选人ID列表
+    initial_match_count = Column(Integer, default=0)
+
+    # 用户响应统计
+    viewed_count = Column(Integer, default=0)  # 查看了多少个
+    liked_count = Column(Integer, default=0)  # 喜欢了多少个
+    disliked_count = Column(Integer, default=0)  # 不喜欢了多少个
+    skipped_count = Column(Integer, default=0)  # 跳过了多少个
+
+    # 转化结果
+    first_like_at = Column(DateTime(timezone=True), nullable=True)
+    first_chat_at = Column(DateTime(timezone=True), nullable=True)
+    completed_quick_start = Column(Boolean, default=False)
+
+    # 时间戳
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class UserFeedbackLearningDB(Base):
+    """用户反馈学习记录 - 传统红娘第三步反馈学习"""
+    __tablename__ = "user_feedback_learning"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+
+    # 反馈类型
+    feedback_type = Column(String(20), nullable=False)  # like, dislike, skip
+
+    # 反馈目标
+    target_match_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+
+    # 反馈原因（dislike时填写）
+    dislike_reason = Column(String(50), nullable=True)  # age_not_match, location_far, not_my_type, etc.
+    dislike_detail = Column(Text, nullable=True)
+
+    # 学习结果
+    learned_preference_dimension = Column(String(50), nullable=True)
+    learned_preference_value = Column(JSON, nullable=True)
+    confidence_score = Column(Float, default=0.5)
+
+    # 向量调整记录
+    vector_dims_before = Column(Text, nullable=True)  # JSON，调整前的向量片段
+    vector_dims_after = Column(Text, nullable=True)  # JSON，调整后的向量片段
+
+    # 时间戳
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class UserSocialMetricsDB(Base):
+    """用户社会认同指标 - 传统红娘第六步口碑背书"""
+    __tablename__ = "user_social_metrics"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+
+    # 好评指标
+    like_count = Column(Integer, default=0)  # 获得的喜欢数
+    pass_count = Column(Integer, default=0)  # 获得的跳过数
+    dislike_count = Column(Integer, default=0)  # 获得的不喜欢数
+    like_rate = Column(Float, default=0.5)  # 好评率
+
+    # 聊天指标
+    chat_initiated_count = Column(Integer, default=0)
+    chat_response_count = Column(Integer, default=0)
+    chat_response_rate = Column(Float, default=0.5)
+    avg_chat_duration_minutes = Column(Float, default=0.0)
+
+    # 成功案例指标
+    success_match_count = Column(Integer, default=0)
+    avg_relationship_duration = Column(Float, default=0.0)
+
+    # 口碑评分
+    reputation_score = Column(Float, default=0.5)
+
+    # 时间戳
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    last_calculated_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class ImplicitInferenceDB(Base):
+    """隐性偏好推断记录 - 传统红娘第五步隐性判断"""
+    __tablename__ = "implicit_inferences"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+
+    # 推断来源
+    inference_source = Column(String(50), nullable=False)  # browse_duration, emoji_usage, etc.
+
+    # 推断结果
+    inferred_dimension = Column(String(50), nullable=False)
+    inferred_value = Column(JSON, nullable=False)
+    confidence = Column(Float, default=0.5)
+
+    # 行为证据
+    behavior_evidence = Column(Text, nullable=True)  # JSON，原始行为数据摘要
+
+    # 向量调整
+    vector_dim_index = Column(Integer, nullable=True)
+
+    # 时间戳
+    inferred_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# ============= P7 新增：灰度配置模型 =============
+
+class FeatureFlagDB(Base):
+    """功能开关配置"""
+    __tablename__ = "feature_flags"
+
+    id = Column(String(36), primary_key=True, index=True)
+    flag_key = Column(String(100), unique=True, nullable=False, index=True)
+
+    # 功能描述
+    name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+
+    # 开关状态
+    is_enabled = Column(Boolean, default=False)
+    rollout_percentage = Column(Integer, default=0)  # 0-100 灰度比例
+
+    # 目标用户群
+    target_user_groups = Column(JSON, default=list)  # ["new_user", "member", "vip"]
+    target_cities = Column(JSON, default=list)  # ["北京", "上海"]
+
+    # 配置参数
+    config_data = Column(JSON, default=dict)
+
+    # 时间控制
+    start_time = Column(DateTime(timezone=True), nullable=True)
+    end_time = Column(DateTime(timezone=True), nullable=True)
+
+    # 时间戳
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class ABExperimentDB(Base):
+    """A/B 实验配置"""
+    __tablename__ = "ab_experiments"
+
+    id = Column(String(36), primary_key=True, index=True)
+    experiment_key = Column(String(100), unique=True, nullable=False, index=True)
+
+    # 实验描述
+    name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+
+    # 实验状态
+    status = Column(String(20), default="draft")  # draft, running, paused, completed
+
+    # 分组配置
+    variants = Column(JSON, default=list)  # [{"name": "A", "weight": 50, "config": {...}}]
+
+    # 目标指标
+    primary_metric = Column(String(100), nullable=True)  # 主要评估指标
+    secondary_metrics = Column(JSON, default=list)
+
+    # 流量分配
+    traffic_allocation = Column(Integer, default=100)  # 参与实验的流量比例
+
+    # 时间控制
+    start_time = Column(DateTime(timezone=True), nullable=True)
+    end_time = Column(DateTime(timezone=True), nullable=True)
+
+    # 时间戳
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class UserExperimentAssignmentDB(Base):
+    """用户实验分组记录"""
+    __tablename__ = "user_experiment_assignments"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), nullable=False, index=True)
+    experiment_key = Column(String(100), nullable=False, index=True)
+
+    # 分组信息
+    variant_name = Column(String(50), nullable=False)
+    assigned_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # 状态
+    is_active = Column(Boolean, default=True)
+
+    # 时间戳
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# ============= 导入外部定义的 SQLAlchemy 模型 =============
+# 确保所有继承自 Base 的模型都被注册到 metadata 中
+from models.membership import UserUsageTrackerDB  # noqa: F401, E402

@@ -21,6 +21,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ['OPENAI_API_KEY'] = 'test-key'
 os.environ['OPENAI_BASE_URL'] = 'https://test.api/v1'
 
+# 在导入 memory_service 之前 mock mem0 模块
+mock_mem0 = MagicMock()
+mock_mem0.Memory = MagicMock
+mock_mem0.configs.base.MemoryConfig = MagicMock
+sys.modules['mem0'] = mock_mem0
+sys.modules['mem0.configs'] = MagicMock()
+sys.modules['mem0.configs.base'] = MagicMock()
+
 
 class TestMemoryService:
     """记忆服务测试"""

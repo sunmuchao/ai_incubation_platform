@@ -212,7 +212,7 @@ class EmotionAnalysisSkill:
         """执行情感分析"""
         from db.database import SessionLocal
         from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
-        from services.p11_services import emotion_analysis_service
+        from services.emotion_analysis_service import emotion_analysis_service
 
         db = SessionLocal()
         result = {
@@ -234,7 +234,7 @@ class EmotionAnalysisSkill:
                     db_session_param=db
                 )
                 # 从数据库获取分析结果
-                from models.p11_models import EmotionAnalysisDB
+                from models.emotion_analysis_models import EmotionAnalysisDB
                 analysis = db.query(EmotionAnalysisDB).filter(EmotionAnalysisDB.id == analysis_id).first()
                 if analysis:
                     result["dominant_emotion"] = analysis.combined_emotion
@@ -250,7 +250,7 @@ class EmotionAnalysisSkill:
                     db_session_param=db
                 )
                 # 合并结果
-                from models.p11_models import EmotionAnalysisDB
+                from models.emotion_analysis_models import EmotionAnalysisDB
                 analysis = db.query(EmotionAnalysisDB).filter(EmotionAnalysisDB.id == analysis_id).first()
                 if analysis:
                     if not result["dominant_emotion"]:

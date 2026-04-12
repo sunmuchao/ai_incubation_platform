@@ -18,13 +18,14 @@ from models.l4_learning_models import (
     UserLearningProfile,
 )
 from utils.logger import logger
+from services.base_service import BaseService
 
 
-class AILearningService:
+class AILearningService(BaseService):
     """AI 持续学习服务"""
 
     def __init__(self, db: Optional[Session] = None):
-        self._db: Optional[Session] = db
+        super().__init__(db)
         self._should_close_db: bool = db is None
 
     def _get_db(self) -> Session:

@@ -7,7 +7,7 @@ P4 新增:
 - 照片展示
 - 照片验证机制
 
-P20 增强:
+Future 增强:
 - 缓存失效集成
 - 继承 BaseService 统一数据库会话管理
 """
@@ -92,7 +92,7 @@ class PhotoService(BaseService[PhotoDB]):
         self.db.commit()
         self.db.refresh(photo)
 
-        # P20 增强：照片上传后失效用户缓存（待审核状态下缓存可能仍是旧的，但为了简单统一失效）
+        # Future 增强：照片上传后失效用户缓存（待审核状态下缓存可能仍是旧的，但为了简单统一失效）
         cache_manager.get_instance().invalidate_on_profile_update(user_id)
 
         return photo
@@ -172,7 +172,7 @@ class PhotoService(BaseService[PhotoDB]):
             p.display_order = index
         self.db.commit()
 
-        # P20 增强：照片删除后失效用户缓存
+        # Future 增强：照片删除后失效用户缓存
         cache_manager.get_instance().invalidate_on_profile_update(user_id)
 
         return True
@@ -211,7 +211,7 @@ class PhotoService(BaseService[PhotoDB]):
         self.db.commit()
         self.db.refresh(photo)
 
-        # P20 增强：照片审核通过后失效用户缓存（因为头像可能变了）
+        # Future 增强：照片审核通过后失效用户缓存（因为头像可能变了）
         if status == self.STATUS_APPROVED:
             cache_manager.get_instance().invalidate_on_profile_update(photo.user_id)
 

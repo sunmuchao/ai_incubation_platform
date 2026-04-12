@@ -17,6 +17,7 @@ import json
 import uuid
 
 from db.models import VideoCallDB, UserDB
+from services.base_service import BaseService
 
 
 # WebRTC 配置
@@ -28,11 +29,11 @@ DEFAULT_ICE_SERVERS = [
 ]
 
 
-class VideoCallService:
+class VideoCallService(BaseService):
     """视频通话服务"""
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
         self.active_calls = {}  # 内存存储活跃通话 {room_id: call_info}
 
     def create_call(self, caller_id: str, receiver_id: str) -> Dict[str, Any]:

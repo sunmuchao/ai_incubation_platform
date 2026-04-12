@@ -16,6 +16,34 @@ export interface User {
   verified: boolean
 }
 
+// ==================== 滑动机制类型 ====================
+
+export type SwipeDirection = 'left' | 'right' | 'up' | 'down'
+export type SwipeAction = 'pass' | 'like' | 'super_like'
+
+export interface SwipeResult {
+  action: SwipeAction
+  targetUserId: string
+  timestamp: number
+  isMatch?: boolean
+}
+
+export interface SwipeLimit {
+  daily_likes: number
+  daily_super_likes: number
+  likes_used: number
+  super_likes_used: number
+  likes_remaining: number
+  super_likes_remaining: number
+  is_unlimited: boolean
+}
+
+export interface SwipeFeedbackOverlay {
+  type: 'like' | 'pass' | 'super_like'
+  visible: boolean
+  opacity: number
+}
+
 export interface MatchCandidate {
   user: User
   compatibility_score: number
@@ -26,6 +54,7 @@ export interface MatchCandidate {
 
 export interface ConversationMatchRequest {
   user_intent: string
+  text?: string  // Skill 调用使用的字段
   context?: Record<string, any>
 }
 
@@ -47,10 +76,12 @@ export interface QuestionCard {
 
 export interface ConversationMatchResponse {
   success: boolean
-  message: string
+  message?: string
   matches?: MatchCandidate[]
+  candidates?: MatchCandidate[]  // Skill 返回的候选列表
   suggestions?: string[]
   next_actions?: string[]
+  ai_message?: string  // Skill 返回的 AI 消息
   // AI Native 用户画像收集
   question_card?: QuestionCard  // AI 生成的个人信息收集卡片
   need_profile_collection?: boolean  // 是否需要收集信息
@@ -65,7 +96,13 @@ export interface StreamChunk {
   next_actions?: string[]
 }
 
-export interface DailyRecommendResponse extends ConversationMatchResponse {}
+export interface DailyRecommendResponse {
+  success: boolean
+  recommendations?: MatchCandidate[]  // Skill 返回的推荐列表
+  matches?: MatchCandidate[]  // 兼容旧名称
+  message?: string
+  ai_message?: string
+}
 
 export interface RelationshipAnalysisRequest {
   match_id: string
@@ -74,18 +111,20 @@ export interface RelationshipAnalysisRequest {
 
 export interface RelationshipAnalysisResponse {
   success: boolean
-  report: {
+  report?: {
     health_score: number
     current_stage: string
     interaction_summary: Record<string, any>
     potential_issues: Array<{ description: string; severity: string }>
     recommendations: string[]
   }
-  ai_summary: string
-  recommendations: string[]
+  health_score?: number  // Skill 返回的简化字段
+  issues?: Array<{ type: string; severity: string; description: string }>
+  recommendations?: string[]
+  ai_summary?: string
 }
 
-// ==================== P18: AI 预沟通类型 ====================
+// ==================== AI 预沟通类型 ====================
 
 export interface AIPreCommunicationSession {
   session_id: string
@@ -174,18 +213,19 @@ export interface TopicSuggestionRequest {
 export interface TopicSuggestionResponse {
   success: boolean
   topics: Array<{ topic: string; context: string; category: string }>
-  conversation_tips: string[]
-  ai_message: string
+  conversation_tips?: string[]
+  ai_message?: string
 }
 
 export interface CompatibilityAnalysis {
   success: boolean
-  analysis: {
+  compatibility_score?: number
+  analysis?: {
     overall_score: number
     dimension_analysis: Record<string, { score: number; description: string }>
     potential_conflicts: Array<{ description: string }>
   }
-  ai_interpretation: string
+  ai_interpretation?: string
 }
 
 export interface ChatMessage {
@@ -229,16 +269,16 @@ export interface GenerativeCardData {
   actions: Array<{ label: string; action: string }>
 }
 
-// ==================== P10-P17 类型导出 ====================
+// ==================== 功能模块类型导出 ====================
 
-// P10: 关系里程碑
-export type * from './p10_types'
+// 关系里程碑、约会建议、双人游戏
+export type * from './milestoneTypes'
 
-// P13: 情感调解增强
-export type * from './p13_types'
+// 爱之语画像、关系趋势、预警响应
+export type * from './loveLanguageTypes'
 
-// P14: 实战演习
-export type * from './p14_types'
+// 约会模拟、约会辅助
+export type * from './dateSimulationTypes'
 
-// P15-P17: 虚实结合/圈子融合/终极共振
-export type * from './p15_p16_p17_types'
+// 生活融合（自主约会、情感纪念册、部落匹配、数字小家、见家长模拟、压力测试、成长计划、信任背书）
+export type * from './lifeIntegrationTypes'

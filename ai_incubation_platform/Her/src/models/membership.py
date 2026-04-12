@@ -1,7 +1,7 @@
 """
 会员订阅模型
 
-P20 增强：
+Future 增强：
 - 使用次数追踪（每日限制计数）
 """
 from pydantic import BaseModel

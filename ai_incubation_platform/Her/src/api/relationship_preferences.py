@@ -13,7 +13,7 @@ from db.models import UserDB
 from services.relationship_preference_service import RelationshipPreferenceService
 
 
-router = APIRouter(prefix="/api/relationship", tags=["relationship"])
+router = APIRouter(prefix="/api/relationship-preferences", tags=["relationship-preferences"])
 
 
 @router.get("/types")

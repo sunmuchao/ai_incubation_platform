@@ -1,17 +1,17 @@
 """
 匹配 API 路由
 
-P0 优化：
+Identity 优化：
 - 集成缓存层（匹配结果缓存）
 - 集成限流保护
 - 优化数据库查询
 
-P1 新增（竞品分析优化）:
+Values 新增（竞品分析优化）:
 - 破冰问题生成 (参考 Tinder/Guide)
 - 地理位置距离计算 (参考 Tinder 附近的人)
 - 性格兼容性分析 (参考 OkCupid 大五人格)
 
-P2 新增（竞品分析优化）:
+DigitalTwin 新增（竞品分析优化）:
 - 安全机制 (参考 Bumble 举报/封禁系统)
 - 兴趣社交 (参考 Soul 灵魂匹配/兴趣社区)
 """
@@ -41,6 +41,35 @@ from services.membership_service import get_membership_service
 router = APIRouter(prefix="/api/matching", tags=["matching"])
 
 
+# ==================== 常量配置 ====================
+MIN_LIMIT = 1  # 最小 limit
+MAX_LIMIT = 100  # 最大 limit（防止超大数据量查询）
+
+
+def validate_limit(limit: int) -> int:
+    """
+    验证并调整 limit 参数
+
+    Args:
+        limit: 用户传入的 limit
+
+    Returns:
+        有效范围内的 limit
+
+    Raises:
+        HTTPException: limit 无效时抛出
+    """
+    if limit <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"limit 必须大于 0，当前值：{limit}"
+        )
+    if limit > MAX_LIMIT:
+        logger.warning(f"limit 超过上限 {MAX_LIMIT}，将被限制为 {MAX_LIMIT}")
+        return MAX_LIMIT
+    return limit
+
+
 def get_user_service(db=Depends(get_db)):
     """获取用户服务依赖注入"""
     return UserRepository(db)
@@ -58,8 +87,13 @@ async def get_matches(
     优化：
     - 缓存匹配结果（10 分钟）
     - 限流保护（50 次/秒突发）
+    - limit 验证：1-100 范围
     """
     trace_id = get_trace_id()
+
+    # 验证 limit 参数
+    limit = validate_limit(limit)
+
     logger.info(f"📡 [MATCH:FIND] START trace_id={trace_id} user={user_id}, limit={limit}")
 
     # 尝试从缓存读取
@@ -217,7 +251,7 @@ async def calculate_compatibility(
     )
 
 
-# ============= P1 新增 API 端点（竞品分析优化）============
+# ============= Values 新增 API 端点（竞品分析优化）============
 
 @router.post("/icebreaker")
 async def get_icebreaker(
@@ -407,7 +441,7 @@ async def get_nearby_users(
     }
 
 
-# ============= P2 新增 API 端点（竞品分析优化 - Bumble/Soul）============
+# ============= DigitalTwin 新增 API 端点（竞品分析优化 - Bumble/Soul）============
 
 @router.post("/safety/report")
 async def report_user(
@@ -796,14 +830,32 @@ async def swipe(
 
         if cursor.fetchone():
             is_match = True
+            match_id = str(uuid.uuid4())
             logger.info(f"Match! {user_id} <-> {request.target_user_id}")
 
             # 创建匹配记录
             cursor.execute("""
                 INSERT INTO match_history (id, user_id_1, user_id_2, compatibility_score, status, created_at)
                 VALUES (%s, %s, %s, %s, %s, %s)
-            """, (str(uuid.uuid4()), user_id, request.target_user_id, 0.8, "matched", datetime.now()))
+            """, (match_id, user_id, request.target_user_id, 0.8, "matched", datetime.now()))
             db.commit()
+
+            # AI Native: 触发匹配事件，引发破冰心跳
+            try:
+                from agent.autonomous.event_listener import emit_event
+                emit_event(
+                    event_type="match_created",
+                    event_data={
+                        "match_id": match_id,
+                        "user_id_1": user_id,
+                        "user_id_2": request.target_user_id,
+                        "compatibility_score": 0.8,
+                    },
+                    event_source=user_id
+                )
+                logger.info(f"📡 [MATCH] Event 'match_created' emitted for match {match_id}")
+            except Exception as e:
+                logger.warning(f"Failed to emit match_created event: {e}")
 
     cursor.close()
     db.close()

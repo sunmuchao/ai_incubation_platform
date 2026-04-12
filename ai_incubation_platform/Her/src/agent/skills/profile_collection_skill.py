@@ -397,8 +397,16 @@ class ProfileCollectionSkill:
 
 只返回 JSON。'''
 
-            from services.llm_semantic_service import call_llm_sync
-            response = call_llm_sync(prompt, timeout=15)
+            # 设置较短超时，快速降级到规则分析
+            import asyncio
+            try:
+                response = await asyncio.wait_for(
+                    llm_service._call_llm(prompt),
+                    timeout=10.0  # 10秒超时，避免前端等待太久
+                )
+            except asyncio.TimeoutError:
+                logger.warning(f"ProfileCollectionSkill: LLM timeout for depth analysis, using fallback")
+                return None
 
             if response and not response.startswith('{"fallback"'):
                 response = response.strip()
@@ -557,8 +565,16 @@ class ProfileCollectionSkill:
 3. 保持轻松自然的语气，避免审问式
 4. 只返回 JSON'''
 
-            from services.llm_semantic_service import call_llm_sync
-            response = call_llm_sync(prompt, timeout=15)
+            # 设置较短超时
+            import asyncio
+            try:
+                response = await asyncio.wait_for(
+                    llm_service._call_llm(prompt),
+                    timeout=10.0
+                )
+            except asyncio.TimeoutError:
+                logger.warning(f"ProfileCollectionSkill: LLM timeout for follow-up, using fallback")
+                return None
 
             if response and not response.startswith('{"fallback"'):
                 response = response.strip()
@@ -738,8 +754,16 @@ class ProfileCollectionSkill:
 4. question_type 根据维度选择：单选用 single_choice，多选用 multiple_choice
 5. 只返回 JSON，不要其他内容'''
 
-            from services.llm_semantic_service import call_llm_sync
-            response = call_llm_sync(prompt, timeout=15)
+            # 设置较短超时
+            import asyncio
+            try:
+                response = await asyncio.wait_for(
+                    llm_service._call_llm(prompt),
+                    timeout=10.0
+                )
+            except asyncio.TimeoutError:
+                logger.warning(f"ProfileCollectionSkill: LLM timeout for question generation, using fallback")
+                return None
 
             if response and not response.startswith('{"fallback"'):
                 response = response.strip()
@@ -934,17 +958,7 @@ class ProfileCollectionSkill:
                 current_depth < max_depth
             )
 
-        # Step 3: 生成确认回复
-        ai_message = self._generate_acknowledgment(dimension, answer)
-
-        result = {
-            "success": True,
-            "ai_message": ai_message,
-            "updated_profile": updated_profile,
-            "answer_depth": depth_score,
-            "need_follow_up": need_follow_up,
-        }
-
+        # Step 3: 先判断是否需要追问和是否还有更多问题
         # Step 4: 如果需要追问，生成追问问题
         if need_follow_up:
             follow_up_card = await self._generate_follow_up_question(
@@ -956,13 +970,32 @@ class ProfileCollectionSkill:
                 importance=importance
             )
             if follow_up_card:
-                result["next_question"] = follow_up_card
-                result["is_follow_up"] = True
-                return result
+                return {
+                    "success": True,
+                    "ai_message": "",  # 追问时静默过渡
+                    "updated_profile": updated_profile,
+                    "answer_depth": depth_score,
+                    "need_follow_up": True,
+                    "next_question": follow_up_card,
+                    "is_follow_up": True,
+                    "has_more_questions": True,
+                }
 
         # Step 5: 不需要追问，检查是否有其他信息缺口
         remaining_gaps = self._analyze_profile_gaps(updated_profile)
-        result["has_more_questions"] = len(remaining_gaps) > 0
+        has_more_questions = len(remaining_gaps) > 0
+
+        # Step 6: 生成确认回复（只在完成时显示）
+        ai_message = self._generate_acknowledgment(dimension, answer, has_more_questions)
+
+        result = {
+            "success": True,
+            "ai_message": ai_message,
+            "updated_profile": updated_profile,
+            "answer_depth": depth_score,
+            "need_follow_up": False,
+            "has_more_questions": has_more_questions,
+        }
 
         # 如果还有其他缺口，准备下一个问题
         if remaining_gaps:
@@ -976,27 +1009,26 @@ class ProfileCollectionSkill:
 
         return result
 
-    def _generate_acknowledgment(self, dimension: str, answer: Any) -> str:
-        """生成确认回复"""
+    def _generate_acknowledgment(self, dimension: str, answer: Any, has_more_questions: bool = True) -> str:
+        """
+        生成确认回复
+
+        AI Native 设计原则：
+        - 如果还有更多问题，不产生冗余消息（静默过渡）
+        - 如果是最后一个问题，给出有意义的完成提示
+        """
+        # 如果还有更多问题，不返回冗余确认
+        if has_more_questions:
+            return ""  # 静默过渡，让前端直接显示下一个问题
+
+        # 最后一个问题完成时的提示
         dimension_name = self.PROFILE_DIMENSIONS.get(dimension, {}).get("name", "偏好")
 
         if isinstance(answer, list):
-            answer_text = "、".join(str(a) for a in answer[:3])
-            if len(answer) > 3:
-                answer_text += f"等 {len(answer)} 个"
+            answer_count = len(answer)
+            return f"好的，我已经了解你的偏好了~ 现在可以帮你找更合适的 TA 了！"
         else:
-            answer_text = str(answer)
-
-        # 简单的确认语
-        templates = [
-            f"收到，你选择了{answer_text}~",
-            f"明白了，{answer_text}是个不错的选择！",
-            f"好的，{answer_text}，我记下了~",
-            f"了解，{answer_text}！",
-        ]
-
-        import random
-        return random.choice(templates)
+            return f"好的，我已经了解你的{dimension_name}了~ 现在可以帮你找更合适的 TA 了！"
 
 
 # 全局实例

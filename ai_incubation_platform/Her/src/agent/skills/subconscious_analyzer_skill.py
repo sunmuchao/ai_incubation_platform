@@ -1,7 +1,7 @@
 """
 数字潜意识分析 Skill
 
-P0 功能：分析用户数字潜意识，包括依恋风格、潜意识特质、行为模式等
+Identity 功能：分析用户数字潜意识，包括依恋风格、潜意识特质、行为模式等
 """
 from typing import Dict, Any, Optional, List
 from datetime import datetime
@@ -136,7 +136,7 @@ class SubconsciousAnalyzerSkill:
     def _get_subconscious_profile(self, user_id: str) -> Optional[Dict]:
         """获取潜意识档案"""
         from utils.db_session_manager import db_session
-        from models.p1_perception_models import DigitalSubconsciousProfileDB
+        from models.perception_models import DigitalSubconsciousProfileDB
 
         with db_session() as db:
             profile = db.query(DigitalSubconsciousProfileDB).filter(

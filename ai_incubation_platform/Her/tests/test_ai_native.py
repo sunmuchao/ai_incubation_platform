@@ -291,8 +291,9 @@ class TestAIFnNativeIntegration:
         assert workflow.tools["compatibility"] == CompatibilityAnalysisTool
 
 
+@pytest.mark.skip(reason="api.conversation_matching module has been removed/refactored")
 class TestConversationMatchingAPI:
-    """测试对话式匹配 API（结构测试）"""
+    """测试对话式匹配 API（结构测试）- 模块已移除"""
 
     def test_api_router_exists(self):
         """测试 API 路由存在"""

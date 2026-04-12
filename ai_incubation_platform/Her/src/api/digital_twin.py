@@ -1,7 +1,7 @@
 """
 数字分身预聊 API
 
-P2 功能：数字分身模拟相亲、复盘报告
+DigitalTwin 功能：数字分身模拟相亲、复盘报告
 """
 from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from sqlalchemy.orm import Session
@@ -14,7 +14,7 @@ from services.digital_twin_service import digital_twin_service, DigitalTwinServi
 from utils.logger import logger
 from auth.jwt import get_current_user
 
-router = APIRouter(prefix="/api/digital-twin", tags=["P2-数字分身预聊"])
+router = APIRouter(prefix="/api/digital-twin", tags=["DigitalTwin-数字分身预聊"])
 
 
 # ============= 请求/响应模型 =============
@@ -253,7 +253,7 @@ async def get_simulation_status(
 
     返回模拟的当前状态和进度
     """
-    from models.p2_digital_twin_models import DigitalTwinSimulation
+    from models.digital_twin_models import DigitalTwinSimulation
 
     simulation = db.query(DigitalTwinSimulation).filter(
         DigitalTwinSimulation.id == simulation_id
@@ -357,7 +357,7 @@ async def get_my_simulations(
     """
     user_id = current_user.get("user_id")
 
-    from models.p2_digital_twin_models import DigitalTwinSimulation
+    from models.digital_twin_models import DigitalTwinSimulation
 
     simulations = db.query(DigitalTwinSimulation).filter(
         (DigitalTwinSimulation.user_a_id == user_id) |

@@ -1,5 +1,5 @@
 """
-P2: 礼物闭环集成服务
+DigitalTwin: 礼物闭环集成服务
 
 功能包括：
 - 电商平台对接（京东/淘宝）
@@ -16,6 +16,8 @@ import json
 import uuid
 import hashlib
 
+
+from services.base_service import BaseService
 
 # ============= 电商 API 配置 =============
 
@@ -61,11 +63,11 @@ BUDGET_RANGES = {
 }
 
 
-class GiftIntegrationService:
+class GiftIntegrationService(BaseService):
     """礼物闭环集成服务"""
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
 
     # ============= 礼物推荐 =============
 

@@ -18,9 +18,10 @@ from sqlalchemy.orm import joinedload
 
 from db.models import ChatMessageDB, ChatConversationDB, UserDB
 from utils.logger import logger, get_trace_id
+from services.base_service import BaseService
 
 
-class ChatService:
+class ChatService(BaseService):
     """实时聊天服务"""
 
     # 消息类型
@@ -37,7 +38,7 @@ class ChatService:
     STATUS_RECALLED = "recalled"
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
 
     def get_or_create_conversation(self, user_id_1: str, user_id_2: str) -> ChatConversationDB:
         """

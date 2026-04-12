@@ -3,7 +3,7 @@ Agent Skill API
 
 提供 Agent Skill 的 HTTP 接口
 
-P0 增强：
+Identity 增强：
 - 流式 Skill 执行 (SSE) - 降低用户感知延迟
 - 敏感信息过滤 - 隐私保护
 """

@@ -17,15 +17,16 @@ from utils.logger import logger
 from sqlalchemy import or_, and_, desc
 from services.memory_service import get_memory_service
 from services.ai_feedback_service import get_ai_feedback_service
+from services.base_service import BaseService
 
 
-class QuickChatService:
+class QuickChatService(BaseService):
     """悬浮球快速对话服务"""
 
     def __init__(self, db: Optional[Session] = None):
         # 使用延迟导入避免模块加载顺序问题
         from db.database import SessionLocal
-        self.db = db or SessionLocal()
+        super().__init__(db or SessionLocal())
         self._should_close_db = db is None
 
     def close(self):
@@ -527,4 +528,4 @@ if __name__ == "__main__":
         ],
     )
 
-    print(f"Result: {result}")
+    logger.info(f"QuickChat test result: {result}")

@@ -1,7 +1,7 @@
 """
 数字分身预聊服务
 
-P2 功能：基于用户数据训练的 AI 代理，模拟用户行为进行预沟通
+DigitalTwin 功能：基于用户数据训练的 AI 代理，模拟用户行为进行预沟通
 """
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
@@ -11,19 +11,20 @@ import asyncio
 
 from db.database import SessionLocal
 from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
-from models.p2_digital_twin_models import (
+from models.digital_twin_models import (
     DigitalTwinProfile,
     DigitalTwinSimulation,
     DigitalTwinReport,
 )
 from utils.logger import logger
+from services.base_service import BaseService
 
 
-class DigitalTwinService:
+class DigitalTwinService(BaseService):
     """数字分身服务"""
 
     def __init__(self, db: Optional[Session] = None):
-        self._db: Optional[Session] = db
+        super().__init__(db)
         self._should_close_db: bool = db is None
 
     def _get_db(self) -> Session:

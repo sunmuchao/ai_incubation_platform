@@ -1,5 +1,5 @@
 """
-P1: 感知层服务 - 用户向量表示和数字潜意识引擎
+Values: 感知层服务 - 用户向量表示和数字潜意识引擎
 
 功能包括：
 - 用户向量计算和更新
@@ -16,7 +16,7 @@ import json
 import uuid
 import math
 
-from models.p1_perception_models import (
+from models.perception_models import (
     UserVectorDB,
     VectorUpdateHistoryDB,
     VectorSimilarityCacheDB,
@@ -27,7 +27,7 @@ from models.p1_perception_models import (
     ATTACHMENT_STYLE_DESCRIPTIONS,
 )
 from db.models import BehaviorEventDB
-from models.p1_values_models import DeclaredValuesDB, InferredValuesDB
+from models.values_models import DeclaredValuesDB, InferredValuesDB
 
 
 class PerceptionLayerService:

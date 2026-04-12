@@ -1,7 +1,7 @@
 """
 Agent 自主权管控服务
 
-P1 功能：为 AI Agent 的自主行为增加"介入阈值"管控
+Values 功能：为 AI Agent 的自主行为增加"介入阈值"管控
 
 AI 在发现异常（如账单异常、安全风险）时，需根据用户设置的授权等级决定：
 - 私下提醒用户
@@ -24,11 +24,12 @@ import json
 
 from db.database import SessionLocal
 from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
-from models.p18_p22_models import PrivacySetting
+from models.advanced_feature_models import PrivacySetting
 from utils.logger import logger
+from services.base_service import BaseService
 
 
-class AgentInterventionService:
+class AgentInterventionService(BaseService):
     """Agent 自主权管控服务"""
 
     # 介入等级定义
@@ -88,7 +89,7 @@ class AgentInterventionService:
     }
 
     def __init__(self, db: Optional[Session] = None):
-        self._db: Optional[Session] = db
+        super().__init__(db)
         self._should_close_db: bool = db is None
 
     def _get_db(self) -> Session:

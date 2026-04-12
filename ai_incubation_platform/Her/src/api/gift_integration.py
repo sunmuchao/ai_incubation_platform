@@ -1,5 +1,5 @@
 """
-P2: 礼物闭环集成 API
+DigitalTwin: 礼物闭环集成 API
 
 功能包括：
 - 礼物推荐
@@ -24,7 +24,7 @@ from services.gift_integration_service import (
 )
 
 
-router = APIRouter(prefix="/api/gifts", tags=["P2-礼物闭环"])
+router = APIRouter(prefix="/api/gifts", tags=["DigitalTwin-礼物闭环"])
 
 
 # ============= 请求/响应模型 =============

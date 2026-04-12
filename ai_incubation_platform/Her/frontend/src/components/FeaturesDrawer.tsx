@@ -10,7 +10,12 @@
 
 import React from 'react'
 import { Drawer, List, Space, Typography, Divider, Badge } from 'antd'
-import { StarOutlined, HeartOutlined, SafetyCertificateOutlined, GiftOutlined, RocketOutlined, MessageOutlined, LineChartOutlined, PictureOutlined, VerifiedOutlined, CrownOutlined, HeartFilled, ThunderboltOutlined, AppstoreOutlined } from '@ant-design/icons'
+import {
+  GiftOutlined, PictureOutlined,
+  VerifiedOutlined, CrownOutlined, HeartFilled, AppstoreOutlined, SwapOutlined,
+  HeartOutlined, SettingOutlined,
+  CalendarOutlined, VideoCameraOutlined
+} from '@ant-design/icons'
 
 const { Text, Paragraph } = Typography
 
@@ -27,7 +32,23 @@ export interface Feature {
 }
 
 // 功能列表定义 - 使用统一的图标风格
+// 注意：AI 决策类功能（Skill 调用）不应在此列表中，由 AI 主动推送或对话触发
 export const FEATURES: Feature[] = [
+  // === 用户操作类功能（REST API）===
+  {
+    icon: <SwapOutlined style={{ color: '#52c41a', fontSize: 20 }} />,
+    name: '滑动匹配',
+    description: 'Tinder 式滑动浏览推荐',
+    action: 'swipe',
+    badge: '新'
+  },
+  {
+    icon: <HeartOutlined style={{ color: '#FFD700', fontSize: 20 }} />,
+    name: 'Who Likes Me',
+    description: '查看喜欢你的人',
+    action: 'who_likes_me',
+    badge: '会员'
+  },
   {
     icon: <PictureOutlined style={{ color: PRIMARY_COLOR, fontSize: 20 }} />,
     name: '照片管理',
@@ -36,48 +57,60 @@ export const FEATURES: Feature[] = [
     badge: '推荐'
   },
   {
-    icon: <VerifiedOutlined style={{ color: PRIMARY_COLOR, fontSize: 20 }} />,
-    name: '身份认证',
-    description: '完成认证增加信任度',
-    action: 'verify'
+    icon: <VerifiedOutlined style={{ color: '#1890ff', fontSize: 20 }} />,
+    name: '人脸认证',
+    description: '获得 Blue Star 徽章',
+    action: 'face_verification',
+    badge: '新'
   },
+  {
+    icon: <GiftOutlined style={{ color: PRIMARY_COLOR, fontSize: 20 }} />,
+    name: '礼物商店',
+    description: '送礼物表达心意',
+    action: 'gifts',
+    badge: '新'
+  },
+  {
+    icon: <SettingOutlined style={{ color: '#1890ff', fontSize: 20 }} />,
+    name: '匹配偏好',
+    description: '设置你的匹配条件',
+    action: 'matching_preference',
+  },
+  {
+    icon: <CalendarOutlined style={{ color: '#fa8c16', fontSize: 20 }} />,
+    name: '约会提醒',
+    description: '管理约会计划',
+    action: 'date_reminder',
+  },
+  {
+    icon: <VideoCameraOutlined style={{ color: PRIMARY_COLOR, fontSize: 20 }} />,
+    name: '视频片段',
+    description: '录制短视频自我介绍',
+    action: 'video_clip',
+    badge: '新'
+  },
+  // === 会员相关 ===
   {
     icon: <CrownOutlined style={{ color: PRIMARY_COLOR, fontSize: 20 }} />,
     name: '会员订阅',
     description: '解锁更多高级功能',
     action: 'membership',
-    badge: '新'
   },
+  // === 记录类功能 ===
   {
     icon: <HeartFilled style={{ color: '#FF6B8A', fontSize: 20 }} />,
     name: '关系里程碑',
     description: '记录重要时刻',
     action: 'milestones'
   },
-  {
-    icon: <GiftOutlined style={{ color: PRIMARY_COLOR, fontSize: 20 }} />,
-    name: '礼物推荐',
-    description: '挑选合适的礼物',
-    action: 'gifts'
-  },
-  {
-    icon: <SafetyCertificateOutlined style={{ color: PRIMARY_COLOR, fontSize: 20 }} />,
-    name: '安全守护',
-    description: '保护你的安全',
-    action: 'safety'
-  },
-  {
-    icon: <LineChartOutlined style={{ color: PRIMARY_COLOR, fontSize: 20 }} />,
-    name: '关系分析',
-    description: '了解关系健康度',
-    action: 'analysis'
-  },
-  {
-    icon: <MessageOutlined style={{ color: PRIMARY_COLOR, fontSize: 20 }} />,
-    name: '聊天助手',
-    description: '智能聊天建议',
-    action: 'chat_assistant'
-  },
+  // === 已移除的功能（改由 AI 主动推送或对话触发）===
+  // Your Turn → chatAssistantSkill（对话中自动触发回复建议）
+  // 消息解读 → chatAssistantSkill（对话中自动触发）
+  // 破冰话题 → silenceBreakerSkill（沉默时 AI 主动推送）
+  // 活动推荐 → activityDirectorSkill（约会时 AI 主动推送）
+  // 压力测试 → relationshipCoachSkill（关系分析时 AI 建议）
+  // 安全守护 → safetyGuardianSkill（危险检测时自动触发）
+  // 关系分析 → relationshipCoachSkill（定期推送健康报告）
 ]
 
 interface FeaturesDrawerProps {
@@ -97,9 +130,9 @@ export const FeaturesDrawer: React.FC<FeaturesDrawerProps> = ({
   return (
     <Drawer
       title={
-        <Space>
-          <AppstoreOutlined style={{ color: PRIMARY_COLOR }} />
-          <span>我能帮你做的事</span>
+        <Space style={{ color: '#fff' }}>
+          <AppstoreOutlined style={{ color: '#fff' }} />
+          <span style={{ color: '#fff' }}>我能帮你做的事</span>
         </Space>
       }
       placement="right"
@@ -113,9 +146,6 @@ export const FeaturesDrawer: React.FC<FeaturesDrawerProps> = ({
           background: PRIMARY_GRADIENT,
           borderBottom: 'none',
         }
-      }}
-      titleStyle={{
-        color: '#fff',
       }}
     >
       <List
@@ -153,7 +183,10 @@ export const FeaturesDrawer: React.FC<FeaturesDrawerProps> = ({
                   <Badge
                     count={feature.badge}
                     style={{
-                      backgroundColor: feature.badge === '新' ? '#52c41a' : PRIMARY_COLOR
+                      backgroundColor: feature.badge === '新' ? '#52c41a'
+                        : feature.badge === 'AI' ? '#722ed1'
+                        : feature.badge === '会员' ? '#FFD700'
+                        : PRIMARY_COLOR
                     }}
                   />
                 )}

@@ -54,7 +54,7 @@ class PreCommunicationSkill:
                 },
                 "action": {
                     "type": "string",
-                    "enum": ["start", "check_status", "get_report", "cancel"],
+                    "enum": ["start", "check_status", "get_report", "cancel", "list_sessions", "get_messages"],
                     "description": "操作类型"
                 },
                 "preferences": {
@@ -95,7 +95,32 @@ class PreCommunicationSkill:
                 "recommendation": {
                     "type": "string",
                     "enum": ["proceed_to_chat", "not_recommended", "need_more_time"]
-                }
+                },
+                "sessions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string"},
+                            "status": {"type": "string"},
+                            "compatibility_score": {"type": "number"},
+                            "message_count": {"type": "integer"}
+                        }
+                    }
+                },
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string"},
+                            "role": {"type": "string"},
+                            "content": {"type": "string"},
+                            "timestamp": {"type": "string"}
+                        }
+                    }
+                },
+                "total_count": {"type": "integer"}
             }
         }
 
@@ -130,6 +155,10 @@ class PreCommunicationSkill:
             return await self._generate_report(match_id)
         elif action == "cancel":
             return await self._cancel_session(match_id)
+        elif action == "list_sessions":
+            return await self._list_sessions(user_id)
+        elif action == "get_messages":
+            return await self._get_messages(match_id)
         else:
             return {"success": False, "error": "Invalid action", "ai_message": "不支持的操作类型"}
 
@@ -250,6 +279,93 @@ class PreCommunicationSkill:
             "ai_message": "已取消 AI 预沟通，你可以随时重新开始"
         }
 
+    async def _list_sessions(self, user_id: str) -> dict:
+        """列出用户的预沟通会话"""
+        # 注：当前使用模拟数据，待对接数据库
+        logger.info(f"PreCommunicationSkill: Listing sessions for user={user_id}")
+
+        # 模拟数据
+        sessions = [
+            {
+                "id": "precomm-match-1-20260411",
+                "user_id_1": user_id,
+                "user_id_2": "partner-1",
+                "user_a_name": "我",
+                "user_b_name": "TA",
+                "status": "completed",
+                "compatibility_score": 0.85,
+                "message_count": 50,
+                "created_at": "2026-04-10T10:00:00",
+                "completed_at": "2026-04-10T12:00:00",
+                "recommendation": "proceed_to_chat"
+            },
+            {
+                "id": "precomm-match-2-20260411",
+                "user_id_1": user_id,
+                "user_id_2": "partner-2",
+                "user_a_name": "我",
+                "user_b_name": "TA",
+                "status": "in_progress",
+                "message_count": 25,
+                "created_at": "2026-04-11T10:00:00",
+                "progress_percentage": 50
+            }
+        ]
+
+        return {
+            "success": True,
+            "sessions": sessions,
+            "total_count": len(sessions),
+            "ai_message": f"找到 {len(sessions)} 个 AI 预沟通会话"
+        }
+
+    async def _get_messages(self, session_id: str) -> dict:
+        """获取预沟通会话的对话消息"""
+        # 注：当前使用模拟数据，待对接数据库
+        logger.info(f"PreCommunicationSkill: Getting messages for session={session_id}")
+
+        # 模拟消息数据
+        messages = [
+            {
+                "id": "msg-1",
+                "role": "ai_user_a",
+                "content": "你好呀，看到你喜欢旅行，最近有去过什么好玩的地方吗？",
+                "timestamp": "2026-04-10T10:05:00"
+            },
+            {
+                "id": "msg-2",
+                "role": "ai_user_b",
+                "content": "你好！最近去了云南，风景特别美，你平时喜欢去哪里旅行呢？",
+                "timestamp": "2026-04-10T10:10:00"
+            },
+            {
+                "id": "msg-3",
+                "role": "ai_user_a",
+                "content": "我比较喜欢去海边，觉得海边特别放松。听说云南有很多少数民族，感觉很有趣~",
+                "timestamp": "2026-04-10T10:15:00"
+            },
+            {
+                "id": "msg-4",
+                "role": "ai_user_b",
+                "content": "是的！少数民族的服饰和文化都很有特色。海边我也喜欢，可能因为平时工作压力大，海边能让人放松~",
+                "timestamp": "2026-04-10T10:20:00"
+            },
+            {
+                "id": "msg-5",
+                "role": "ai_user_a",
+                "content": "确实，旅行是最好的放松方式。你平时做什么工作呢？",
+                "timestamp": "2026-04-10T10:25:00"
+            }
+        ]
+
+        return {
+            "success": True,
+            "session_id": session_id,
+            "messages": messages,
+            "total_count": len(messages),
+            "ai_message": f"AI 预沟通对话历史（共 {len(messages)} 条）"
+        }
+
     def _get_match_info(self, match_id: str) -> Optional[dict]:
         """获取匹配信息"""
         # 注：当前使用模拟数据，待对接数据库
@@ -304,7 +420,7 @@ class PreCommunicationSkill:
         return session_id
 
     async def _start_ai_dialog(self, session_id: str, match_info: dict, preferences: dict = None) -> dict:
-        """启动 AI 对话（调用 P18 AI Interlocutor API）"""
+        """启动 AI 对话（调用 EmotionWeather AI Interlocutor API）"""
         # 注：当前仅记录日志，待对接 AI Interlocutor 服务
         logger.info(f"PreCommunicationSkill: Starting AI dialog for session {session_id}")
 

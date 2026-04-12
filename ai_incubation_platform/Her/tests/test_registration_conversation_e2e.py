@@ -2,8 +2,14 @@
 注册对话端到端集成测试
 
 测试完整的用户注册 -> AI 对话 -> 数据保存流程
+
+注意：该 API 和服务已被重构移除，测试暂时跳过
 """
 import pytest
+
+# 整个测试文件跳过，因为 API 路由和服务已被移除/重构
+pytestmark = pytest.mark.skip(reason="registration-conversation API and service have been removed/refactored")
+
 import json
 from fastapi.testclient import TestClient
 from main import app

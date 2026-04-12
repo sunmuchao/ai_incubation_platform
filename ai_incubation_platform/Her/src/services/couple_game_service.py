@@ -1,5 +1,5 @@
 """
-P10-004: 双人互动游戏服务
+Milestone-004: 双人互动游戏服务
 
 提供多种双人互动游戏，帮助用户在轻松的氛围中加深了解。
 """
@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 from db.database import SessionLocal
 from db.models import UserDB, MatchHistoryDB
-from models.p10_models import (
+from models.milestone_models import (
     CoupleGameDB,
     CoupleGameRoundDB,
     GameResultInsightDB

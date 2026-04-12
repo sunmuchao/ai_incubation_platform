@@ -1,0 +1,33 @@
+{
+  "mcpServers": {},
+  "skills": {
+    "her_matchmaking": {
+      "enabled": true,
+      "description": "Her 匹配助手 Skill - 智能匹配推荐"
+    },
+    "her_relationship_coach": {
+      "enabled": true,
+      "description": "Her 关系教练 Skill - 关系健康分析"
+    },
+    "her_date_planning": {
+      "enabled": true,
+      "description": "Her 约会策划 Skill - 约会场景推荐"
+    },
+    "her_chat_assistant": {
+      "enabled": true,
+      "description": "Her 聊天助手 Skill - 对话优化建议"
+    },
+    "her_matching_flow": {
+      "enabled": true,
+      "description": "Her 智能匹配流程 - 从找对象到破冰建议的完整编排"
+    },
+    "her_dating_coach": {
+      "enabled": true,
+      "description": "Her 约会教练流程 - 约会前准备到约会后复盘"
+    },
+    "her_relationship_guide": {
+      "enabled": true,
+      "description": "Her 关系指导流程 - 关系健康检查到冲突调解"
+    }
+  }
+}

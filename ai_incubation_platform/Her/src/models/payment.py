@@ -5,7 +5,7 @@
 - 发票信息
 - 免费试用
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict
 from datetime import datetime
 from enum import Enum
@@ -335,19 +335,36 @@ class Subscription(BaseModel):
 # ==================== 请求/响应模型 ====================
 
 class CouponCreate(BaseModel):
-    """创建优惠券请求"""
-    code: str
-    name: str
-    description: str = ""
+    """创建优惠券请求
+
+    安全验证规则：
+    - value: 百分比折扣时 0-100，固定金额时 > 0
+    - min_amount: >= 0
+    - usage_limit: > 0 或 None
+    - per_user_limit: > 0
+    - valid_days: > 0
+    """
+    code: str = Field(..., min_length=1, max_length=50, description="优惠码")
+    name: str = Field(..., min_length=1, max_length=100, description="优惠券名称")
+    description: str = Field(default="", max_length=500, description="描述")
     type: CouponType
-    value: float
-    min_amount: float = 0.0
-    max_discount: Optional[float] = None
+    value: float = Field(..., gt=0, description="折扣值")
+    min_amount: float = Field(default=0.0, ge=0, description="最低消费金额")
+    max_discount: Optional[float] = Field(default=None, ge=0, description="最大折扣金额")
     applicable_tiers: List[CouponTier] = [CouponTier.ALL]
-    usage_limit: Optional[int] = None
-    per_user_limit: int = 1
+    usage_limit: Optional[int] = Field(default=None, gt=0, description="总使用次数限制")
+    per_user_limit: int = Field(default=1, ge=1, description="每用户限用次数")
     new_user_only: bool = False
-    valid_days: int = 30  # 有效期天数
+    valid_days: int = Field(default=30, gt=0, le=365, description="有效期天数")
+
+    @field_validator('value')
+    @classmethod
+    def validate_value(cls, v: float, info) -> float:
+        """验证折扣值：百分比折扣时不超过 100"""
+        # info.data 包含其他字段值，检查 type
+        if info.data.get('type') == CouponType.PERCENTAGE and v > 100:
+            raise ValueError('percentage discount value cannot exceed 100')
+        return v
 
 
 class CouponClaimRequest(BaseModel):
@@ -356,11 +373,16 @@ class CouponClaimRequest(BaseModel):
 
 
 class ApplyCouponRequest(BaseModel):
-    """应用优惠券请求"""
-    coupon_code: str
-    tier: str
-    duration_months: int
-    amount: float
+    """应用优惠券请求
+
+    安全验证规则：
+    - amount: > 0
+    - duration_months: > 0
+    """
+    coupon_code: str = Field(..., min_length=1, max_length=50, description="优惠码")
+    tier: str = Field(..., description="会员等级")
+    duration_months: int = Field(..., ge=1, le=12, description="订阅时长（月）")
+    amount: float = Field(..., gt=0, description="订单金额")
 
 
 class ApplyCouponResponse(BaseModel):
@@ -411,11 +433,17 @@ class TrialStartRequest(BaseModel):
 
 
 class SubscriptionCreateRequest(BaseModel):
-    """创建订阅请求"""
-    tier: str
-    interval: str = "month"
-    payment_method: str = "wechat"
-    auto_renew: bool = True
+    """创建订阅请求
+
+    安全验证规则：
+    - tier: 必填，有效会员等级
+    - interval: 必须是 'month' 或 'year'
+    - payment_method: 必填
+    """
+    tier: str = Field(..., description="会员等级：standard/premium")
+    interval: str = Field(default="month", pattern=r'^month|year$', description="订阅周期")
+    payment_method: str = Field(..., min_length=1, description="支付方式")
+    auto_renew: bool = Field(default=True, description="自动续费")
 
 
 # ==================== 统计模型 ====================

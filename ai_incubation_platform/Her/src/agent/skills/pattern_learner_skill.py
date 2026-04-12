@@ -1,7 +1,7 @@
 """
 行为模式学习 Skill
 
-P2 功能：从用户历史行为中学习行为模式，识别规律和习惯
+DigitalTwin 功能：从用户历史行为中学习行为模式，识别规律和习惯
 """
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta

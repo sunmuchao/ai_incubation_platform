@@ -2,8 +2,14 @@
 注册对话 API 测试
 
 测试 AI 红娘注册对话的 HTTP 接口
+
+注意：该 API 已被重构移除，测试暂时跳过
 """
 import pytest
+
+# 整个测试文件跳过，因为 API 路由已被移除/重构
+pytestmark = pytest.mark.skip(reason="registration-conversation API has been removed/refactored")
+
 import json
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient

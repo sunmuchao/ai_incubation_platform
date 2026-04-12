@@ -1,7 +1,7 @@
 """
 价值观行为推断 Skill
 
-P0 功能：基于用户行为推断真实价值观，与声明价值观对比检测偏移
+Identity 功能：基于用户行为推断真实价值观，与声明价值观对比检测偏移
 """
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
@@ -142,7 +142,7 @@ class ValuesInferencerSkill:
     def _get_declared_values(self, user_id: str) -> List[Dict]:
         """获取用户声明的价值观"""
         from utils.db_session_manager import db_session
-        from models.p1_values_models import DeclaredValuesDB
+        from models.values_models import DeclaredValuesDB
 
         with db_session() as db:
             declared = db.query(DeclaredValuesDB).filter(
@@ -256,7 +256,7 @@ class ValuesInferencerSkill:
         """调整匹配权重"""
         from services.values_evolution_service import values_evolution_service
         from utils.db_session_manager import db_session
-        from models.p1_values_models import DeclaredValuesDB
+        from models.values_models import DeclaredValuesDB
 
         with db_session() as db:
             declared = db.query(DeclaredValuesDB).filter(

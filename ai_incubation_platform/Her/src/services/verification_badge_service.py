@@ -16,6 +16,7 @@ from db.models import (
     VerificationBadgeDB, EducationVerificationDB, CareerVerificationDB,
     IdentityVerificationDB, PhotoDB, UserMembershipDB
 )
+from services.base_service import BaseService
 
 
 # 徽章类型定义
@@ -96,11 +97,11 @@ BADGE_TYPES = {
 }
 
 
-class VerificationBadgeService:
+class VerificationBadgeService(BaseService):
     """信任标识体系服务"""
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
 
     def get_user_badges(self, user_id: str) -> List[Dict[str, Any]]:
         """获取用户的所有徽章"""

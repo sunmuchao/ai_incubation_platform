@@ -1,5 +1,5 @@
 """
-P18 关系进阶服务 - v1.18 关系进阶功能
+EmotionWeather 关系进阶服务 - v1.18 关系进阶功能
 
 服务列表:
 - RelationshipStateService: 关系状态管理服务
@@ -17,7 +17,7 @@ from sqlalchemy import and_, or_, desc, func
 from sqlalchemy.orm import Session
 
 from db.database import SessionLocal
-from models.p18_models import (
+from models.emotion_weather_models import (
     RelationshipStateDB, RelationshipStateTransitionDB,
     DatingAdviceDB, DatingVenueDB,
     LoveGuidanceDB, ChatSuggestionDB, GiftRecommendationDB,

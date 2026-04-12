@@ -1,572 +1,462 @@
 """
-天气服务模块
+Behavior 行为实验室 - 关系气象报告服务
 
-支持：
-1. OpenWeatherMap API（国际）
-2. 和风天气 API（国内）
-3. Mock 实现（用于测试）
-
-配置项：
-- WEATHER_PROVIDER: 天气服务提供商 (openweathermap, qweather, mock)
-- OPENWEATHERMAP_API_KEY: OpenWeatherMap API 密钥
-- QWEATHER_API_KEY: 和风天气 API 密钥
+关系气象报告服务 - 情感温度计算、天气描述、行动建议
 """
-import os
-import requests
 from typing import Dict, List, Optional, Any
-from datetime import datetime
-from abc import ABC, abstractmethod
+from datetime import datetime, timedelta
+from collections import defaultdict
+from db.database import SessionLocal
+from db.models import ConversationDB, ChatMessageDB
+from models.behavior_lab_models import RelationshipWeatherReportDB, EmotionWarningDB
 from utils.logger import logger
+from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 
 
-class WeatherProvider(ABC):
-    """天气服务提供者抽象基类"""
+class RelationshipWeatherService:
+    """关系气象报告服务"""
 
-    @abstractmethod
-    def get_current_weather(self, city: str) -> Optional[Dict[str, Any]]:
-        """获取当前天气"""
-        pass
+    # 天气描述映射 - 使用温度范围元组 (min, max)
+    WEATHER_DESCRIPTIONS = [
+        (80, 100, "sunny"),  # 晴朗
+        (60, 80, "partly_cloudy"),  # 多云
+        (40, 60, "cloudy"),  # 阴天
+        (20, 40, "rainy"),  # 雨天
+        (0, 20, "stormy"),  # 暴风雨
+    ]
 
-    @abstractmethod
-    def get_weather_forecast(self, city: str, days: int = 3) -> List[Dict[str, Any]]:
-        """获取天气预报"""
-        pass
+    WEATHER_LABELS = {
+        "sunny": "阳光明媚",
+        "partly_cloudy": "晴时多云",
+        "cloudy": "阴云密布",
+        "rainy": "小雨淅沥",
+        "stormy": "雷雨交加"
+    }
 
-    @abstractmethod
-    def get_outfit_suggestion(self, city: str) -> Dict[str, Any]:
-        """基于天气获取穿搭建议"""
-        pass
-
-
-class OpenWeatherMapProvider(WeatherProvider):
-    """OpenWeatherMap 天气服务提供者"""
-
-    BASE_URL = "https://api.openweathermap.org/data/2.5"
-
-    def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv("OPENWEATHERMAP_API_KEY")
-        if not self.api_key:
-            logger.warning("OpenWeatherMap API key not configured")
-
-    def get_current_weather(self, city: str) -> Optional[Dict[str, Any]]:
+    def generate_weather_report(
+        self,
+        user_a_id: str,
+        user_b_id: str,
+        report_period: str = "weekly",
+        db_session_param: Optional[Any] = None
+    ) -> Optional[Dict[str, Any]]:
         """
-        获取当前天气
+        生成关系气象报告
 
         Args:
-            city: 城市名
+            user_a_id: 用户 A ID
+            user_b_id: 用户 B ID
+            report_period: 报告周期（daily, weekly, monthly）
+            db_session_param: 可选的数据库会话
 
         Returns:
-            天气数据
+            气象报告
         """
-        if not self.api_key:
-            return None
+        with optional_db_session(db_session_param) as db:
+            # 确定报告日期范围
+            now = datetime.now()
+            if report_period == "daily":
+                days_back = 1
+                report_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            elif report_period == "weekly":
+                days_back = 7
+                report_date = now - timedelta(days=now.weekday())  # 本周一
+                report_date = report_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            else:  # monthly
+                days_back = 30
+                report_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-        try:
-            url = f"{self.BASE_URL}/weather"
-            params = {
-                "q": city,
-                "appid": self.api_key,
-                "units": "metric",
-                "lang": "zh_cn"
-            }
+            since = now - timedelta(days=days_back)
 
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
+            # 收集关系数据
+            data = self._collect_relationship_data(
+                user_a_id, user_b_id, since, db
+            )
+
+            # 计算情感温度
+            emotional_temperature = self._calculate_emotional_temperature(data)
+
+            # 确定天气描述
+            weather_description = self._determine_weather(emotional_temperature)
+
+            # 生成亮点
+            highlights = self._generate_highlights(data, emotional_temperature)
+
+            # 生成关注领域
+            areas_of_concern = self._generate_areas_of_concern(data)
+
+            # 生成冲突热点图
+            conflict_heatmap = self._generate_conflict_heatmap(data)
+
+            # 生成情感温度曲线
+            temperature_curve = self._generate_temperature_curve(
+                user_a_id, user_b_id, days_back, db
+            )
+
+            # 生成 AI 总结
+            ai_summary = self._generate_ai_summary(
+                weather_description, emotional_temperature, highlights, areas_of_concern
+            )
+
+            # 生成行动建议
+            action_suggestions = self._generate_action_suggestions(
+                weather_description, areas_of_concern
+            )
+
+            # 创建报告记录
+            report_id = f"report_{report_period}_{report_date.strftime('%Y%m%d')}_{user_a_id[:4]}{user_b_id[:4]}"
+
+            report = RelationshipWeatherReportDB(
+                id=report_id,
+                user_a_id=user_a_id,
+                user_b_id=user_b_id,
+                report_period=report_period,
+                report_date=report_date,
+                emotional_temperature=emotional_temperature,
+                weather_description=weather_description,
+                highlights=highlights,
+                areas_of_concern=areas_of_concern,
+                conflict_heatmap=conflict_heatmap,
+                temperature_curve=temperature_curve,
+                ai_summary=ai_summary,
+                action_suggestions=action_suggestions
+            )
+
+            db.add(report)
+
+            logger.info(f"Generated weather report: {report_id}, temp={emotional_temperature}")
 
             return {
-                "city": city,
-                "temperature": data["main"]["temp"],
-                "feels_like": data["main"]["feels_like"],
-                "humidity": data["main"]["humidity"],
-                "pressure": data["main"]["pressure"],
-                "weather": data["weather"][0]["description"],
-                "weather_icon": data["weather"][0]["icon"],
-                "wind_speed": data["wind"]["speed"],
-                "clouds": data.get("clouds", {}).get("all", 0),
-                "provider": "openweathermap",
-                "timestamp": datetime.now().isoformat()
-            }
-        except Exception as e:
-            logger.error(f"Error fetching weather from OpenWeatherMap: {e}")
-            return None
-
-    def get_weather_forecast(self, city: str, days: int = 3) -> List[Dict[str, Any]]:
-        """
-        获取天气预报
-
-        Args:
-            city: 城市名
-            days: 预报天数 (1-5)
-
-        Returns:
-            天气预报列表
-        """
-        if not self.api_key:
-            return []
-
-        days = min(max(days, 1), 5)  # 限制 1-5 天
-
-        try:
-            url = f"{self.BASE_URL}/forecast"
-            params = {
-                "q": city,
-                "appid": self.api_key,
-                "units": "metric",
-                "lang": "zh_cn"
+                "id": report_id,
+                "report_period": report_period,
+                "report_date": report_date.isoformat(),
+                "emotional_temperature": emotional_temperature,
+                "weather_description": weather_description,
+                "weather_label": self.WEATHER_LABELS.get(weather_description, ""),
+                "highlights": highlights,
+                "areas_of_concern": areas_of_concern,
+                "conflict_heatmap": conflict_heatmap,
+                "temperature_curve": temperature_curve,
+                "ai_summary": ai_summary,
+                "action_suggestions": action_suggestions
             }
 
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
+    def get_user_reports(
+        self,
+        user_id: str,
+        report_period: Optional[str] = None,
+        limit: int = 10,
+        db_session_param: Optional[Any] = None
+    ) -> List[Dict[str, Any]]:
+        """获取用户的报告历史"""
+        with optional_db_session(db_session_param) as db:
+            query = db.query(RelationshipWeatherReportDB).filter(
+                (RelationshipWeatherReportDB.user_a_id == user_id) |
+                (RelationshipWeatherReportDB.user_b_id == user_id)
+            )
 
-            # 整理每日预报
-            daily_forecasts = {}
-            for item in data["list"]:
-                dt_txt = item["dt_txt"]
-                date = dt_txt.split(" ")[0]
-                if date not in daily_forecasts:
-                    daily_forecasts[date] = {
-                        "date": date,
-                        "temp_max": item["main"]["temp"],
-                        "temp_min": item["main"]["temp"],
-                        "weather": item["weather"][0]["description"],
-                        "weather_icon": item["weather"][0]["icon"],
-                        "humidity": item["main"]["humidity"],
-                        "wind_speed": item["wind"]["speed"]
-                    }
-                else:
-                    daily_forecasts[date]["temp_max"] = max(
-                        daily_forecasts[date]["temp_max"], item["main"]["temp"]
-                    )
-                    daily_forecasts[date]["temp_min"] = min(
-                        daily_forecasts[date]["temp_min"], item["main"]["temp"]
-                    )
+            if report_period:
+                query = query.filter(RelationshipWeatherReportDB.report_period == report_period)
 
-            return list(daily_forecasts.values())[:days]
-        except Exception as e:
-            logger.error(f"Error fetching forecast from OpenWeatherMap: {e}")
-            return []
+            reports = query.order_by(
+                RelationshipWeatherReportDB.report_date.desc()
+            ).limit(limit).all()
 
-    def get_outfit_suggestion(self, city: str) -> Dict[str, Any]:
-        """
-        基于天气获取穿搭建议
+            return [self._report_to_dict(r) for r in reports]
 
-        Args:
-            city: 城市名
-
-        Returns:
-            穿搭建议
-        """
-        weather = self.get_current_weather(city)
-        if not weather:
-            return {"error": "无法获取天气数据"}
-
-        temp = weather["temperature"]
-        weather_desc = weather["weather"].lower()
-
-        # 温度穿搭建议
-        if temp < 5:
-            clothing = ["厚羽绒服", "毛衣", "保暖内衣", "围巾", "手套"]
-            style = "保暖优先"
-        elif temp < 15:
-            clothing = ["外套", "毛衣/卫衣", "长裤", "薄围巾"]
-            style = "注意保暖"
-        elif temp < 25:
-            clothing = ["长袖 T 恤", "薄外套", "牛仔裤/休闲裤"]
-            style = "舒适休闲"
-        else:
-            clothing = ["短袖 T 恤", "短裤/裙子", "凉鞋"]
-            style = "清爽透气"
-
-        # 天气状况建议
-        accessories = []
-        if "rain" in weather_desc or "drizzle" in weather_desc:
-            accessories.append("雨伞")
-            accessories.append("防水鞋")
-        if "snow" in weather_desc:
-            accessories.append("防滑鞋")
-            accessories.append("厚手套")
-        if "sunny" in weather_desc or "clear" in weather_desc:
-            accessories.append("太阳镜")
-            accessories.append("防晒霜")
-        if "cloud" in weather_desc:
-            accessories.append("薄外套备用")
-
-        # 约会场景建议
-        date_outfit_tips = []
-        if temp < 10:
-            date_outfit_tips.append("室内有暖气，建议内搭选择精致的单品")
-        if "rain" in weather_desc:
-            date_outfit_tips.append("雨天路滑，建议选择防滑的鞋子")
-        if temp > 25:
-            date_outfit_tips.append("天气较热，建议携带纸巾和小风扇")
-
-        return {
-            "city": city,
-            "temperature": temp,
-            "weather": weather_desc,
-            "clothing": clothing,
-            "style": style,
-            "accessories": accessories,
-            "date_outfit_tips": date_outfit_tips,
-            "provider": "openweathermap"
+    def _collect_relationship_data(
+        self,
+        user_a_id: str,
+        user_b_id: str,
+        since: datetime,
+        db: Any
+    ) -> Dict[str, Any]:
+        """收集关系数据"""
+        data = {
+            "messages": [],
+            "warnings": [],
+            "positive_interactions": 0,
+            "negative_interactions": 0,
+            "conversation_count": 0,
+            "avg_response_time": 0
         }
 
+        # 获取共同对话
+        conversations = db.query(ConversationDB).filter(
+            ((ConversationDB.user_id_1 == user_a_id) & (ConversationDB.user_id_2 == user_b_id)) |
+            ((ConversationDB.user_id_1 == user_b_id) & (ConversationDB.user_id_2 == user_a_id))
+        ).all()
 
-class QWeatherProvider(WeatherProvider):
-    """和风天气服务提供者（中国国内）"""
+        conversation_ids = [c.id for c in conversations]
+        data["conversation_count"] = len(conversation_ids)
 
-    BASE_URL = "https://devapi.qweather.com/v7"
+        if conversation_ids:
+            # 获取消息
+            messages = db.query(ChatMessageDB).filter(
+                ChatMessageDB.conversation_id.in_(conversation_ids),
+                ChatMessageDB.created_at >= since
+            ).all()
+            data["messages"] = messages
 
-    def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv("QWEATHER_API_KEY")
-        if not self.api_key:
-            logger.warning("QWeather API key not configured")
+            # 简单分析消息情感
+            for msg in messages:
+                if self._is_positive_message(msg.content):
+                    data["positive_interactions"] += 1
+                elif self._is_negative_message(msg.content):
+                    data["negative_interactions"] += 1
 
-    def _get_city_location(self, city: str) -> Optional[Dict[str, str]]:
-        """获取城市地理位置 ID"""
-        try:
-            url = f"{self.BASE_URL}/city/search"
-            params = {
-                "location": city,
-                "key": self.api_key
-            }
+        # 获取预警记录
+        warnings = db.query(EmotionWarningDB).filter(
+            EmotionWarningDB.created_at >= since
+        ).all()
+        data["warnings"] = warnings
 
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
+        return data
 
-            if data.get("code") == "200" and data.get("location"):
-                return data["location"][0]
-            return None
-        except Exception as e:
-            logger.error(f"Error fetching city location: {e}")
-            return None
+    def _is_positive_message(self, content: str) -> bool:
+        """判断消息是否积极"""
+        positive_words = ["开心", "喜欢", "爱", "谢谢", "感谢", "好", "棒", "温暖", "幸福"]
+        return any(word in content.lower() for word in positive_words)
 
-    def get_current_weather(self, city: str) -> Optional[Dict[str, Any]]:
-        """获取当前天气"""
-        if not self.api_key:
-            return None
+    def _is_negative_message(self, content: str) -> bool:
+        """判断消息是否消极"""
+        negative_words = ["生气", "讨厌", "烦", "难过", "失望", "够了", "随便", "呵呵"]
+        return any(word in content.lower() for word in negative_words)
 
-        try:
-            # 先获取城市 ID
-            location_info = self._get_city_location(city)
-            if not location_info:
-                logger.warning(f"City {city} not found")
-                return None
+    def _calculate_emotional_temperature(self, data: Dict[str, Any]) -> float:
+        """计算情感温度（0-100）"""
+        # 基础温度 50
+        temperature = 50.0
 
-            location_id = location_info["id"]
+        # 基于积极/消极互动比例调整
+        total = data["positive_interactions"] + data["negative_interactions"]
+        if total > 0:
+            positive_ratio = data["positive_interactions"] / total
+            temperature += (positive_ratio - 0.5) * 40  # 最多±20 分
 
-            # 获取天气数据
-            url = f"{self.BASE_URL}/weather/now"
-            params = {
-                "location": location_id,
-                "key": self.api_key
-            }
+        # 基于预警数量扣减
+        warning_count = len(data.get("warnings", []))
+        temperature -= min(20, warning_count * 5)
 
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
+        # 基于对话频率加分
+        if data["conversation_count"] > 0:
+            temperature += min(10, data["conversation_count"] * 2)
 
-            if data.get("code") != "200":
-                return None
+        return max(0, min(100, temperature))
 
-            now = data.get("now", {})
+    def _determine_weather(self, temperature: float) -> str:
+        """根据温度确定天气描述"""
+        for min_temp, max_temp, weather in self.WEATHER_DESCRIPTIONS:
+            if min_temp < temperature <= max_temp:
+                return weather
+        return "cloudy"
 
-            return {
-                "city": city,
-                "temperature": float(now.get("temp", 0)),
-                "feels_like": float(now.get("feelsLike", 0)),
-                "humidity": int(now.get("humidity", 0)),
-                "pressure": int(now.get("pressure", 0)),
-                "weather": now.get("text", "未知"),
-                "weather_icon": now.get("icon", ""),
-                "wind_speed": float(now.get("windSpeed", 0)),
-                "wind_direction": now.get("windDir", ""),
-                "clouds": int(now.get("cloud", 0)),
-                "provider": "qweather",
-                "timestamp": datetime.now().isoformat()
-            }
-        except Exception as e:
-            logger.error(f"Error fetching weather from QWeather: {e}")
-            return None
+    def _generate_highlights(
+        self,
+        data: Dict[str, Any],
+        temperature: float
+    ) -> List[Dict[str, Any]]:
+        """生成亮点"""
+        highlights = []
 
-    def get_weather_forecast(self, city: str, days: int = 3) -> List[Dict[str, Any]]:
-        """获取天气预报"""
-        if not self.api_key:
-            return []
-
-        days = min(max(days, 1), 7)  # 和风天气支持最多 7 天
-
-        try:
-            location_info = self._get_city_location(city)
-            if not location_info:
-                return []
-
-            location_id = location_info["id"]
-
-            url = f"{self.BASE_URL}/weather/{days}d"
-            params = {
-                "location": location_id,
-                "key": self.api_key
-            }
-
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-
-            if data.get("code") != "200":
-                return []
-
-            forecasts = []
-            for daily in data.get("daily", []):
-                forecasts.append({
-                    "date": daily.get("fxDate", ""),
-                    "temp_max": float(daily.get("tempMax", 0)),
-                    "temp_min": float(daily.get("tempMin", 0)),
-                    "weather": daily.get("textDay", ""),
-                    "weather_icon": daily.get("iconDay", ""),
-                    "humidity": int(daily.get("humidity", 0)),
-                    "wind_speed": float(daily.get("windSpeedDay", 0)),
-                    "wind_direction": daily.get("windDirDay", "")
-                })
-
-            return forecasts
-        except Exception as e:
-            logger.error(f"Error fetching forecast from QWeather: {e}")
-            return []
-
-    def get_outfit_suggestion(self, city: str) -> Dict[str, Any]:
-        """基于天气获取穿搭建议"""
-        weather = self.get_current_weather(city)
-        if not weather:
-            return {"error": "无法获取天气数据"}
-
-        temp = weather["temperature"]
-        weather_desc = weather["weather"]
-
-        # 温度穿搭建议
-        if temp < 5:
-            clothing = ["厚羽绒服", "毛衣", "保暖内衣", "围巾", "手套"]
-            style = "保暖优先"
-        elif temp < 15:
-            clothing = ["外套", "毛衣/卫衣", "长裤", "薄围巾"]
-            style = "注意保暖"
-        elif temp < 25:
-            clothing = ["长袖 T 恤", "薄外套", "牛仔裤/休闲裤"]
-            style = "舒适休闲"
-        else:
-            clothing = ["短袖 T 恤", "短裤/裙子", "凉鞋"]
-            style = "清爽透气"
-
-        # 天气状况建议
-        accessories = []
-        if "雨" in weather_desc:
-            accessories.append("雨伞")
-            accessories.append("防水鞋")
-        if "雪" in weather_desc:
-            accessories.append("防滑鞋")
-            accessories.append("厚手套")
-        if "晴" in weather_desc:
-            accessories.append("太阳镜")
-            accessories.append("防晒霜")
-        if "云" in weather_desc:
-            accessories.append("薄外套备用")
-
-        # 约会场景建议
-        date_outfit_tips = []
-        if temp < 10:
-            date_outfit_tips.append("室内有暖气，建议内搭选择精致的单品")
-        if "雨" in weather_desc:
-            date_outfit_tips.append("雨天路滑，建议选择防滑的鞋子")
-        if temp > 25:
-            date_outfit_tips.append("天气较热，建议携带纸巾和小风扇")
-
-        return {
-            "city": city,
-            "temperature": temp,
-            "weather": weather_desc,
-            "clothing": clothing,
-            "style": style,
-            "accessories": accessories,
-            "date_outfit_tips": date_outfit_tips,
-            "provider": "qweather"
-        }
-
-
-class MockWeatherProvider(WeatherProvider):
-    """Mock 天气服务提供者（用于测试和降级）"""
-
-    def __init__(self):
-        self.mock_data = {
-            "北京市": {
-                "temperature": 22,
-                "feels_like": 21,
-                "humidity": 45,
-                "weather": "晴朗",
-                "wind_speed": 2.5
-            },
-            "上海市": {
-                "temperature": 25,
-                "feels_like": 26,
-                "humidity": 60,
-                "weather": "多云",
-                "wind_speed": 3.0
-            },
-            "深圳市": {
-                "temperature": 28,
-                "feels_like": 30,
-                "humidity": 75,
-                "weather": "晴热",
-                "wind_speed": 2.0
-            },
-            "广州市": {
-                "temperature": 27,
-                "feels_like": 29,
-                "humidity": 70,
-                "weather": "多云",
-                "wind_speed": 2.5
-            },
-        }
-
-    def get_current_weather(self, city: str) -> Optional[Dict[str, Any]]:
-        """获取模拟的当前天气"""
-        mock = self.mock_data.get(city, {
-            "temperature": 20,
-            "feels_like": 20,
-            "humidity": 50,
-            "weather": "晴朗",
-            "wind_speed": 2.0
-        })
-
-        return {
-            "city": city,
-            "temperature": mock["temperature"],
-            "feels_like": mock["feels_like"],
-            "humidity": mock["humidity"],
-            "pressure": 1013,
-            "weather": mock["weather"],
-            "weather_icon": "sunny",
-            "wind_speed": mock["wind_speed"],
-            "clouds": 10,
-            "provider": "mock",
-            "timestamp": datetime.now().isoformat()
-        }
-
-    def get_weather_forecast(self, city: str, days: int = 3) -> List[Dict[str, Any]]:
-        """获取模拟的天气预报"""
-        forecasts = []
-        base_temp = self.mock_data.get(city, {}).get("temperature", 20)
-
-        for i in range(days):
-            forecasts.append({
-                "date": datetime.now().strftime(f"%Y-%m-%d"),
-                "temp_max": base_temp + i * 2,
-                "temp_min": base_temp - i * 2,
-                "weather": "晴朗" if i % 2 == 0 else "多云",
-                "weather_icon": "sunny" if i % 2 == 0 else "cloudy",
-                "humidity": 50 + i * 5,
-                "wind_speed": 2.0 + i * 0.5
+        if temperature >= 80:
+            highlights.append({
+                "type": "high_temperature",
+                "title": "关系热度高涨",
+                "description": "你们的情感温度处于高位，继续保持真诚的交流！"
             })
 
-        return forecasts
+        if data["positive_interactions"] > data["negative_interactions"] * 2:
+            highlights.append({
+                "type": "positive_ratio",
+                "title": "积极互动满满",
+                "description": "你们的积极互动远超消极互动，这是健康关系的标志！"
+            })
 
-    def get_outfit_suggestion(self, city: str) -> Dict[str, Any]:
-        """获取模拟的穿搭建议"""
-        weather = self.get_current_weather(city)
-        temp = weather["temperature"]
+        if data["conversation_count"] >= 7:
+            highlights.append({
+                "type": "frequent_communication",
+                "title": "沟通频繁",
+                "description": "你们保持频繁的沟通，这是增进了解的基础。"
+            })
 
-        if temp < 5:
-            clothing = ["厚羽绒服", "毛衣", "保暖内衣"]
-            style = "保暖优先"
-        elif temp < 15:
-            clothing = ["外套", "毛衣", "长裤"]
-            style = "注意保暖"
-        elif temp < 25:
-            clothing = ["长袖 T 恤", "薄外套", "牛仔裤"]
-            style = "舒适休闲"
-        else:
-            clothing = ["短袖 T 恤", "短裤/裙子"]
-            style = "清爽透气"
+        return highlights
 
-        return {
-            "city": city,
-            "temperature": temp,
-            "weather": weather["weather"],
-            "clothing": clothing,
-            "style": style,
-            "accessories": ["太阳镜"],
-            "date_outfit_tips": ["保持清爽整洁", "选择舒适的鞋子"],
-            "provider": "mock"
+    def _generate_areas_of_concern(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """生成需要关注的领域"""
+        concerns = []
+
+        warning_count = len(data.get("warnings", []))
+        if warning_count >= 3:
+            concerns.append({
+                "type": "frequent_conflicts",
+                "title": "冲突频发",
+                "description": f"本周检测到{warning_count}次情绪预警，建议学习一些冲突管理技巧。",
+                "priority": "high"
+            })
+
+        if data["negative_interactions"] > data["positive_interactions"]:
+            concerns.append({
+                "type": "negative_ratio",
+                "title": "消极互动偏多",
+                "description": "消极互动超过积极互动，试着多表达欣赏和感谢。",
+                "priority": "medium"
+            })
+
+        if data["conversation_count"] <= 2:
+            concerns.append({
+                "type": "low_communication",
+                "title": "沟通不足",
+                "description": "本周沟通次数较少，主动联系是维系关系的关键。",
+                "priority": "medium"
+            })
+
+        return concerns
+
+    def _generate_conflict_heatmap(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """生成冲突热点图"""
+        heatmap = {
+            "topics": defaultdict(int),
+            "times": defaultdict(int),
+            "triggers": []
         }
 
+        for warning in data.get("warnings", []):
+            # 按时间统计
+            if warning.created_at:
+                hour = warning.created_at.hour
+                if 9 <= hour < 12:
+                    heatmap["times"]["morning"] += 1
+                elif 12 <= hour < 18:
+                    heatmap["times"]["afternoon"] += 1
+                else:
+                    heatmap["times"]["evening"] += 1
 
-class WeatherService:
-    """天气服务统一入口"""
+            # 按触发原因统计
+            reason = getattr(warning, "trigger_reason", "")
+            if "绝对化" in reason:
+                heatmap["triggers"].append("绝对化表达")
+            if "轻蔑" in reason:
+                heatmap["triggers"].append("轻蔑气")
 
-    def __init__(self, provider: Optional[str] = None):
-        """
-        初始化天气服务
+        # 转换为普通字典
+        heatmap["topics"] = dict(heatmap["topics"])
+        heatmap["times"] = dict(heatmap["times"])
+        heatmap["triggers"] = list(set(heatmap["triggers"]))
 
-        Args:
-            provider: 服务提供商 (openweathermap, qweather, mock)
-        """
-        self.provider_name = provider or os.getenv("WEATHER_PROVIDER", "mock")
-        self.provider = self._create_provider(self.provider_name)
+        return heatmap
 
-    def _create_provider(self, provider_name: str) -> WeatherProvider:
-        """创建天气服务提供者"""
-        if provider_name == "openweathermap":
-            return OpenWeatherMapProvider()
-        elif provider_name == "qweather":
-            return QWeatherProvider()
+    def _generate_temperature_curve(
+        self,
+        user_a_id: str,
+        user_b_id: str,
+        days: int,
+        db: Any
+    ) -> List[Dict[str, Any]]:
+        """生成情感温度曲线数据"""
+        curve = []
+
+        for i in range(days):
+            date = datetime.now() - timedelta(days=i)
+            date_str = date.strftime("%Y-%m-%d")
+
+            # 获取当天的数据计算温度
+            # 简化实现：使用随机波动
+            base_temp = 65 + (i % 7) * 3  # 基础温度
+            curve.append({
+                "date": date_str,
+                "temperature": min(100, max(0, base_temp))
+            })
+
+        return list(reversed(curve))
+
+    def _generate_ai_summary(
+        self,
+        weather: str,
+        temperature: float,
+        highlights: List[Dict[str, Any]],
+        concerns: List[Dict[str, Any]]
+    ) -> str:
+        """生成 AI 总结"""
+        weather_label = self.WEATHER_LABELS.get(weather, "")
+
+        summary_parts = [f"本周你们的关系天气是{weather_label}，情感温度{temperature:.0f}分。"]
+
+        if highlights:
+            summary_parts.append(f"有{len(highlights)}个亮点时刻。")
+
+        if concerns:
+            summary_parts.append(f"需要关注{len(concerns)}个方面。")
+
+        if temperature >= 70:
+            summary_parts.append("整体而言，你们的关系处于健康状态，继续保持！")
+        elif temperature >= 40:
+            summary_parts.append("你们的关系有些波动，建议多关注彼此的感受。")
         else:
-            return MockWeatherProvider()
+            summary_parts.append("你们的关系正面临挑战，建议寻求专业帮助或深入沟通。")
 
-    def get_weather(self, city: str) -> Optional[Dict[str, Any]]:
-        """
-        获取天气信息
+        return "".join(summary_parts)
 
-        Args:
-            city: 城市名
+    def _generate_action_suggestions(
+        self,
+        weather: str,
+        concerns: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """生成行动建议"""
+        suggestions = []
 
-        Returns:
-            天气数据
-        """
-        return self.provider.get_current_weather(city)
+        # 基于天气的通用建议
+        if weather in ["rainy", "stormy"]:
+            suggestions.append({
+                "type": "general",
+                "title": "关系修复",
+                "content": "建议安排一次真诚的对话，倾听彼此的感受，避免指责和防御。",
+                "priority": 1
+            })
+        elif weather == "cloudy":
+            suggestions.append({
+                "type": "general",
+                "title": "增加互动",
+                "content": "试着主动分享日常，增加积极的互动机会。",
+                "priority": 2
+            })
+        else:
+            suggestions.append({
+                "type": "general",
+                "title": "保持现状",
+                "content": "你们的关系状态良好，继续保持真诚的沟通和关心。",
+                "priority": 3
+            })
 
-    def get_forecast(self, city: str, days: int = 3) -> List[Dict[str, Any]]:
-        """
-        获取天气预报
+        # 基于具体问题的建议
+        for concern in concerns:
+            if concern["type"] == "frequent_conflicts":
+                suggestions.append({
+                    "type": "conflict_management",
+                    "title": "学习冲突管理",
+                    "content": "可以尝试'我语句'表达法，或使用冷静锦囊技巧。",
+                    "priority": 1
+                })
 
-        Args:
-            city: 城市名
-            days: 预报天数
+        return sorted(suggestions, key=lambda x: x.get("priority", 99))
 
-        Returns:
-            天气预报列表
-        """
-        return self.provider.get_weather_forecast(city, days)
-
-    def get_outfit_recommendation(self, city: str) -> Dict[str, Any]:
-        """
-        获取穿搭推荐
-
-        Args:
-            city: 城市名
-
-        Returns:
-            穿搭推荐
-        """
-        return self.provider.get_outfit_suggestion(city)
-
-    def switch_provider(self, provider_name: str):
-        """切换天气服务提供者"""
-        self.provider = self._create_provider(provider_name)
-        self.provider_name = provider_name
-        logger.info(f"Switched weather provider to {provider_name}")
+    def _report_to_dict(self, report: RelationshipWeatherReportDB) -> Dict[str, Any]:
+        """将报告对象转换为字典"""
+        return {
+            "id": report.id,
+            "report_period": report.report_period,
+            "report_date": report.report_date.isoformat() if report.report_date else None,
+            "emotional_temperature": report.emotional_temperature,
+            "weather_description": report.weather_description,
+            "highlights": report.highlights,
+            "areas_of_concern": report.areas_of_concern,
+            "conflict_heatmap": report.conflict_heatmap,
+            "temperature_curve": report.temperature_curve,
+            "ai_summary": report.ai_summary,
+            "action_suggestions": report.action_suggestions,
+            "created_at": report.created_at.isoformat() if report.created_at else None
+        }
 
 
 # 全局服务实例
-weather_service = WeatherService()
+relationship_weather_service = RelationshipWeatherService()

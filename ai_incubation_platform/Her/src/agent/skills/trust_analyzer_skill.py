@@ -1,7 +1,7 @@
 """
 信任度分析 Skill
 
-P0 功能：综合分析用户信任度，包括信任分、信任勋章、验证状态等
+Identity 功能：综合分析用户信任度，包括信任分、信任勋章、验证状态等
 """
 from typing import Dict, Any, Optional, List
 from datetime import datetime
@@ -156,7 +156,7 @@ class TrustAnalyzerSkill:
     def _get_trust_badges(self, user_id: str) -> List[Dict]:
         """获取信任勋章"""
         from utils.db_session_manager import db_session
-        from models.p0_identity_models import TrustBadgeDB
+        from models.identity_models import TrustBadgeDB
 
         with db_session() as db:
             badges = db.query(TrustBadgeDB).filter(
@@ -179,7 +179,7 @@ class TrustAnalyzerSkill:
     def _get_verifications(self, user_id: str) -> List[Dict]:
         """获取验证状态"""
         from utils.db_session_manager import db_session
-        from models.p0_identity_models import (
+        from models.identity_models import (
             EducationCredentialDB,
             OccupationCredentialDB,
             IncomeCredentialDB,

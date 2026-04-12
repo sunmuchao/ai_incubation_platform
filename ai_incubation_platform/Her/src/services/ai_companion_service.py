@@ -15,6 +15,7 @@ from db.models import (
     AICompanionSessionDB, AICompanionMessageDB
 )
 from agent.skills.emotion_analysis_skill import analyze_text_emotion_sync
+from services.base_service import BaseService
 
 
 # 虚拟角色设定
@@ -86,11 +87,11 @@ SESSION_TYPES = {
 }
 
 
-class AICompanionService:
+class AICompanionService(BaseService):
     """AI 陪伴助手服务"""
 
     def __init__(self, db: Session, llm_client=None):
-        self.db = db
+        super().__init__(db)
         self.llm_client = llm_client  # 可选的 LLM 客户端
 
     def create_session(self, user_id: str,

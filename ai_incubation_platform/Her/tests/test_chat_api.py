@@ -175,18 +175,20 @@ class TestMessageSendAPI:
 
     def test_send_message_success(self, client, db_session):
         """测试发送消息成功"""
-        sender = make_user(id="sender_1", email="sender1@example.com")
-        receiver = make_user(id="receiver_1", email="receiver1@example.com", gender="female")
+        sender_id = str(uuid.uuid4())
+        receiver_id = str(uuid.uuid4())
+        sender = make_user(id=sender_id, email="sender1@example.com")
+        receiver = make_user(id=receiver_id, email="receiver1@example.com", gender="female")
         db_session.add_all([sender, receiver])
         db_session.commit()
 
-        token = create_access_token(user_id="sender_1")
+        token = create_access_token(user_id=sender_id)
 
         response = client.post(
             "/api/chat/send",
             headers={"Authorization": f"Bearer {token}"},
             json={
-                "receiver_id": "receiver_1",
+                "receiver_id": receiver_id,
                 "content": "Hello!",
             }
         )
@@ -196,17 +198,19 @@ class TestMessageSendAPI:
 
     def test_send_message_with_type(self, client, db_session):
         """测试发送带类型的消息"""
-        sender = make_user(id="sender_type", email="sender_type@example.com")
+        sender_id = str(uuid.uuid4())
+        receiver_id = str(uuid.uuid4())
+        sender = make_user(id=sender_id, email="sender_type@example.com")
         db_session.add(sender)
         db_session.commit()
 
-        token = create_access_token(user_id="sender_type")
+        token = create_access_token(user_id=sender_id)
 
         response = client.post(
             "/api/chat/send",
             headers={"Authorization": f"Bearer {token}"},
             json={
-                "receiver_id": "receiver_type",
+                "receiver_id": receiver_id,
                 "content": "image_url",
                 "message_type": "image",
             }
@@ -216,17 +220,19 @@ class TestMessageSendAPI:
 
     def test_send_message_with_metadata(self, client, db_session):
         """测试发送带元数据的消息"""
-        sender = make_user(id="sender_meta", email="sender_meta@example.com")
+        sender_id = str(uuid.uuid4())
+        receiver_id = str(uuid.uuid4())
+        sender = make_user(id=sender_id, email="sender_meta@example.com")
         db_session.add(sender)
         db_session.commit()
 
-        token = create_access_token(user_id="sender_meta")
+        token = create_access_token(user_id=sender_id)
 
         response = client.post(
             "/api/chat/send",
             headers={"Authorization": f"Bearer {token}"},
             json={
-                "receiver_id": "receiver_meta",
+                "receiver_id": receiver_id,
                 "content": "voice_data",
                 "message_type": "voice",
                 "message_metadata": {"duration": 30},
@@ -237,17 +243,19 @@ class TestMessageSendAPI:
 
     def test_send_message_empty_content(self, client, db_session):
         """测试发送空内容消息"""
-        sender = make_user(id="sender_empty", email="sender_empty@example.com")
+        sender_id = str(uuid.uuid4())
+        receiver_id = str(uuid.uuid4())
+        sender = make_user(id=sender_id, email="sender_empty@example.com")
         db_session.add(sender)
         db_session.commit()
 
-        token = create_access_token(user_id="sender_empty")
+        token = create_access_token(user_id=sender_id)
 
         response = client.post(
             "/api/chat/send",
             headers={"Authorization": f"Bearer {token}"},
             json={
-                "receiver_id": "receiver_empty",
+                "receiver_id": receiver_id,
                 "content": "",
             }
         )
@@ -257,17 +265,19 @@ class TestMessageSendAPI:
 
     def test_send_message_very_long_content(self, client, db_session):
         """测试发送超长内容消息"""
-        sender = make_user(id="sender_long", email="sender_long@example.com")
+        sender_id = str(uuid.uuid4())
+        receiver_id = str(uuid.uuid4())
+        sender = make_user(id=sender_id, email="sender_long@example.com")
         db_session.add(sender)
         db_session.commit()
 
-        token = create_access_token(user_id="sender_long")
+        token = create_access_token(user_id=sender_id)
 
         response = client.post(
             "/api/chat/send",
             headers={"Authorization": f"Bearer {token}"},
             json={
-                "receiver_id": "receiver_long",
+                "receiver_id": receiver_id,
                 "content": "A" * 10000,
             }
         )
@@ -276,10 +286,11 @@ class TestMessageSendAPI:
 
     def test_send_message_without_auth(self, client):
         """测试无认证发送消息"""
+        receiver_id = str(uuid.uuid4())
         response = client.post(
             "/api/chat/send",
             json={
-                "receiver_id": "receiver_no_auth",
+                "receiver_id": receiver_id,
                 "content": "Hello",
             }
         )
@@ -290,11 +301,12 @@ class TestMessageSendAPI:
 
     def test_send_message_invalid_token(self, client):
         """测试无效 Token 发送消息"""
+        receiver_id = str(uuid.uuid4())
         response = client.post(
             "/api/chat/send",
             headers={"Authorization": "Bearer invalid_token"},
             json={
-                "receiver_id": "receiver_invalid",
+                "receiver_id": receiver_id,
                 "content": "Hello",
             }
         )
@@ -304,17 +316,18 @@ class TestMessageSendAPI:
 
     def test_send_message_to_self(self, client, db_session):
         """测试给自己发消息"""
-        user = make_user(id="self_msg_user", email="self@example.com")
+        user_id = str(uuid.uuid4())
+        user = make_user(id=user_id, email="self@example.com")
         db_session.add(user)
         db_session.commit()
 
-        token = create_access_token(user_id="self_msg_user")
+        token = create_access_token(user_id=user_id)
 
         response = client.post(
             "/api/chat/send",
             headers={"Authorization": f"Bearer {token}"},
             json={
-                "receiver_id": "self_msg_user",
+                "receiver_id": user_id,  # 发给自己
                 "content": "Message to self",
             }
         )
@@ -323,17 +336,19 @@ class TestMessageSendAPI:
 
     def test_send_message_to_nonexistent_user(self, client, db_session):
         """测试发送给不存在用户"""
-        sender = make_user(id="sender_nonexist", email="sender_nonexist@example.com")
+        sender_id = str(uuid.uuid4())
+        nonexistent_receiver = str(uuid.uuid4())  # 使用 UUID 格式
+        sender = make_user(id=sender_id, email="sender_nonexist@example.com")
         db_session.add(sender)
         db_session.commit()
 
-        token = create_access_token(user_id="sender_nonexist")
+        token = create_access_token(user_id=sender_id)
 
         response = client.post(
             "/api/chat/send",
             headers={"Authorization": f"Bearer {token}"},
             json={
-                "receiver_id": "nonexistent_receiver",
+                "receiver_id": nonexistent_receiver,
                 "content": "Hello",
             }
         )
@@ -342,17 +357,19 @@ class TestMessageSendAPI:
 
     def test_send_message_special_characters(self, client, db_session):
         """测试发送特殊字符消息"""
-        sender = make_user(id="sender_special", email="sender_special@example.com")
+        sender_id = str(uuid.uuid4())
+        receiver_id = str(uuid.uuid4())
+        sender = make_user(id=sender_id, email="sender_special@example.com")
         db_session.add(sender)
         db_session.commit()
 
-        token = create_access_token(user_id="sender_special")
+        token = create_access_token(user_id=sender_id)
 
         response = client.post(
             "/api/chat/send",
             headers={"Authorization": f"Bearer {token}"},
             json={
-                "receiver_id": "receiver_special",
+                "receiver_id": receiver_id,
                 "content": "<script>alert('xss')</script> & \" ' \\n \\t",
             }
         )

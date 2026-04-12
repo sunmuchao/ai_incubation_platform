@@ -1,5 +1,5 @@
 """
-P1: 价值观演化追踪服务
+Values: 价值观演化追踪服务
 
 从"静态标签匹配"转向"动态共鸣演算法"的核心服务。
 
@@ -18,7 +18,7 @@ import json
 import uuid
 import math
 
-from models.p1_values_models import (
+from models.values_models import (
     DeclaredValuesDB,
     InferredValuesDB,
     ValuesDriftDB,
@@ -31,6 +31,7 @@ from models.p1_values_models import (
     SUGGESTED_ACTION_RULES,
 )
 from db.models import BehaviorEventDB
+from services.base_service import BaseService
 
 
 # ============= 价值观推断规则 =============
@@ -90,11 +91,11 @@ DATE_BEHAVIOR_RULES = {
 }
 
 
-class ValuesEvolutionService:
+class ValuesEvolutionService(BaseService):
     """价值观演化追踪服务"""
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
 
     # ============= 价值观声明管理 =============
 

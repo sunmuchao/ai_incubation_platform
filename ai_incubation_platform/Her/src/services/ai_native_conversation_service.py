@@ -57,13 +57,21 @@ class AINativeConversationService:
     """
 
     # AI 人设
-    AI_PERSONA = """你是一位专业、温暖、贴心的 AI 助手 Her。
+    AI_PERSONA = """你是一位专业、温暖、贴心的 AI 情感顾问 Her。你拥有20年专业婚恋顾问经验，精通心理学、社会学和人际关系学。
 你的特点：
 - 语气温柔亲切，偶尔用一些 emoji（🌸 ✨ 💕 😊）
 - 像朋友一样聊天，不是机械问答
 - 善于倾听和追问，让用户感觉被理解
 - 会共情，会开玩笑，会有自己的情绪
 - 每次只问一个问题，不要像查户口
+
+## 你的核心能力
+当用户问"你能干什么"或类似问题时，告诉TA你可以：
+1. **智能匹配** - 基于深度了解，为你推荐真正合适的人
+2. **关系洞察** - 分析你和TA的匹配度，给出专业建议
+3. **情感陪伴** - 倾听你的心事，陪你聊天解闷
+4. **恋爱指导** - 在恋爱过程中给到贴心的建议和提醒
+5. **约会策划** - 帮你策划浪漫的约会和惊喜
 
 你的目标是通过自然对话了解用户的：
 1. 关系期望（认真恋爱/结婚/交友）【核心】
@@ -74,6 +82,7 @@ class AINativeConversationService:
 6. 感情的底线/禁忌
 
 ⚠️ 重要注意：
+- 如果用户问你的能力，先热情介绍，再自然引导回对话
 - 如果用户在注册时已填写了基本信息（年龄、性别、位置等），不要重复询问！
 - 在提问前，先查看"已了解的用户信息"，确认该维度是否已收集
 - 如果某个维度已标记为"已确认"，跳过该话题，问下一个缺失的维度
@@ -797,40 +806,25 @@ class AINativeConversationService:
             self._background_extract_and_save(user_id, state, user_message, ai_message)
         )
 
-    def _detect_asked_questions(self, conversation_history: list) -> list:
+    def _format_pending_dimensions(self, state: ConversationState) -> str:
         """
-        检测对话历史中已经问过的问题，避免重复提问
+        格式化待了解的维度列表
 
         Args:
-            conversation_history: 对话历史列表
+            state: 对话状态
 
         Returns:
-            已问过的问题关键词列表
+            格式化的维度列表字符串
         """
-        # 问题关键词映射：检测到这些关键词表示已问过相关问题
-        question_keywords = {
-            "relationship_goal": ["希望找到什么样的关系", "关系期望", "什么样的人", "感情期待", "恋爱", "结婚", "交友"],
-            "ideal_type": ["理想型", "另一半是什么样的", "对方是什么样的", "喜欢什么样的人"],
-            "personality": ["性格", "内向还是外向", "什么性格"],
-            "lifestyle": ["生活方式", "日常", "周末", "作息"],
-            "interests": ["爱好", "兴趣", "喜欢做什么", "业余时间"],
-            "values": ["价值观", "看重什么", "底线", "不能接受什么"],
-        }
+        pending = []
+        for dim_key, dim in sorted(state.knowledge_base.items(), key=lambda x: x[1].priority):
+            if not dim.collected:
+                pending.append(f"- {dim.name}（{dim.description}）")
 
-        asked = []
+        if not pending:
+            return "所有维度已了解完毕"
 
-        # 只检查 AI 的消息（assistant 角色）
-        for msg in conversation_history:
-            if msg.get("role") == "assistant":
-                content = msg.get("content", "")
-                for dim_key, keywords in question_keywords.items():
-                    # 如果消息中包含问题关键词，标记为已问过
-                    for kw in keywords:
-                        if kw in content and dim_key not in asked:
-                            asked.append(dim_key)
-                            break
-
-        return asked
+        return "\n".join(pending)
 
     def _build_stream_prompt(self, state: ConversationState, user_message: str) -> str:
         """
@@ -858,18 +852,10 @@ class AINativeConversationService:
             if dim.collected and dim.raw_data:
                 collected_summary.append(f"- {dim.name}: {dim.raw_data}")
 
-        # 确定下一个要了解的维度
-        next_dimension = None
-        for dim_key, dim in sorted(state.knowledge_base.items(), key=lambda x: x[1].priority):
-            if not dim.collected:
-                next_dimension = dim
-                break
-
-        # 🔍 [DEBUG] 记录话题选择逻辑
+        # 🔍 [DEBUG] 记录当前状态
         collected_dim_names = [d.name for d in state.knowledge_base.values() if d.collected]
         uncollected_dim_names = [d.name for d in state.knowledge_base.values() if not d.collected]
-        logger.info(f"[Prompt] Collected dims: {collected_dim_names}, Uncollected dims: {uncollected_dim_names}")
-        logger.info(f"[Prompt] Next topic: {next_dimension.name if next_dimension else 'None (ending)'}")
+        logger.info(f"[Prompt] Collected: {collected_dim_names}, Pending: {uncollected_dim_names}")
 
         # 已有信息提醒
         existing_info_reminder = ""
@@ -880,66 +866,47 @@ class AINativeConversationService:
                 if fields:
                     existing_info_reminder = f"\n⚠️ 用户已填写（不要重复询问）：{', '.join(fields)}"
 
-        # 已收集的维度列表（用于提示 LLM 不要重复提取）
+        # 已收集的维度列表
         collected_dim_keys = [k for k, d in state.knowledge_base.items() if d.collected]
-        collected_hint = f"\n已收集的维度（跳过）: {', '.join(collected_dim_keys)}" if collected_dim_keys else ""
-
-        # 🔧 新增：检测对话历史中已问过的问题，避免重复提问
-        asked_questions = self._detect_asked_questions(state.conversation_history)
-        asked_hint = ""
-        if asked_questions:
-            asked_hint = f"\n⚠️ 已在对话中讨论过（不要重复问）：{', '.join(asked_questions)}"
-            logger.info(f"[Prompt] Detected asked questions: {asked_questions}")
 
         return f"""{self.AI_PERSONA}
-{existing_info_reminder}{asked_hint}
+{existing_info_reminder}
 
-## 对话上下文
+## 对话上下文（完整历史）
 {history_text}
 
 ## 用户刚说
 {user_message}
 
-## 已了解的用户信息
+## 已收集的用户信息
 {chr(10).join(collected_summary) if collected_summary else "暂无"}
-{collected_hint}
 
-## 任务
-请完成以下两件事，按指定格式输出：
+## 待了解的维度
+{self._format_pending_dimensions(state)}
 
-### 1. 生成回复
-- 先回应刚才的话
-- {"下一个话题：" + next_dimension.description if next_dimension else "准备结束对话，给出温暖的结束语"}
+## 任务：生成回复
+请根据对话历史判断下一步：
+
+1. **如果刚才的问题用户回答不完整**：
+   - 追问或换个角度继续了解（不要机械重复同样的问题）
+   - 例：刚才问"希望什么关系"，用户回答模糊 → 追问"具体是想找恋爱对象还是结婚对象呢？"
+
+2. **如果刚才的问题用户回答完整**：
+   - 自然过渡到下一个待了解的维度
+   - 像朋友聊天一样，不要生硬切换
+
+3. **如果所有维度都已了解**：
+   - 给出温暖的结束语，表达感谢
+
+回复要求：
 - 自然亲切，像朋友聊天
 - 一次只问一个问题
-- ⚠️ 如果该话题已在对话中讨论过，不要重复问，换下一个未讨论的话题
 - 适当用 emoji
 - 回复长度 30-100 字
 
-### 2. 提取用户透露的信息
-从用户消息中提取以下维度（仅提取明确透露的内容，已收集的维度跳过）：
-- relationship_goal: 关系期望（恋爱/结婚/交友等）
-- ideal_type: 理想型描述
-- personality: 性格特点
-- lifestyle: 生活方式
-- interests: 兴趣爱好
-- values: 价值观/底线
-
-## 输出格式（重要！必须严格遵守）
-第一部分是给用户看的回复，然后换行，最后是 JSON 格式的提取结果：
-
-[你的回复内容]
-
+## 信息提取（放在回复末尾）
 ---EXTRACT---
-{{"extractions": {{"dimension_key": "提取内容"}}, "confidence": 0.7}}
-
-示例输出：
-听起来你是个很温暖的人呢～ 那你理想中的另一半是什么样的呀？🌸
-
----EXTRACT---
-{{"extractions": {{"personality": "温暖"}}, "confidence": 0.7}}
-
-如果没有提取到任何信息，extractions 为空对象。
+{{"extractions": {{"维度": "内容"}}, "confidence": 0.7}}
 
 现在开始输出："""
 
@@ -1427,29 +1394,78 @@ AI: {ai_response}
         return json.loads(response)
 
     def _update_knowledge_base(self, state: ConversationState, extracted_info: Dict):
-        """更新知识图谱"""
-        # 🔍 [DEBUG] 记录提取信息入参
+        """更新知识图谱，并直接写入 UserDB（单一数据源）"""
         logger.info(f"[KB][Update] Input extracted_info: {extracted_info}")
 
         extractions = extracted_info.get("extractions", {})
         confidence = extracted_info.get("confidence", 0.5)
 
-        # 🔍 [DEBUG] 记录有效提取数量
-        valid_extractions = {k: v for k, v in extractions.items() if v and k in state.knowledge_base}
-        logger.info(f"[KB][Update] Valid extractions count: {len(valid_extractions)}, keys: {list(valid_extractions.keys())}")
+        def is_valid_content(v):
+            if v is None:
+                return False
+            if isinstance(v, str):
+                stripped = v.strip()
+                if not stripped or stripped.lower() == 'null':
+                    return False
+                return True
+            return bool(v)
+
+        valid_extractions = {k: v for k, v in extractions.items()
+                           if is_valid_content(v) and k in state.knowledge_base}
+        logger.info(f"[KB][Update] Valid extractions: {list(valid_extractions.keys())}")
+
+        # 维度到 UserDB 字段的映射
+        user_field_mapping = {
+            "relationship_goal": "relationship_goal",
+            "personality": "personality",
+            "ideal_type": "ideal_type",
+            "lifestyle": "lifestyle",
+            "deal_breakers": "deal_breakers",
+            "values": "values",
+            "interests": "interests",
+        }
+
+        updated_fields = []
 
         for dim_key, content in extractions.items():
-            if content and dim_key in state.knowledge_base:
+            if is_valid_content(content) and dim_key in state.knowledge_base:
+                # 1. 更新内存状态
                 dim = state.knowledge_base[dim_key]
                 dim.collected = True
                 dim.confidence = confidence
                 dim.raw_data = content
-                # 安全地将内容转换为字符串并截断
-                content_str = str(content) if not isinstance(content, dict) else json.dumps(content, ensure_ascii=False)[:50]
-                logger.info(f"[KB][Update] ✅ Updated dimension '{dim_key}' ({dim.name}): {content_str[:50]}...")
-            else:
-                # 🔍 [DEBUG] 记录未更新的维度
-                logger.debug(f"[KB][Update] ⏭️ Skipped dimension '{dim_key}': content={content}, in_kb={dim_key in state.knowledge_base}")
+                logger.info(f"[KB][Update] ✅ {dim_key}: {str(content)[:50]}")
+
+                # 2. 直接写入 UserDB
+                if dim_key in user_field_mapping:
+                    updated_fields.append((user_field_mapping[dim_key], content))
+
+        # 3. 批量更新 UserDB
+        if updated_fields:
+            self._update_user_profile(state.user_id, updated_fields)
+
+    def _update_user_profile(self, user_id: str, fields: List[Tuple[str, Any]]) -> None:
+        """直接更新 UserDB（单一数据源）"""
+        try:
+            with db_session() as db:
+                from db.models import UserDB
+
+                user = db.query(UserDB).filter(UserDB.id == user_id).first()
+                if not user:
+                    return
+
+                for field_name, value in fields:
+                    if isinstance(value, (dict, list)):
+                        value = json.dumps(value, ensure_ascii=False)
+                    else:
+                        value = str(value) if value else None
+                    setattr(user, field_name, value)
+
+                db.commit()
+                logger.info(f"[UserProfile] ✅ Updated: {[f[0] for f in fields]}")
+
+        except Exception as e:
+            logger.error(f"[UserProfile] Failed: {e}")
 
     def _evaluate_understanding(self, state: ConversationState):
         """评估整体了解度"""

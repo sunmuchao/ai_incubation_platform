@@ -16,6 +16,7 @@ import json
 from db.models import LLMMetricsDB, UserDB
 from utils.logger import logger
 from config import settings
+from services.base_service import BaseService
 
 
 # LLM 定价（每 1000 tokens 的价格，单位：元）
@@ -41,11 +42,11 @@ LLM_PRICING = {
 DEFAULT_PRICING = {"input": 0.01, "output": 0.03}
 
 
-class LLMMetricsService:
+class LLMMetricsService(BaseService):
     """LLM 成本监控服务"""
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
         self.daily_token_limit = getattr(settings, 'llm_daily_token_limit', 100000)
 
     def record_metric(

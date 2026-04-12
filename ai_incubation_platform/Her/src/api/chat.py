@@ -8,11 +8,12 @@ P4 新增:
 """
 import uuid
 import random
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
+import re
 
 from db.database import get_db
 from auth.jwt import get_current_user, get_current_user_optional
@@ -20,6 +21,7 @@ from db.models import UserDB, ChatConversationDB
 from services.chat_service import ChatService
 from config import settings
 from utils.logger import logger, get_trace_id
+from utils.db_session_manager import db_session
 from agent.user_simulation_agent import get_agent_for_user
 import asyncio
 
@@ -30,11 +32,43 @@ router = APIRouter(prefix="/api/chat", tags=["实时聊天"])
 # ============= Pydantic 模型 =============
 
 class MessageSendRequest(BaseModel):
-    """发送消息请求"""
-    receiver_id: str = Field(..., description="接收者 ID")
-    content: str = Field(..., description="消息内容")
+    """发送消息请求
+
+    安全验证规则：
+    - receiver_id: 必填，UUID 格式验证
+    - content: 必填，长度 1-10000 字符，禁止纯空格
+    - message_type: 必须是有效类型 (text/image/emoji/voice)
+    """
+    receiver_id: str = Field(..., min_length=36, max_length=36, description="接收者 ID（UUID格式）")
+    content: str = Field(..., min_length=1, max_length=10000, description="消息内容")
     message_type: str = Field(default="text", description="消息类型：text/image/emoji/voice")
     message_metadata: Optional[dict] = Field(default=None, description="元数据")
+
+    @field_validator('receiver_id')
+    @classmethod
+    def validate_receiver_id(cls, v: str) -> str:
+        """验证 receiver_id 为 UUID 格式"""
+        uuid_pattern = r'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'
+        if not re.match(uuid_pattern, v.lower()):
+            raise ValueError('receiver_id must be a valid UUID format')
+        return v
+
+    @field_validator('content')
+    @classmethod
+    def validate_content(cls, v: str) -> str:
+        """验证消息内容：禁止纯空格"""
+        if v is None or v.strip() == '':
+            raise ValueError('content cannot be empty or whitespace only')
+        return v
+
+    @field_validator('message_type')
+    @classmethod
+    def validate_message_type(cls, v: str) -> str:
+        """验证消息类型"""
+        valid_types = ['text', 'image', 'emoji', 'voice']
+        if v not in valid_types:
+            raise ValueError(f'message_type must be one of: {valid_types}')
+        return v
 
 
 class MessageResponse(BaseModel):
@@ -330,6 +364,23 @@ async def send_message(
             )
 
         logger.info(f"📡 [CHAT:SEND] SUCCESS trace_id={trace_id}, message_id={message.id}")
+
+        # AI Native: 触发消息发送事件，更新活跃状态
+        try:
+            from agent.autonomous.event_listener import emit_event
+            emit_event(
+                event_type="message_sent",
+                event_data={
+                    "sender_id": user_id,
+                    "receiver_id": request.receiver_id,
+                    "match_id": message.conversation_id,
+                    "message_id": message.id,
+                },
+                event_source=user_id
+            )
+            logger.info(f"📡 [CHAT:SEND] Event 'message_sent' emitted for conversation {message.conversation_id}")
+        except Exception as e:
+            logger.warning(f"Failed to emit message_sent event: {e}")
 
         # 手动构建响应（避免 Pydantic 验证问题）
         return {
@@ -746,3 +797,401 @@ async def simulate_reply(
     except Exception as e:
         logger.error(f"SimulateReply failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============= 悬浮球快速对话 API（合并自 quick_chat）==============
+
+class QuickChatRequest(BaseModel):
+    """快速对话请求"""
+    question: str
+    partnerId: str
+    partnerName: str = "TA"
+    recentMessages: List[Dict] = []
+
+
+class QuickChatResponse(BaseModel):
+    """快速对话响应"""
+    answer: str
+    suggestions: List[str] = []
+    analysis: Dict = {}
+
+
+class SuggestReplyRequest(BaseModel):
+    """回复建议请求"""
+    partnerId: str
+    lastMessage: Dict
+    recentMessages: List[Dict] = []
+    relationshipStage: str = "初识"
+
+
+class SuggestionItem(BaseModel):
+    """回复建议项"""
+    style: str
+    content: str
+
+
+class SuggestReplyResponse(BaseModel):
+    """回复建议响应"""
+    suggestions: List[SuggestionItem]
+
+
+class FeedbackRequest(BaseModel):
+    """反馈记录请求"""
+    partnerId: str
+    suggestionId: str
+    feedbackType: str  # adopted/ignored/modified
+    suggestionContent: str
+    suggestionStyle: str
+    userActualReply: Optional[str] = None
+
+
+@router.get("/tags", summary="获取智能快捷标签")
+async def get_quick_tags(
+    current_user: dict = Depends(get_current_user_optional),
+):
+    """
+    获取智能快捷标签
+
+    根据用户画像、状态和场景，智能生成个性化的快捷对话标签
+    让标签真正理解用户的意图和需求
+    """
+    # 从 dict 中提取 user_id
+    current_user_id = current_user.get("user_id") if current_user else None
+
+    # 如果没有用户，返回基础标签
+    if not current_user_id:
+        return {"tags": [
+            {"label": "介绍一下", "trigger": "介绍一下你自己"},
+            {"label": "开始匹配", "trigger": "帮我找对象"},
+        ]}
+
+    try:
+        # 获取用户画像和状态
+        user_profile = await _get_user_profile_for_tags(current_user_id)
+        user_state = await _get_user_state_for_tags(current_user_id)
+
+        # 基于用户状态生成标签（简化逻辑，不依赖 LLM）
+        tags = _generate_tags_from_state(user_profile, user_state)
+
+        logger.info(f"[QuickTags] Generated {len(tags)} tags for user {current_user_id}")
+        return {"tags": tags}
+
+    except Exception as e:
+        logger.error(f"[QuickTags] Failed: {e}")
+        return {"tags": _get_fallback_tags()}
+
+
+def _generate_tags_from_state(profile: Dict, state: Dict) -> List[Dict]:
+    """基于用户状态生成标签（简化版，不依赖 LLM）"""
+    tags = []
+
+    # 根据匹配状态
+    if state.get("has_active_match"):
+        tags.append({"label": "继续聊天", "trigger": "看看今天的聊天"})
+        tags.append({"label": "关系分析", "trigger": "分析我和TA的关系"})
+    else:
+        tags.append({"label": "今日推荐", "trigger": "看看今天有什么推荐"})
+        tags.append({"label": "找对象", "trigger": "帮我找对象"})
+
+    # 根据资料完成度
+    if state.get("profile_completion", 0) < 50:
+        tags.append({"label": "完善资料", "trigger": "帮我完善资料"})
+
+    # 根据关系目标
+    goal = profile.get("relationship_goal", "")
+    if goal == "serious" or goal == "marriage":
+        tags.append({"label": "认真恋爱", "trigger": "我想找认真恋爱的对象"})
+    elif goal == "dating":
+        tags.append({"label": "轻松交友", "trigger": "我想轻松交友"})
+
+    # 确保至少有 2 个标签
+    if len(tags) < 2:
+        tags.extend(_get_fallback_tags()[:2])
+
+    return tags[:5]  # 最多 5 个标签
+
+
+
+async def _get_user_profile_for_tags(user_id: str) -> Dict:
+    """获取用户画像（用于生成标签）"""
+    try:
+        with db_session() as db:
+            user = db.query(UserDB).filter(UserDB.id == user_id).first()
+            if user:
+                return {
+                    "relationship_goal": user.relationship_goal or "未设置",
+                    "personality": user.personality or "未设置",
+                    "interests": user.interests or "未设置",
+                    "age": user.age,
+                    "location": user.location,
+                }
+    except Exception as e:
+        logger.warning(f"[QuickTags] Failed to get profile: {e}")
+    return {}
+
+
+async def _get_user_state_for_tags(user_id: str) -> Dict:
+    """获取用户状态（用于生成标签）"""
+    try:
+        with db_session() as db:
+            # 检查匹配状态
+            from db.models import MatchHistoryDB, ChatConversationDB
+
+            has_active_match = db.query(MatchHistoryDB).filter(
+                (MatchHistoryDB.user_id_1 == user_id) | (MatchHistoryDB.user_id_2 == user_id),
+                MatchHistoryDB.status == 'accepted'
+            ).count() > 0
+
+            # 检查消息状态
+            conversations = db.query(ChatConversationDB).filter(
+                (ChatConversationDB.user_id_1 == user_id) | (ChatConversationDB.user_id_2 == user_id)
+            ).all()
+
+            has_unread_messages = any(
+                conv.unread_count_1 > 0 if conv.user_id_1 == user_id else conv.unread_count_2 > 0
+                for conv in conversations
+            ) if conversations else False
+
+            # 计算资料完成度
+            user = db.query(UserDB).filter(UserDB.id == user_id).first()
+            profile_fields = ['relationship_goal', 'personality', 'interests', 'bio', 'avatar_url']
+            filled_fields = sum(1 for f in profile_fields if getattr(user, f, None))
+            profile_completion = int(filled_fields / len(profile_fields) * 100)
+
+            return {
+                "has_active_match": has_active_match,
+                "has_unread_messages": has_unread_messages,
+                "activity_level": "active" if has_active_match else "new" if profile_completion < 50 else "normal",
+                "recent_behavior": "有匹配" if has_active_match else "有资料" if profile_completion > 50 else "刚注册",
+                "profile_completion": profile_completion,
+            }
+    except Exception as e:
+        logger.warning(f"[QuickTags] Failed to get state: {e}")
+    return {}
+
+
+def _get_fallback_tags() -> List[Dict]:
+    """降级标签"""
+    return [
+        {"label": "今日推荐", "trigger": "看看今天有什么推荐"},
+        {"label": "找对象", "trigger": "帮我找对象"},
+    ]
+
+
+@router.post("/quick-ask", response_model=QuickChatResponse, summary="悬浮球快速对话")
+async def quick_chat(
+    request: QuickChatRequest,
+    current_user_id: str = Depends(get_current_user),
+):
+    """
+    悬浮球快速对话
+
+    用户可以向 Her 提问关于匹配对象的问题，例如:
+    - "她为什么不回我消息？"
+    - "我该怎么回复她？"
+    - "她对我有意思吗？"
+
+    Her 会分析聊天上下文给出建议
+    """
+    try:
+        from services.quick_chat_service import QuickChatService
+        service = QuickChatService()
+        result = service.get_ai_advice(
+            current_user_id=current_user_id,
+            partner_id=request.partnerId,
+            question=request.question,
+            recent_messages=request.recentMessages,
+        )
+
+        return QuickChatResponse(
+            answer=result.get("answer", ""),
+            suggestions=result.get("suggestions", []),
+            analysis=result.get("analysis", {}),
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"AI 思考失败：{str(e)}")
+
+
+@router.post("/suggest-reply", response_model=SuggestReplyResponse, summary="生成回复建议")
+async def suggest_reply(
+    request: SuggestReplyRequest,
+    current_user_id: str = Depends(get_current_user),
+):
+    """
+    生成回复建议
+
+    当用户收到消息但不知道如何回复时，可以调用此接口
+    AI 会生成 3 种不同风格的回复建议
+    """
+    try:
+        from services.quick_chat_service import QuickChatService
+        service = QuickChatService()
+        result = service.suggest_reply(
+            current_user_id=current_user_id,
+            partner_id=request.partnerId,
+            last_message=request.lastMessage,
+            recent_messages=request.recentMessages,
+            relationship_stage=request.relationshipStage,
+        )
+
+        if not result.get("success", False):
+            raise HTTPException(status_code=500, detail="生成建议失败")
+
+        suggestions = [
+            SuggestionItem(**s) for s in result.get("suggestions", [])
+        ]
+
+        return SuggestReplyResponse(suggestions=suggestions)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"生成建议失败：{str(e)}")
+
+
+@router.post("/suggestion-feedback", summary="记录建议反馈")
+async def record_feedback(
+    request: FeedbackRequest,
+    current_user_id: str = Depends(get_current_user),
+):
+    """
+    记录用户对 AI 建议的反馈
+
+    用于追踪 AI 建议的采纳情况和效果，持续优化 AI 策略
+    """
+    try:
+        from services.quick_chat_service import QuickChatService
+        service = QuickChatService()
+        feedback_id = service.record_suggestion_feedback(
+            current_user_id=current_user_id,
+            partner_id=request.partnerId,
+            suggestion_id=request.suggestionId,
+            feedback_type=request.feedbackType,
+            suggestion_content=request.suggestionContent,
+            suggestion_style=request.suggestionStyle,
+            user_actual_reply=request.userActualReply,
+        )
+
+        return {"success": True, "feedback_id": feedback_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"记录反馈失败：{str(e)}")
+
+
+@router.get("/quick-tags", summary="获取动态快捷标签")
+async def get_quick_tags(
+    current_user_id: str = Depends(get_current_user),
+):
+    """
+    获取动态快捷标签
+
+    AI 根据用户状态动态生成最相关的 1-3 个快捷标签。
+    """
+    try:
+        from services.quick_tag_service import get_quick_tag_service
+        service = get_quick_tag_service()
+        tags = service.get_quick_tags(current_user_id)
+
+        return {"tags": tags}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取标签失败：{str(e)}")
+
+
+# ============= 对话分析 API（合并自 conversations）==============
+
+@router.post("/analyze-message", summary="分析单条消息")
+async def analyze_message(
+    message: str,
+    sender_id: str,
+    receiver_id: str
+):
+    """
+    分析单条消息
+
+    Args:
+        message: 消息内容
+        sender_id: 发送者 ID
+        receiver_id: 接收者 ID
+    """
+    from services.conversation_analysis_service import conversation_analyzer
+    result = conversation_analyzer.analyze_message(
+        message=message,
+        sender_id=sender_id,
+        receiver_id=receiver_id
+    )
+
+    return {"analysis": result}
+
+
+@router.post("/save-with-analysis", summary="保存对话记录（带分析）")
+async def save_conversation_with_analysis(
+    sender_id: str,
+    receiver_id: str,
+    message: str,
+    message_type: str = "text"
+):
+    """
+    保存对话记录（带分析）
+
+    Args:
+        sender_id: 发送者 ID
+        receiver_id: 接收者 ID
+        message: 消息内容
+        message_type: 消息类型
+    """
+    from services.conversation_analysis_service import conversation_analyzer
+    conversation_id = conversation_analyzer.save_conversation(
+        sender_id=sender_id,
+        receiver_id=receiver_id,
+        message=message,
+        message_type=message_type
+    )
+
+    return {
+        "conversation_id": conversation_id,
+        "status": "saved"
+    }
+
+
+@router.get("/topic-profile/{user_id}", summary="获取用户话题画像")
+async def get_topic_profile(
+    user_id: str,
+    days: int = 30
+):
+    """
+    获取用户的话题画像
+
+    Args:
+        user_id: 用户 ID
+        days: 分析天数
+    """
+    from services.conversation_analysis_service import conversation_analyzer
+    profile = conversation_analyzer.get_user_topic_profile(user_id, days=days)
+
+    return {
+        "user_id": user_id,
+        "period_days": days,
+        "topic_profile": profile
+    }
+
+
+@router.get("/profile-suggestions/{user_id}", summary="获取画像更新建议")
+async def get_profile_update_suggestions(
+    user_id: str,
+    days: int = 30
+):
+    """
+    获取画像更新建议（基于对话分析）
+
+    Args:
+        user_id: 用户 ID
+        days: 分析天数
+    """
+    from services.conversation_analysis_service import conversation_analyzer
+    suggestions = conversation_analyzer.generate_profile_update_suggestions(
+        user_id=user_id,
+        days=days
+    )
+
+    return {
+        "user_id": user_id,
+        "suggestions": suggestions
+    }

@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from db.models import UserReportDB
 from utils.logger import logger
+from services.base_service import BaseService
 import enum
 import uuid
 
@@ -31,11 +32,11 @@ class ReportType(enum.Enum):
     OTHER = "other"  # 其他
 
 
-class ReportService:
+class ReportService(BaseService):
     """举报服务"""
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
 
     def create_report(
         self,

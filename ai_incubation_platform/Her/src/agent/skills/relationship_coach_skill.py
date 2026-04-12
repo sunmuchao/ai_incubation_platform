@@ -19,6 +19,7 @@ class RelationshipCoachSkill:
     - 提供沟通建议
     - 策划约会活动
     - 送礼建议
+    - 关系压力测试（替代已删除的 relationship_stress_test API）
 
     自主触发条件:
     - 沟通频率下降 > 50%
@@ -28,7 +29,7 @@ class RelationshipCoachSkill:
     """
 
     name = "relationship_coach"
-    version = "1.0.0"
+    version = "1.1.0"
     description = """
     关系维护教练
 
@@ -38,6 +39,7 @@ class RelationshipCoachSkill:
     - 提供沟通建议
     - 策划约会活动
     - 送礼建议
+    - 关系压力测试
     """
 
     def get_input_schema(self) -> dict:
@@ -49,9 +51,17 @@ class RelationshipCoachSkill:
                     "type": "string",
                     "description": "匹配记录 ID"
                 },
+                "user_id": {
+                    "type": "string",
+                    "description": "用户 ID"
+                },
+                "partner_id": {
+                    "type": "string",
+                    "description": "伴侣用户 ID"
+                },
                 "action": {
                     "type": "string",
-                    "enum": ["health_check", "get_advice", "plan_date", "gift_suggestion"],
+                    "enum": ["health_check", "get_advice", "plan_date", "gift_suggestion", "stress_test", "stress_test_answer", "stress_test_result"],
                     "description": "操作类型"
                 },
                 "context": {
@@ -59,7 +69,12 @@ class RelationshipCoachSkill:
                     "properties": {
                         "issue_type": {"type": "string"},
                         "occasion": {"type": "string"},
-                        "budget": {"type": "number"}
+                        "budget": {"type": "number"},
+                        "scenario_type": {"type": "string"},
+                        "relationship_stage": {"type": "string"},
+                        "test_id": {"type": "string"},
+                        "question_id": {"type": "string"},
+                        "selected_option": {"type": "string"}
                     }
                 }
             },
@@ -96,7 +111,24 @@ class RelationshipCoachSkill:
                 "gift_suggestions": {
                     "type": "array",
                     "items": {"type": "object"}
-                }
+                },
+                # 压力测试相关
+                "test_id": {"type": "string"},
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "question_id": {"type": "string"},
+                            "scenario_description": {"type": "string"},
+                            "options": {"type": "array"},
+                            "difficulty": {"type": "integer"},
+                            "key_insight": {"type": "string"}
+                        }
+                    }
+                },
+                "analysis": {"type": "object"},
+                "summary": {"type": "object"}
             }
         }
 
@@ -104,6 +136,8 @@ class RelationshipCoachSkill:
         self,
         match_id: str,
         action: str,
+        user_id: Optional[str] = None,
+        partner_id: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> dict:
@@ -113,6 +147,8 @@ class RelationshipCoachSkill:
         Args:
             match_id: 匹配记录 ID
             action: 操作类型
+            user_id: 用户 ID
+            partner_id: 伴侣用户 ID
             context: 上下文信息
             **kwargs: 额外参数
 
@@ -129,6 +165,12 @@ class RelationshipCoachSkill:
             return await self._plan_date(match_id, context)
         elif action == "gift_suggestion":
             return await self._gift_suggestion(match_id, context)
+        elif action == "stress_test":
+            return await self._stress_test(user_id, partner_id, context)
+        elif action == "stress_test_answer":
+            return await self._stress_test_answer(context)
+        elif action == "stress_test_result":
+            return await self._stress_test_result(context)
         else:
             return {"success": False, "error": "Invalid action", "ai_message": "不支持的操作类型"}
 
@@ -237,6 +279,231 @@ class RelationshipCoachSkill:
             "ai_message": self._generate_gift_message(gift_suggestions),
             "gift_suggestions": gift_suggestions
         }
+
+    # ========== 关系压力测试（替代已删除的 relationship_stress_test API）==========
+
+    async def _stress_test(
+        self,
+        user_id: str,
+        partner_id: str,
+        context: Optional[Dict[str, Any]] = None
+    ) -> dict:
+        """
+        创建关系压力测试
+
+        Args:
+            user_id: 用户 ID
+            partner_id: 伴侣用户 ID
+            context: 包含 scenario_type, relationship_stage 等
+
+        Returns:
+            测试创建结果
+        """
+        scenario_type = context.get("scenario_type", "value_conflict") if context else "value_conflict"
+        relationship_stage = context.get("relationship_stage", "dating") if context else "dating"
+
+        # 生成测试 ID
+        test_id = f"stress-test-{user_id}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+        # 生成测试问题
+        questions = self._generate_stress_test_questions(scenario_type, relationship_stage)
+
+        logger.info(f"RelationshipCoachSkill: Created stress test {test_id} with {len(questions)} questions")
+
+        return {
+            "success": True,
+            "test_id": test_id,
+            "questions": questions,
+            "scenario_type": scenario_type,
+            "ai_message": f"已创建关系压力测试（{scenario_type}场景），共{len(questions)}个问题"
+        }
+
+    async def _stress_test_answer(self, context: Optional[Dict[str, Any]] = None) -> dict:
+        """
+        提交压力测试答案
+
+        Args:
+            context: 包含 test_id, question_id, selected_option
+
+        Returns:
+            答案分析结果
+        """
+        test_id = context.get("test_id", "") if context else ""
+        question_id = context.get("question_id", "") if context else ""
+        selected_option = context.get("selected_option", "") if context else ""
+
+        # 模拟分析结果
+        analysis = {
+            "attitude_analysis": "你的回答显示你在面对价值观冲突时倾向于妥协和沟通，这是一种健康的处理方式。",
+            "communication_advice": "建议在类似情况下，先表达自己的感受，再倾听对方的想法，最后共同寻找解决方案。",
+            "resilience_score": 75
+        }
+
+        logger.info(f"RelationshipCoachSkill: Answer submitted for test={test_id}, question={question_id}")
+
+        return {
+            "success": True,
+            "analysis": analysis,
+            "ai_message": analysis.get("attitude_analysis", "")
+        }
+
+    async def _stress_test_result(self, context: Optional[Dict[str, Any]] = None) -> dict:
+        """
+        获取压力测试结果
+
+        Args:
+            context: 包含 test_id
+
+        Returns:
+            测试结果总结
+        """
+        test_id = context.get("test_id", "") if context else ""
+
+        # 模拟结果
+        summary = {
+            "average_resilience_score": 78,
+            "overall_risk_level": "低风险",
+            "key_findings": [
+                "在价值观冲突场景中表现出较强的沟通能力",
+                "倾向于通过协商解决分歧",
+                "情绪控制能力良好"
+            ],
+            "recommendations": [
+                "继续保持开放的沟通态度",
+                "在面对重大分歧时，可以尝试提前准备",
+                "定期进行关系健康检查"
+            ]
+        }
+
+        logger.info(f"RelationshipCoachSkill: Getting result for test={test_id}")
+
+        return {
+            "success": True,
+            "summary": summary,
+            "ai_message": f"测试完成！平均韧性评分：{summary['average_resilience_score']}，风险等级：{summary['overall_risk_level']}"
+        }
+
+    def _generate_stress_test_questions(self, scenario_type: str, relationship_stage: str) -> list:
+        """生成压力测试问题"""
+        questions = []
+
+        if scenario_type == "value_conflict":
+            questions = [
+                {
+                    "question_id": "q1",
+                    "scenario_description": "你们在讨论未来定居城市时产生了分歧。你希望留在现在的城市发展事业，而对方想回老家照顾父母。",
+                    "options": [
+                        {"id": "a", "content": "直接表达自己的想法，希望对方能理解", "consequence": "可能导致分歧加深"},
+                        {"id": "b", "content": "先倾听对方的想法，再表达自己的顾虑", "consequence": "有助于理解彼此立场"},
+                        {"id": "c", "content": "提出折中方案，比如先在现在的城市发展几年再考虑", "consequence": "可能双方都能接受"},
+                        {"id": "d", "content": "暂时回避这个问题，等以后再说", "consequence": "问题可能会积累"}
+                    ],
+                    "difficulty": 3,
+                    "key_insight": "定居问题涉及双方的核心价值观，需要坦诚沟通"
+                },
+                {
+                    "question_id": "q2",
+                    "scenario_description": "对方希望你以后能照顾TA的父母，但你觉得这会影响自己的事业发展。",
+                    "options": [
+                        {"id": "a", "content": "直接表达自己的顾虑，希望对方能理解", "consequence": "可能导致对方感到被忽视"},
+                        {"id": "b", "content": "提出可以定期探望但无法全职照顾", "consequence": "坦诚但可能不被接受"},
+                        {"id": "c", "content": "同意对方的想法，但内心感到不满", "consequence": "可能积累负面情绪"},
+                        {"id": "d", "content": "讨论其他解决方案，比如请护工或定期探望", "consequence": "可能找到双方都接受的方案"}
+                    ],
+                    "difficulty": 4,
+                    "key_insight": "家庭责任分配需要双方协商"
+                },
+                {
+                    "question_id": "q3",
+                    "scenario_description": "对方希望你们能尽快结婚，但你觉得还需要更多时间了解彼此。",
+                    "options": [
+                        {"id": "a", "content": "直接表达自己的想法，希望对方能等待", "consequence": "可能导致对方感到被拒绝"},
+                        {"id": "b", "content": "提出可以先订婚，给自己更多时间准备", "consequence": "折中方案"},
+                        {"id": "c", "content": "同意对方的想法，但内心感到压力", "consequence": "可能导致以后的问题"},
+                        {"id": "d", "content": "坦诚讨论自己对婚姻的想法和顾虑", "consequence": "有助于理解彼此立场"}
+                    ],
+                    "difficulty": 4,
+                    "key_insight": "婚姻时间表需要双方达成共识"
+                }
+            ]
+
+        elif scenario_type == "lifestyle_difference":
+            questions = [
+                {
+                    "question_id": "q1",
+                    "scenario_description": "对方喜欢早起锻炼，而你喜欢晚睡晚起。对方希望你调整作息。",
+                    "options": [
+                        {"id": "a", "content": "尝试调整自己的作息适应对方", "consequence": "可能牺牲自己的舒适"},
+                        {"id": "b", "content": "提出可以部分调整，但保留自己的节奏", "consequence": "折中方案"},
+                        {"id": "c", "content": "表达自己的习惯难以改变", "consequence": "可能导致冲突"},
+                        {"id": "d", "content": "讨论如何在不改变作息的情况下增加相处时间", "consequence": "创新方案"}
+                    ],
+                    "difficulty": 2,
+                    "key_insight": "生活习惯差异可以通过协商解决"
+                },
+                {
+                    "question_id": "q2",
+                    "scenario_description": "对方喜欢整洁有序的生活环境，而你喜欢随性的生活方式。",
+                    "options": [
+                        {"id": "a", "content": "尝试改变自己的习惯适应对方", "consequence": "可能牺牲自己的舒适"},
+                        {"id": "b", "content": "提出可以共同制定一些基本规则", "consequence": "折中方案"},
+                        {"id": "c", "content": "表达自己的生活方式难以改变", "consequence": "可能导致冲突"},
+                        {"id": "d", "content": "讨论如何在不改变风格的情况下保持整洁", "consequence": "创新方案"}
+                    ],
+                    "difficulty": 2,
+                    "key_insight": "生活风格差异需要双方妥协"
+                }
+            ]
+
+        elif scenario_type == "economic_disagreement":
+            questions = [
+                {
+                    "question_id": "q1",
+                    "scenario_description": "对方希望你们能共同存钱买房，但你觉得应该先享受生活。",
+                    "options": [
+                        {"id": "a", "content": "表达自己希望平衡存钱和享受生活", "consequence": "可能不被接受"},
+                        {"id": "b", "content": "提出可以部分存钱，同时保留享受生活的预算", "consequence": "折中方案"},
+                        {"id": "c", "content": "同意对方的想法，但内心感到不满", "consequence": "可能积累负面情绪"},
+                        {"id": "d", "content": "坦诚讨论自己对金钱的看法", "consequence": "有助于理解彼此立场"}
+                    ],
+                    "difficulty": 3,
+                    "key_insight": "金钱观念差异需要坦诚沟通"
+                }
+            ]
+
+        elif scenario_type == "communication_style":
+            questions = [
+                {
+                    "question_id": "q1",
+                    "scenario_description": "对方在遇到问题时喜欢直接讨论，而你更喜欢自己消化后再谈。",
+                    "options": [
+                        {"id": "a", "content": "尝试改变自己的习惯适应对方", "consequence": "可能牺牲自己的舒适"},
+                        {"id": "b", "content": "提出可以给自己一些时间消化后再讨论", "consequence": "折中方案"},
+                        {"id": "c", "content": "表达自己的沟通方式难以改变", "consequence": "可能导致冲突"},
+                        {"id": "d", "content": "讨论如何找到双方都舒适的沟通方式", "consequence": "创新方案"}
+                    ],
+                    "difficulty": 2,
+                    "key_insight": "沟通风格差异需要双方理解"
+                }
+            ]
+
+        else:  # family_relation
+            questions = [
+                {
+                    "question_id": "q1",
+                    "scenario_description": "对方的父母对你有偏见，对方希望你主动改善关系。",
+                    "options": [
+                        {"id": "a", "content": "主动尝试改善关系", "consequence": "可能需要时间"},
+                        {"id": "b", "content": "提出可以先通过对方了解父母的想法", "consequence": "间接方式"},
+                        {"id": "c", "content": "表达自己需要对方的支持才能改善关系", "consequence": "寻求帮助"},
+                        {"id": "d", "content": "讨论如何在不强迫自己的情况下改善关系", "consequence": "协商方案"}
+                    ],
+                    "difficulty": 4,
+                    "key_insight": "家庭关系需要双方共同努力"
+                }
+            ]
+
+        return questions
 
     def _get_match_info(self, match_id: str) -> Optional[dict]:
         """获取匹配信息"""

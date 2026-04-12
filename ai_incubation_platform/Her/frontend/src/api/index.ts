@@ -3,7 +3,9 @@
 // ==================== 核心 API ====================
 
 import apiClient from './apiClient'
-import { authStorage, devStorage } from '../utils/storage'
+import { authStorage } from '../utils/storage'
+import { getCurrentUserId } from '../hooks/useCurrentUserId'
+import { conversationMatchmakerSkill } from './skillClient'
 import type {
   ConversationMatchRequest,
   ConversationMatchResponse,
@@ -17,32 +19,49 @@ import type {
   StreamChunk,
 } from '../types'
 
+// conversation_matching API 已删除，改用 conversationMatchmakerSkill
 export const conversationMatchingApi = {
   /**
    * 对话式匹配 - 用户通过自然语言表达匹配需求
+   * 改用 Skill 调用
    */
   async match(request: ConversationMatchRequest): Promise<ConversationMatchResponse> {
-    const response = await apiClient.post('/api/conversation-matching/match', request)
-    return response.data
+    const userId = getCurrentUserId()
+    const result = await conversationMatchmakerSkill.matchByIntent(userId, request.text || '')
+    return {
+      success: result.success,
+      candidates: result.candidates || [],
+      ai_message: result.ai_message || ''
+    }
   },
 
   /**
-   * 对话式匹配 - 流式响应版本
+   * 对话式匹配 - 流式响应版本（保留原有实现）
+   * 注：流式响应仍通过 Skill API 的 SSE 实现
    */
   async matchStream(
     request: ConversationMatchRequest,
     onChunk: (chunk: StreamChunk) => void
   ): Promise<void> {
+    // 改用 Skill SSE 流式调用
+    const userId = getCurrentUserId()
     const token = authStorage.getToken()
-    const testUserId = devStorage.getTestUserId() || 'user-test-001'
 
-    const response = await fetch('/api/conversation-matching/match-stream', {
+    const response = await fetch('/api/skills/conversation_matchmaker/execute', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : { 'X-Dev-User-Id': testUserId }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify(request),
+      body: JSON.stringify({
+        skill_name: 'conversation_matchmaker',
+        params: {
+          user_id: userId,
+          action: 'match_by_intent',
+          intent_text: request.text
+        },
+        stream: true
+      }),
     })
 
     if (!response.ok) {
@@ -63,7 +82,7 @@ export const conversationMatchingApi = {
 
       buffer += decoder.decode(value, { stream: true })
       const lines = buffer.split('\n')
-      buffer = lines.pop() || '' // 保留不完整的一行
+      buffer = lines.pop() || ''
 
       for (const line of lines) {
         if (line.startsWith('data: ')) {
@@ -82,8 +101,12 @@ export const conversationMatchingApi = {
    * 每日自主推荐 - AI 主动分析用户状态，推送每日匹配
    */
   async dailyRecommend(): Promise<DailyRecommendResponse> {
-    const response = await apiClient.get('/api/conversation-matching/daily-recommend')
-    return response.data
+    const userId = getCurrentUserId()
+    const result = await conversationMatchmakerSkill.getDailyRecommend(userId)
+    return {
+      success: result.success,
+      recommendations: result.recommendations || []
+    }
   },
 
   /**
@@ -92,40 +115,59 @@ export const conversationMatchingApi = {
   async analyzeRelationship(
     request: RelationshipAnalysisRequest
   ): Promise<RelationshipAnalysisResponse> {
-    const response = await apiClient.post('/api/conversation-matching/relationship/analyze', request)
-    return response.data
+    // 改用 relationshipCoachSkill
+    const { relationshipCoachSkill } = await import('./skillClient')
+    const result = await relationshipCoachSkill.healthCheck(request.match_id || '')
+    return {
+      success: result.success ?? false,
+      health_score: result.health_score || 0,
+      issues: result.issues || [],
+      recommendations: result.recommendations || []
+    }
   },
 
   /**
    * 获取关系状态
    */
   async getRelationshipStatus(matchId: string) {
-    const response = await apiClient.get(`/api/conversation-matching/relationship/${matchId}/status`)
-    return response.data
+    // 改用 relationshipCoachSkill
+    const { relationshipCoachSkill } = await import('./skillClient')
+    const result = await relationshipCoachSkill.healthCheck(matchId)
+    return { success: result.success, status: result }
   },
 
   /**
    * 智能话题推荐
    */
   async suggestTopics(request: TopicSuggestionRequest): Promise<TopicSuggestionResponse> {
-    const response = await apiClient.post('/api/conversation-matching/topics/suggest', request)
-    return response.data
+    const userId = getCurrentUserId()
+    const result = await conversationMatchmakerSkill.suggestTopics(userId, request.match_id || '')
+    return {
+      success: result.success,
+      topics: result.topics || []
+    }
   },
 
   /**
    * 兼容性分析
    */
   async getCompatibility(targetUserId: string): Promise<CompatibilityAnalysis> {
-    const response = await apiClient.get(`/api/conversation-matching/compatibility/${targetUserId}`)
-    return response.data
+    const userId = getCurrentUserId()
+    const result = await conversationMatchmakerSkill.analyzeCompatibility(userId, targetUserId)
+    return {
+      success: result.success,
+      compatibility_score: result.compatibility_score || 0,
+      analysis: result.analysis || {}
+    }
   },
 
   /**
    * 获取 AI 主动推送
    */
   async getAiPushRecommendations() {
-    const response = await apiClient.get('/api/conversation-matching/ai/push/recommendations')
-    return response.data
+    const userId = getCurrentUserId()
+    const result = await conversationMatchmakerSkill.getDailyRecommend(userId)
+    return { success: result.success, recommendations: result.recommendations || [] }
   },
 }
 
@@ -255,53 +297,28 @@ export const matchingApi = {
     })
     return response.data
   },
-}
 
-export const chatApi = {
   /**
-   * 获取会话列表
+   * 获取每日滑动限制
    */
-  async getConversations() {
-    const response = await apiClient.get('/api/chat/conversations')
+  async getDailyLimits(userId: string): Promise<{
+    daily_likes: number
+    daily_super_likes: number
+    likes_used: number
+    super_likes_used: number
+    likes_remaining: number
+    super_likes_remaining: number
+    is_unlimited: boolean
+  }> {
+    const response = await apiClient.get(`/api/membership/usage/${userId}/daily`)
     return response.data
   },
 
   /**
-   * 获取聊天历史
+   * 撤销滑动（会员功能）
    */
-  async getHistory(otherUserId: string, limit = 50, offset = 0) {
-    const response = await apiClient.get(`/api/chat/history/${otherUserId}`, {
-      params: { limit, offset },
-    })
-    return response.data
-  },
-
-  /**
-   * 发送消息
-   */
-  async sendMessage(data: { receiver_id: string; content: string; message_type?: string }) {
-    const response = await apiClient.post('/api/chat/send', data)
-    return response.data
-  },
-
-  /**
-   * 模拟回复 (开发环境)
-   */
-  async simulateReply(conversationId: string, userMessage: string) {
-    const response = await apiClient.post('/api/chat/simulate-reply', {}, {
-      params: {
-        conversation_id: conversationId,
-        user_message: userMessage,
-      },
-    })
-    return response.data
-  },
-
-  /**
-   * 标记消息已读
-   */
-  async markMessageRead(messageId: string) {
-    const response = await apiClient.post(`/api/chat/read/message/${messageId}`)
+  async undoSwipe(swipeId: string) {
+    const response = await apiClient.post(`/api/matching/swipe/${swipeId}/undo`)
     return response.data
   },
 }
@@ -374,59 +391,91 @@ export const userApi = {
   },
 }
 
+// registration_conversation API 已删除，改用 profileCollectionSkill
 export const registrationConversationApi = {
   /**
    * 开始注册对话
    */
   async startConversation(userId: string, userName: string) {
-    const response = await apiClient.post('/api/registration-conversation/start', {
-      user_id: userId,
-      user_name: userName,
-    })
-    return response.data
+    const { profileCollectionSkill } = await import('./skillClient')
+    const result = await profileCollectionSkill.startSession(userId)
+    return {
+      success: result.success,
+      session_id: result.session_id,
+      opening_message: result.opening_message
+    }
   },
 
   /**
    * 发送对话消息
    */
   async sendMessage(userId: string, message: string) {
-    const response = await apiClient.post('/api/registration-conversation/message', {
-      user_id: userId,
-      message,
-    })
-    return response.data
+    const { profileCollectionSkill } = await import('./skillClient')
+    // 需要先获取 session_id，这里简化处理
+    const result = await profileCollectionSkill.sendMessage(`session-${userId}`, userId, message)
+    return {
+      success: result.success,
+      ai_response: result.ai_response,
+      profile_updates: result.profile_updates
+    }
   },
 
   /**
    * 获取会话状态
    */
   async getSession(userId: string) {
-    const response = await apiClient.get(`/api/registration-conversation/session/${userId}`)
-    return response.data
+    const { profileCollectionSkill } = await import('./skillClient')
+    const result = await profileCollectionSkill.getProgress(userId)
+    return {
+      success: result.success,
+      progress: result.progress,
+      completed_dimensions: result.completed_dimensions
+    }
   },
 
   /**
    * 完成对话
    */
   async completeConversation(userId: string) {
-    const response = await apiClient.post(`/api/registration-conversation/complete/${userId}`)
-    return response.data
+    const { profileCollectionSkill } = await import('./skillClient')
+    const result = await profileCollectionSkill.completeSession(userId)
+    return {
+      success: result.success,
+      profile: result.profile,
+      recommendations: result.recommendations
+    }
   },
 }
 
-// ==================== P10-P17 API 导出 ====================
+// ==================== 合并后的 API ====================
 
-// P10: 关系里程碑、约会建议、双人互动游戏
-export * from './p10_api'
+// 聊天 API（合并 quick_chat + conversations）
+export * from './chatApi'
 
-// P13: 情感调解增强
-export * from './p13_api'
+// 视频约会 API（合并 video）
+export * from './videoDateApi'
 
-// P14: 实战演习
-export * from './p14_api'
+// ==================== 已删除的 API（改用 Skill 调用）====================
+// emotionAnalysisApi 已删除：改用 emotionAnalysisSkill
+// loveLanguageProfileApi 已删除：改用 relationshipCoachSkill.analyzeLoveLanguage
+// dateSimulationApi 已删除：改用 twinSimulatorSkill
+// quickStartApi 已删除：改用 matchmakingSkill + profileCollectionSkill
 
-// P15-P17: 虚实结合、圈子融合、终极共振
-export * from './p15_p16_p17_api'
+// ==================== 生活融合 API ====================
+
+export * from './lifeIntegrationApi'
+
+// ==================== 关系里程碑 API ====================
+
+export * from './milestoneApi'
+
+// ==================== Your Turn 提醒 API ====================
+
+export * from './yourTurnApi'
+
+// ==================== Who Likes Me API ====================
+
+export * from './whoLikesMeApi'
 
 // Profile Collection API - AI Native 用户画像收集
 export { profileApi } from './profileApi'

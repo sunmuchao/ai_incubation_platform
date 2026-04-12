@@ -20,9 +20,10 @@ import uuid
 
 from db.models import UserDB, TrustedContactDB
 from utils.logger import logger
+from services.base_service import BaseService
 
 
-class NotificationService:
+class NotificationService(BaseService):
     """第三方通知服务"""
 
     # 通知渠道
@@ -39,7 +40,7 @@ class NotificationService:
     TYPE_MESSAGE_NOTIFICATION = "message_notification"
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
         self._push_client = None
         self._sms_client = None
         self._voice_client = None
@@ -371,11 +372,11 @@ def get_notification_service(db: Session) -> NotificationService:
 
 # ============= 分享服务 =============
 
-class ShareService:
+class ShareService(BaseService):
     """分享与邀请码服务"""
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
 
     def create_invite_code(
         self,

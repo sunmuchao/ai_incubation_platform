@@ -12,7 +12,8 @@ from agent.skills.omniscient_insight_skill import OmniscientInsightSkill, get_om
 from agent.skills.relationship_coach_skill import RelationshipCoachSkill, get_relationship_coach_skill
 from agent.skills.date_planning_skill import DatePlanningSkill, get_date_planning_skill
 from agent.skills.bill_analysis_skill import BillAnalysisSkill, get_bill_analysis_skill
-# 注：geo_location, gift_ordering 已删除，改用 REST API
+from agent.skills.gift_suggestion_skill import GiftSuggestionSkill, get_gift_suggestion_skill
+# 注：geo_location 已删除，改用 REST API
 
 __all__ = [
     # 基类
@@ -23,7 +24,7 @@ __all__ = [
     "get_skill_registry",
     "initialize_default_skills",
 
-    # P0 Skills - 核心 AI Native 能力
+    # Identity Skills - 核心 AI Native 能力
     "MatchmakingSkill",
     "get_matchmaking_skill",
     "PreCommunicationSkill",
@@ -31,56 +32,63 @@ __all__ = [
     "OmniscientInsightSkill",
     "get_omniscient_insight_skill",
 
-    # P1 Skills - 增强 AI 自主性
+    # Values Skills - 增强 AI 自主性
     "RelationshipCoachSkill",
     "get_relationship_coach_skill",
     "DatePlanningSkill",
     "get_date_planning_skill",
 
-    # P19 Skills - 外部服务集成
+    # Advanced Skills - 外部服务集成
     "BillAnalysisSkill",
     "get_bill_analysis_skill",
+    "GiftSuggestionSkill",
+    "get_gift_suggestion_skill",
 ]
 
 # 技能元数据
 SKILL_METADATA = {
     "matchmaking_assistant": {
         "name": "匹配助手",
-        "priority": "P0",
+        "priority": "Identity",
         "category": "core",
         "description": "AI 红娘助手，帮助用户找到合适的匹配对象"
     },
     "pre_communication": {
         "name": "AI 预沟通",
-        "priority": "P0",
+        "priority": "Identity",
         "category": "core",
         "description": "AI 替身预沟通服务"
     },
     "omniscient_insight": {
         "name": "AI 感知",
-        "priority": "P0",
+        "priority": "Identity",
         "category": "core",
         "description": "AI 全知感知系统"
     },
     "relationship_coach": {
         "name": "关系教练",
-        "priority": "P1",
+        "priority": "Values",
         "category": "relationship",
         "description": "关系维护教练"
     },
     "date_planning": {
         "name": "约会策划",
-        "priority": "P1",
+        "priority": "Values",
         "category": "dating",
         "description": "AI 约会策划师"
     },
     "bill_analysis": {
         "name": "账单分析",
-        "priority": "P19",
+        "priority": "Advanced",
         "category": "external_service",
         "description": "基于消费水平的真实匹配服务"
+    },
+    "gift_suggestion": {
+        "name": "礼物推荐",
+        "priority": "Values",
+        "category": "gift",
+        "description": "AI 根据场景和兴趣推荐礼物"
     }
-    # 注：geo_location, gift_ordering 已删除，改用 REST API
 }
 
 

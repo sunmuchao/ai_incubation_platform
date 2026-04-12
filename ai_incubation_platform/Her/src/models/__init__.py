@@ -4,27 +4,29 @@
 所有模型按领域分类注册，避免重复定义和循环导入问题。
 测试环境只需导入此模块即可获得所有模型定义。
 
-## 领域映射表（P系列 → 功能领域）
+## 领域映射表（语义化命名）
 
-| P系列 | 领域 | 文件 |
-|-------|------|------|
-| P0 | 身份认证 | p0_identity_models.py |
-| P1 | 冲突/感知/价值观 | p1_conflict_models.py, p1_perception_models.py, p1_values_models.py |
-| P2 | 数字孪生 | p2_digital_twin_models.py |
-| P8 | 企业管理 | p8_models.py |
-| P9 | 通知分享 | p9_models.py |
-| P10 | 关系里程碑/约会建议 | p10_models.py |
-| P11 | 情感分析/安全守护 | p11_models.py |
-| P12 | 行为实验室 | p12_models.py |
-| P13 | 爱之语/预警响应 | p13_models.py |
-| P14 | 约会模拟沙盒 | p14_models.py |
-| P15 | 自主约会策划 | p15_models.py |
-| P16 | 部落匹配/数字小家 | p16_models.py |
-| P17 | 压力测试/成长计划 | p17_models.py |
-| P18 | 关系状态管理 | p18_models.py |
-| P18-P22 | AI预沟通/消费画像 | p18_p22_models.py |
-| P20 | 智能聊天助手 | p20_models.py |
-| L4 | AI持续学习 | l4_learning_models.py |
+| 功能领域 | 文件 |
+|----------|------|
+| 身份认证 | identity_models.py |
+| 冲突处理 | conflict_models.py |
+| 感知层 | perception_models.py |
+| 价值观演化 | values_models.py |
+| 数字孪生 | digital_twin_models.py |
+| 企业管理/验证 | verification_models.py |
+| 通知分享 | notification_models.py |
+| 关系里程碑 | milestone_models.py |
+| 情感分析 | emotion_analysis_models.py |
+| 行为实验室 | behavior_lab_models.py |
+| 关系增强 | relationship_enhancement_models.py |
+| 约会模拟 | date_simulation_models.py |
+| 自主约会 | autonomous_dating_models.py |
+| 社交部落 | social_tribe_models.py |
+| 压力测试 | stress_test_models.py |
+| 情感气象 | emotion_weather_models.py |
+| 高级功能 | advanced_feature_models.py |
+| 未来功能 | future_models.py |
+| AI持续学习 | l4_learning_models.py |
 
 详细文档见: models/README.md
 """
@@ -74,9 +76,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P8: 企业管理领域
+# Enterprise: 企业管理领域
 # ============================================
-from models.p8_models import (
+from models.verification_models import (
     DepartmentDB,
     OperatorRoleDB,
     UserOperatorDB,
@@ -93,9 +95,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P9: 通知与分享领域
+# Notification: 通知与分享领域
 # ============================================
-from models.p9_models import (
+from models.notification_models import (
     UserNotificationDB,
     UserPushTokenDB,
     NotificationTemplateDB,
@@ -109,9 +111,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P10: 深度认知领域
+# Milestone: 深度认知领域
 # ============================================
-from models.p10_models import (
+from models.milestone_models import (
     RelationshipMilestoneDB,
     RelationshipStageHistoryDB,
     RelationshipInsightDB,
@@ -129,9 +131,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P11: 感官洞察领域 (情感分析/安全守护)
+# Emotion: 感官洞察领域 (情感分析/安全守护)
 # ============================================
-from models.p11_models import (
+from models.emotion_analysis_models import (
     EmotionAnalysisDB,
     EmotionReportDB,
     EmotionalTrendDB,
@@ -151,9 +153,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P12: 行为实验室领域
+# Behavior: 行为实验室领域
 # ============================================
-from models.p12_models import (
+from models.behavior_lab_models import (
     SharedExperienceDB,
     SilenceEventDB,
     IcebreakerTopicDB,
@@ -171,9 +173,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P13: 情感调解领域
+# LoveLanguage: 情感调解领域
 # ============================================
-from models.p13_models import (
+from models.relationship_enhancement_models import (
     UserLoveLanguageProfileDB,
     RelationshipTrendPredictionDB,
     WarningResponseStrategyDB,
@@ -188,9 +190,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P14: 实战演习领域
+# DateSimulation: 实战演习领域
 # ============================================
-from models.p14_models import (
+from models.date_simulation_models import (
     AIDateAvatarDB,
     DateSimulationDB,
     SimulationFeedbackDB,
@@ -211,9 +213,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P15: 虚实结合领域
+# AutonomousDating: 虚实结合领域
 # ============================================
-from models.p15_models import (
+from models.autonomous_dating_models import (
     AutonomousDatePlanDB,
     DateReservationDB,
     RelationshipAlbumDB,
@@ -228,9 +230,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P16: 圈子融合领域
+# SocialTribe: 圈子融合领域
 # ============================================
-from models.p16_models import (
+from models.social_tribe_models import (
     LifestyleTribeDB,
     UserTribeMembershipDB,
     TribeCompatibilityDB,
@@ -248,9 +250,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P17: 终极共振领域
+# StressTest: 终极共振领域
 # ============================================
-from models.p17_models import (
+from models.stress_test_models import (
     StressTestScenarioDB,
     CoupleStressTestDB,
     GrowthPlanDB,
@@ -268,9 +270,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P18: AI 预沟通领域
+# EmotionWeather: AI 预沟通领域
 # ============================================
-from models.p18_models import (
+from models.emotion_weather_models import (
     RelationshipStateDB,
     DatingAdviceDB,
     LoveGuidanceDB,
@@ -285,9 +287,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P1: 冲突处理领域
+# Values: 冲突处理领域
 # ============================================
-from models.p1_conflict_models import (
+from models.conflict_models import (
     ConflictStyleDB,
     ConflictHistoryDB,
     ConflictCompatibilityDB,
@@ -301,9 +303,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P1: 价值观演化领域
+# Values: 价值观演化领域
 # ============================================
-from models.p1_values_models import (
+from models.values_models import (
     DeclaredValuesDB,
     InferredValuesDB,
     ValuesDriftDB,
@@ -320,9 +322,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P1: 感知层领域 (向量数据库)
+# Values: 感知层领域 (向量数据库)
 # ============================================
-from models.p1_perception_models import (
+from models.perception_models import (
     UserVectorDB,
     VectorUpdateHistoryDB,
     VectorSimilarityCacheDB,
@@ -341,9 +343,9 @@ __all__.extend([
 ])
 
 # ============================================
-# P18-P22: 下一代迭代领域
+# Advanced: 下一代迭代领域
 # ============================================
-from models.p18_p22_models import (
+from models.advanced_feature_models import (
     AIChatSession,
     AIChatSessionResult,
     ConsumptionProfile,
@@ -361,11 +363,11 @@ from models.p18_p22_models import (
     OfflineConversionFunnel,
     CoupleMode,
 )
-# P20 专用：聊天情感趋势（区别于 P11 的 EmotionalTrendDB）
-from models.p20_models import (
+# Future 专用：聊天情感趋势（区别于 Emotion 的 EmotionalTrendDB）
+from models.future_models import (
     ChatAssistantSuggestionDB,
     DatePlanDB,
-    DateVenueDB as DateVenueP20DB,  # 重命名避免与 p10_models.DateVenueDB 冲突
+    DateVenueDB as DateVenueP20DB,  # 重命名避免与 milestone_models.DateVenueDB 冲突
     RelationshipConsultationDB,
     RelationshipFAQDB,
     ChatEmotionTrendDB,
@@ -375,8 +377,8 @@ from models.p20_models import (
     BehaviorCreditDB,
     BehaviorCreditEventDB,
 )
-# P0: 多源身份核验模型
-from models.p0_identity_models import (
+# Identity: 多源身份核验模型
+from models.identity_models import (
     TrustBadgeDB,
     TrustBadgeHistoryDB,
     ExternalVerificationAPIConfigDB,
@@ -386,8 +388,8 @@ from models.p0_identity_models import (
     PropertyCredentialDB,
 )
 
-# P2: 数字分身预聊模型
-from models.p2_digital_twin_models import (
+# DigitalTwin: 数字分身预聊模型
+from models.digital_twin_models import (
     DigitalTwinProfile,
     DigitalTwinSimulation,
     DigitalTwinReport,
@@ -413,17 +415,17 @@ __all__.extend([
     'DateFeedback', 'RiskFlag', 'RelationshipHealth', 'GiftManager',
     'DynamicProfile', 'PreferenceDial', 'PrivacySetting', 'AIAuditLog',
     'OfflineConversionFunnel', 'CoupleMode',
-    # P20 专用模型
+    # Future 专用模型
     'ChatAssistantSuggestionDB', 'DatePlanDB', 'DateVenueP20DB',
     'RelationshipConsultationDB', 'RelationshipFAQDB', 'ChatEmotionTrendDB',
     'LoveDiaryEntryDB', 'LoveDiaryMemoryDB', 'RelationshipTimelineDB',
     'BehaviorCreditDB', 'BehaviorCreditEventDB',
-    # P0: 多源身份核验模型
+    # Identity: 多源身份核验模型
     'TrustBadgeDB', 'TrustBadgeHistoryDB',
     'ExternalVerificationAPIConfigDB',
     'EducationCredentialDB', 'OccupationCredentialDB',
     'IncomeCredentialDB', 'PropertyCredentialDB',
-    # P2: 数字分身预聊模型
+    # DigitalTwin: 数字分身预聊模型
     'DigitalTwinProfile', 'DigitalTwinSimulation', 'DigitalTwinReport',
     # L4: AI 持续学习模型
     'UserPreferenceMemory', 'BehaviorLearningPattern', 'MatchingWeightAdjustment', 'UserLearningProfile',
@@ -432,12 +434,12 @@ __all__.extend([
 ])
 
 # ============================================
-# P18-P22 别名映射（兼容旧代码引用）
+# Advanced 别名映射（兼容旧代码引用）
 # 注意：以下别名仅保留被实际引用的，已删除未使用的别名
 # ============================================
 PreCommunicationSessionDB = AIChatSession
 ConsumptionProfileDB = ConsumptionProfile
-# 注意：BehaviorCreditDB 在 p20_models.py 中有真实定义，此处不再创建别名以避免覆盖
+# 注意：BehaviorCreditDB 在 future_models.py 中有真实定义，此处不再创建别名以避免覆盖
 
 # 添加到 __all__
 __all__.extend([
@@ -447,7 +449,7 @@ __all__.extend([
 # ============================================
 # 审计日志模型 (单独在 db.audit 中)
 # ============================================
-# 注意：AuditLogDB 已在 p8_models 中定义，无需重复导入
+# 注意：AuditLogDB 已在 verification_models 中定义，无需重复导入
 
 
 def register_all_models():

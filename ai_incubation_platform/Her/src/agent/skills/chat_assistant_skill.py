@@ -4,7 +4,7 @@
 AI 聊天助手核心 Skill - 消息发送、会话管理、聊天建议
 """
 from typing import Dict, Any, Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 from agent.skills.base import BaseSkill
 from utils.logger import logger
 
@@ -49,7 +49,8 @@ class ChatAssistantSkill:
                         "get_history",
                         "mark_read",
                         "get_suggestions",
-                        "get_unread_count"
+                        "get_unread_count",
+                        "check_pending_replies"
                     ],
                     "description": "操作类型"
                 },
@@ -178,6 +179,8 @@ class ChatAssistantSkill:
                     result = self._get_suggestions(user_id, other_user_id)
                 elif operation == "get_unread_count":
                     result = self._get_unread_count(service, user_id)
+                elif operation == "check_pending_replies":
+                    result = self._check_pending_replies(service, user_id)
                 else:
                     return {
                         "success": False,
@@ -364,6 +367,45 @@ class ChatAssistantSkill:
         count = service.get_unread_count(user_id)
         return {"unread_count": count}
 
+    def _check_pending_replies(self, service, user_id: str) -> Dict[str, Any]:
+        """
+        检查待回复的消息（Your Turn 功能）
+
+        AI Native: 主动检测对方发来的消息，生成回复建议
+        """
+        from db.models import ChatMessageDB, UserDB
+        from sqlalchemy import desc
+
+        db = service.db
+
+        # 获取对方发来的未回复消息（最近24小时内）
+        pending_messages = db.query(ChatMessageDB).filter(
+            ChatMessageDB.receiver_id == user_id,
+            ~ChatMessageDB.is_read,
+            ChatMessageDB.created_at >= datetime.now() - timedelta(hours=24)
+        ).order_by(desc(ChatMessageDB.created_at)).limit(10).all()
+
+        pending_replies = []
+        for msg in pending_messages:
+            # 获取发送者信息
+            sender = db.query(UserDB).filter(UserDB.id == msg.sender_id).first()
+            if sender:
+                pending_replies.append({
+                    "message_id": msg.id,
+                    "sender_id": msg.sender_id,
+                    "sender_name": sender.name,
+                    "sender_avatar": sender.avatar_url,
+                    "content_preview": msg.content[:50] if len(msg.content) > 50 else msg.content,
+                    "created_at": msg.created_at.isoformat(),
+                    "hours_since": (datetime.now() - msg.created_at).total_seconds() / 3600
+                })
+
+        return {
+            "pending_count": len(pending_replies),
+            "pending_replies": pending_replies,
+            "has_urgent": any(p["hours_since"] > 12 for p in pending_replies)
+        }
+
     def _generate_ai_message(self, result: Dict, operation: str) -> str:
         """生成 AI 消息"""
         if operation == "send_message":
@@ -384,6 +426,14 @@ class ChatAssistantSkill:
             if count > 0:
                 return f"你有{count}条未读消息，快看看吧~"
             return "没有未读消息"
+        elif operation == "check_pending_replies":
+            count = result.get("pending_count", 0)
+            if count > 0:
+                urgent = result.get("has_urgent", False)
+                if urgent:
+                    return f"你有{count}条消息待回复，有些已经超过12小时了，赶紧回复吧~"
+                return f"你有{count}条消息待回复，来看看我帮你准备的回复建议~"
+            return "没有待回复的消息，继续聊吧~"
         return "操作完成"
 
     def _build_generative_ui(self, result: Dict, operation: str) -> Dict[str, Any]:
@@ -427,6 +477,16 @@ class ChatAssistantSkill:
                     "count": result.get("unread_count", 0)
                 }
             }
+        elif operation == "check_pending_replies":
+            return {
+                "component_type": "YourTurnCard",
+                "props": {
+                    "pending_count": result.get("pending_count", 0),
+                    "pending_replies": result.get("pending_replies", []),
+                    "has_urgent": result.get("has_urgent", False),
+                    "show_reply_suggestions": True
+                }
+            }
         return {"component_type": "empty_state", "props": {"message": "暂无数据"}}
 
     def _generate_actions(self, result: Dict, operation: str) -> List[Dict[str, Any]]:
@@ -462,6 +522,19 @@ class ChatAssistantSkill:
                 "action_type": "refresh_suggestions",
                 "params": {}
             })
+        elif operation == "check_pending_replies":
+            pending = result.get("pending_replies", [])
+            if pending:
+                actions.append({
+                    "label": "查看待回复",
+                    "action_type": "view_pending_replies",
+                    "params": {}
+                })
+                actions.append({
+                    "label": "获取回复建议",
+                    "action_type": "get_reply_suggestions",
+                    "params": {"sender_id": pending[0].get("sender_id") if pending else None}
+                })
 
         return actions
 

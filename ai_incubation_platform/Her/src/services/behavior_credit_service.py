@@ -1,7 +1,7 @@
 """
 AI 行为信用分服务
 
-P0 功能：基于用户行为建立信用评分体系，用于：
+Identity 功能：基于用户行为建立信用评分体系，用于：
 1. 匹配权重调节
 2. 敏感功能限制
 3. AI 提醒其他用户
@@ -22,11 +22,12 @@ import json
 
 from db.database import SessionLocal
 from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
-from models.p20_models import BehaviorCreditDB, BehaviorCreditEventDB
+from models.future_models import BehaviorCreditDB, BehaviorCreditEventDB
 from utils.logger import logger
+from services.base_service import BaseService
 
 
-class BehaviorCreditService:
+class BehaviorCreditService(BaseService):
     """行为信用分服务"""
 
     # 负面行为扣分配置
@@ -69,7 +70,7 @@ class BehaviorCreditService:
     }
 
     def __init__(self, db: Optional[Session] = None):
-        self._db: Optional[Session] = db
+        super().__init__(db)
         self._should_close_db: bool = db is None
 
     def _get_db(self) -> Session:

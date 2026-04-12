@@ -30,11 +30,12 @@ from db.models import (
     SemanticAnalysisDB, UserProfileUpdateDB, MatchInteractionDB
 )
 from utils.logger import logger
+from services.base_service import BaseService
 from services.behavior_tracking_service import behavior_service
 from services.llm_semantic_service import get_llm_semantic_service
 
 
-class AIAwarenessService:
+class AIAwarenessService(BaseService):
     """
     AI 感知服务 -  omniscient awareness layer
 
@@ -59,7 +60,7 @@ class AIAwarenessService:
     PRIORITY_URGENT = 4
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
         self.semantic_service = get_llm_semantic_service()
 
     async def get_omniscient_awareness(self, user_id: str) -> Dict[str, Any]:

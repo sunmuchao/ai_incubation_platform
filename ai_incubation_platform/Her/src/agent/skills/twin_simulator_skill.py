@@ -1,7 +1,7 @@
 """
 数字分身模拟 Skill
 
-P1 功能：使用数字分身进行模拟对话，生成兼容性报告和复盘分析
+Values 功能：使用数字分身进行模拟对话，生成兼容性报告和复盘分析
 """
 from typing import Dict, Any, Optional, List
 from datetime import datetime
@@ -209,7 +209,7 @@ class TwinSimulatorSkill:
 
         # 获取模拟结果
         db = digital_twin_service._get_db()
-        from models.p2_digital_twin_models import DigitalTwinSimulation
+        from models.digital_twin_models import DigitalTwinSimulation
         simulation = db.query(DigitalTwinSimulation).filter(
             DigitalTwinSimulation.id == simulation_id
         ).first()
@@ -273,7 +273,7 @@ class TwinSimulatorSkill:
     ) -> Dict[str, Any]:
         """获取状态"""
         from utils.db_session_manager import db_session
-        from models.p2_digital_twin_models import DigitalTwinSimulation
+        from models.digital_twin_models import DigitalTwinSimulation
 
         with db_session() as db:
             simulation = db.query(DigitalTwinSimulation).filter(

@@ -224,7 +224,7 @@ class EmotionMediatorSkill(BaseSkill):
         """执行调解分析"""
         from db.database import SessionLocal
         from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
-        from services.p12_emotion_mediation_service import emotion_mediation_service
+        from services.emotion_mediation_service import emotion_mediation_service
 
         db = SessionLocal()
         result = {

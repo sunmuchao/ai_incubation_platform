@@ -580,7 +580,7 @@ class TestBuildStreamPrompt:
 
         prompt = service._build_stream_prompt(state, "我想找个认真恋爱的")
 
-        assert "AI 助手" in prompt or "AI_PERSONA" in prompt
+        assert "AI 情感顾问" in prompt or "AI_PERSONA" in prompt
         assert "认真恋爱" in prompt
 
 

@@ -1,7 +1,7 @@
 """
 情境感知渲染服务
 
-P1 功能：基于对话情境、用户状态、关系阶段动态选择 UI 组件
+Values 功能：基于对话情境、用户状态、关系阶段动态选择 UI 组件
 """
 from typing import Dict, List, Optional, Any
 from datetime import datetime
@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from db.database import SessionLocal
 from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 from utils.logger import logger
+from services.base_service import BaseService
 
 
 class AdaptiveUIContext:
@@ -54,7 +55,7 @@ class AdaptiveUIContext:
         }
 
 
-class AdaptiveUIRenderer:
+class AdaptiveUIRenderer(BaseService):
     """
     自适应 UI 渲染器
 
@@ -193,7 +194,7 @@ class AdaptiveUIRenderer:
                 service = AdaptiveUIService(db=db)
                 service.select_component(context)
         """
-        self._db: Optional[Session] = db
+        super().__init__(db)
         self._should_close_db: bool = db is None
 
     def _get_db(self) -> Session:

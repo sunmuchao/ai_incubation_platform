@@ -1,7 +1,7 @@
 """
 会员订阅服务 - SQLAlchemy 版本
 
-P20 增强：
+Future 增强：
 - 使用次数追踪（每日限制计数）
 - 缓存失效集成
 """
@@ -29,13 +29,14 @@ from db.models import UserMembershipDB, MembershipOrderDB
 from sqlalchemy.orm import Session
 from utils.logger import logger
 from cache import cache_manager
+from services.base_service import BaseService
 
 
-class MembershipService:
+class MembershipService(BaseService):
     """会员订阅服务 - SQLAlchemy 版本"""
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
 
     def get_user_membership(self, user_id: str) -> UserMembership:
         """获取用户会员状态"""
@@ -459,7 +460,7 @@ class MembershipService:
 
         logger.info(f"激活会员：user_id={user_id}, tier={tier.value}, duration={duration_months}个月")
 
-        # P20 增强：会员状态变更后失效用户缓存
+        # Future 增强：会员状态变更后失效用户缓存
         cache_manager.get_instance().invalidate_on_membership_change(user_id)
 
     def cancel_subscription(self, user_id: str) -> bool:

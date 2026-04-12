@@ -1,25 +1,87 @@
 // AI Native Chat 组件 - 对话式交互核心
 
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Input, Button, Card, Avatar, Spin, Tag, Space, Typography, Divider, Progress, Empty, Timeline } from 'antd'
-import { UserOutlined, ThunderboltOutlined, HeartFilled, CheckCircleOutlined, CloseCircleOutlined, MessageOutlined, SendOutlined } from '@ant-design/icons'
+import React, { useState, useRef, useEffect, useMemo, useCallback, lazy, Suspense } from 'react'
+import { Input, Button, Card, Avatar, Spin, Tag, Space, Typography, Divider } from 'antd'
+import { UserOutlined, ThunderboltOutlined, HeartFilled, MessageOutlined, SendOutlined } from '@ant-design/icons'
 import type { MatchCandidate, AIPreCommunicationSession } from '../types'
 import { conversationMatchingApi, aiAwarenessApi } from '../api'
-import {
-  getMyPreCommunicationSessions,
-  startPreCommunication,
-  getPreCommunicationMessages,
-  getCompatibilityLevel,
-  getSessionStatusText,
-} from '../api/aiInterlocutor'
-import HerAvatar from '../assets/her-avatar.svg'
-import MatchCard from './MatchCard'
-import { FeatureCardRenderer } from './FeatureCards'
-import ProfileQuestionCard from './ProfileQuestionCard'
-import type { Feature } from './FeaturesDrawer'
-import { authStorage } from '../utils/storage'
+import { preCommunicationSkill, skillRegistry } from '../api/skillClient'
+import { deerflowClient } from '../api/deerflowClient'
+import { authStorage, registrationStorage } from '../utils/storage'
 import profileApi from '../api/profileApi'
+import HerAvatar from '../assets/her-avatar.svg'
+import type { Feature } from './FeaturesDrawer'
 import './ChatInterface.less'
+
+// 辅助函数（从已删除的 aiInterlocutor.ts 迁移）
+const getCompatibilityLevel = (score: number): string => {
+  if (score >= 90) return '极高'
+  if (score >= 80) return '很高'
+  if (score >= 70) return '较高'
+  if (score >= 60) return '中等'
+  return '较低'
+}
+
+const getSessionStatusText = (status: string): string => {
+  const texts: Record<string, string> = {
+    pending: '等待开始',
+    analyzing: '分析中',
+    chatting: 'AI 对聊中',
+    completed: '已完成',
+    cancelled: '已取消',
+  }
+  return texts[status] || status
+}
+
+// 🚀 [性能优化] 懒加载大型组件，减少初始 bundle 大小
+const MatchCard = lazy(() => import('./MatchCard'))
+const FeatureCardRenderer = lazy(() => import('./FeatureCards').then(m => ({ default: m.FeatureCardRenderer })))
+const ProfileQuestionCard = lazy(() => import('./ProfileQuestionCard'))
+const PreCommunicationSessionCard = lazy(() => import('./PreCommunicationSessionCard'))
+const PreCommunicationDialogCard = lazy(() => import('./PreCommunicationDialogCard'))
+
+// 🚀 [性能优化] 内联骨架屏组件，避免静态导入破坏代码分割
+const InlineFeatureCardSkeleton: React.FC = () => (
+  <Card className="feature-card" style={{ marginBottom: 16 }}>
+    <div style={{ padding: 16 }}>
+      <div style={{ width: 100, height: 20, background: '#f0f0f0', borderRadius: 4, marginBottom: 12 }} />
+      <div style={{ width: '100%', height: 14, background: '#f0f0f0', borderRadius: 4, marginBottom: 8 }} />
+      <div style={{ width: '80%', height: 14, background: '#f0f0f0', borderRadius: 4 }} />
+    </div>
+  </Card>
+)
+
+// 🚀 [性能优化] 匹配卡片骨架屏
+const InlineMatchCardSkeleton: React.FC = () => (
+  <Card className="match-card" style={{ marginBottom: 16, borderRadius: 16 }}>
+    <div style={{ padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ width: 48, height: 48, background: '#f0f0f0', borderRadius: 12 }} />
+        <div style={{ marginLeft: 12 }}>
+          <div style={{ width: 120, height: 16, background: '#f0f0f0', borderRadius: 4 }} />
+          <div style={{ width: 80, height: 12, background: '#f0f0f0', borderRadius: 4, marginTop: 6 }} />
+        </div>
+      </div>
+      <div style={{ width: '100%', height: 14, background: '#f0f0f0', borderRadius: 4, marginBottom: 8 }} />
+      <div style={{ width: '70%', height: 14, background: '#f0f0f0', borderRadius: 4 }} />
+    </div>
+  </Card>
+)
+
+// 🚀 [性能优化] 问题卡片骨架屏
+const InlineQuestionCardSkeleton: React.FC = () => (
+  <Card style={{ marginBottom: 16, borderRadius: 12 }}>
+    <div style={{ padding: 16 }}>
+      <div style={{ width: '80%', height: 18, background: '#f0f0f0', borderRadius: 4, marginBottom: 8 }} />
+      <div style={{ width: '60%', height: 12, background: '#f0f0f0', borderRadius: 4, marginBottom: 16 }} />
+      <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ width: 80, height: 32, background: '#f0f0f0', borderRadius: 8 }} />
+        <div style={{ width: 80, height: 32, background: '#f0f0f0', borderRadius: 8 }} />
+        <div style={{ width: 80, height: 32, background: '#f0f0f0', borderRadius: 8 }} />
+      </div>
+    </div>
+  </Card>
+)
 
 const { Text, Paragraph } = Typography
 
@@ -36,13 +98,32 @@ interface Message {
   suggestions?: string[]
   next_actions?: string[]
   timestamp: Date
-  generativeCard?: 'precommunication' | 'precommunication-dialog' | 'match' | 'analysis' | 'feature' | 'profile_question'  // Generative UI 卡片类型
+  generativeCard?: 'precommunication' | 'precommunication-dialog' | 'match' | 'analysis' | 'feature' | 'profile_question' | 'quick_start'  // Generative UI 卡片类型（新增 quick_start）
   generativeData?: unknown  // Generative UI 数据
   featureAction?: string  // 功能卡片类型
 }
 
 // 最大消息数量限制，防止内存泄漏
 const MAX_MESSAGES = 50
+
+// 检查是否是新用户（需要信息收集）
+const isNewUserNeedsInfo = (): boolean => {
+  const user = authStorage.getUser()
+  // 如果用户信息不完整（缺少年龄、性别、所在地、关系目标中的任意一个）
+  const hasRequiredInfo = user?.age && user?.gender && user?.location && user?.relationship_goal
+  return !hasRequiredInfo
+}
+
+// 获取缺失的信息字段
+const getMissingInfoFields = (): string[] => {
+  const user = authStorage.getUser()
+  const missing: string[] = []
+  if (!user?.age) missing.push('age')
+  if (!user?.gender) missing.push('gender')
+  if (!user?.location) missing.push('location')
+  if (!user?.relationship_goal) missing.push('relationship_goal')
+  return missing
+}
 
 interface ChatInterfaceProps {
   onMatchSelect?: (match: MatchCandidate) => void
@@ -59,26 +140,53 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   initialMatch,
   onInitialMatchConsumed
 }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      type: 'ai',
-      content:
-        '你好，我是 Her 🤍\n\n我相信，每个人都有属于自己的那个人。\n\n我可以帮你：\n• 遇见懂你的 TA\n• 读懂你们的关系信号\n• 策划只属于你们的浪漫\n\n和我说说吧，你期待怎样的相遇？',
-      timestamp: new Date(),
-    },
-  ])
+  // 判断是否是新用户，决定欢迎消息内容
+  const isNewUser = isNewUserNeedsInfo()
+
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (isNewUser) {
+      // 新用户：主动发起信息收集对话
+      return [{
+        id: 'welcome-new-user',
+        type: 'ai',
+        content: '你好！我是 Her 🤍\n\n我来帮你找到合适的人。\n\n先告诉我几个关键信息，马上给你推荐~',
+        timestamp: new Date(),
+        next_actions: ['开始'],
+      }]
+    } else {
+      // 已有完整信息的用户：标准欢迎消息
+      return [{
+        id: 'welcome',
+        type: 'ai',
+        content:
+          '你好，我是 Her 🤍\n\n我相信，每个人都有属于自己的那个人。\n\n我可以帮你：\n• 遇见懂你的 TA\n• 读懂你们的关系信号\n• 策划只属于你们的浪漫\n\n和我说说吧，你期待怎样的相遇？',
+        timestamp: new Date(),
+      }]
+    }
+  })
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [quickTags, setQuickTags] = useState<QuickTag[]>([])  // 动态快捷标签
+  const [threadId, setThreadId] = useState<string>(() => {
+    // 初始化 thread_id，用于 DeerFlow 对话上下文持久化
+    const userId = authStorage.getUserId()
+    return `her-${userId}-${Date.now()}`
+  })
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // 新用户信息收集状态
+  const [collectingStep, setCollectingStep] = useState<number>(() => {
+    if (!isNewUser) return -1  // 不需要收集
+    const missing = getMissingInfoFields()
+    return missing.length > 0 ? 0 : -1  // 0 表示开始收集
+  })
 
   // 获取动态快捷标签
   useEffect(() => {
     const fetchQuickTags = async () => {
       try {
         const token = authStorage.getToken()
-        const response = await fetch('/api/quick_chat/tags', {
+        const response = await fetch('/api/chat/tags', {
           headers: {
             'Authorization': `Bearer ${token || ''}`,
           },
@@ -272,27 +380,280 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return () => {}
   }, [messages, scrollToBottom])
 
+  // ==================== 新用户信息收集流程 ====================
+
+  /**
+   * 处理新用户信息收集
+   * 在对话中逐步收集：年龄、性别、所在地、关系目标
+   * 收集完成后立即展示推荐
+   */
+  const handleQuickStartStep = async (userInput: string) => {
+    const user = authStorage.getUser()
+    const missingFields = getMissingInfoFields()
+
+    // 如果用户信息已完整，直接进行匹配
+    if (missingFields.length === 0) {
+      // 标记收集完成
+      setCollectingStep(-1)
+      registrationStorage.markCompleted()
+
+      // 调用匹配 API
+      try {
+        const response = await conversationMatchingApi.match({
+          user_intent: '帮我找对象',
+        })
+
+        const aiMessage: Message = {
+          id: `ai-${Date.now()}`,
+          type: 'ai',
+          content: response.message || '好的，我这有几个觉得合适的，你先看看~',
+          matches: response.matches,
+          timestamp: new Date(),
+        }
+        setMessages(prev => {
+          const newMessages = [...prev, aiMessage]
+          if (newMessages.length > MAX_MESSAGES) {
+            return newMessages.slice(newMessages.length - MAX_MESSAGES)
+          }
+          return newMessages
+        })
+      } catch (error) {
+        const aiMessage: Message = {
+          id: `ai-${Date.now()}`,
+          type: 'ai',
+          content: '好的，信息收集完成了！你可以在对话中说"帮我找对象"开始匹配~',
+          timestamp: new Date(),
+        }
+        setMessages(prev => [...prev, aiMessage])
+      }
+      setIsLoading(false)
+      return true
+    }
+
+    // 根据缺失字段生成对应的问题卡片
+    const nextMissing = missingFields[collectingStep]
+    if (nextMissing && collectingStep >= 0) {
+      // 生成问题卡片
+      const questionCard = generateQuickStartQuestionCard(nextMissing)
+
+      const aiMessage: Message = {
+        id: `ai-${Date.now()}`,
+        type: 'ai',
+        content: '',
+        generativeCard: 'quick_start',
+        generativeData: questionCard,
+        timestamp: new Date(),
+      }
+      setMessages(prev => {
+        const newMessages = [...prev, aiMessage]
+        if (newMessages.length > MAX_MESSAGES) {
+          return newMessages.slice(newMessages.length - MAX_MESSAGES)
+        }
+        return newMessages
+      })
+      setIsLoading(false)
+      return true
+    }
+
+    return false
+  }
+
+  /**
+   * 根据缺失字段生成问题卡片
+   */
+  const generateQuickStartQuestionCard = (field: string): {
+    question: string
+    question_type: 'single_choice' | 'input' | 'tags'
+    options: { value: string; label: string; icon?: string }[]
+    dimension: string
+  } => {
+    switch (field) {
+      case 'age':
+        return {
+          question: '你多大啦？',
+          question_type: 'single_choice',
+          options: [
+            { value: '18-22', label: '18-22岁', icon: '🌱' },
+            { value: '23-26', label: '23-26岁', icon: '🌿' },
+            { value: '27-30', label: '27-30岁', icon: '🌳' },
+            { value: '31-35', label: '31-35岁', icon: '🌲' },
+            { value: '36-40', label: '36-40岁', icon: '🎄' },
+            { value: '40+', label: '40岁以上', icon: '⛰️' },
+          ],
+          dimension: 'age',
+        }
+      case 'gender':
+        return {
+          question: '你是男生还是女生？',
+          question_type: 'single_choice',
+          options: [
+            { value: 'male', label: '男生', icon: '👨' },
+            { value: 'female', label: '女生', icon: '👩' },
+          ],
+          dimension: 'gender',
+        }
+      case 'location':
+        return {
+          question: '你在哪个城市？',
+          question_type: 'tags',
+          options: [
+            { value: '北京', label: '北京' },
+            { value: '上海', label: '上海' },
+            { value: '广州', label: '广州' },
+            { value: '深圳', label: '深圳' },
+            { value: '杭州', label: '杭州' },
+            { value: '成都', label: '成都' },
+            { value: '武汉', label: '武汉' },
+            { value: '南京', label: '南京' },
+          ],
+          dimension: 'location',
+        }
+      case 'relationship_goal':
+        return {
+          question: '想找什么样的关系？',
+          question_type: 'single_choice',
+          options: [
+            { value: 'serious', label: '认真恋爱', icon: '💕' },
+            { value: 'marriage', label: '奔着结婚', icon: '💍' },
+            { value: 'dating', label: '轻松交友', icon: '☕' },
+            { value: 'casual', label: '随便聊聊', icon: '💭' },
+          ],
+          dimension: 'relationship_goal',
+        }
+      default:
+        return {
+          question: '请告诉我更多信息',
+          question_type: 'input',
+          options: [],
+          dimension: field,
+        }
+    }
+  }
+
+  /**
+   * 处理 QuickStart 问题回答
+   */
+  const handleQuickStartAnswer = async (dimension: string, value: string | string[]) => {
+    // 更新用户信息
+    const user = authStorage.getUser()
+    const updatedUser = { ...user }
+
+    switch (dimension) {
+      case 'age':
+        // 解析年龄范围，取中间值
+        if (typeof value === 'string') {
+          const range = value.split('-')
+          if (range.length === 2) {
+            updatedUser.age = Math.round((parseInt(range[0]) + parseInt(range[1])) / 2)
+          } else if (value === '40+') {
+            updatedUser.age = 42
+          }
+        }
+        break
+      case 'gender':
+        updatedUser.gender = value as string
+        break
+      case 'location':
+        updatedUser.location = typeof value === 'string' ? value : value[0]
+        break
+      case 'relationship_goal':
+        updatedUser.relationship_goal = value as string
+        break
+    }
+
+    // 保存更新后的用户信息
+    authStorage.setUser(updatedUser as any)
+
+    // 进入下一步
+    const newStep = collectingStep + 1
+    const remainingMissing = getMissingInfoFields()
+
+    if (remainingMissing.length === 0) {
+      // 所有信息收集完成
+      setCollectingStep(-1)
+      registrationStorage.markCompleted()
+
+      // 添加确认消息
+      const confirmMessage: Message = {
+        id: `ai-${Date.now()}`,
+        type: 'ai',
+        content: `好的，记下了！\n\n${updatedUser.age ? `年龄：${updatedUser.age}岁` : ''}\n${updatedUser.gender ? `性别：${updatedUser.gender === 'male' ? '男' : '女'}` : ''}\n${updatedUser.location ? `所在地：${updatedUser.location}` : ''}\n${updatedUser.relationship_goal ? `关系目标：${updatedUser.relationship_goal === 'serious' ? '认真恋爱' : updatedUser.relationship_goal === 'marriage' ? '奔着结婚' : updatedUser.relationship_goal === 'dating' ? '轻松交友' : '随便聊聊'}` : ''}\n\n我来帮你找合适的对象~`,
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, confirmMessage])
+
+      // 立即调用匹配 API
+      setIsLoading(true)
+      try {
+        const response = await conversationMatchingApi.match({
+          user_intent: '帮我找对象',
+        })
+
+        const matchMessage: Message = {
+          id: `ai-match-${Date.now()}`,
+          type: 'ai',
+          content: response.message || '好的，我这有几个觉得合适的，你先看看~',
+          matches: response.matches,
+          timestamp: new Date(),
+        }
+        setMessages(prev => [...prev, matchMessage])
+      } catch (error) {
+        const fallbackMessage: Message = {
+          id: `ai-${Date.now()}`,
+          type: 'ai',
+          content: '信息收集完成！你可以直接说"帮我找对象"开始匹配~',
+          timestamp: new Date(),
+        }
+        setMessages(prev => [...prev, fallbackMessage])
+      } finally {
+        setIsLoading(false)
+      }
+    } else {
+      // 还有缺失字段，继续下一步
+      setCollectingStep(newStep)
+
+      // 添加过渡消息
+      const transitionMessage: Message = {
+        id: `ai-${Date.now()}`,
+        type: 'ai',
+        content: '好的，记下了~',
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, transitionMessage])
+
+      // 触发下一个问题
+      setTimeout(() => {
+        handleQuickStartStep('')
+      }, 500)
+    }
+  }
+
+  // 新用户首次进入时，自动触发信息收集流程
+  useEffect(() => {
+    if (collectingStep === 0 && isNewUser) {
+      // 用户点击"开始"后，展示第一个问题
+      // 这里我们等待用户的第一次交互
+    }
+  }, [])
+
+  /**
+   * 简化后的 handleSend - 统一通过 DeerFlow Agent 处理
+   *
+   * 设计原则（AI Native）：
+   * - DeerFlow 是 Agent 运行时，负责意图识别、工具编排、状态管理
+   * - Her 只提供业务 Tools（匹配、关系分析、约会策划等）
+   * - IntentRouter 中间件层已移除（DeerFlow 已具备此能力）
+   * - Generative UI 由 DeerFlow 决定，前端只渲染
+   */
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading) {
       return
     }
 
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      type: 'user',
-      content: inputValue,
-      timestamp: new Date(),
-    }
-
-    setMessages((prev) => {
-      const newMessages = [...prev, userMessage]
-      // 限制消息数量，移除最旧的消息
-      if (newMessages.length > MAX_MESSAGES) {
-        return newMessages.slice(newMessages.length - MAX_MESSAGES)
-      }
-      return newMessages
-    })
     const userInput = inputValue
+
+    // 1. 添加用户消息
+    addUserMessage(userInput)
     setInputValue('')
     setIsLoading(true)
 
@@ -302,152 +663,110 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       aiAwarenessApi.trackChatMessage(userId, 'system', userInput.length).catch(() => {})
     }
 
-    // 1. 检测简单对话（打招呼、感谢等）
-    const simpleResponse = getSimpleResponse(userInput)
-    if (simpleResponse) {
-      const aiMessage: Message = {
-        id: `ai-${Date.now()}`,
-        type: 'ai',
-        content: simpleResponse,
-        timestamp: new Date(),
-      }
-      setMessages((prev) => {
-        const newMessages = [...prev, aiMessage]
-        if (newMessages.length > MAX_MESSAGES) {
-          return newMessages.slice(newMessages.length - MAX_MESSAGES)
-        }
-        return newMessages
-      })
-      setIsLoading(false)
-      return
-    }
-
-    // 2. 检测特定意图（AI 预沟通、关系分析等）
-    const intentResponse = detectUserIntent(userInput)
-    if (intentResponse) {
-      // 如果有 Generative UI 卡片，不需要再添加消息（loadPreCommunicationSessions 会添加）
-      if (intentResponse.generativeCard) {
-        return
-      }
-      const aiMessage: Message = {
-        id: `ai-${Date.now()}`,
-        type: 'ai',
-        content: intentResponse.content,
-        timestamp: new Date(),
-      }
-      setMessages((prev) => {
-        const newMessages = [...prev, aiMessage]
-        if (newMessages.length > MAX_MESSAGES) {
-          return newMessages.slice(newMessages.length - MAX_MESSAGES)
-        }
-        return newMessages
-      })
-      setIsLoading(false)
-      return
-    }
-
-    // 3. 调用后端 API 处理一般对话
+    // 2. 调用 DeerFlow Agent（AI Native 架构：Agent 是核心决策引擎）
     try {
-      const response = await conversationMatchingApi.match({
-        user_intent: userInput,
-      })
+      const result = await deerflowClient.chat(userInput, threadId)
 
-      // 检查是否需要收集用户信息（AI Native 设计）
-      if (response.need_profile_collection && response.question_card) {
-        const aiMessage: Message = {
-          id: `ai-${Date.now()}`,
-          type: 'ai',
-          content: response.message,
-          timestamp: new Date(),
-        }
-        setMessages((prev) => {
-          const newMessages = [...prev, aiMessage]
-          if (newMessages.length > MAX_MESSAGES) {
-            return newMessages.slice(newMessages.length - MAX_MESSAGES)
-          }
-          return newMessages
-        })
-
-        // 添加问题卡片
-        setTimeout(() => {
-          const questionMessage: Message = {
-            id: `question-${Date.now()}`,
-            type: 'ai',
-            content: '',
-            generativeCard: 'profile_question',
-            generativeData: response.question_card,
-            timestamp: new Date(),
-          }
-          setMessages((prev) => [...prev, questionMessage])
-        }, 300)
-
-        setIsLoading(false)
-        return
-      }
-
+      // 3. 添加 AI 消息
       const aiMessage: Message = {
         id: `ai-${Date.now()}`,
         type: 'ai',
-        content: response.message,
-        matches: response.matches,
-        suggestions: response.suggestions,
-        next_actions: response.next_actions,
+        content: result.ai_message,
         timestamp: new Date(),
+        generativeCard: mapComponentTypeToGenerativeCard(result.generative_ui?.component_type),
+        generativeData: result.generative_ui?.props,
+        suggestions: result.suggested_actions?.map((a: any) => a.label),
+        next_actions: result.suggested_actions?.map((a: any) => a.action),
       }
 
-      setMessages((prev) => {
-        const newMessages = [...prev, aiMessage]
-        if (newMessages.length > MAX_MESSAGES) {
-          return newMessages.slice(newMessages.length - MAX_MESSAGES)
-        }
-        return newMessages
-      })
-    } catch (error) {
-      const errorMessage: Message = {
-        id: `error-${Date.now()}`,
-        type: 'system',
-        content: '抱歉，出现了一些问题，请稍后再试~',
-        timestamp: new Date(),
+      addAIMessage(aiMessage)
+
+      // 4. 如果 DeerFlow 未使用，显示提示
+      if (!result.deerflow_used) {
+        console.warn('DeerFlow not available, using fallback response')
       }
-      setMessages((prev) => {
-        const newMessages = [...prev, errorMessage]
-        if (newMessages.length > MAX_MESSAGES) {
-          return newMessages.slice(newMessages.length - MAX_MESSAGES)
-        }
-        return newMessages
-      })
+
+    } catch (error) {
+      console.error('DeerFlow chat error:', error)
+      addErrorMessage('抱歉，出现了一些问题，请稍后再试~')
     } finally {
       setIsLoading(false)
     }
   }
 
-  // 检测简单对话并返回回复
-  const getSimpleResponse = (input: string): string | null => {
-    const inputLower = input.toLowerCase().trim()
-
-    // 打招呼
-    if (/^(你好|hi|hello|早上好|中午好|晚上好 | 嗨|哈喽|hey)/.test(inputLower)) {
-      return `你好呀 🤍 我是 Her，你的情感伴侣~
-
-我可以帮你：
-• 💕 读懂你和 TA 的匹配度
-• 💬 给你最懂你的破冰建议
-• 🎯 遇见为你挑选的人
-
-说说看，今天想聊什么？`
+  // 辅助函数：添加用户消息
+  const addUserMessage = (content: string) => {
+    const userMessage: Message = {
+      id: `user-${Date.now()}`,
+      type: 'user',
+      content,
+      timestamp: new Date(),
     }
+    setMessages(prev => {
+      const newMessages = [...prev, userMessage]
+      if (newMessages.length > MAX_MESSAGES) {
+        return newMessages.slice(newMessages.length - MAX_MESSAGES)
+      }
+      return newMessages
+    })
+  }
 
-    // 感谢
-    if (/(谢谢|thank|thx)/.test(inputLower)) {
-      return `能帮到你，我很开心 🤍`
+  // 辅助函数：添加 AI 消息
+  const addAIMessage = (message: Message) => {
+    setMessages(prev => {
+      const newMessages = [...prev, message]
+      if (newMessages.length > MAX_MESSAGES) {
+        return newMessages.slice(newMessages.length - MAX_MESSAGES)
+      }
+      return newMessages
+    })
+  }
+
+  // 辅助函数：添加错误消息
+  const addErrorMessage = (content: string) => {
+    const errorMessage: Message = {
+      id: `error-${Date.now()}`,
+      type: 'system',
+      content,
+      timestamp: new Date(),
     }
+    setMessages(prev => {
+      const newMessages = [...prev, errorMessage]
+      if (newMessages.length > MAX_MESSAGES) {
+        return newMessages.slice(newMessages.length - MAX_MESSAGES)
+      }
+      return newMessages
+    })
+  }
 
-    // 再见
-    if (/(再见|bye|拜拜 | 回见)/.test(inputLower)) {
-      return `下次见。愿你可以遇见属于自己的那份懂得 🤍`
+  // 辅助函数：将后端 component_type 映射为前端 generativeCard
+  // 支持 DeerFlow 返回的多种 Generative UI 类型
+  const mapComponentTypeToGenerativeCard = (componentType: string): Message['generativeCard'] | undefined => {
+    const mapping: Record<string, Message['generativeCard'] | undefined> = {
+      // 匹配相关
+      'MatchCardList': 'match',
+      'MatchCardList': 'match',
+      // 预沟通
+      'PreCommunicationPanel': 'precommunication',
+      'PreCommunicationDialog': 'precommunication-dialog',
+      // 信息收集
+      'ProfileQuestionCard': 'profile_question',
+      // 约会相关
+      'DateSuggestionCard': 'feature',
+      'DatePlanCard': 'feature',
+      // 分析相关
+      'RelationshipReportCard': 'analysis',
+      'CompatibilityChart': 'analysis',
+      'RelationshipHealthCard': 'analysis',
+      // 功能展示
+      'CapabilityCard': 'feature',
+      'TopicsCard': 'feature',
+      'IcebreakerCard': 'feature',
+      // 简单响应
+      'SimpleResponse': undefined,
+      'AIResponseCard': undefined,
     }
-
-    return null
+    return mapping[componentType]
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -462,245 +781,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setInputValue(action)
   }
 
-  // 检测用户意图并返回相应回复
-  // 注意：这里只处理特殊的本地 UI 交互（如预沟通会话列表）
-  // 真正的意图识别交给后端 AI skill 系统处理
-  const detectUserIntent = (input: string): { content: string; generativeCard?: Message['generativeCard']; generativeData?: unknown } | null => {
-    const inputLower = input.toLowerCase().trim()
-
-    // 预沟通相关 - 启动命令
-    if (inputLower.includes('启动') && (inputLower.includes('预沟通') || inputLower.includes('ai 替身'))) {
-      // 触发 Generative UI 渲染预沟通会话列表
-      loadPreCommunicationSessions()
-      return {
-        content: `正在为你加载预沟通会话...`,
-        generativeCard: 'precommunication',
-      }
-    }
-
-    // 预沟通相关 - 介绍（不拦截，让后端 AI 回复）
-    // 注释掉硬编码回复，改为调用后端 API
-    // if (inputLower.includes('预沟通') || inputLower.includes('ai 替身') || inputLower.includes('代聊')) { ... }
-
-    // 关系分析相关（不拦截，让后端 AI 回复）
-    // 注释掉硬编码回复，改为调用后端 API
-    // if (inputLower.includes('关系') || inputLower.includes('进展') || inputLower.includes('分析')) { ... }
-
-    // 约会建议（不拦截，让后端 AI 回复）
-    // 注释掉硬编码回复，改为调用后端 API
-    // 这样 AI 可以根据上下文判断用户是要约会建议还是要找对象
-    // if (inputLower.includes('约会') || inputLower.includes('去哪里') || inputLower.includes('推荐')) { ... }
-
-    // 没有找到本地特殊意图，返回 null 让后端 AI skill 处理
-    return null
-  }
-
-  // 加载 AI 预沟通会话列表
-  const loadPreCommunicationSessions = async () => {
-    try {
-      const sessions = await getMyPreCommunicationSessions()
-
-      // 添加 AI 消息，包含 Generative UI 卡片
-      const aiMessage: Message = {
-        id: `ai-${Date.now()}`,
-        type: 'ai',
-        content: `找到 ${sessions.length} 个 AI 预沟通会话：`,
-        generativeCard: 'precommunication',
-        generativeData: sessions,
-        timestamp: new Date(),
-      }
-      setMessages(prev => {
-        const newMessages = [...prev, aiMessage]
-        if (newMessages.length > MAX_MESSAGES) {
-          return newMessages.slice(newMessages.length - MAX_MESSAGES)
-        }
-        return newMessages
-      })
-      setIsLoading(false)
-    } catch (error) {
-      const errorMessage: Message = {
-        id: `error-${Date.now()}`,
-        type: 'system',
-        content: '加载预沟通会话失败，请稍后再试~',
-        timestamp: new Date(),
-      }
-      setMessages(prev => {
-        const newMessages = [...prev, errorMessage]
-        if (newMessages.length > MAX_MESSAGES) {
-          return newMessages.slice(newMessages.length - MAX_MESSAGES)
-        }
-        return newMessages
-      })
-      setIsLoading(false)
-    }
-  }
-
-  // 渲染 AI 预沟通会话卡片（Generative UI）
-  const renderPreCommunicationSessions = (sessions: unknown) => {
-    const typedSessions = sessions as AIPreCommunicationSession[]
-
-    if (!typedSessions || typedSessions.length === 0) {
-      return (
-        <Card className="generative-card" size="small">
-          <Empty description="暂无 AI 预沟通会话" />
-        </Card>
-      )
-    }
-
-    return (
-      <div className="generative-card-container">
-        <Text type="secondary" style={{ fontSize: 12, marginBottom: 8, display: 'block' }}>
-          AI 预沟通会话列表
-        </Text>
-        <div className="generative-cards-grid">
-          {sessions.slice(0, 5).map((session, index) => {
-            const isCompleted = session.status === 'completed'
-            const isRecommended = session.recommendation === 'recommend'
-            const progress = (session.conversation_rounds / session.target_rounds) * 100
-
-            return (
-              <Card
-                key={session.session_id}
-                className="generative-card precomm-card"
-                size="small"
-                hoverable
-              >
-                <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                  {/* 状态标签 */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Tag color={getSessionStatusColor(session.status)}>
-                      {getSessionStatusText(session.status)}
-                    </Tag>
-                    {isCompleted && isRecommended && (
-                      <Tag color="green">推荐</Tag>
-                    )}
-                  </div>
-
-                  {/* 进度条 */}
-                  {session.status === 'chatting' && (
-                    <div>
-                      <Progress
-                        percent={Math.round(progress)}
-                        size="small"
-                        strokeColor={{
-                          '0%': '#108ee9',
-                          '100%': '#87d068',
-                        }}
-                      />
-                      <Text type="secondary" style={{ fontSize: 11 }}>
-                        {session.conversation_rounds}/{session.target_rounds} 轮
-                      </Text>
-                    </div>
-                  )}
-
-                  {/* 硬指标校验 */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {session.hard_check_passed ? (
-                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                    ) : (
-                      <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
-                    )}
-                    <Text type="secondary" style={{ fontSize: 11 }}>
-                      硬指标{session.hard_check_passed ? '通过' : '未通过'}
-                    </Text>
-                  </div>
-
-                  {/* 价值观探测 */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <HeartOutlined style={{ color: session.values_check_passed ? '#52c41a' : '#ff4d4f' }} />
-                    <Text type="secondary" style={{ fontSize: 11 }}>
-                      价值观{session.values_check_passed ? '通过' : '未通过'}
-                    </Text>
-                  </div>
-
-                  {/* 匹配度 */}
-                  {isCompleted && session.compatibility_score && (
-                    <div>
-                      <Divider style={{ margin: '4px 0' }} />
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Text strong style={{ fontSize: 18, color: getScoreColor(session.compatibility_score) }}>
-                          {Math.round(session.compatibility_score)}%
-                        </Text>
-                        <Tag color={getScoreColor(session.compatibility_score)}>
-                          {getCompatibilityLevel(session.compatibility_score)}
-                        </Tag>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 操作按钮 */}
-                  <Space wrap size="small">
-                    <Button
-                      size="small"
-                      icon={<MessageOutlined />}
-                      onClick={() => handleViewPreCommunicationMessages(session.session_id)}
-                      disabled={session.conversation_rounds === 0}
-                    >
-                      查看对话
-                    </Button>
-                    {isCompleted && isRecommended && (
-                      <Button
-                        type="primary"
-                        size="small"
-                        icon={<ThunderboltOutlined />}
-                        onClick={() => handleStartChatFromSession(session)}
-                      >
-                        开始聊天
-                      </Button>
-                    )}
-                  </Space>
-                </Space>
-              </Card>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
-
-  // 获取状态颜色
-  const getSessionStatusColor = (status: string): string => {
-    const colors: Record<string, string> = {
-      pending: 'default',
-      analyzing: 'blue',
-      chatting: 'green',
-      completed: 'purple',
-      cancelled: 'red',
-    }
-    return colors[status] || 'default'
-  }
-
-  const getScoreColor = (score: number): string => {
-    if (score >= 85) return 'green'
-    if (score >= 70) return 'blue'
-    if (score >= 60) return 'orange'
-    return 'red'
-  }
-
-  const getSessionStatusText = (status: string): string => {
-    const texts: Record<string, string> = {
-      pending: '等待中',
-      analyzing: '分析中',
-      chatting: '对话中',
-      completed: '已完成',
-      cancelled: '已取消',
-    }
-    return texts[status] || status
-  }
-
-  const getCompatibilityLevel = (score: number): string => {
-    if (score >= 90) return '极匹配'
-    if (score >= 85) return '很匹配'
-    if (score >= 75) return '较匹配'
-    if (score >= 60) return '一般'
-    return '待观察'
-  }
-
-  // 查看预沟通对话消息
+  // 查看预沟通对话消息（由 PreCommunicationSessionCard 组件调用）
   const handleViewPreCommunicationMessages = async (sessionId: string) => {
     try {
       setIsLoading(true)
-      const messages = await getPreCommunicationMessages(sessionId)
+      // 注：pre_communication skill 的 get_messages action 已支持
+      const result = await skillRegistry.execute('pre_communication', {
+        match_id: sessionId,
+        action: 'get_messages'
+      })
+
+      if (!result.success) {
+        throw new Error(result.error || '获取对话历史失败')
+      }
+
+      const messages = result.data?.messages || []
 
       // 添加 AI 消息，包含对话消息列表
       const aiMessage: Message = {
@@ -748,50 +843,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setMessages(prev => [...prev, systemMessage])
   }
 
-  // 渲染 AI 预沟通对话历史（Generative UI）
-  const renderPreCommunicationDialog = (messages: unknown) => {
-    const typedMessages = messages as Array<{ id: string; sender_agent: string; content: string; topic_tag?: string; round_number: number; message_type?: string }>
-
-    if (!typedMessages || typedMessages.length === 0) {
-      return (
-        <Card className="generative-card" size="small">
-          <Empty description="暂无对话内容" />
-        </Card>
-      )
-    }
-
-    return (
-      <div className="generative-dialog-container">
-        <Timeline
-          items={typedMessages.map((msg, idx) => {
-            return {
-              key: msg.id,
-              color: msg.sender_agent.includes('agent_1') ? 'blue' : 'purple',
-              dot: <HeartFilled style={{ color: '#FF8FAB' }} />,
-              children: (
-                <Card size="small" style={{ marginBottom: 8 }}>
-                  <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                    <div>
-                      <Tag color={msg.sender_agent.includes('agent_1') ? 'blue' : 'purple'}>
-                        {msg.sender_agent.includes('agent_1') ? 'AI 替身 A' : 'AI 替身 B'}
-                      </Tag>
-                      <Tag>{msg.message_type || 'text'}</Tag>
-                      {msg.topic_tag && <Tag>{msg.topic_tag}</Tag>}
-                      <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>
-                        第{msg.round_number}轮
-                      </Text>
-                    </div>
-                    <Paragraph style={{ margin: 0, fontSize: 13 }}>{msg.content}</Paragraph>
-                  </Space>
-                </Card>
-              ),
-            }
-          })}
-        />
-      </div>
-    )
-  }
-
   // 渲染消息内容 - 使用 useMemo 缓存渲染结果
   const renderMessageContent = useCallback((message: Message) => {
     if (message.type === 'user') {
@@ -830,92 +881,131 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           {/* Generative UI: AI 预沟通会话卡片 */}
           {message.generativeCard === 'precommunication' && message.generativeData && (
             <div className="generative-ui-container">
-              {renderPreCommunicationSessions(message.generativeData)}
+              {/* 🚀 [性能优化] Suspense 包裹懒加载的 PreCommunicationSessionCard */}
+              <Suspense fallback={<div style={{ padding: 24, textAlign: 'center' }}><Spin size="small" /></div>}>
+                <PreCommunicationSessionCard
+                  sessions={message.generativeData as AIPreCommunicationSession[]}
+                  onViewMessages={handleViewPreCommunicationMessages}
+                  onStartChat={handleStartChatFromSession}
+                />
+              </Suspense>
             </div>
           )}
 
           {/* Generative UI: AI 预沟通对话历史 */}
           {message.generativeCard === 'precommunication-dialog' && message.generativeData && (
             <div className="generative-ui-container">
-              {renderPreCommunicationDialog(message.generativeData)}
+              {/* 🚀 [性能优化] Suspense 包裹懒加载的 PreCommunicationDialogCard */}
+              <Suspense fallback={<div style={{ padding: 24, textAlign: 'center' }}><Spin size="small" /></div>}>
+                <PreCommunicationDialogCard
+                  messages={message.generativeData as Array<{ id: string; sender_agent: string; content: string; topic_tag?: string; round_number: number; message_type?: string }>}
+                />
+              </Suspense>
             </div>
           )}
 
           {/* Generative UI: 功能卡片 */}
           {message.generativeCard === 'feature' && message.featureAction && (
             <div className="generative-ui-container feature-card-container">
-              <FeatureCardRenderer
-                featureAction={message.featureAction}
-                data={message.generativeData}
-                onAction={(action, data) => {
-                  console.log('Feature action:', action, data)
-                  // TODO: 调用对应的 API
-                }}
-              />
+              {/* 🚀 [性能优化] Suspense 包裹懒加载组件，骨架屏作为 fallback */}
+              <Suspense fallback={<InlineFeatureCardSkeleton />}>
+                <FeatureCardRenderer
+                  featureAction={message.featureAction}
+                  data={message.generativeData}
+                  onAction={(action, data) => {
+                    // 功能卡片动作处理（具体 API 调用根据 action 类型分发）
+                  }}
+                />
+              </Suspense>
             </div>
           )}
 
           {/* Generative UI: AI 问题卡片 */}
           {message.generativeCard === 'profile_question' && message.generativeData && (
             <div className="generative-ui-container">
-              <ProfileQuestionCard
-                question={(message.generativeData as any).question}
-                subtitle={(message.generativeData as any).subtitle}
-                questionType={(message.generativeData as any).question_type}
-                options={(message.generativeData as any).options}
-                dimension={(message.generativeData as any).dimension}
-                depth={(message.generativeData as any).depth || 0}
-                onAnswer={async (dimension, value, depth) => {
-                  // 用户选择后，自动发送为消息
-                  const answerText = Array.isArray(value)
-                    ? value.join('、')
-                    : value
-
-                  // 添加用户回答消息
-                  const userMessage: Message = {
-                    id: `user-${Date.now()}`,
-                    type: 'user',
-                    content: answerText,
-                    timestamp: new Date(),
-                  }
-                  setMessages(prev => [...prev, userMessage])
+              {/* 🚀 [性能优化] Suspense 包裹懒加载的 ProfileQuestionCard */}
+              <Suspense fallback={<InlineQuestionCardSkeleton />}>
+                <ProfileQuestionCard
+                  question={(message.generativeData as any).question}
+                  subtitle={(message.generativeData as any).subtitle}
+                  questionType={(message.generativeData as any).question_type}
+                  options={(message.generativeData as any).options}
+                  dimension={(message.generativeData as any).dimension}
+                  depth={(message.generativeData as any).depth || 0}
+                  onAnswer={async (dimension, value, depth) => {
+                  // 🎯 AI Native 设计：用户选择静默处理，不产生冗余对话消息
+                  // 点击选项即代表选择，无需在对话区"表演"选择过程
 
                   // 调用 API 保存用户偏好
-                  try {
-                    const result = await profileApi.submitAnswer({
-                      dimension,
-                      answer: value,
-                      depth,
-                    })
+                  // 错误会抛给 ProfileQuestionCard 处理显示
+                  const result = await profileApi.submitAnswer({
+                    dimension,
+                    answer: value,
+                    depth,
+                  })
 
-                    // 添加 AI 确认回复
-                    const aiMessage: Message = {
-                      id: `ai-${Date.now()}`,
-                      type: 'ai',
-                      content: result.ai_message,
-                      timestamp: new Date(),
-                    }
-                    setMessages(prev => [...prev, aiMessage])
-
-                    // 如果有下一个问题，添加问题卡片
-                    if (result.has_more_questions && result.next_question) {
-                      setTimeout(() => {
-                        const questionMessage: Message = {
-                          id: `question-${Date.now()}`,
-                          type: 'ai',
-                          content: '',
-                          generativeCard: 'profile_question',
+                  // 如果有下一个问题，直接替换当前卡片（不添加新消息）
+                  if (result.has_more_questions && result.next_question) {
+                    // 找到当前问题卡片消息并替换
+                    setMessages(prev => {
+                      const lastQuestionIdx = prev.findIndex(
+                        m => m.generativeCard === 'profile_question' && m.id === message.id
+                      )
+                      if (lastQuestionIdx !== -1) {
+                        const newMessages = [...prev]
+                        newMessages[lastQuestionIdx] = {
+                          ...newMessages[lastQuestionIdx],
                           generativeData: result.next_question,
-                          timestamp: new Date(),
                         }
-                        setMessages(prev => [...prev, questionMessage])
-                      }, 500)
+                        return newMessages
+                      }
+                      // 如果没找到当前卡片，追加新的
+                      return [...prev, {
+                        id: `question-${Date.now()}`,
+                        type: 'ai',
+                        content: '',
+                        generativeCard: 'profile_question',
+                        generativeData: result.next_question,
+                        timestamp: new Date(),
+                      }]
+                    })
+                  } else {
+                    // 没有更多问题，移除当前问题卡片，显示完成提示或匹配结果
+                    setMessages(prev => prev.filter(m => m.id !== message.id))
+
+                    // 可选：添加简洁的完成提示
+                    if (result.ai_message && !result.ai_message.includes('收到')) {
+                      const completionMessage: Message = {
+                        id: `ai-${Date.now()}`,
+                        type: 'ai',
+                        content: result.ai_message,
+                        timestamp: new Date(),
+                      }
+                      setMessages(prev => [...prev, completionMessage])
                     }
-                  } catch (error) {
-                    console.error('Failed to submit profile answer:', error)
                   }
                 }}
-              />
+                />
+              </Suspense>
+            </div>
+          )}
+
+          {/* Generative UI: QuickStart 信息收集卡片 */}
+          {message.generativeCard === 'quick_start' && message.generativeData && (
+            <div className="generative-ui-container">
+              <Suspense fallback={<InlineQuestionCardSkeleton />}>
+                <ProfileQuestionCard
+                  question={(message.generativeData as any).question}
+                  questionType={(message.generativeData as any).question_type}
+                  options={(message.generativeData as any).options}
+                  dimension={(message.generativeData as any).dimension}
+                  depth={0}
+                  onAnswer={async (dimension, value) => {
+                    // 处理 QuickStart 回答
+                    await handleQuickStartAnswer(dimension, value)
+                  }}
+                />
+              </Suspense>
             </div>
           )}
 
@@ -931,18 +1021,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   const matchKey = match.user?.id || match.user_id || `match-${index}`
                   return (
                     <div key={matchKey} className="match-card-wrapper">
-                      <MatchCard
-                        match={match}
-                        onLike={() => onMatchSelect?.(match)}
-                        onPass={() => {}}
-                        onMessage={() => {
-                          // 发起对话 - 直接进入聊天室，而不是打开匹配详情
-                          const partnerId = match.user?.id || match.user_id || ''
-                          const partnerName = match.user?.name || 'TA'
-                          onOpenChatRoom?.(partnerId, partnerName)
-                        }}
-                        isSwipeMode={false}
-                      />
+                      {/* 🚀 [性能优化] Suspense 包裹懒加载的 MatchCard */}
+                      <Suspense fallback={<InlineMatchCardSkeleton />}>
+                        <MatchCard
+                          match={match}
+                          onLike={() => onMatchSelect?.(match)}
+                          onPass={() => {}}
+                          onMessage={() => {
+                            // 发起对话 - 直接进入聊天室，而不是打开匹配详情
+                            const partnerId = match.user?.id || match.user_id || ''
+                            const partnerName = match.user?.name || 'TA'
+                            onOpenChatRoom?.(partnerId, partnerName)
+                          }}
+                          isSwipeMode={false}
+                        />
+                      </Suspense>
                     </div>
                   )
                 })}
@@ -970,7 +1063,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       </div>
     )
-  }, [onMatchSelect, handleQuickAction, renderPreCommunicationSessions, renderPreCommunicationDialog, HerAvatar])
+  }, [onMatchSelect, handleQuickAction, handleQuickStartAnswer, HerAvatar])
 
   return (
     <div className="chat-interface">

@@ -8,13 +8,14 @@
  */
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Input, Button, Avatar, Typography, Space, Empty, Tooltip, message, Tag, Modal } from 'antd'
-import { SendOutlined, LeftOutlined, PictureOutlined, SmileOutlined, MoreOutlined } from '@ant-design/icons'
+import { Input, Button, Avatar, Typography, Space, Empty, Tooltip, message, Tag, Modal, Dropdown, Badge } from 'antd'
+import { SendOutlined, LeftOutlined, PictureOutlined, SmileOutlined, MoreOutlined, EyeInvisibleOutlined, EyeOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import type { MatchCandidate } from '../types'
-import { chatApi } from '../api'
+import { chatApi, yourTurnApi } from '../api'
 import { websocketService } from '../services/websocket'
-import { authStorage } from '../utils/storage'
+import { authStorage, herStorage } from '../utils/storage'
 import { isIOS, optimizeIOSScroll, optimizeIOSInput } from '../utils/iosUtils'
+import type { MenuProps } from 'antd'
 import './ChatRoom.less'
 
 const { Text } = Typography
@@ -36,6 +37,8 @@ interface ChatRoomProps {
   partnerName?: string
   partnerAvatar?: string
   onBack?: () => void
+  herSleeping?: boolean // Her 是否处于休眠状态
+  onHerSleepChange?: (sleeping: boolean) => void // 休眠状态变更回调
 }
 
 const ChatRoom: React.FC<ChatRoomProps> = ({
@@ -43,7 +46,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
   partnerId,
   partnerName,
   partnerAvatar,
-  onBack
+  onBack,
+  herSleeping = false,
+  onHerSleepChange,
 }) => {
   // 从 match 对象获取对方信息
   const actualPartnerId = partnerId || match?.user?.id
@@ -53,6 +58,11 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isYourTurn, setIsYourTurn] = useState(false) // Your Turn 提醒状态
+  const [yourTurnReminder, setYourTurnReminder] = useState<any>(null) // 提醒详情
+
+  // Her 休眠状态（本地状态，同步到父组件）
+  const [herSleepingLocal, setHerSleepingLocal] = useState(herSleeping)
 
   // 图片和表情功能状态
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
@@ -373,6 +383,22 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
           status: msg.status
         })))
       }
+
+      // 检查 Your Turn 提醒
+      if (currentUserId) {
+        try {
+          const conversationId = `${currentUserId}-${actualPartnerId}`
+          const yourTurnResult = await yourTurnApi.shouldShowReminder(currentUserId, conversationId)
+          if (yourTurnResult.should_show) {
+            setIsYourTurn(true)
+            setYourTurnReminder(yourTurnResult.reminder)
+            // 标记提醒已显示
+            await yourTurnApi.markReminderShown(currentUserId, conversationId)
+          }
+        } catch (error) {
+          // 静默失败
+        }
+      }
     } catch (error) {
       // 加载失败时也继续，可以发送新消息
     }
@@ -415,6 +441,10 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
           ? { ...msg, id: result.id || msg.id, status: 'delivered' }
           : msg
       ))
+
+      // 清除 Your Turn 提醒状态（用户已回复）
+      setIsYourTurn(false)
+      setYourTurnReminder(null)
 
       // 后端会在开发环境自动触发模拟 Agent 回复
       // 通过 WebSocket 推送回复，无需轮询
@@ -606,15 +636,72 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
           <Avatar src={actualPartnerAvatar} size={40} className="partner-avatar" />
           <div className="partner-info">
             <Text strong className="partner-name">{actualPartnerName}</Text>
+            {/* Your Turn 提醒 */}
+            {isYourTurn && (
+              <Badge
+                count="Your Turn"
+                style={{
+                  backgroundColor: '#C88B8B',
+                  fontSize: 10,
+                  height: 18,
+                  lineHeight: '18px',
+                  marginLeft: 8,
+                }}
+              />
+            )}
           </div>
         </div>
 
         <div className="header-right">
-          <Tooltip title="更多">
-            <Button type="text" icon={<MoreOutlined />} />
-          </Tooltip>
+          {/* 更多菜单 - 包含休眠/唤醒 Her 选项 */}
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: 'her-sleep',
+                  label: herSleepingLocal ? '唤醒 Her' : '让 Her 休眠',
+                  icon: herSleepingLocal ? <EyeOutlined /> : <EyeInvisibleOutlined />,
+                  onClick: () => {
+                    const newSleeping = !herSleepingLocal
+                    setHerSleepingLocal(newSleeping)
+                    herStorage.setSleepingInChat(newSleeping)
+                    onHerSleepChange?.(newSleeping)
+                    message.info(newSleeping ? 'Her 已休眠，专注你们的聊天吧' : 'Her 已唤醒')
+                  },
+                },
+              ],
+            }}
+            trigger={['click']}
+            placement="bottomRight"
+          >
+            <Tooltip title="更多">
+              <Button type="text" icon={<MoreOutlined />} />
+            </Tooltip>
+          </Dropdown>
         </div>
       </div>
+
+      {/* Her 休眠提示条 */}
+      {herSleepingLocal && (
+        <div className="her-sleeping-bar">
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Her 已休眠
+          </Text>
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => {
+              setHerSleepingLocal(false)
+              herStorage.setSleepingInChat(false)
+              onHerSleepChange?.(false)
+            }}
+            style={{ fontSize: 12, padding: '0 4px' }}
+          >
+            唤醒
+          </Button>
+        </div>
+      )}
 
       {/* 消息列表 */}
       <div className="chat-room-messages" ref={messagesContainerRef}>

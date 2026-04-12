@@ -29,13 +29,66 @@ from db.payment_models import (
 )
 from db.models import MembershipOrderDB, UserMembershipDB
 from utils.logger import logger
+from services.base_service import BaseService
 
 
-class PaymentService:
+class PaymentService(BaseService):
     """付费功能服务"""
 
+    # ==================== 金额验证常量 ====================
+    MIN_AMOUNT = 0.01  # 最小支付金额（分）
+    MAX_AMOUNT = 100000.0  # 最大支付金额（10万元）
+
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
+
+    # ==================== 金额验证方法 ====================
+
+    def validate_amount(self, amount: float) -> Tuple[bool, str]:
+        """
+        验证支付金额
+
+        Args:
+            amount: 支付金额
+
+        Returns:
+            (是否有效, 错误消息)
+
+        Raises:
+            ValueError: 金额无效时抛出
+        """
+        if amount <= 0:
+            raise ValueError(f"支付金额必须大于 0，当前金额：{amount}")
+
+        if amount > self.MAX_AMOUNT:
+            raise ValueError(f"支付金额不能超过 {self.MAX_AMOUNT} 元，当前金额：{amount}")
+
+        # 精度验证：最多两位小数
+        rounded = round(amount, 2)
+        if abs(amount - rounded) > 0.0001:
+            logger.warning(f"金额精度超过两位小数，将四舍五入：{amount} -> {rounded}")
+
+        logger.info(f"金额验证通过：{amount}")
+        return True, ""
+
+    def validate_refund_amount(self, refund_amount: float, original_amount: float) -> Tuple[bool, str]:
+        """
+        验证退款金额
+
+        Args:
+            refund_amount: 退款金额
+            original_amount: 原订单金额
+
+        Returns:
+            (是否有效, 错误消息)
+        """
+        if refund_amount <= 0:
+            raise ValueError(f"退款金额必须大于 0，当前金额：{refund_amount}")
+
+        if refund_amount > original_amount:
+            raise ValueError(f"退款金额不能超过原订单金额 {original_amount} 元")
+
+        return True, ""
 
     # ==================== 优惠券管理 ====================
 

@@ -1,7 +1,7 @@
 """
 用户 API 路由 - 数据库版本
 
-P0 优化：
+Identity 优化：
 - 支持双令牌（access_token + refresh_token）
 - 添加刷新令牌端点
 - 集成缓存层
@@ -116,7 +116,7 @@ async def login(
     - 限流保护：同一客户端 10 次突发，1 次/秒补充
     - 密码错误日志记录
     """
-    # P0: 登录限流保护 - 防止暴力破解
+    # Identity: 登录限流保护 - 防止暴力破解
     await rate_limit_login(request)
 
     logger.info(f"Login attempt START: username={credentials.username}")
@@ -174,6 +174,21 @@ async def login(
     # 生成令牌对
     access_token, refresh_token = create_token_pair(user.id)
     logger.info(f"Login successful for user: {user.id}")
+
+    # AI Native: 触发用户登录事件，取消激活推送计划
+    try:
+        from agent.autonomous.event_listener import emit_event
+        emit_event(
+            event_type="user_login",
+            event_data={
+                "user_id": user.id,
+                "login_method": "credentials",
+            },
+            event_source=user.id
+        )
+        logger.info(f"Login event 'user_login' emitted for user {user.id}")
+    except Exception as e:
+        logger.warning(f"Failed to emit user_login event: {e}")
 
     # 存储用户信息到 localStorage 供前端使用
     user_info = {
@@ -439,7 +454,8 @@ async def forgot_password(
         "expires_at": expires_at
     }
 
-    # TODO: 发送邮件（需要配置邮件服务）
+    # 邮件发送需要配置 SMTP 服务（当前开发环境打印到日志）
+    # 生产环境应集成邮件服务（如阿里云邮件推送）
     # 目前开发环境：打印 token 到日志
     logger.info(f"Password reset token for {request.email}: {reset_token}")
 
@@ -523,7 +539,7 @@ async def reset_password(
     )
 
 
-# ========== Token 撤销机制（P1） ==========
+# ========== Token 撤销机制（Values） ==========
 
 # 已撤销的 refresh token（生产环境应使用 Redis）
 _revoked_tokens = set()

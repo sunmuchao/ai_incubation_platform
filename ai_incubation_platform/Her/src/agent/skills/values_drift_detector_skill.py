@@ -1,7 +1,7 @@
 """
 价值观偏移检测 Skill
 
-P1 功能：检测用户价值观随时间的变化，生成偏移报告和趋势分析
+Values 功能：检测用户价值观随时间的变化，生成偏移报告和趋势分析
 """
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
@@ -152,7 +152,7 @@ class ValuesDriftDetectorSkill:
     ) -> List[Dict]:
         """获取价值观历史"""
         from utils.db_session_manager import db_session
-        from models.p1_values_models import DeclaredValuesDB, InferredValuesDB
+        from models.values_models import DeclaredValuesDB, InferredValuesDB
 
         cutoff_date = datetime.now() - timedelta(days=period_days)
 

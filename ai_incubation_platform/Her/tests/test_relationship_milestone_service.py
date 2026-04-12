@@ -12,7 +12,7 @@ from services.relationship_milestone_service import (
     MILESTONE_TYPES_P10,
     CELEBRATION_SUGGESTIONS,
 )
-from models.p10_models import RelationshipMilestoneDB
+from models.milestone_models import RelationshipMilestoneDB
 
 
 class TestRelationshipMilestoneService:

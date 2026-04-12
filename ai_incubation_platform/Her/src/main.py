@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 """
 红娘 Agent - 主入口 - 数据库版本
 
-P0 优化：
+Identity 优化：
 - 集成 API 限流中间件
 - 增强健康检查端点
 - 添加缓存统计端点
@@ -21,7 +21,7 @@ AI Native 转型：
 - 自主匹配工作流
 - 审计日志系统
 
-P20 重构：
+Future 重构：
 - 使用统一路由注册中心（routers/__init__.py）
 - main.py 精简至 100 行以内
 """
@@ -98,12 +98,23 @@ async def startup_event():
     init_audit()
     logger.info("Audit logging system initialized")
 
+    # AI Native: 初始化自主代理引擎数据表
+    from db.autonomous_models import init_autonomous_tables
+    init_autonomous_tables()
+    logger.info("Autonomous agent tables initialized")
+
     # AI Native: 初始化 Skills 注册表
     from agent.skills.registry import initialize_default_skills
     initialize_default_skills()
     logger.info("Skills registry initialized")
 
-    # P1: 启动时检查 API 注册和 Skills 同步
+    # AI Native: 启动心跳调度器（自主代理引擎）
+    heartbeat_interval = getattr(settings, 'heartbeat_interval', 30)  # 默认30分钟
+    from agent.autonomous.scheduler import start_heartbeat
+    start_heartbeat(interval=heartbeat_interval)
+    logger.info(f"🫀 Heartbeat scheduler started, interval={heartbeat_interval}m")
+
+    # Milestone: 启动时检查 API 注册和 Skills 同步
     from utils.api_checker import check_api_registration
     from utils.skills_checker import check_skills_sync
 
@@ -166,6 +177,19 @@ async def startup_event():
             except Exception as e:
                 logger.warning(f"Failed to load user {db_user.id} to matchmaker: {e}")
         logger.info(f"Loaded {loaded_count} users from database to matchmaker")
+
+# 应用关闭时清理资源
+@app.on_event("shutdown")
+async def shutdown_event():
+    """应用关闭时停止心跳调度器"""
+    logger.info("Shutting down Matchmaker Agent...")
+
+    # 停止心跳调度器
+    from agent.autonomous.scheduler import stop_heartbeat
+    stop_heartbeat()
+    logger.info("🫀 Heartbeat scheduler stopped")
+
+    logger.info("Matchmaker Agent shutdown complete")
 
 # 全局异常处理
 @app.exception_handler(Exception)

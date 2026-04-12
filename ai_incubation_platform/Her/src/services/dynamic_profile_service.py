@@ -12,7 +12,7 @@
 - 支持数据导出和删除
 - 优先保留摘要和特征，不长期存储原文
 
-P20 增强:
+Future 增强:
 - 使用统一的数据库会话管理器
 """
 from typing import Dict, List, Optional, Any
@@ -43,7 +43,7 @@ class DynamicUserProfileService:
         Returns:
             更新结果
         """
-        # P20 增强：使用统一的数据库会话管理器
+        # Future 增强：使用统一的数据库会话管理器
         with db_session() as db:
             # 1. 从对话分析获取建议
             conversation_suggestions = conversation_analyzer.generate_profile_update_suggestions(user_id)
@@ -220,7 +220,7 @@ class DynamicUserProfileService:
         Returns:
             演化历史
         """
-        # P20 增强：使用统一的数据库会话管理器
+        # Future 增强：使用统一的数据库会话管理器
         with db_session_readonly() as db:
             since = datetime.now() - timedelta(days=days)
 
@@ -256,7 +256,7 @@ class DynamicUserProfileService:
         Returns:
             增强画像
         """
-        # P20 增强：使用统一的数据库会话管理器
+        # Future 增强：使用统一的数据库会话管理器
         with db_session_readonly() as db:
             user = db.query(UserDB).filter(UserDB.id == user_id).first()
             if not user:

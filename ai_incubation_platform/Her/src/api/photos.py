@@ -30,6 +30,67 @@ os.makedirs(STATIC_DIR, exist_ok=True)
 router = APIRouter(prefix="/api/photos", tags=["照片管理"])
 
 
+# ============= 常量配置 ====================
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 最大文件大小 10MB
+MIN_FILE_SIZE = 100  # 最小文件大小 100 字节（拒绝空文件）
+ALLOWED_CONTENT_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp"]
+
+
+def validate_file_upload(file: UploadFile, content: bytes) -> tuple[bool, str]:
+    """
+    验证上传文件
+
+    Args:
+        file: 上传的文件对象
+        content: 文件内容
+
+    Returns:
+        (是否有效, 错误消息)
+
+    Raises:
+        HTTPException: 文件无效时抛出
+    """
+    # 1. 验证空文件
+    if len(content) < MIN_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="文件太小或为空文件，请上传有效图片"
+        )
+
+    # 2. 验证文件大小上限
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"文件大小超过限制 {MAX_FILE_SIZE // (1024 * 1024)}MB"
+        )
+
+    # 3. 验证文件类型
+    if file.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"不支持的文件类型: {file.content_type}，仅支持 JPG/PNG/GIF/WEBP"
+        )
+
+    # 4. 验证文件扩展名
+    if file.filename:
+        ext = file.filename.split('.')[-1].lower() if '.' in file.filename else ''
+        if ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"不支持的文件扩展名: {ext}"
+            )
+
+    # 5. 验证文件名安全（防止路径遍历攻击）
+    if file.filename:
+        safe_filename = file.filename.replace("/", "").replace("\\", "").replace("..", "")
+        if safe_filename != file.filename:
+            logger.warning(f"文件名包含危险字符，已清理: {file.filename} -> {safe_filename}")
+            file.filename = safe_filename
+
+    return True, ""
+
+
 # ============= Pydantic 模型 =============
 
 class PhotoResponse(BaseModel):
@@ -121,22 +182,11 @@ async def upload_photo_file(
     - **file**: 照片文件 (支持 jpg/png/gif/webp)
     - **photo_type**: 照片类型 (chat/profile/avatar/verification/lifestyle)
     """
-    # 验证文件类型
-    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
-    if file.content_type not in allowed_types:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"不支持的文件类型: {file.content_type}"
-        )
-
-    # 验证文件大小 (最大 5MB)
-    max_size = 5 * 1024 * 1024
+    # 读取文件内容
     content = await file.read()
-    if len(content) > max_size:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="文件大小不能超过 5MB"
-        )
+
+    # 使用统一的验证函数进行完整校验
+    validate_file_upload(file, content)
 
     # 生成唯一文件名
     file_ext = file.filename.split('.')[-1] if file.filename and '.' in file.filename else 'jpg'

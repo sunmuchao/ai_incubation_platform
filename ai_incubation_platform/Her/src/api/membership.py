@@ -453,3 +453,66 @@ async def compare_membership_tiers():
         comparison["pricing"][tier.value] = prices
 
     return comparison
+
+
+class DailyUsageResponse(BaseModel):
+    """每日使用情况响应"""
+    daily_likes: int
+    daily_super_likes: int
+    likes_used: int
+    super_likes_used: int
+    likes_remaining: int
+    super_likes_remaining: int
+    rewinds_used: int
+    rewinds_remaining: int
+    boosts_used: int
+    boosts_remaining: int
+    is_unlimited: bool
+
+
+@router.get("/usage/{user_id}/daily", response_model=DailyUsageResponse)
+async def get_daily_usage(user_id: str):
+    """
+    获取用户每日使用情况
+
+    返回用户当日各类动作的使用次数和剩余次数
+    """
+    db = next(get_db())
+    membership_svc = get_membership_service(db)
+
+    # 获取用户会员状态
+    membership = membership_svc.get_user_membership(user_id)
+
+    # 获取各类限制
+    daily_likes = membership.get_limit("daily_likes")
+    daily_super_likes = membership.get_limit("daily_super_likes")
+    daily_rewinds = membership.get_limit("daily_rewinds")
+    daily_boosts = membership.get_limit("daily_boosts")
+
+    # 获取各类使用次数
+    likes_used = membership_svc.get_daily_usage_count(user_id, "like")
+    super_likes_used = membership_svc.get_daily_usage_count(user_id, "super_like")
+    rewinds_used = membership_svc.get_daily_usage_count(user_id, "rewind")
+    boosts_used = membership_svc.get_daily_usage_count(user_id, "boost")
+
+    # 计算剩余次数
+    is_unlimited = daily_likes == -1
+
+    likes_remaining = -1 if is_unlimited else max(0, daily_likes - likes_used)
+    super_likes_remaining = max(0, daily_super_likes - super_likes_used)
+    rewinds_remaining = max(0, daily_rewinds - rewinds_used)
+    boosts_remaining = max(0, daily_boosts - boosts_used)
+
+    return DailyUsageResponse(
+        daily_likes=daily_likes,
+        daily_super_likes=daily_super_likes,
+        likes_used=likes_used,
+        super_likes_used=super_likes_used,
+        likes_remaining=likes_remaining,
+        super_likes_remaining=super_likes_remaining,
+        rewinds_used=rewinds_used,
+        rewinds_remaining=rewinds_remaining,
+        boosts_used=boosts_used,
+        boosts_remaining=boosts_remaining,
+        is_unlimited=is_unlimited,
+    )

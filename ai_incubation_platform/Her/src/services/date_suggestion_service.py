@@ -1,5 +1,5 @@
 """
-P10-002: 约会建议引擎服务
+Milestone-002: 约会建议引擎服务
 
 基于用户兴趣、位置和关系阶段，智能推荐约会地点和活动。
 """
@@ -12,7 +12,7 @@ import math
 from db.database import SessionLocal
 from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 from db.models import UserDB, MatchHistoryDB
-from models.p10_models import DateSuggestionDB, DateVenueDB
+from models.milestone_models import DateSuggestionDB, DateVenueDB
 from utils.logger import logger
 
 

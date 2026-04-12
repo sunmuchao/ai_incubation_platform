@@ -3,7 +3,7 @@
  */
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Modal, List, Radio, Button, Typography, Space, Divider } from 'antd'
+import { Modal, Button, Typography, Space, Divider } from 'antd'
 import { GlobalOutlined, CheckOutlined } from '@ant-design/icons'
 import { SUPPORTED_LANGUAGES, changeLanguage, getCurrentLanguage, type LanguageCode } from '../locales/i18n'
 import './LanguageSwitcher.less'
@@ -97,30 +97,23 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
         width={320}
       >
         <div className="language-list">
-          <Radio.Group
-            value={currentLang}
-            onChange={(e) => handleLanguageChange(e.target.value)}
-            className="language-radio-group"
-          >
-            {SUPPORTED_LANGUAGES.map((lang) => (
-              <Radio.Button
-                key={lang.code}
-                value={lang.code}
-                className={`language-item ${currentLang === lang.code ? 'selected' : ''}`}
-                disabled={loading}
-              >
-                <div className="language-item-content">
-                  <span className="language-native-name">{lang.nativeName}</span>
-                  {lang.code !== lang.nativeName && (
-                    <span className="language-name">{lang.name}</span>
-                  )}
-                </div>
-                {currentLang === lang.code && (
-                  <CheckOutlined className="check-icon" />
+          {SUPPORTED_LANGUAGES.map((lang) => (
+            <div
+              key={lang.code}
+              className={`language-item ${currentLang === lang.code ? 'selected' : ''}`}
+              onClick={() => !loading && handleLanguageChange(lang.code)}
+            >
+              <div className="language-item-content">
+                <span className="language-native-name">{lang.nativeName}</span>
+                {lang.code !== lang.nativeName && (
+                  <span className="language-name">{lang.name}</span>
                 )}
-              </Radio.Button>
-            ))}
-          </Radio.Group>
+              </div>
+              {currentLang === lang.code && (
+                <CheckOutlined className="check-icon" />
+              )}
+            </div>
+          ))}
         </div>
 
         <Divider />

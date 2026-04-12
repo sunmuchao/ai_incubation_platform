@@ -18,8 +18,8 @@ import type {
   LoveLanguageProfile,
   LoveLanguageType,
   LoveLanguageDescription,
-} from '../types/p13_types'
-import { loveLanguageProfileApi } from '../api/p13_api'
+} from '../types/loveLanguageTypes'
+import { loveLanguageProfileApi } from '../api/loveLanguageProfileApi'
 import './LoveLanguageProfile.less'
 
 const { Text, Paragraph, Title } = Typography

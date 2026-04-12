@@ -4,41 +4,74 @@
 
 红娘 Agent 是一个 **AI 驱动的深度婚恋匹配平台**，旨在通过智能算法和数据分析帮助用户找到真正匹配的伴侣或合作伙伴。
 
-**当前版本**: v1.28.0 (AI Native 架构增强版)
+**当前版本**: v1.29.0 (AI Native + DeerFlow 集成版)
 
-## 核心差异化
+## 架构说明（AI Native）
 
-我们不做"看脸滑动"的浅层社交，而是通过 AI 深度理解用户的价值观、性格特质、沟通风格和关系需求，实现"越用越懂你"的匹配体验。
+Her 采用 **AI Native 架构**，集成 DeerFlow Agent 运行时：
 
-| 竞品做法 | 红娘 Agent 做法 |
-|---------|---------------|
-| 滑动匹配看脸 | AI 分析价值观/兴趣/沟通风格 |
-| 用户自己写简介 | AI 对话生成深度画像 |
-| 匹配后靠用户聊 | AI 生成破冰话题、关系建议 |
-| 成了就离开平台 | AI 追踪关系进展持续服务 |
-| 黑盒推荐 | 可解释匹配、透明算法 |
+| 层 | 负责内容 | 实现 |
+|---|---------|------|
+| **DeerFlow Agent** | 意图识别、工具编排、状态管理、记忆系统 | DeerFlow 2.0 (LangGraph) |
+| **Her Tools** | 业务执行（匹配、关系分析、约会策划） | 7 个 LangChain BaseTool |
+| **前端** | 用户交互、Generative UI 渲染 | React + deerflowClient |
+
+**核心优势**：
+- Agent 循环思考，多工具协作
+- 记忆系统自动记住用户偏好
+- 主动询问，不是"执行一次就停"
 
 ## 快速开始
 
-### 环境要求
-
-- Python 3.9+
-- Node.js 16+ (前端)
-- SQLite (默认) 或 PostgreSQL
-- Redis (可选，用于缓存)
-
-### 后端安装
+### 一键启动（推荐）
 
 ```bash
 cd Her
-pip install -r requirements.txt
+make dev
 ```
 
-### 前端安装
+启动内容：
+- DeerFlow Agent 运行时（LangGraph + Gateway）
+- Her 后端 API（FastAPI）
+- Her 前端（Vite）
+
+### 端口说明
+
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| DeerFlow LangGraph | 2024 | Agent 核心运行时 |
+| DeerFlow Gateway | 8001 | Agent HTTP API |
+| Her Backend | 8000 | 业务 API + DeerFlow 路由 |
+| Her Frontend | 3005 | 前端页面 |
+
+### 其他命令
 
 ```bash
-cd Her/frontend
-npm install
+make help          # 显示帮助
+make dev-her       # 只启动 Her（无 DeerFlow）
+make dev-deerflow  # 只启动 DeerFlow
+make stop          # 停止所有服务
+make status        # 检查服务状态
+make logs          # 查看日志位置
+make test          # 运行测试
+make health        # DeerFlow 健康检查
+```
+
+### 环境要求
+
+- Python 3.12+
+- Node.js 18+ (前端)
+- SQLite (默认) 或 PostgreSQL
+- Redis (可选，用于缓存)
+
+### 安装依赖
+
+```bash
+# 后端依赖
+pip install -r requirements.txt
+
+# 前端依赖
+cd frontend && npm install
 ```
 
 ### 配置
@@ -49,12 +82,12 @@ npm install
 cp .env.example .env
 ```
 
-编辑 `.env` 文件，配置必要的参数：
+配置必要的参数：
 
 ```bash
 # 应用配置
 APP_NAME=matchmaker-agent
-APP_VERSION=1.28.0
+APP_VERSION=1.29.0
 ENVIRONMENT=development
 DEBUG=True
 
@@ -63,41 +96,54 @@ DATABASE_URL=sqlite:///./matchmaker_agent.db
 
 # JWT 配置
 JWT_SECRET_KEY=your-secret-key-here
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
 
-# 服务配置
-SERVER_HOST=0.0.0.0
-SERVER_PORT=8000
+# 模型配置（DeerFlow 使用）
+OPENAI_API_KEY=your-api-key
+OPENAI_MODEL=gpt-4o
 ```
 
-### 启动服务
+### 启动服务（详细）
 
-**后端服务**：
+**方式一：使用 Makefile（推荐）**
 ```bash
-cd Her
-python -m src.main
-# 或使用 uvicorn
-uvicorn src.main:app --reload --port 8000
+make dev
 ```
 
-**前端服务** (新窗口)：
+**方式二：使用脚本**
 ```bash
-cd Her/frontend
+./start.sh
+```
+
+**方式三：手动启动**
+```bash
+# 启动 DeerFlow
+cd deerflow/backend
+export HER_PROJECT_ROOT=/path/to/Her
+make dev
+
+# 启动 Her 后端（新窗口）
+cd src
+PYTHONPATH=. uvicorn main:app --port 8000
+
+# 启动前端（新窗口）
+cd frontend
 npm run dev
 ```
 
 访问应用：
-- 前端应用：http://localhost:3006/
+- 前端应用：http://localhost:3005/
 - API 文档：http://localhost:8000/docs
+- DeerFlow 状态：http://localhost:8000/api/deerflow/status
 
 ### 运行测试
 
 ```bash
-# 运行所有测试
-pytest
+# 运行 Her Tools 测试
+make test
 
-# 运行特定测试
+# 或手动运行
+cd deerflow/backend
+PYTHONPATH=packages/harness pytest tests/test_her_tools.py -v
 pytest tests/test_ai_companion_service.py -v
 pytest tests/test_matcher.py -v
 pytest tests/test_membership_service.py -v
@@ -299,11 +345,13 @@ Her/
 当前测试覆盖情况：
 
 ```
-总计：1184 测试用例
+总计：1875 测试用例（pytest 收集）
+
+# 运行全量测试
+pytest -v
 
 # AI Native Skills 测试 (v1.28.0)
 pytest tests/test_skills.py -v
-# 42 个测试用例，85.7% 通过率
 
 # 查看测试覆盖率
 pytest --cov=src --cov-report=html

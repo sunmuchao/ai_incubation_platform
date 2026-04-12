@@ -234,16 +234,17 @@ async def _get_user_profile(user_id: str) -> Dict[str, Any]:
             user = db.query(UserDB).filter(UserDB.id == user_id).first()
             if user:
                 return {
-                    "relationship_goal": getattr(user, "goal", None),
+                    "relationship_goal": getattr(user, "goal", None) or getattr(user, "relationship_goal", None),
                     "age_preference": {
                         "min": getattr(user, "preferred_age_min", None),
                         "max": getattr(user, "preferred_age_max", None),
                     } if getattr(user, "preferred_age_min", None) else None,
-                    "location_preference": getattr(user, "location", None),
+                    "location_preference": getattr(user, "preferred_location", None),  # 用户的地域偏好
                     "interests": getattr(user, "interests", None),
-                    "lifestyle": None,  # TODO: 添加生活方式字段
-                    "values": None,  # TODO: 添加价值观字段
-                    "deal_breakers": None,  # TODO: 添加底线字段
+                    "personality": json.loads(getattr(user, "personality", "{}") or "{}"),
+                    "lifestyle": json.loads(getattr(user, "lifestyle", "{}") or "{}"),
+                    "values": json.loads(getattr(user, "values", "{}") or "{}"),
+                    "deal_breakers": json.loads(getattr(user, "deal_breakers", "{}") or "{}"),
                 }
     except Exception as e:
         logger.debug(f"Failed to get user profile: {e}")
@@ -264,9 +265,46 @@ async def _update_user_profile(user_id: str, profile: Dict[str, Any]) -> bool:
                 if "interests" in profile:
                     user.interests = profile["interests"]
 
-                # TODO: 添加更多字段的更新逻辑
+                # 地域偏好 -> preferred_location
+                if "location_preference" in profile:
+                    # 如果是列表，取第一个或拼接
+                    loc_value = profile["location_preference"]
+                    if isinstance(loc_value, list):
+                        user.preferred_location = loc_value[0] if loc_value else None
+                    else:
+                        user.preferred_location = loc_value
+
+                # 年龄偏好
+                if "age_preference" in profile:
+                    age_pref = profile["age_preference"]
+                    if isinstance(age_pref, dict):
+                        user.preferred_age_min = age_pref.get("min", 18)
+                        user.preferred_age_max = age_pref.get("max", 60)
+                    elif isinstance(age_pref, str) and "-" in age_pref:
+                        # 解析 "25-35" 格式
+                        parts = age_pref.split("-")
+                        if len(parts) == 2:
+                            user.preferred_age_min = int(parts[0])
+                            user.preferred_age_max = int(parts[1])
+
+                # 性格特点
+                if "personality" in profile:
+                    user.personality = json.dumps(profile["personality"]) if isinstance(profile["personality"], (dict, list)) else profile["personality"]
+
+                # 生活方式
+                if "lifestyle" in profile:
+                    user.lifestyle = json.dumps(profile["lifestyle"]) if isinstance(profile["lifestyle"], (dict, list)) else profile["lifestyle"]
+
+                # 价值观
+                if "values" in profile:
+                    user.values = json.dumps(profile["values"]) if isinstance(profile["values"], (dict, list)) else profile["values"]
+
+                # 底线禁忌
+                if "deal_breakers" in profile:
+                    user.deal_breakers = json.dumps(profile["deal_breakers"]) if isinstance(profile["deal_breakers"], (dict, list)) else profile["deal_breakers"]
 
                 db.commit()
+                logger.info(f"Profile updated for user={user_id}: {list(profile.keys())}")
                 return True
     except Exception as e:
         logger.error(f"Failed to update user profile: {e}")

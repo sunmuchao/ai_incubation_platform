@@ -104,7 +104,9 @@ class SkillRegistry:
             执行结果 {"success": bool, "data/error": any}
         """
         skill = self.get(name)
+
         if not skill:
+            logger.warning(f"Skill not found: {name}")
             return {"success": False, "error": f"Skill not found: {name}"}
 
         try:
@@ -155,132 +157,145 @@ def initialize_default_skills() -> SkillRegistry:
     """
     registry = get_skill_registry()
 
-    # P0 Skills - 核心 AI Native 能力
+    # Core Skills - 核心 AI Native 能力
     from agent.skills.matchmaking_skill import get_matchmaking_skill
     from agent.skills.precommunication_skill import get_precommunication_skill
     from agent.skills.omniscient_insight_skill import get_omniscient_insight_skill
 
-    registry.register(get_matchmaking_skill(), tags=["p0", "matching", "core"])
-    registry.register(get_precommunication_skill(), tags=["p0", "communication", "core"])
-    registry.register(get_omniscient_insight_skill(), tags=["p0", "awareness", "core"])
+    registry.register(get_matchmaking_skill(), tags=["core", "matching", "core"])
+    registry.register(get_precommunication_skill(), tags=["core", "communication", "core"])
+    registry.register(get_omniscient_insight_skill(), tags=["core", "awareness", "core"])
 
-    # P1 Skills - 增强 AI 自主性
+    # ===== 核心：意图路由 Skill（问诊台） =====
+    # IntentRouter 是系统的核心入口，所有对话都通过此 Skill 处理
+    from agent.skills.intent_router_skill import get_intent_router_skill
+
+    registry.register(get_intent_router_skill(), tags=["core", "intent_router", "entry_point"])
+
+    # Enhancement Skills - 增强 AI 自主性
     from agent.skills.relationship_coach_skill import get_relationship_coach_skill
     from agent.skills.date_planning_skill import get_date_planning_skill
 
-    registry.register(get_relationship_coach_skill(), tags=["p1", "relationship"])
-    registry.register(get_date_planning_skill(), tags=["p1", "dating"])
+    registry.register(get_relationship_coach_skill(), tags=["enhancement", "relationship"])
+    registry.register(get_date_planning_skill(), tags=["enhancement", "dating"])
 
-    # P19 Skills - 外部服务集成
+    # External Skills - 外部服务集成
     from agent.skills.bill_analysis_skill import get_bill_analysis_skill
+    from agent.skills.gift_suggestion_skill import get_gift_suggestion_skill
 
-    registry.register(get_bill_analysis_skill(), tags=["p19", "external_service", "consumption"])
+    registry.register(get_bill_analysis_skill(), tags=["external", "external_service", "consumption"])
+    registry.register(get_gift_suggestion_skill(), tags=["values", "gift", "suggestion", "core"])
 
-    # 注：geo_location 和 gift_ordering 已删除，改用 REST API
+    # 注：geo_location 已删除，改用 REST API
     # /api/activities/locations/* 和 /api/gifts/*
 
-    # ===== 新增：API 改造 Skill (P0 优先级) =====
+    # ===== 新增：API 改造 Skill (Core 优先级) =====
 
-    # P11 - 感官洞察
+    # Emotion - 感官洞察
     from agent.skills.emotion_analysis_skill import get_emotion_analysis_skill
     from agent.skills.safety_guardian_skill import get_safety_guardian_skill
 
-    registry.register(get_emotion_analysis_skill(), tags=["p11", "emotion", "analysis", "core"])
-    registry.register(get_safety_guardian_skill(), tags=["p11", "safety", "guardian", "core"])
+    registry.register(get_emotion_analysis_skill(), tags=["emotion", "emotion", "analysis", "core"])
+    registry.register(get_safety_guardian_skill(), tags=["emotion", "safety", "guardian", "core"])
 
-    # P12 - 行为实验室
+    # Behavior - 行为实验室
     from agent.skills.silence_breaker_skill import get_silence_breaker_skill
     from agent.skills.emotion_mediator_skill import get_emotion_mediator_skill
 
-    registry.register(get_silence_breaker_skill(), tags=["p12", "silence", "icebreaker", "core"])
-    registry.register(get_emotion_mediator_skill(), tags=["p12", "emotion", "mediation", "core"])
+    registry.register(get_silence_breaker_skill(), tags=["behavior", "silence", "icebreaker", "core"])
+    registry.register(get_emotion_mediator_skill(), tags=["behavior", "emotion", "mediation", "core"])
 
-    # P13 - 情感调解增强
+    # LoveLanguage - 情感调解增强
     from agent.skills.love_language_translator_skill import get_love_language_translator_skill
     from agent.skills.relationship_prophet_skill import get_relationship_prophet_skill
 
-    registry.register(get_love_language_translator_skill(), tags=["p13", "love_language", "translation", "core"])
-    registry.register(get_relationship_prophet_skill(), tags=["p13", "relationship", "prediction", "core"])
+    registry.register(get_love_language_translator_skill(), tags=["love_language", "love_language", "translation", "core"])
+    registry.register(get_relationship_prophet_skill(), tags=["love_language", "relationship", "prediction", "core"])
 
-    # P14 - 实战演习
+    # Dating - 实战演习
     from agent.skills.date_coach_skill import get_date_coach_skill
     from agent.skills.date_assistant_skill import get_date_assistant_skill
 
-    registry.register(get_date_coach_skill(), tags=["p14", "dating", "coach", "core"])
-    registry.register(get_date_assistant_skill(), tags=["p14", "dating", "assistant", "core"])
+    registry.register(get_date_coach_skill(), tags=["dating", "dating", "coach", "core"])
+    registry.register(get_date_assistant_skill(), tags=["dating", "dating", "assistant", "core"])
 
-    # P15-P17 - 终极关系
+    # Integration - 终极关系
     from agent.skills.relationship_curator_skill import get_relationship_curator_skill
 
-    registry.register(get_relationship_curator_skill(), tags=["p15", "relationship", "curator", "core"])
+    registry.register(get_relationship_curator_skill(), tags=["integration", "relationship", "curator", "core"])
 
-    # ===== 新增：P8-P10 技能 =====
+    # ===== 新增：Enterprise/Social/Relationship 技能 =====
 
-    # P8 - 智能风控与绩效管理
+    # Enterprise - 智能风控与绩效管理
     from agent.skills.risk_control_skill import get_risk_control_skill
 
-    registry.register(get_risk_control_skill(), tags=["p8", "risk_control", "dashboard", "core"])
+    registry.register(get_risk_control_skill(), tags=["enterprise", "risk_control", "dashboard", "core"])
 
-    # P9 - 分享增长引擎
+    # Social - 分享增长引擎
     from agent.skills.share_growth_skill import get_share_growth_skill
 
-    registry.register(get_share_growth_skill(), tags=["p9", "share", "growth", "core"])
+    registry.register(get_share_growth_skill(), tags=["social", "share", "growth", "core"])
 
-    # P10 - 关系绩效教练
+    # Relationship - 关系绩效教练
     from agent.skills.performance_coach_skill import get_performance_coach_skill
 
-    registry.register(get_performance_coach_skill(), tags=["p10", "performance", "coach", "core"])
+    registry.register(get_performance_coach_skill(), tags=["relationship", "performance", "coach", "core"])
 
-    # P10 - 活动导演
+    # Relationship - 活动导演
     from agent.skills.activity_director_skill import get_activity_director_skill
 
-    registry.register(get_activity_director_skill(), tags=["p10", "activity", "director", "core"])
+    registry.register(get_activity_director_skill(), tags=["relationship", "activity", "director", "core"])
 
-    # P10 - 视频约会教练
+    # Relationship - 视频约会教练
     from agent.skills.video_date_coach_skill import get_video_date_coach_skill
 
-    registry.register(get_video_date_coach_skill(), tags=["p10", "video_date", "coach", "core"])
+    registry.register(get_video_date_coach_skill(), tags=["relationship", "video_date", "coach", "core"])
 
-    # P10 - 对话式匹配专家
+    # Relationship - 对话式匹配专家
     from agent.skills.conversation_matchmaker_skill import get_conversation_matchmaker_skill
 
-    registry.register(get_conversation_matchmaker_skill(), tags=["p10", "conversation", "matching", "core"])
+    registry.register(get_conversation_matchmaker_skill(), tags=["relationship", "conversation", "matching", "core"])
 
-    # ===== 新增：API 转 Skill (P0-P2 优先级) =====
+    # ===== 新增：API 转 Skill (Core/Enhancement/Experience 优先级) =====
 
-    # P0 - 核心能力增强
+    # Core - 核心能力增强
     from agent.skills.trust_analyzer_skill import get_trust_analyzer_skill
     from agent.skills.subconscious_analyzer_skill import get_subconscious_analyzer_skill
     from agent.skills.values_inferencer_skill import get_values_inferencer_skill
 
-    registry.register(get_trust_analyzer_skill(), tags=["p0", "trust", "analysis", "core"])
-    registry.register(get_subconscious_analyzer_skill(), tags=["p0", "subconscious", "analysis", "core"])
-    registry.register(get_values_inferencer_skill(), tags=["p0", "values", "inference", "core"])
+    registry.register(get_trust_analyzer_skill(), tags=["core", "trust", "analysis", "core"])
+    registry.register(get_subconscious_analyzer_skill(), tags=["core", "subconscious", "analysis", "core"])
+    registry.register(get_values_inferencer_skill(), tags=["core", "values", "inference", "core"])
 
-    # P1 - 差异化功能
+    # Enhancement - 差异化功能
     from agent.skills.conflict_compatibility_analyzer_skill import get_conflict_compatibility_analyzer_skill
     from agent.skills.values_drift_detector_skill import get_values_drift_detector_skill
     from agent.skills.twin_simulator_skill import get_twin_simulator_skill
 
-    registry.register(get_conflict_compatibility_analyzer_skill(), tags=["p1", "conflict", "compatibility", "core"])
-    registry.register(get_values_drift_detector_skill(), tags=["p1", "values", "drift", "core"])
-    registry.register(get_twin_simulator_skill(), tags=["p1", "twin", "simulation", "core"])
+    registry.register(get_conflict_compatibility_analyzer_skill(), tags=["enhancement", "conflict", "compatibility", "core"])
+    registry.register(get_values_drift_detector_skill(), tags=["enhancement", "values", "drift", "core"])
+    registry.register(get_twin_simulator_skill(), tags=["enhancement", "twin", "simulation", "core"])
 
-    # P2 - 增强体验
+    # Experience - 增强体验
     from agent.skills.context_detector_skill import get_context_detector_skill
     from agent.skills.ui_renderer_skill import get_ui_renderer_skill
     from agent.skills.preference_learner_skill import get_preference_learner_skill
     from agent.skills.pattern_learner_skill import get_pattern_learner_skill
 
-    registry.register(get_context_detector_skill(), tags=["p2", "context", "awareness", "enhancement"])
-    registry.register(get_ui_renderer_skill(), tags=["p2", "ui", "rendering", "enhancement"])
-    registry.register(get_preference_learner_skill(), tags=["p2", "preference", "learning", "enhancement"])
-    registry.register(get_pattern_learner_skill(), tags=["p2", "pattern", "learning", "enhancement"])
+    registry.register(get_context_detector_skill(), tags=["experience", "context", "awareness", "enhancement"])
+    registry.register(get_ui_renderer_skill(), tags=["experience", "ui", "rendering", "enhancement"])
+    registry.register(get_preference_learner_skill(), tags=["experience", "preference", "learning", "enhancement"])
+    registry.register(get_pattern_learner_skill(), tags=["experience", "pattern", "learning", "enhancement"])
+
+    # ===== Profile Collection - 用户信息收集 =====
+    from agent.skills.profile_collection_skill import get_profile_collection_skill
+
+    registry.register(get_profile_collection_skill(), tags=["core", "profile", "collection", "entry_point"])
 
     # ===== 新增：API 改造 Skill (从 REST API 升级) =====
 
     # 注：relationship_progress 已删除，改用 REST API /api/relationship/*
-    # P11 - 紧急求助扩展 (SafetyGuardianSkill 已注册，此处添加功能扩展说明)
+    # Emotion - 紧急求助扩展 (SafetyGuardianSkill 已注册，此处添加功能扩展说明)
     # SafetyGuardianSkill 已在上注册，新增 trigger_emergency 和 notify_emergency_contact 方法
 
     # 聊天助手 - 聊天 API 改造

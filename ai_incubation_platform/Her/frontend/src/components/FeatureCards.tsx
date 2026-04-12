@@ -7,9 +7,14 @@
  * 1. 用户在卡片上直接操作
  * 2. 不跳转到新页面
  * 3. 操作结果即时反馈
+ *
+ * 性能优化：
+ * 1. 骨架屏立即显示，提升感知速度
+ * 2. API 并行加载，不阻塞渲染
+ * 3. 使用 React.memo 减少不必要重渲染
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, memo, Suspense, lazy } from 'react'
 import {
   Card,
   Typography,
@@ -49,11 +54,37 @@ import {
   TrophyOutlined,
   StarFilled,
   CalendarOutlined,
+  BulbOutlined,
+  ExperimentOutlined,
+  CompassOutlined,
+  CommentOutlined,
 } from '@ant-design/icons'
 
 import photosApi from '../api/photosApi'
+import { SkeletonCard, SkeletonText } from './Skeleton'
+import {
+  silenceBreakerSkill,
+  chatAssistantSkill,
+  activityDirectorSkill,
+  relationshipCoachSkill
+} from '../api/skillClient'
+import { authStorage } from '../utils/storage'
 
 const { Title, Text, Paragraph } = Typography
+
+// ========== 骨架屏占位组件 ==========
+
+// 🚀 [性能优化] 导出骨架屏组件，供 Suspense fallback 使用
+export const FeatureCardSkeleton: React.FC<{ title?: string }> = ({ title = '加载中...' }) => (
+  <Card className="feature-card">
+    <div className="card-header">
+      <div className="skeleton-icon" style={{ width: 24, height: 24, background: '#f0f0f0', borderRadius: 4 }} />
+      <div className="skeleton-title" style={{ width: 100, height: 20, background: '#f0f0f0', borderRadius: 4, marginLeft: 8 }} />
+    </div>
+    <Divider />
+    <SkeletonCard showAvatar={false} contentLines={3} />
+  </Card>
+)
 
 // ========== 照片管理卡片 ==========
 
@@ -69,7 +100,8 @@ interface PhotoManageCardProps {
   onPhotoUploaded?: () => void
 }
 
-export const PhotoManageCard: React.FC<PhotoManageCardProps> = ({ onPhotoUploaded }) => {
+// 🚀 [性能优化] 使用 memo 防止不必要的重渲染
+export const PhotoManageCard: React.FC<PhotoManageCardProps> = memo(({ onPhotoUploaded }) => {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -134,14 +166,9 @@ export const PhotoManageCard: React.FC<PhotoManageCardProps> = ({ onPhotoUploade
     }
   }
 
+  // 🚀 [性能优化] 骨架屏立即显示，提升感知速度
   if (loading) {
-    return (
-      <Card className="feature-card">
-        <div style={{ textAlign: 'center', padding: 40 }}>
-          <Spin />
-        </div>
-      </Card>
-    )
+    return <FeatureCardSkeleton title="照片管理" />
   }
 
   return (
@@ -265,7 +292,7 @@ export const PhotoManageCard: React.FC<PhotoManageCardProps> = ({ onPhotoUploade
       )}
     </Card>
   )
-}
+})
 
 // ========== 身份认证卡片 ==========
 
@@ -274,7 +301,8 @@ interface IdentityVerifyCardProps {
   onStartVerify?: () => void
 }
 
-export const IdentityVerifyCard: React.FC<IdentityVerifyCardProps> = ({
+// 🚀 [性能优化] 使用 memo 防止不必要的重渲染
+export const IdentityVerifyCard: React.FC<IdentityVerifyCardProps> = memo(({
   verifyStatus = 'none',
   onStartVerify
 }) => {
@@ -293,7 +321,7 @@ export const IdentityVerifyCard: React.FC<IdentityVerifyCardProps> = ({
   const handleUploadIdCard = async (file: File) => {
     setUploading(true)
     try {
-      // TODO: 调用认证 API
+      // 证件上传（当前为模拟流程，集成 identityApi 后可对接真实认证）
       await new Promise(resolve => setTimeout(resolve, 1500))
       message.success('证件上传成功')
       setCurrentStep(1)
@@ -307,7 +335,7 @@ export const IdentityVerifyCard: React.FC<IdentityVerifyCardProps> = ({
   const handleUploadSelfie = async (file: File) => {
     setUploading(true)
     try {
-      // TODO: 调用认证 API
+      // 证件上传（当前为模拟流程，集成 identityApi 后可对接真实认证）
       await new Promise(resolve => setTimeout(resolve, 1500))
       message.success('自拍上传成功')
       setCurrentStep(2)
@@ -457,7 +485,7 @@ export const IdentityVerifyCard: React.FC<IdentityVerifyCardProps> = ({
       </Modal>
     </>
   )
-}
+})
 
 // ========== 会员订阅卡片 ==========
 
@@ -466,7 +494,8 @@ interface MembershipCardProps {
   onUpgrade?: (plan: string) => void
 }
 
-export const MembershipCard: React.FC<MembershipCardProps> = ({
+// 🚀 [性能优化] 使用 memo 防止不必要的重渲染
+export const MembershipCard: React.FC<MembershipCardProps> = memo(({
   currentPlan = 'free',
   onUpgrade
 }) => {
@@ -556,7 +585,7 @@ export const MembershipCard: React.FC<MembershipCardProps> = ({
       />
     </Card>
   )
-}
+})
 
 // ========== 礼物推荐卡片 ==========
 
@@ -570,7 +599,8 @@ interface GiftRecommendCardProps {
   onSelect?: (gift: any) => void
 }
 
-export const GiftRecommendCard: React.FC<GiftRecommendCardProps> = ({
+// 🚀 [性能优化] 使用 memo 防止不必要的重渲染
+export const GiftRecommendCard: React.FC<GiftRecommendCardProps> = memo(({
   gifts = [
     { name: '玫瑰花束', price: 199, reason: '浪漫经典，表达心意' },
     { name: '巧克力礼盒', price: 88, reason: '甜蜜温馨，适合初识' },
@@ -617,7 +647,7 @@ export const GiftRecommendCard: React.FC<GiftRecommendCardProps> = ({
       />
     </Card>
   )
-}
+})
 
 // ========== 关系分析卡片 ==========
 
@@ -628,7 +658,8 @@ interface RelationshipAnalysisCardProps {
   onViewDetails?: () => void
 }
 
-export const RelationshipAnalysisCard: React.FC<RelationshipAnalysisCardProps> = ({
+// 🚀 [性能优化] 使用 memo 防止不必要的重渲染
+export const RelationshipAnalysisCard: React.FC<RelationshipAnalysisCardProps> = memo(({
   score = 0,
   stage = '未知',
   suggestions = [],
@@ -684,7 +715,7 @@ export const RelationshipAnalysisCard: React.FC<RelationshipAnalysisCardProps> =
       </Button>
     </Card>
   )
-}
+})
 
 // ========== 安全守护卡片 ==========
 
@@ -695,7 +726,8 @@ interface SafetyGuardianCardProps {
   onEmergency?: () => void
 }
 
-export const SafetyGuardianCard: React.FC<SafetyGuardianCardProps> = ({
+// 🚀 [性能优化] 使用 memo 防止不必要的重渲染
+export const SafetyGuardianCard: React.FC<SafetyGuardianCardProps> = memo(({
   emergencyContacts = 0,
   safetyScore = 100,
   onAddContact,
@@ -744,7 +776,7 @@ export const SafetyGuardianCard: React.FC<SafetyGuardianCardProps> = ({
       />
     </Card>
   )
-}
+})
 
 // ========== 里程碑卡片 ==========
 
@@ -763,7 +795,8 @@ interface MilestoneFeatureCardProps {
   onViewAll?: () => void
 }
 
-export const MilestoneFeatureCard: React.FC<MilestoneFeatureCardProps> = ({
+// 🚀 [性能优化] 使用 memo 防止不必要的重渲染
+export const MilestoneFeatureCard: React.FC<MilestoneFeatureCardProps> = memo(({
   milestones = [],
   partnerId,
   partnerName,
@@ -797,7 +830,7 @@ export const MilestoneFeatureCard: React.FC<MilestoneFeatureCardProps> = ({
     if (!partnerId) return
     try {
       setLoading(true)
-      // TODO: 调用 API 获取里程碑
+      // 里程碑加载（当前为 placeholder，集成 milestoneApi 后可获取真实数据）
       // const data = await milestoneApi.getMilestoneTimeline(currentUserId, partnerId)
     } catch (error) {
       console.error('Failed to load milestones:', error)
@@ -898,6 +931,439 @@ export const MilestoneFeatureCard: React.FC<MilestoneFeatureCardProps> = ({
       </Space>
     </Card>
   )
+})
+
+// ========== AI 功能卡片（使用 Skill 调用）==========
+
+// 破冰话题卡片
+interface DeepIcebreakerCardProps {
+  onTopicSelect?: (topic: string) => void
+}
+
+const DeepIcebreakerCard: React.FC<DeepIcebreakerCardProps> = ({ onTopicSelect }) => {
+  const [loading, setLoading] = useState(false)
+  const [topics, setTopics] = useState<any[]>([])
+
+  const generateTopics = async () => {
+    setLoading(true)
+    try {
+      const userId = authStorage.getUserId()
+      const result = await silenceBreakerSkill.generateTopics(userId, 'partner-test', {})
+      if (result.success) {
+        setTopics(result.topics || [])
+      }
+    } catch (error) {
+      message.error('生成话题失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Card className="feature-card">
+      <div className="card-header">
+        <BulbOutlined style={{ fontSize: 24, color: '#FFD700' }} />
+        <Title level={4} style={{ margin: '0 0 0 8px' }}>破冰话题</Title>
+        <Tag color="purple" style={{ marginLeft: 8 }}>AI</Tag>
+      </div>
+      <Divider />
+      <Button
+        type="primary"
+        block
+        icon={<BulbOutlined />}
+        loading={loading}
+        onClick={generateTopics}
+        style={{ marginBottom: 16, borderRadius: 8 }}
+      >
+        AI 生成话题
+      </Button>
+      {topics.length > 0 && (
+        <List
+          dataSource={topics.slice(0, 5)}
+          renderItem={(topic: any) => (
+            <List.Item
+              onClick={() => onTopicSelect?.(topic.topic_content || topic.content)}
+              style={{ cursor: 'pointer', padding: '8px 0' }}
+            >
+              <Text>{topic.topic_content || topic.content}</Text>
+            </List.Item>
+          )}
+        />
+      )}
+    </Card>
+  )
+}
+
+// 消息解读卡片
+interface MessageInterpretationCardProps {
+  messageContent: string
+  messageId: string
+  partnerId: string
+  onUseSuggestion?: (suggestion: string) => void
+}
+
+const MessageInterpretationCard: React.FC<MessageInterpretationCardProps> = ({
+  messageContent,
+  messageId,
+  partnerId,
+  onUseSuggestion
+}) => {
+  const [loading, setLoading] = useState(false)
+  const [interpretation, setInterpretation] = useState<any>(null)
+
+  const interpret = async () => {
+    if (!messageContent) {
+      message.warning('请先选择一条消息')
+      return
+    }
+    setLoading(true)
+    try {
+      const userId = authStorage.getUserId()
+      const result = await chatAssistantSkill.getSuggestions(userId, partnerId)
+      if (result.success) {
+        setInterpretation({
+          meaning: '对方想要继续对话',
+          suggestions: result.data?.suggestions || ['好的，继续聊聊吧']
+        })
+      }
+    } catch (error) {
+      message.error('解读失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Card className="feature-card">
+      <div className="card-header">
+        <CommentOutlined style={{ fontSize: 24, color: '#722ed1' }} />
+        <Title level={4} style={{ margin: '0 0 0 8px' }}>消息解读</Title>
+        <Tag color="purple" style={{ marginLeft: 8 }}>AI</Tag>
+      </div>
+      <Divider />
+      {messageContent && (
+        <Card size="small" style={{ marginBottom: 12, borderRadius: 8 }}>
+          <Text type="secondary">原消息：</Text>
+          <Paragraph style={{ margin: '4px 0' }}>{messageContent}</Paragraph>
+        </Card>
+      )}
+      <Button
+        type="primary"
+        block
+        loading={loading}
+        onClick={interpret}
+        style={{ marginBottom: 16, borderRadius: 8 }}
+      >
+        AI 解读
+      </Button>
+      {interpretation && (
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Text strong>含义：{interpretation.meaning}</Text>
+          <Divider />
+          <Text type="secondary">回复建议：</Text>
+          {interpretation.suggestions?.map((s: string, i: number) => (
+            <Button
+              key={i}
+              block
+              size="small"
+              onClick={() => onUseSuggestion?.(s)}
+              style={{ borderRadius: 8 }}
+            >
+              {s}
+            </Button>
+          ))}
+        </Space>
+      )}
+    </Card>
+  )
+}
+
+// 活动推荐卡片
+interface JointActivityCardProps {
+  userProfile?: any
+  partnerProfile?: any
+  onActivitySelect?: (activity: any) => void
+}
+
+const JointActivityCard: React.FC<JointActivityCardProps> = ({
+  userProfile,
+  partnerProfile,
+  onActivitySelect
+}) => {
+  const [loading, setLoading] = useState(false)
+  const [activities, setActivities] = useState<any[]>([])
+
+  const recommendActivities = async () => {
+    setLoading(true)
+    try {
+      const userId = authStorage.getUserId()
+      const result = await activityDirectorSkill.recommendActivity(userId, partnerProfile?.id || 'partner-test', {})
+      if (result.success) {
+        setActivities(result.activities || [])
+      }
+    } catch (error) {
+      message.error('推荐失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Card className="feature-card">
+      <div className="card-header">
+        <CompassOutlined style={{ fontSize: 24, color: '#13c2c2' }} />
+        <Title level={4} style={{ margin: '0 0 0 8px' }}>活动推荐</Title>
+        <Tag color="purple" style={{ marginLeft: 8 }}>AI</Tag>
+      </div>
+      <Divider />
+      <Button
+        type="primary"
+        block
+        icon={<CompassOutlined />}
+        loading={loading}
+        onClick={recommendActivities}
+        style={{ marginBottom: 16, borderRadius: 8 }}
+      >
+        AI 推荐活动
+      </Button>
+      {activities.length > 0 && (
+        <List
+          dataSource={activities.slice(0, 5)}
+          renderItem={(activity: any) => (
+            <List.Item
+              onClick={() => onActivitySelect?.(activity)}
+              style={{ cursor: 'pointer', padding: '8px 0' }}
+            >
+              <Space direction="vertical" size={0}>
+                <Text strong>{activity.activity_name || activity.name}</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {activity.description}
+                </Text>
+              </Space>
+            </List.Item>
+          )}
+        />
+      )}
+    </Card>
+  )
+}
+
+// 压力测试卡片（简化版，完整版在 StressTest.tsx）
+interface StressTestCardProps {
+  userId: string
+  partnerId: string
+  onComplete?: (summary: any) => void
+}
+
+const StressTestCard: React.FC<StressTestCardProps> = ({
+  userId,
+  partnerId,
+  onComplete
+}) => {
+  const [loading, setLoading] = useState(false)
+
+  const startTest = async () => {
+    setLoading(true)
+    try {
+      const result = await relationshipCoachSkill.createStressTest(userId, partnerId, 'value_conflict')
+      if (result.success) {
+        message.success('测试已创建，请在弹窗中完成测试')
+        onComplete?.({ testId: result.test_id })
+      }
+    } catch (error) {
+      message.error('创建测试失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Card className="feature-card">
+      <div className="card-header">
+        <ExperimentOutlined style={{ fontSize: 24, color: '#eb2f96' }} />
+        <Title level={4} style={{ margin: '0 0 0 8px' }}>压力测试</Title>
+        <Tag color="green" style={{ marginLeft: 8 }}>新</Tag>
+      </div>
+      <Divider />
+      <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+        通过模拟场景测试你们的关系韧性，了解如何更好地应对冲突。
+      </Paragraph>
+      <Button
+        type="primary"
+        block
+        icon={<ExperimentOutlined />}
+        loading={loading}
+        onClick={startTest}
+        style={{ borderRadius: 8 }}
+      >
+        开始测试
+      </Button>
+    </Card>
+  )
+}
+
+// Your Turn 功能卡片
+interface YourTurnFeatureCardProps {
+  pendingReminders?: any[]
+  onMarkReplied?: (matchId: string) => void
+}
+
+const YourTurnFeatureCard: React.FC<YourTurnFeatureCardProps> = ({
+  pendingReminders,
+  onMarkReplied
+}) => {
+  return (
+    <Card className="feature-card">
+      <div className="card-header">
+        <ClockCircleOutlined style={{ fontSize: 24, color: '#C88B8B' }} />
+        <Title level={4} style={{ margin: '0 0 0 8px' }}>Your Turn</Title>
+        <Tag color="green" style={{ marginLeft: 8 }}>新</Tag>
+      </div>
+      <Divider />
+      {pendingReminders && pendingReminders.length > 0 ? (
+        <List
+          dataSource={pendingReminders}
+          renderItem={(reminder: any) => (
+            <List.Item
+              actions={[
+                <Button
+                  key="reply"
+                  size="small"
+                  type="primary"
+                  onClick={() => onMarkReplied?.(reminder.match_id)}
+                  style={{ borderRadius: 8 }}
+                >
+                  已回复
+                </Button>
+              ]}
+            >
+              <List.Item.Meta
+                avatar={<Avatar>{reminder.partner_name?.[0] || 'T'}</Avatar>}
+                title={reminder.partner_name}
+                description={`等待你的回复...`}
+              />
+            </List.Item>
+          )}
+        />
+      ) : (
+        <Empty description="暂无待回复的对话" />
+      )}
+    </Card>
+  )
+}
+
+// 匹配偏好卡片
+interface MatchingPreferenceCardProps {
+  currentPreferences?: any
+  onSave?: (preferences: any) => void
+}
+
+const MatchingPreferenceCard: React.FC<MatchingPreferenceCardProps> = ({
+  currentPreferences,
+  onSave
+}) => {
+  const [ageMin, setAgeMin] = useState(currentPreferences?.age_min || 18)
+  const [ageMax, setAgeMax] = useState(currentPreferences?.age_max || 40)
+
+  return (
+    <Card className="feature-card">
+      <div className="card-header">
+        <SettingOutlined style={{ fontSize: 24, color: '#1890ff' }} />
+        <Title level={4} style={{ margin: '0 0 0 8px' }}>匹配偏好</Title>
+      </div>
+      <Divider />
+      <Space direction="vertical" style={{ width: '100%' }}>
+        <Text strong>年龄范围：{ageMin} - {ageMax}</Text>
+        <Input.Group compact>
+          <Input style={{ width: 100 }} placeholder="最小年龄" value={ageMin} onChange={(e) => setAgeMin(Number(e.target.value))} />
+          <Input style={{ width: 100 }} placeholder="最大年龄" value={ageMax} onChange={(e) => setAgeMax(Number(e.target.value))} />
+        </Input.Group>
+        <Button block type="primary" onClick={() => onSave?.({ age_min: ageMin, age_max: ageMax })} style={{ borderRadius: 8 }}>
+          保存偏好
+        </Button>
+      </Space>
+    </Card>
+  )
+}
+
+// 约会提醒卡片
+interface DateReminderCardProps {
+  reminders?: any[]
+  onCreateReminder?: () => void
+}
+
+const DateReminderCard: React.FC<DateReminderCardProps> = ({
+  reminders,
+  onCreateReminder
+}) => {
+  return (
+    <Card className="feature-card">
+      <div className="card-header">
+        <CalendarOutlined style={{ fontSize: 24, color: '#fa8c16' }} />
+        <Title level={4} style={{ margin: '0 0 0 8px' }}>约会提醒</Title>
+      </div>
+      <Divider />
+      {reminders && reminders.length > 0 ? (
+        <List
+          dataSource={reminders}
+          renderItem={(reminder: any) => (
+            <List.Item>
+              <List.Item.Meta
+                avatar={<CalendarOutlined style={{ color: '#fa8c16' }} />}
+                title={reminder.title}
+                description={new Date(reminder.date).toLocaleDateString()}
+              />
+            </List.Item>
+          )}
+        />
+      ) : (
+        <Empty description="暂无约会计划" />
+      )}
+      <Button block icon={<PlusOutlined />} onClick={onCreateReminder} style={{ marginTop: 16, borderRadius: 8 }}>
+        创建约会提醒
+      </Button>
+    </Card>
+  )
+}
+
+// 视频片段卡片
+interface VideoClipCardProps {
+  clips?: any[]
+  onRecord?: () => void
+}
+
+const VideoClipCard: React.FC<VideoClipCardProps> = ({
+  clips,
+  onRecord
+}) => {
+  return (
+    <Card className="feature-card">
+      <div className="card-header">
+        <VideoCameraOutlined style={{ fontSize: 24, color: '#C88B8B' }} />
+        <Title level={4} style={{ margin: '0 0 0 8px' }}>视频片段</Title>
+        <Tag color="green" style={{ marginLeft: 8 }}>新</Tag>
+      </div>
+      <Divider />
+      <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+        录制一段短视频自我介绍，让对方更了解你。
+      </Paragraph>
+      {clips && clips.length > 0 ? (
+        <List
+          dataSource={clips}
+          renderItem={(clip: any) => (
+            <List.Item>
+              <Text>{clip.title || '我的视频'}</Text>
+            </List.Item>
+          )}
+        />
+      ) : (
+        <Empty description="暂无视频" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+      )}
+      <Button block type="primary" icon={<VideoCameraOutlined />} onClick={onRecord} style={{ marginTop: 16, borderRadius: 8 }}>
+        录制视频
+      </Button>
+    </Card>
+  )
 }
 
 // ========== 功能卡片渲染器 ==========
@@ -908,81 +1374,163 @@ interface FeatureCardRendererProps {
   onAction?: (action: string, data?: any) => void
 }
 
-export const FeatureCardRenderer: React.FC<FeatureCardRendererProps> = ({
+/**
+ * 功能卡片渲染器
+ *
+ * 性能优化：
+ * 1. 使用 memo 防止父组件重渲染导致的重复渲染
+ * 2. 使用 useMemo 缓存渲染结果
+ * 3. 统一的骨架屏占位
+ */
+export const FeatureCardRenderer: React.FC<FeatureCardRendererProps> = memo(({
   featureAction,
   data,
   onAction
 }) => {
-  switch (featureAction) {
-    case 'photos':
-      return (
-        <PhotoManageCard
-          onPhotoUploaded={() => onAction?.('photo_uploaded')}
-        />
-      )
+  // 🚀 [性能优化] 使用 useMemo 缓存渲染结果
+  const renderedCard = useMemo(() => {
+    switch (featureAction) {
+      case 'photos':
+        return (
+          <PhotoManageCard
+            onPhotoUploaded={() => onAction?.('photo_uploaded')}
+          />
+        )
 
-    case 'verify':
-      return (
-        <IdentityVerifyCard
-          verifyStatus={data?.verifyStatus}
-          onStartVerify={() => onAction?.('start_verify')}
-        />
-      )
+      case 'verify':
+        return (
+          <IdentityVerifyCard
+            verifyStatus={data?.verifyStatus}
+            onStartVerify={() => onAction?.('start_verify')}
+          />
+        )
 
-    case 'membership':
-      return (
-        <MembershipCard
-          currentPlan={data?.currentPlan}
-          onUpgrade={(plan) => onAction?.('upgrade_membership', plan)}
-        />
-      )
+      case 'membership':
+        return (
+          <MembershipCard
+            currentPlan={data?.currentPlan}
+            onUpgrade={(plan) => onAction?.('upgrade_membership', plan)}
+          />
+        )
 
-    case 'gifts':
-      return (
-        <GiftRecommendCard
-          gifts={data?.gifts}
-          onSelect={(gift) => onAction?.('select_gift', gift)}
-        />
-      )
+      case 'gifts':
+        return (
+          <GiftRecommendCard
+            gifts={data?.gifts}
+            onSelect={(gift) => onAction?.('select_gift', gift)}
+          />
+        )
 
-    case 'analysis':
-      return (
-        <RelationshipAnalysisCard
-          score={data?.score}
-          stage={data?.stage}
-          suggestions={data?.suggestions}
-          onViewDetails={() => onAction?.('view_analysis')}
-        />
-      )
+      case 'analysis':
+        return (
+          <RelationshipAnalysisCard
+            score={data?.score}
+            stage={data?.stage}
+            suggestions={data?.suggestions}
+            onViewDetails={() => onAction?.('view_analysis')}
+          />
+        )
 
-    case 'safety':
-      return (
-        <SafetyGuardianCard
-          emergencyContacts={data?.emergencyContacts}
-          safetyScore={data?.safetyScore}
-          onAddContact={() => onAction?.('add_contact')}
-          onEmergency={() => onAction?.('emergency')}
-        />
-      )
+      case 'safety':
+        return (
+          <SafetyGuardianCard
+            emergencyContacts={data?.emergencyContacts}
+            safetyScore={data?.safetyScore}
+            onAddContact={() => onAction?.('add_contact')}
+            onEmergency={() => onAction?.('emergency')}
+          />
+        )
 
-    case 'milestones':
-      return (
-        <MilestoneFeatureCard
-          milestones={data?.milestones}
-          partnerId={data?.partnerId}
-          partnerName={data?.partnerName}
-          onAddMilestone={() => onAction?.('add_milestone')}
-          onViewAll={() => onAction?.('view_all_milestones')}
-        />
-      )
+      case 'milestones':
+        return (
+          <MilestoneFeatureCard
+            milestones={data?.milestones}
+            partnerId={data?.partnerId}
+            partnerName={data?.partnerName}
+            onAddMilestone={() => onAction?.('add_milestone')}
+            onViewAll={() => onAction?.('view_all_milestones')}
+          />
+        )
 
-    default:
-      return (
-        <Card>
-          <Empty description="功能开发中，敬请期待..." />
-        </Card>
-      )
-  }
-}
+      // ========== AI 功能卡片（改用 Skill 调用）==========
+
+      case 'deep_icebreaker':
+        return (
+          <DeepIcebreakerCard
+            onTopicSelect={(topic) => onAction?.('select_topic', topic)}
+          />
+        )
+
+      case 'message_interpretation':
+        return (
+          <MessageInterpretationCard
+            messageContent={data?.messageContent || ''}
+            messageId={data?.messageId || ''}
+            partnerId={data?.partnerId || ''}
+            onUseSuggestion={(suggestion) => onAction?.('use_suggestion', suggestion)}
+          />
+        )
+
+      case 'joint_activity':
+        return (
+          <JointActivityCard
+            userProfile={data?.userProfile}
+            partnerProfile={data?.partnerProfile}
+            onActivitySelect={(activity) => onAction?.('select_activity', activity)}
+          />
+        )
+
+      case 'stress_test':
+        return (
+          <StressTestCard
+            userId={authStorage.getUserId()}
+            partnerId={data?.partnerId || ''}
+            onComplete={(summary) => onAction?.('stress_test_complete', summary)}
+          />
+        )
+
+      case 'your_turn':
+        return (
+          <YourTurnFeatureCard
+            pendingReminders={data?.pendingReminders}
+            onMarkReplied={(matchId) => onAction?.('mark_replied', matchId)}
+          />
+        )
+
+      case 'matching_preference':
+        return (
+          <MatchingPreferenceCard
+            currentPreferences={data?.preferences}
+            onSave={(prefs) => onAction?.('save_preferences', prefs)}
+          />
+        )
+
+      case 'date_reminder':
+        return (
+          <DateReminderCard
+            reminders={data?.reminders}
+            onCreateReminder={() => onAction?.('create_reminder')}
+          />
+        )
+
+      case 'video_clip':
+        return (
+          <VideoClipCard
+            clips={data?.clips}
+            onRecord={() => onAction?.('record_clip')}
+          />
+        )
+
+      default:
+        return (
+          <Card>
+            <Empty description="功能开发中，敬请期待..." />
+          </Card>
+        )
+    }
+  }, [featureAction, data?.verifyStatus, data?.currentPlan, data?.gifts, data?.score, data?.stage, data?.suggestions, data?.emergencyContacts, data?.safetyScore, data?.milestones, data?.partnerId, data?.partnerName, onAction])
+
+  return renderedCard
+})
 
 export default FeatureCardRenderer

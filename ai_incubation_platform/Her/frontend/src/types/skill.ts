@@ -32,7 +32,7 @@ export interface SkillExecuteResponse {
   success: boolean
   data?: {
     ai_message: string
-    matches?: MatchCandidate[]
+    matches?: SkillMatchCandidate[]
     generative_ui?: GenerativeUIConfig
     suggested_actions?: SkillAction[]
     [key: string]: any
@@ -69,8 +69,8 @@ export interface SkillAction {
   params: Record<string, any>
 }
 
-// 匹配候选人
-export interface MatchCandidate {
+// Skill 专用匹配候选人（与 index.ts 的 MatchCandidate 结构不同）
+export interface SkillMatchCandidate {
   user_id: string
   name: string
   age: number
@@ -101,7 +101,7 @@ export interface MatchmakingSkillParams {
 // 匹配助手 Skill 响应
 export interface MatchmakingSkillResponse {
   ai_message: string
-  matches: MatchCandidate[]
+  matches: SkillMatchCandidate[]
   generative_ui: GenerativeUIConfig
   suggested_actions: SkillAction[]
   skill_metadata: {
@@ -197,6 +197,7 @@ export interface RelationshipCoachSkillParams {
 
 // 关系教练 Skill 响应
 export interface RelationshipCoachSkillResponse {
+  success?: boolean  // Skill 执行结果
   ai_message: string
   health_score?: number
   issues?: Array<{
@@ -240,7 +241,7 @@ export interface GiftSuggestion {
 export interface DatePlanningSkillParams {
   match_id: string
   preferences?: {
-    date_type?: 'casual' | 'formal' | 'romantic' | 'adventurous' | 'cultural'
+    date_type?: 'casual' | 'formal' | 'romantic' | 'adventurous' | 'cultural' | 'first_date'
     budget_range?: 'low' | 'medium' | 'high'
     duration?: 'short' | 'medium' | 'long'
     time_preference?: 'morning' | 'afternoon' | 'evening' | 'any'
@@ -341,7 +342,7 @@ export interface SkillRegistry {
 
 // 聊天助手 Skill
 export interface ChatAssistantSkillParams {
-  operation: 'send_message' | 'get_conversations' | 'get_history' | 'mark_read' | 'get_suggestions' | 'get_unread_count'
+  operation: 'send_message' | 'get_conversations' | 'get_history' | 'mark_read' | 'get_suggestions' | 'get_unread_count' | 'check_pending_replies'
   user_id: string
   receiver_id?: string
   content?: string
@@ -352,7 +353,8 @@ export interface ChatAssistantSkillParams {
   limit?: number
 }
 
-export interface ChatMessage {
+// Skill 专用聊天消息（简化版）
+export interface SkillChatMessage {
   id: string
   sender_id: string
   content: string
@@ -380,7 +382,7 @@ export interface ChatAssistantSkillResponse {
   chat_data: {
     message_id?: string
     conversation_id?: string
-    messages?: ChatMessage[]
+    messages?: SkillChatMessage[]
     conversations?: Conversation[]
     unread_count?: number
     suggestions?: ChatSuggestion[]
@@ -432,4 +434,44 @@ export interface SafetyGuardianEmergencyResponse {
   }
   generative_ui?: GenerativeUIConfig
   suggested_actions?: SkillAction[]
+}
+
+// 礼物推荐 Skill
+export interface GiftSuggestionSkillParams {
+  user_id: string
+  partner_id: string
+  occasion: 'birthday' | 'anniversary' | 'daily' | 'thank_you' | 'apology' | 'celebration'
+  budget?: number
+  action: 'recommend' | 'get_popular' | 'get_by_interest'
+}
+
+export interface GiftRecommendation {
+  gift_id: string
+  name: string
+  price: number
+  icon: string
+  reason: string
+  suitability_score: number
+  occasion_match?: boolean
+  tags?: string[]
+}
+
+export interface GiftSuggestionSkillResponse {
+  success: boolean
+  ai_message: string
+  recommendations: GiftRecommendation[]
+  budget_analysis?: {
+    min_price: number
+    max_price: number
+    recommended_budget: number
+  }
+  generative_ui?: {
+    component_type: 'GiftRecommendCarousel' | 'empty_state'
+    props: {
+      gifts?: GiftRecommendation[]
+      show_purchase_button?: boolean
+      show_reason?: boolean
+      message?: string
+    }
+  }
 }

@@ -11,8 +11,19 @@ from db.models import (
     RelationshipProgressDB,
     SavedLocationDB,
     ConversationSessionDB,
+    # 灰度配置模型
+    FeatureFlagDB,
+    ABExperimentDB,
+    UserExperimentAssignmentDB,
 )
 from db.repositories import UserRepository, MatchHistoryRepository
+from db.autonomous_models import (
+    HeartbeatRuleStateDB,
+    PushHistoryDB,
+    TriggerEventDB,
+    UserPushPreferencesDB,
+    init_autonomous_tables,
+)
 
 __all__ = [
     "get_db",
@@ -29,4 +40,14 @@ __all__ = [
     "ConversationSessionDB",
     "UserRepository",
     "MatchHistoryRepository",
+    # 自主代理引擎模型
+    "HeartbeatRuleStateDB",
+    "PushHistoryDB",
+    "TriggerEventDB",
+    "UserPushPreferencesDB",
+    "init_autonomous_tables",
+    # 灰度配置模型
+    "FeatureFlagDB",
+    "ABExperimentDB",
+    "UserExperimentAssignmentDB",
 ]

@@ -23,9 +23,10 @@ import time
 from db.models import UserDB
 from db.repositories import UserRepository
 from utils.logger import logger
+from services.base_service import BaseService
 
 
-class PhoneLoginService:
+class PhoneLoginService(BaseService):
     """手机号登录服务"""
 
     # 验证码有效期（分钟）
@@ -36,7 +37,7 @@ class PhoneLoginService:
     IP_HOURLY_LIMIT = 10  # 同一 IP 每小时限制
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
         self.user_repo = UserRepository(db)
 
         # 频次限制存储（生产环境应使用 Redis）

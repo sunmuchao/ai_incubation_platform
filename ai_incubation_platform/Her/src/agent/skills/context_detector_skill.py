@@ -1,7 +1,7 @@
 """
 情境感知检测 Skill
 
-P2 功能：检测当前对话情境，识别沉默、冲突、深度交流等状态
+DigitalTwin 功能：检测当前对话情境，识别沉默、冲突、深度交流等状态
 """
 from typing import Dict, Any, Optional, List
 from datetime import datetime

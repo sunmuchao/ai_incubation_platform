@@ -87,16 +87,32 @@ class ConversationMatchmakerSkill(BaseSkill):
     async def execute(
         self,
         user_id: str,
-        service_type: str,
+        service_type: str = None,
         context: Optional[Dict[str, Any]] = None,
+        action: str = None,  # 前端兼容参数
+        intent_text: str = None,  # 前端兼容参数
         **kwargs
     ) -> dict:
+        # 参数兼容映射：前端 action -> 后端 service_type
+        if service_type is None and action is not None:
+            service_type = self._map_action_to_service_type(action)
+
+        if service_type is None:
+            # 默认使用意图匹配
+            service_type = "intent_matching"
+
+        # 如果有 intent_text，注入到 context
+        if intent_text and context is None:
+            context = {"user_intent": intent_text}
+        elif intent_text and context:
+            context["user_intent"] = intent_text
+
         logger.info(f"ConversationMatchmakerSkill: Executing for user={user_id}, type={service_type}")
 
         start_time = datetime.now()
 
-        # 根据服务类型提供匹配服务
-        result = self._provide_matching_service(service_type, user_id, context)
+        # 根据服务类型提供匹配服务（改为异步调用）
+        result = await self._provide_matching_service(service_type, user_id, context)
 
         ai_message = self._generate_message(result, service_type)
         generative_ui = self._build_ui(result, service_type)
@@ -117,7 +133,7 @@ class ConversationMatchmakerSkill(BaseSkill):
             }
         }
 
-    def _provide_matching_service(
+    async def _provide_matching_service(
         self,
         service_type: str,
         user_id: str,
@@ -134,7 +150,7 @@ class ConversationMatchmakerSkill(BaseSkill):
         }
 
         if service_type == "intent_matching":
-            result["intent_analysis"] = self._parse_intent(context)
+            result["intent_analysis"] = await self._parse_intent(context)
             result["matches"] = self._execute_intent_matching(user_id, result["intent_analysis"])
             result["recommendations"] = self._generate_matching_recommendations(result["matches"])
 
@@ -152,7 +168,7 @@ class ConversationMatchmakerSkill(BaseSkill):
 
         return result
 
-    def _parse_intent(self, context: Optional[Dict]) -> Dict[str, Any]:
+    async def _parse_intent(self, context: Optional[Dict]) -> Dict[str, Any]:
         """
         解析用户意图
 
@@ -173,19 +189,19 @@ class ConversationMatchmakerSkill(BaseSkill):
 
             # 构建意图分类 prompt
             intent_prompt = f"""
-你是一个专业的婚恋匹配助手，请分析用户的真实意图。
+你是一个专业的婚恋匹配助手 Her，请分析用户的真实意图。
 
 用户输入："{user_intent}"
 
 请分析：
-1. 用户的核心意图是什么？（找对象/每日推荐/关系分析/话题建议/约会策划/其他）
+1. 用户的核心意图是什么？
 2. 用户是否有明确的偏好条件？（年龄/地区/兴趣/学历等）
 3. 用户想要多少个推荐？
 4. 用户的语气和情绪状态如何？
 
 请返回严格的 JSON 格式：
 {{
-    "intent_type": "serious_relationship/daily_browse/interest_based/location_based/education_based/relationship_analysis/topic_suggestion/date_planning/icebreaker/general",
+    "intent_type": "serious_relationship/daily_browse/interest_based/location_based/education_based/relationship_analysis/topic_suggestion/date_planning/icebreaker/capability_inquiry/general",
     "limit": 5,
     "min_score": 0.6,
     "preferences": {{
@@ -198,21 +214,35 @@ class ConversationMatchmakerSkill(BaseSkill):
     "suggestions": []
 }}
 
+意图类型说明：
+- serious_relationship: 用户想找对象、认真谈恋爱、结婚
+- daily_browse: 用户想看看推荐、浏览
+- interest_based: 用户提到兴趣爱好（旅行、运动等）
+- location_based: 用户提到地点（附近、同城等）
+- education_based: 用户提到学历要求
+- relationship_analysis: 用户想分析现有关系
+- topic_suggestion: 用户想要聊天话题
+- date_planning: 用户想策划约会
+- icebreaker: 用户想了解如何开启对话
+- capability_inquiry: 用户询问你能做什么、你的功能、介绍你自己
+- general: 其他一般意图
+
 注意：
-- intent_type 必须是上述列举的类型之一
-- 如果用户说"推荐"，根据上下文判断是"每日推荐"还是"约会推荐"
+- 如果用户问"你能干什么"、"你有什么功能"、"介绍一下你自己"，属于 capability_inquiry
 - 如果用户说"找对象"/"谈恋爱"，属于 serious_relationship
 - 如果用户提到地点，属于 location_based
 - 如果用户提到兴趣，属于 interest_based
 """
 
-            # 同步调用 LLM（skill 是同步的）
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            llm_response = loop.run_until_complete(
-                llm_service._call_llm(intent_prompt)
-            )
-            loop.close()
+            # 异步调用 LLM（添加超时保护）
+            try:
+                llm_response = await asyncio.wait_for(
+                    llm_service._call_llm(intent_prompt),
+                    timeout=10.0  # 10秒超时
+                )
+            except asyncio.TimeoutError:
+                logger.warning("ConversationMatchmakerSkill: LLM timeout, using fallback")
+                return self._parse_intent_fallback(user_intent)
 
             # 解析 LLM 响应
             import json
@@ -253,10 +283,15 @@ class ConversationMatchmakerSkill(BaseSkill):
             "topic_suggestion": "智能话题推荐",
             "date_planning": "约会策划建议",
             "icebreaker": "破冰话题建议",
+            "general": "智能匹配推荐",  # 添加 general 类型
         }
 
         if intent_type in intent_suggestions:
             suggestions.append(intent_suggestions[intent_type])
+
+        # 确保至少有一个建议
+        if not suggestions:
+            suggestions.append("寻找匹配对象")
 
         # 添加情绪相关的建议
         emotional_state = llm_result.get("emotional_state", "normal")
@@ -266,6 +301,30 @@ class ConversationMatchmakerSkill(BaseSkill):
             suggestions.append("感受到你的期待，让我们一起开启这段缘分~")
 
         return suggestions
+
+    def _map_action_to_service_type(self, action: str) -> str:
+        """
+        参数兼容映射：将前端的 action 参数转换为后端的 service_type
+
+        前端 action 值:
+        - match_by_intent -> intent_matching
+        - daily_recommend -> daily_recommend
+        - suggest_topics -> topic_suggestion
+        - analyze_compatibility -> relationship_analysis
+        """
+        action_mapping = {
+            "match_by_intent": "intent_matching",
+            "daily_recommend": "daily_recommend",
+            "suggest_topics": "topic_suggestion",
+            "analyze_compatibility": "relationship_analysis",
+            # 直接匹配（前端可能直接传 service_type）
+            "intent_matching": "intent_matching",
+            "relationship_analysis": "relationship_analysis",
+            "topic_suggestion": "topic_suggestion",
+        }
+        mapped = action_mapping.get(action, "intent_matching")
+        logger.debug(f"ConversationMatchmakerSkill: Mapped action '{action}' -> service_type '{mapped}'")
+        return mapped
 
     def _parse_intent_fallback(self, user_intent: str) -> Dict[str, Any]:
         """
@@ -288,6 +347,12 @@ class ConversationMatchmakerSkill(BaseSkill):
         }
 
         # 识别意图类型
+        # 能力询问 - 用户问"你能干什么"
+        if any(phrase in intent_lower for phrase in ["你能干", "你能做", "你有什么功能", "你是谁", "介绍你自己", "你能帮我"]):
+            analysis["intent_type"] = "capability_inquiry"
+            analysis["suggestions"] = ["能力介绍"]
+            return analysis
+
         if any(word in user_intent for word in ["找对象", "谈恋爱", "认真"]):
             analysis["intent_type"] = "serious_relationship"
             analysis["min_score"] = 0.6  # 降低阈值以获取更多推荐
@@ -644,7 +709,11 @@ class ConversationMatchmakerSkill(BaseSkill):
             matches = result.get("matches", [])
             intent = result.get("intent_analysis", {})
 
-            message = f"🔍 理解到你的需求：{intent.get('suggestions', ['寻找匹配对象'])[0]}\n\n"
+            # 安全获取第一个 suggestion
+            suggestions = intent.get("suggestions", ['寻找匹配对象'])
+            first_suggestion = suggestions[0] if suggestions else '寻找匹配对象'
+
+            message = f"🔍 理解到你的需求：{first_suggestion}\n\n"
             message += f"为你找到 {len(matches)} 位潜在匹配对象：\n\n"
 
             for i, match in enumerate(matches[:3], 1):

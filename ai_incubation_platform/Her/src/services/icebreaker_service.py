@@ -3,7 +3,7 @@ v1.3 破冰问题服务
 
 基于用户画像和兴趣，生成个性化的破冰问题。
 
-P20 增强:
+Future 增强:
 - 继承 BaseService 统一数据库会话管理
 """
 from sqlalchemy.orm import Session

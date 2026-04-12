@@ -1,54 +1,129 @@
 #!/bin/bash
 
-# ==================== Her 项目启动脚本 ====================
+# ==================== Her 项目启动脚本（DeerFlow 集成版） ====================
+#
+# 启动流程：
+# 1. DeerFlow Agent 运行时（LangGraph Server + Gateway）
+# 2. Her 后端 API（FastAPI）
+# 3. Her 前端（Vite）
+#
+# 架构：
+# - DeerFlow 是 Agent 运行时（意图识别、工具编排、状态管理）
+# - Her 提供业务 Tools（匹配、关系分析、约会策划）
+# - 前端通过 deerflowClient 调用 DeerFlow Agent
 
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # 项目根目录
 PROJECT_ROOT="/Users/sunmuchao/Downloads/ai_incubation_platform/Her"
 BACKEND_DIR="$PROJECT_ROOT/src"
 FRONTEND_DIR="$PROJECT_ROOT/frontend"
+DEERFLOW_DIR="$PROJECT_ROOT/deerflow"
+DEERFLOW_BACKEND_DIR="$DEERFLOW_DIR/backend"
+
+# ==================== 环境变量配置 ====================
+
+# Her 项目根目录（DeerFlow Tools 需要此变量）
+export HER_PROJECT_ROOT="$PROJECT_ROOT"
 
 # 模型配置
 export OPENAI_API_KEY='sk-sp-5b3a4ac5243440b0b39372f84d543d4a'
 export OPENAI_API_BASE='https://coding.dashscope.aliyuncs.com/v1'
 export OPENAI_MODEL='glm-5'
 
+# DeerFlow 配置路径
+export DEER_FLOW_CONFIG_PATH="$DEERFLOW_DIR/config.yaml"
+export DEER_FLOW_EXTENSIONS_CONFIG_PATH="$DEERFLOW_DIR/extensions_config.json"
+
 # 端口配置
-BACKEND_PORT=8000
-FRONTEND_PORT=3005
+HER_BACKEND_PORT=8000
+HER_FRONTEND_PORT=3005
+DEERFLOW_LANGGRAPH_PORT=2024
+DEERFLOW_GATEWAY_PORT=8001
 
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}       Her 项目启动脚本${NC}"
+echo -e "${GREEN}    Her + DeerFlow 启动脚本${NC}"
+echo -e "${GREEN}    (AI Native 架构)${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
-# 停止已有进程
-echo -e "${YELLOW}[1/4] 停止已有服务...${NC}"
+# ==================== Step 1: 停止已有服务 ====================
+echo -e "${YELLOW}[1/5] 停止已有服务...${NC}"
 pkill -f "uvicorn main:app" 2>/dev/null
 pkill -f "vite" 2>/dev/null
+pkill -f "langgraph" 2>/dev/null
+pkill -f "deerflow" 2>/dev/null
 sleep 2
 echo -e "${GREEN}✓ 已停止旧服务${NC}"
 echo ""
 
-# 启动后端
-echo -e "${YELLOW}[2/4] 启动后端服务...${NC}"
+# ==================== Step 2: 启动 DeerFlow ====================
+echo -e "${BLUE}[2/5] 启动 DeerFlow Agent 运行时...${NC}"
+
+# 检查 DeerFlow 配置是否存在
+if [ ! -f "$DEERFLOW_DIR/config.yaml" ]; then
+    echo -e "${RED}✗ DeerFlow 配置文件不存在: $DEERFLOW_DIR/config.yaml${NC}"
+    echo -e "${YELLOW}提示: 请检查 DeerFlow 是否正确安装${NC}"
+    echo ""
+    echo -e "${YELLOW}继续启动 Her（无 DeerFlow 集成）...${NC}"
+    DEERFLOW_ENABLED=false
+else
+    DEERFLOW_ENABLED=true
+
+    cd "$DEERFLOW_BACKEND_DIR"
+
+    # 启动 DeerFlow（使用 make dev）
+    # make dev 会同时启动 LangGraph Server (2024) 和 Gateway (8001)
+    echo "启动 DeerFlow..."
+    nohup make dev > /tmp/deerflow.log 2>&1 &
+    DEERFLOW_PID=$!
+    echo "DeerFlow PID: $DEERFLOW_PID"
+
+    # 等待 DeerFlow 启动（最多等待30秒）
+    echo "等待 DeerFlow 启动..."
+    MAX_WAIT=30
+    WAIT_COUNT=0
+    while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
+        if curl -s "http://localhost:$DEERFLOW_GATEWAY_PORT/health" > /dev/null 2>&1; then
+            echo -e "${GREEN}✓ DeerFlow Gateway 启动成功: http://localhost:$DEERFLOW_GATEWAY_PORT${NC}"
+            break
+        fi
+        sleep 1
+        WAIT_COUNT=$((WAIT_COUNT + 1))
+        printf "\r启动中... %d/%d 秒" $WAIT_COUNT $MAX_WAIT
+    done
+    echo ""
+
+    if [ $WAIT_COUNT -eq $MAX_WAIT ]; then
+        echo -e "${YELLOW}⚠ DeerFlow 启动超时，继续启动 Her...${NC}"
+        echo -e "${YELLOW}日志: /tmp/deerflow.log${NC}"
+    fi
+fi
+echo ""
+
+# ==================== Step 3: 启动 Her 后端 ====================
+echo -e "${YELLOW}[3/5] 启动 Her 后端服务...${NC}"
 cd "$BACKEND_DIR"
-PYTHONPATH=. nohup uvicorn main:app --host 0.0.0.0 --port $BACKEND_PORT > /tmp/her_backend.log 2>&1 &
-BACKEND_PID=$!
-echo "后端 PID: $BACKEND_PID"
+
+# 添加 DeerFlow 路径到 PYTHONPATH
+PYTHONPATH="$BACKEND_DIR:$DEERFLOW_BACKEND_DIR/packages/harness"
+
+nohup uvicorn main:app --host 0.0.0.0 --port $HER_BACKEND_PORT > /tmp/her_backend.log 2>&1 &
+HER_BACKEND_PID=$!
+echo "Her 后端 PID: $HER_BACKEND_PID"
 
 # 等待后端启动（最多等待30秒）
-echo "等待后端启动..."
+echo "等待 Her 后端启动..."
 MAX_WAIT=30
 WAIT_COUNT=0
 while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
-    if curl -s "http://localhost:$BACKEND_PORT/docs" > /dev/null 2>&1; then
-        echo -e "${GREEN}✓ 后端启动成功: http://localhost:$BACKEND_PORT${NC}"
+    if curl -s "http://localhost:$HER_BACKEND_PORT/docs" > /dev/null 2>&1; then
+        echo -e "${GREEN}✓ Her 后端启动成功: http://localhost:$HER_BACKEND_PORT${NC}"
         break
     fi
     sleep 1
@@ -58,24 +133,25 @@ done
 echo ""
 
 if [ $WAIT_COUNT -eq $MAX_WAIT ]; then
-    echo -e "${RED}✗ 后端启动超时，请检查日志: /tmp/her_backend.log${NC}"
+    echo -e "${RED}✗ Her 后端启动超时，请检查日志: /tmp/her_backend.log${NC}"
 fi
 echo ""
 
-# 启动前端
-echo -e "${YELLOW}[3/4] 启动前端服务...${NC}"
+# ==================== Step 4: 启动 Her 前端 ====================
+echo -e "${YELLOW}[4/5] 启动 Her 前端服务...${NC}"
 cd "$FRONTEND_DIR"
+
 nohup npm run dev > /tmp/her_frontend.log 2>&1 &
-FRONTEND_PID=$!
-echo "前端 PID: $FRONTEND_PID"
+HER_FRONTEND_PID=$!
+echo "Her 前端 PID: $HER_FRONTEND_PID"
 
 # 等待前端启动（最多等待15秒）
 echo "等待前端启动..."
 MAX_WAIT=15
 WAIT_COUNT=0
 while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
-    if curl -s "http://localhost:$FRONTEND_PORT" > /dev/null 2>&1; then
-        echo -e "${GREEN}✓ 前端启动成功: http://localhost:$FRONTEND_PORT${NC}"
+    if curl -s "http://localhost:$HER_FRONTEND_PORT" > /dev/null 2>&1; then
+        echo -e "${GREEN}✓ Her 前端启动成功: http://localhost:$HER_FRONTEND_PORT${NC}"
         break
     fi
     sleep 1
@@ -85,28 +161,67 @@ done
 echo ""
 
 if [ $WAIT_COUNT -eq $MAX_WAIT ]; then
-    echo -e "${RED}✗ 前端启动超时，请检查日志: /tmp/her_frontend.log${NC}"
+    echo -e "${RED}✗ Her 前端启动超时，请检查日志: /tmp/her_frontend.log${NC}"
 fi
 echo ""
 
-# 打印服务信息
-echo -e "${GREEN}[4/4] 服务状态${NC}"
-echo -e "${GREEN}========================================${NC}"
-echo -e "  后端 API:    http://localhost:$BACKEND_PORT"
-echo -e "  API 文档:    http://localhost:$BACKEND_PORT/docs"
-echo -e "  前端页面:    http://localhost:$FRONTEND_PORT"
-echo -e "  后端日志:    $BACKEND_DIR/logs/server.log"
-echo -e "  前端日志:    /tmp/her_frontend.log"
+# ==================== Step 5: 打印服务信息 ====================
+echo -e "${GREEN}[5/5] 服务状态${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
-echo -e "模型配置:"
+
+if [ "$DEERFLOW_ENABLED" = true ]; then
+    echo -e "${BLUE}DeerFlow Agent 运行时:${NC}"
+    echo -e "  LangGraph Server:  http://localhost:$DEERFLOW_LANGGRAPH_PORT"
+    echo -e "  Gateway API:       http://localhost:$DEERFLOW_GATEWAY_PORT"
+    echo -e "  Gateway Health:    http://localhost:$DEERFLOW_GATEWAY_PORT/health"
+    echo -e "  DeerFlow 状态:     http://localhost:$HER_BACKEND_PORT/api/deerflow/status"
+    echo ""
+fi
+
+echo -e "${YELLOW}Her 后端 API:${NC}"
+echo -e "  API 服务:          http://localhost:$HER_BACKEND_PORT"
+echo -e "  API 文档:          http://localhost:$HER_BACKEND_PORT/docs"
+echo -e "  DeerFlow 路由:     http://localhost:$HER_BACKEND_PORT/api/deerflow/chat"
+echo ""
+
+echo -e "${GREEN}Her 前端:${NC}"
+echo -e "  前端页面:          http://localhost:$HER_FRONTEND_PORT"
+echo ""
+
+echo -e "${GREEN}========================================${NC}"
+echo ""
+
+echo -e "${BLUE}架构说明 (AI Native):${NC}"
+echo -e "  DeerFlow 是 Agent 运行时（意图识别、工具编排、状态管理）"
+echo -e "  Her 提供 7 个业务 Tools（匹配、关系、约会等）"
+echo -e "  前端通过 deerflowClient 直接调用 DeerFlow"
+echo ""
+
+echo -e "${GREEN}模型配置:${NC}"
 echo -e "  OPENAI_MODEL: $OPENAI_MODEL"
 echo -e "  API_BASE:     $OPENAI_API_BASE"
 echo ""
 
-# 保存 PID 到文件
-echo "$BACKEND_PID" > /tmp/her_backend.pid
-echo "$FRONTEND_PID" > /tmp/her_frontend.pid
+echo -e "${GREEN}日志位置:${NC}"
+echo -e "  DeerFlow:     /tmp/deerflow.log"
+echo -e "  Her 后端:     $BACKEND_DIR/logs/server.log"
+echo -e "  Her 前端:     /tmp/her_frontend.log"
+echo ""
 
-echo -e "${YELLOW}提示: 使用 './stop.sh' 停止服务${NC}"
-echo -e "${YELLOW}提示: 使用 'tail -f $BACKEND_DIR/logs/server.log' 查看后端日志${NC}"
+# 保存 PID 到文件
+echo "$HER_BACKEND_PID" > /tmp/her_backend.pid
+echo "$HER_FRONTEND_PID" > /tmp/her_frontend.pid
+if [ "$DEERFLOW_ENABLED" = true ]; then
+    echo "$DEERFLOW_PID" > /tmp/deerflow.pid
+fi
+
+echo -e "${YELLOW}提示:${NC}"
+echo -e "  停止服务:     ./stop.sh"
+echo -e "  查看后端日志: tail -f $BACKEND_DIR/logs/server.log"
+echo -e "  查看DeerFlow: tail -f /tmp/deerflow.log"
+echo ""
+
+echo -e "${GREEN}========================================${NC}"
+echo -e "${GREEN}✓ 所有服务启动完成！${NC}"
+echo -e "${GREEN}========================================${NC}"

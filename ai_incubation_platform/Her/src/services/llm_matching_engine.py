@@ -30,9 +30,10 @@ from utils.logger import logger
 from config import settings
 from services.llm_semantic_service import get_llm_semantic_service
 from cache.cache_manager import cache_manager
+from services.base_service import BaseService
 
 
-class LLMMatchingEngine:
+class LLMMatchingEngine(BaseService):
     """
     LLM 增强的匹配引擎
 
@@ -43,7 +44,7 @@ class LLMMatchingEngine:
     """
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
         self.semantic_service = get_llm_semantic_service()
         self.cache = cache_manager.get_instance()
 

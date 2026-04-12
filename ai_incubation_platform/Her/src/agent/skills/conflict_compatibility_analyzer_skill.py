@@ -1,7 +1,7 @@
 """
 冲突兼容性分析 Skill
 
-P1 功能：分析双方冲突处理风格的兼容性，预测潜在冲突并生成建议
+Values 功能：分析双方冲突处理风格的兼容性，预测潜在冲突并生成建议
 """
 from typing import Dict, Any, Optional, List
 from agent.skills.base import BaseSkill
@@ -140,7 +140,7 @@ class ConflictCompatibilityAnalyzerSkill:
     def _get_conflict_style(self, user_id: str) -> Dict:
         """获取用户冲突风格"""
         from utils.db_session_manager import db_session
-        from models.p1_conflict_models import ConflictStyleDB
+        from models.conflict_models import ConflictStyleDB
 
         with db_session() as db:
             style = db.query(ConflictStyleDB).filter(

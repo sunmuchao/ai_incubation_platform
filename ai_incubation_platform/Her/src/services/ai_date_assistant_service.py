@@ -1,5 +1,5 @@
 """
-P20 服务层实现 - v1.20 AI 约会助手
+Future 服务层实现 - v1.20 AI 约会助手
 
 AI 约会助手服务包括：
 - 智能聊天助手（回复建议/话题推荐）
@@ -16,25 +16,26 @@ import json
 import random
 import uuid
 
-from models.p20_models import (
+from models.future_models import (
     ChatAssistantSuggestionDB, DatePlanDB, DateVenueDB,
     RelationshipConsultationDB, RelationshipFAQDB,
-    ChatEmotionTrendDB,  # P20 专用：聊天情感趋势
+    ChatEmotionTrendDB,  # Future 专用：聊天情感趋势
     LoveDiaryEntryDB, LoveDiaryMemoryDB, RelationshipTimelineDB
 )
-from models.p11_models import EmotionAnalysisDB  # 从 p11_models 导入情感分析模型
-from models import EmotionalTrendDB  # P11 的情感趋势（视频面诊）
+from models.emotion_analysis_models import EmotionAnalysisDB  # 从 emotion_analysis_models 导入情感分析模型
+from models import EmotionalTrendDB  # Emotion 的情感趋势（视频面诊）
 from db.models import UserDB
 from agent.skills.emotion_analysis_skill import analyze_text_emotion_sync
+from services.base_service import BaseService
 
 
-# ============= P20-001: 智能聊天助手服务 =============
+# ============= Future-001: 智能聊天助手服务 =============
 
-class ChatAssistantService:
+class ChatAssistantService(BaseService):
     """智能聊天助手服务"""
 
     def __init__(self, db: Session):
-        self.db = db
+        super().__init__(db)
 
     def generate_reply_suggestion(
         self,
@@ -362,7 +363,7 @@ class ChatAssistantService:
         return "检测到对方在分享日常，建议积极倾听并回应"
 
 
-# ============= P20-002: 约会策划服务 =============
+# ============= Future-002: 约会策划服务 =============
 
 class DatePlanningService:
     """约会策划服务"""
@@ -507,7 +508,7 @@ class DatePlanningService:
         return plans.get(plan_type, plans["first_date"])
 
 
-# ============= P20-003: 关系咨询服务 =============
+# ============= Future-003: 关系咨询服务 =============
 
 class RelationshipConsultantService:
     """关系咨询服务"""
@@ -606,7 +607,7 @@ class RelationshipConsultantService:
         })
 
 
-# ============= P20-004: 情感分析服务 =============
+# ============= Future-004: 情感分析服务 =============
 
 class EmotionAnalyzerService:
     """情感分析服务"""
@@ -649,7 +650,7 @@ class EmotionAnalyzerService:
     def get_sentiment_trend(self, user_id: str, partner_user_id: str, days: int = 7) -> List[EmotionAnalysisDB]:
         """获取情感趋势"""
         start_date = datetime.now() - timedelta(days=days)
-        # 注意：EmotionAnalysisDB 来自 p11_models，只有 user_id 字段，没有 partner_user_id
+        # 注意：EmotionAnalysisDB 来自 emotion_analysis_models，只有 user_id 字段，没有 partner_user_id
         return self.db.query(EmotionAnalysisDB).filter(
             EmotionAnalysisDB.user_id == user_id,
             EmotionAnalysisDB.created_at >= start_date
@@ -657,7 +658,7 @@ class EmotionAnalyzerService:
 
     def get_compatibility_score(self, user_id: str, partner_user_id: str) -> float:
         """获取匹配度评分"""
-        # 注意：EmotionAnalysisDB 来自 p11_models，只有 user_id 字段
+        # 注意：EmotionAnalysisDB 来自 emotion_analysis_models，只有 user_id 字段
         analyses = self.db.query(EmotionAnalysisDB).filter(
             EmotionAnalysisDB.user_id == user_id
         ).order_by(desc(EmotionAnalysisDB.created_at)).limit(10).all()
@@ -689,7 +690,7 @@ class EmotionAnalyzerService:
         }
 
 
-# ============= P20-005: 恋爱日记服务 =============
+# ============= Future-005: 恋爱日记服务 =============
 
 class LoveDiaryService:
     """恋爱日记服务"""

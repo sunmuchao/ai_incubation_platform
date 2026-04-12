@@ -3,7 +3,7 @@ v1.3 视频约会服务
 
 提供视频约会管理、预约、提醒等功能。
 
-P20 增强:
+Future 增强:
 - 继承 BaseService 统一数据库会话管理
 """
 from sqlalchemy.orm import Session

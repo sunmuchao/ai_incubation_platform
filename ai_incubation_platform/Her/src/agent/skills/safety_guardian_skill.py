@@ -238,7 +238,7 @@ class SafetyGuardianSkill:
         """执行安全检查"""
         from db.database import SessionLocal
         from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
-        from services.p11_safety_service import safety_monitoring_service
+        from services.safety_guardian_service import safety_monitoring_service
 
         db = SessionLocal()
         result = {
@@ -521,7 +521,7 @@ class SafetyGuardianSkill:
         """
         logger.info(f"SafetyGuardianSkill: Emergency triggered for user={user_id}, type={emergency_type}")
 
-        from services.p11_safety_service import safety_monitoring_service
+        from services.safety_guardian_service import safety_monitoring_service
         from db.database import SessionLocal
         from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 
@@ -596,7 +596,7 @@ class SafetyGuardianSkill:
         """
         logger.info(f"SafetyGuardianSkill: Notifying emergency contact for user={user_id}")
 
-        from services.p11_safety_service import safety_monitoring_service
+        from services.safety_guardian_service import safety_monitoring_service
         from db.database import SessionLocal
         from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
 
