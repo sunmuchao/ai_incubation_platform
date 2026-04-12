@@ -669,6 +669,138 @@ export const safetyGuardianSkill = {
   }
 }
 
+// ==================== 对话式匹配 Skill ====================
+// AI Native 特性：意图驱动匹配、自主推荐、话题建议
+export const conversationMatchmakerSkill = {
+  /**
+   * 意图匹配 - 通过自然语言表达匹配需求
+   */
+  async matchByIntent(userId: string, intentText: string): Promise<ConversationMatchmakerSkillResponse> {
+    const result = await skillRegistry.execute('conversation_matchmaker', {
+      user_id: userId,
+      action: 'match_by_intent',
+      intent_text: intentText
+    })
+    if (!result.success) {
+      throw new Error(result.error || '意图匹配失败')
+    }
+    return result.data as ConversationMatchmakerSkillResponse
+  },
+
+  /**
+   * 每日推荐 - AI 主动分析用户状态，推送每日匹配
+   */
+  async getDailyRecommend(userId: string): Promise<ConversationMatchmakerSkillResponse> {
+    const result = await skillRegistry.execute('conversation_matchmaker', {
+      user_id: userId,
+      action: 'get_daily_recommend'
+    })
+    if (!result.success) {
+      throw new Error(result.error || '获取每日推荐失败')
+    }
+    return result.data as ConversationMatchmakerSkillResponse
+  },
+
+  /**
+   * 话题建议 - 智能推荐聊天话题
+   */
+  async suggestTopics(userId: string, matchId: string): Promise<ConversationMatchmakerSkillResponse> {
+    const result = await skillRegistry.execute('conversation_matchmaker', {
+      user_id: userId,
+      action: 'suggest_topics',
+      match_id: matchId
+    })
+    if (!result.success) {
+      throw new Error(result.error || '获取话题建议失败')
+    }
+    return result.data as ConversationMatchmakerSkillResponse
+  },
+
+  /**
+   * 兼容性分析 - 分析两个用户的匹配度
+   */
+  async analyzeCompatibility(userId: string, targetUserId: string): Promise<ConversationMatchmakerSkillResponse> {
+    const result = await skillRegistry.execute('conversation_matchmaker', {
+      user_id: userId,
+      action: 'analyze_compatibility',
+      target_user_id: targetUserId
+    })
+    if (!result.success) {
+      throw new Error(result.error || '兼容性分析失败')
+    }
+    return result.data as ConversationMatchmakerSkillResponse
+  },
+
+  /**
+   * 自主触发：每日匹配推送
+   */
+  async triggerDailyMatch(userId: string) {
+    return skillRegistry.triggerAutonomous('conversation_matchmaker', 'daily_match', userId)
+  }
+}
+
+// ==================== 画像收集 Skill ====================
+// AI Native 特性：对话式收集、智能追问、画像补全
+export const profileCollectionSkill = {
+  /**
+   * 开始会话 - 启动画像收集对话
+   */
+  async startSession(userId: string): Promise<ProfileCollectionSkillResponse> {
+    const result = await skillRegistry.execute('profile_collection', {
+      user_id: userId,
+      action: 'start_session'
+    })
+    if (!result.success) {
+      throw new Error(result.error || '启动会话失败')
+    }
+    return result.data as ProfileCollectionSkillResponse
+  },
+
+  /**
+   * 发送消息 - 向 AI 发送对话消息
+   */
+  async sendMessage(sessionId: string, userId: string, message: string): Promise<ProfileCollectionSkillResponse> {
+    const result = await skillRegistry.execute('profile_collection', {
+      user_id: userId,
+      action: 'send_message',
+      session_id: sessionId,
+      message
+    })
+    if (!result.success) {
+      throw new Error(result.error || '发送消息失败')
+    }
+    return result.data as ProfileCollectionSkillResponse
+  },
+
+  /**
+   * 获取进度 - 查看画像收集进度
+   */
+  async getProgress(userId: string): Promise<ProfileCollectionSkillResponse> {
+    const result = await skillRegistry.execute('profile_collection', {
+      user_id: userId,
+      action: 'get_progress'
+    })
+    if (!result.success) {
+      throw new Error(result.error || '获取进度失败')
+    }
+    return result.data as ProfileCollectionSkillResponse
+  },
+
+  /**
+   * 完成会话 - 结束画像收集并生成完整画像
+   */
+  async completeSession(userId: string): Promise<ProfileCollectionSkillResponse> {
+    const result = await skillRegistry.execute('profile_collection', {
+      user_id: userId,
+      action: 'complete_session'
+    })
+    if (!result.success) {
+      throw new Error(result.error || '完成会话失败')
+    }
+    return result.data as ProfileCollectionSkillResponse
+  }
+}
+
 // 导出所有 Skills
 export const skills = {
   // P0
@@ -683,7 +815,10 @@ export const skills = {
   // 注：geoLocation, giftOrdering, relationshipProgress 已删除，改用 REST API
   // 新增 Skills
   chatAssistant: chatAssistantSkill,
-  safetyGuardian: safetyGuardianSkill
+  safetyGuardian: safetyGuardianSkill,
+  // AI Native 对话式能力
+  conversationMatchmaker: conversationMatchmakerSkill,
+  profileCollection: profileCollectionSkill,
 }
 
 export default skillRegistry
