@@ -6,6 +6,10 @@ Your Turn 提醒服务
 - 提醒用户回复，避免对话中断
 - 记录提醒历史，避免重复提醒
 - 会员可自定义提醒频率
+
+架构说明：
+- YourTurnReminderDB 模型已迁移到 models/your_turn.py
+- 本服务仅负责业务逻辑，不定义数据模型
 """
 import uuid
 from datetime import datetime, timedelta
@@ -15,6 +19,7 @@ from sqlalchemy import and_, or_
 
 from utils.logger import logger
 from services.base_service import BaseService
+from models.your_turn import YourTurnReminderDB
 
 
 class YourTurnReminderService(BaseService):
@@ -112,7 +117,6 @@ class YourTurnReminderService(BaseService):
     def mark_reminder_shown(self, user_id: str, conversation_id: str) -> bool:
         """标记提醒已显示"""
         # 记录提醒显示历史（避免重复提醒）
-        from db.models import YourTurnReminderDB
 
         # 检查是否已有记录
         existing = self.db.query(YourTurnReminderDB).filter(
@@ -151,7 +155,6 @@ class YourTurnReminderService(BaseService):
 
     def dismiss_reminder(self, user_id: str, conversation_id: str) -> bool:
         """用户主动忽略提醒"""
-        from db.models import YourTurnReminderDB
 
         reminder = self.db.query(YourTurnReminderDB).filter(
             YourTurnReminderDB.user_id == user_id,
@@ -165,31 +168,6 @@ class YourTurnReminderService(BaseService):
             return True
 
         return False
-
-
-# Your Turn 提醒数据库模型
-from sqlalchemy import Column, String, Integer, DateTime, Boolean, ForeignKey
-from sqlalchemy.sql import func
-from db.database import Base
-
-
-class YourTurnReminderDB(Base):
-    """Your Turn 提醒记录"""
-    __tablename__ = "your_turn_reminders"
-
-    id = Column(String(36), primary_key=True, index=True)
-    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
-    conversation_id = Column(String(36), nullable=False, index=True)
-
-    # 提醒状态
-    shown_count = Column(Integer, default=0)  # 显示次数
-    last_shown_at = Column(DateTime(timezone=True), nullable=True)
-    dismissed = Column(Boolean, default=False)  # 是否已忽略
-    dismissed_at = Column(DateTime(timezone=True), nullable=True)
-
-    # 时间戳
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
 # 服务工厂函数

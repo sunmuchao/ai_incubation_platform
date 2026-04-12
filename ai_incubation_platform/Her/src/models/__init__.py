@@ -434,6 +434,20 @@ __all__.extend([
 ])
 
 # ============================================
+# YourTurn: Your Turn 提醒领域
+# ============================================
+from models.your_turn import YourTurnReminderDB
+
+__all__.extend(['YourTurnReminderDB'])
+
+# ============================================
+# BehaviorLog: 用户行为日志领域
+# ============================================
+from models.behavior_log import UserBehaviorEventDB, UserBehaviorDailyStatsDB
+
+__all__.extend(['UserBehaviorEventDB', 'UserBehaviorDailyStatsDB'])
+
+# ============================================
 # Advanced 别名映射（兼容旧代码引用）
 # 注意：以下别名仅保留被实际引用的，已删除未使用的别名
 # ============================================
