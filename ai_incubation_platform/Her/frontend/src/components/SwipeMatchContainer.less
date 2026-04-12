@@ -1,0 +1,559 @@
+// ==================== SwipeMatchContainer 样式 ====================
+
+@import '../styles/design-tokens.less';
+
+.swipe-match-container {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
+}
+
+// ==================== 顶部状态栏 ====================
+
+.swipe-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: @space-3 @space-4;
+  margin-bottom: @space-4;
+}
+
+.remaining-count {
+  font-size: @font-size-sm;
+  color: @text-secondary;
+  font-weight: @font-weight-medium;
+}
+
+.swipe-limits-indicator {
+  display: flex;
+  gap: @space-3;
+}
+
+.limit-item {
+  display: flex;
+  align-items: center;
+  gap: @space-1;
+  padding: @space-1 @space-2;
+  background: @color-primary-light;
+  border-radius: @radius-lg;
+  font-size: @font-size-xs;
+
+  .anticon {
+    font-size: @font-size-sm;
+  }
+
+  &.likes .anticon {
+    color: #52c41a;
+  }
+
+  &.super-likes .anticon {
+    color: @color-primary;
+  }
+}
+
+// ==================== 卡片区域 ====================
+
+.swipe-cards-area {
+  position: relative;
+  height: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: @space-4;
+}
+
+// ==================== 空状态 ====================
+
+.swipe-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: @space-8;
+
+  .ant-empty-description {
+    color: @text-secondary;
+  }
+}
+
+// ==================== 加载状态 ====================
+
+.swipe-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+// ==================== 控制按钮 ====================
+
+.swipe-control-buttons {
+  display: flex;
+  justify-content: center;
+  gap: @space-3;
+  padding: @space-4;
+}
+
+.control-btn {
+  width: 52px;
+  height: 52px;
+  font-size: @font-size-xl;
+  border-radius: @radius-full;
+  box-shadow: @shadow-sm;
+  transition: all @transition-bounce;
+  background: white;
+  border-width: 2px;
+
+  &:hover:not(:disabled) {
+    transform: scale(1.1);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.rewind-btn {
+    color: @text-tertiary;
+    border-color: @border-medium;
+    font-size: @font-size-lg;
+
+    &:hover:not(:disabled) {
+      color: @color-primary;
+      border-color: @color-primary-medium;
+      background: @color-primary-light;
+    }
+  }
+
+  &.pass-btn {
+    color: #ff7875;
+    border-color: rgba(255, 120, 117, 0.25);
+
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, #ff7875 0%, #ff9c9c 100%);
+      border-color: #ff7875;
+      color: white;
+      box-shadow: 0 4px 16px rgba(255, 120, 117, 0.25);
+    }
+  }
+
+  &.super-like-btn {
+    color: @color-primary;
+    border-color: @color-primary-medium;
+
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, @color-primary 0%, @color-primary-hover 100%);
+      border-color: @color-primary;
+      color: white;
+      box-shadow: @shadow-primary-strong;
+    }
+  }
+
+  &.like-btn {
+    color: #52c41a;
+    border-color: rgba(82, 196, 26, 0.25);
+
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+      border-color: #52c41a;
+      color: white;
+      box-shadow: 0 4px 16px rgba(82, 196, 26, 0.25);
+    }
+  }
+}
+
+// ==================== 匹配成功弹窗 ====================
+
+.match-success-modal {
+  .ant-modal-content {
+    border-radius: @radius-2xl;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .ant-modal-body {
+    padding: 0;
+  }
+}
+
+.match-modal-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: @space-8 @space-6;
+  background: linear-gradient(180deg, @color-primary-light 0%, @bg-subtle 100%);
+}
+
+.match-animation {
+  margin-bottom: @space-4;
+  animation: match-heart-pulse 1s ease-in-out infinite;
+}
+
+.match-heart {
+  font-size: 48px;
+  color: #52c41a;
+  animation: heart-beat 0.8s ease-in-out infinite;
+}
+
+@keyframes match-heart-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes heart-beat {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.1) rotate(-5deg);
+  }
+  50% {
+    transform: scale(1.2) rotate(0deg);
+  }
+  75% {
+    transform: scale(1.1) rotate(5deg);
+  }
+}
+
+.match-title {
+  color: @text-primary;
+  margin-bottom: @space-6 !important;
+  text-align: center;
+}
+
+.matched-avatars {
+  display: flex;
+  align-items: center;
+  gap: @space-3;
+  margin-bottom: @space-5;
+}
+
+.avatar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: @space-2;
+}
+
+.avatar-name {
+  font-size: @font-size-sm;
+  color: @text-secondary;
+}
+
+.heart-connect {
+  font-size: @font-size-2xl;
+  color: #52c41a;
+  animation: heart-pulse 1s ease-in-out infinite;
+}
+
+.match-score {
+  margin-bottom: @space-4;
+}
+
+.score-tag {
+  font-size: @font-size-sm;
+  padding: @space-1 @space-3;
+  border-radius: @radius-lg;
+}
+
+.common-interests {
+  margin-bottom: @space-6;
+  text-align: center;
+}
+
+.interests-label {
+  font-size: @font-size-xs;
+  margin-bottom: @space-2;
+  display: block;
+}
+
+.interests-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: @space-1;
+}
+
+.interest-tag {
+  padding: 4px @space-2;
+  background: @color-primary-light;
+  border-radius: @radius-lg;
+  font-size: @font-size-xs;
+  color: @text-secondary;
+  border: 1px solid @color-primary-medium;
+
+  .anticon {
+    color: #52c41a;
+    margin-right: 4px;
+  }
+}
+
+.match-actions {
+  display: flex;
+  flex-direction: column;
+  gap: @space-2;
+  width: 100%;
+
+  .ant-btn {
+    height: 48px;
+    border-radius: @radius-xl;
+    font-size: @font-size-base;
+    font-weight: @font-weight-medium;
+  }
+
+  .ant-btn-primary {
+    .button-primary();
+  }
+}
+
+// ==================== 详情弹窗 ====================
+
+.match-detail-modal {
+  .ant-modal-content {
+    border-radius: @radius-2xl;
+    overflow: hidden;
+    box-shadow: @shadow-lg;
+  }
+
+  .ant-modal-body {
+    padding: 0;
+  }
+}
+
+.modal-profile-header {
+  padding: @space-6;
+  background: linear-gradient(135deg, @color-primary-light 0%, @color-accent-light 100%);
+  display: flex;
+  align-items: center;
+  gap: @space-4;
+}
+
+.modal-user-info {
+  flex: 1;
+
+  .user-name-row {
+    display: flex;
+    align-items: center;
+    gap: @space-2;
+    margin-bottom: @space-1;
+  }
+
+  .user-name {
+    font-size: @font-size-xl;
+    font-weight: @font-weight-semibold;
+    color: @text-primary;
+  }
+
+  .user-location {
+    font-size: @font-size-sm;
+    color: @text-secondary;
+    display: flex;
+    align-items: center;
+    gap: @space-1;
+
+    .anticon {
+      color: @color-primary;
+    }
+  }
+}
+
+.modal-compatibility {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: @space-2 @space-3;
+  background: white;
+  border-radius: @radius-lg;
+  box-shadow: @shadow-sm;
+
+  .score {
+    font-size: @font-size-2xl;
+    font-weight: @font-weight-bold;
+    background: linear-gradient(135deg, @color-primary 0%, @color-primary-hover 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .label {
+    font-size: @font-size-xs;
+    color: @text-tertiary;
+  }
+}
+
+.modal-content {
+  padding: @space-5 @space-6;
+}
+
+.bio-section {
+  margin-bottom: @space-5;
+
+  .bio-text {
+    font-size: @font-size-base;
+    color: @text-secondary;
+    line-height: @line-height-relaxed;
+    white-space: pre-line;
+  }
+}
+
+.info-row {
+  display: flex;
+  gap: @space-6;
+  margin-bottom: @space-4;
+  padding-bottom: @space-4;
+  border-bottom: 1px solid @border-light;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  .info-label {
+    font-size: @font-size-xs;
+    color: @text-tertiary;
+  }
+
+  .info-value {
+    font-size: @font-size-base;
+    color: @text-primary;
+    font-weight: @font-weight-medium;
+  }
+}
+
+.interests-section-modal {
+  margin-bottom: @space-4;
+
+  .section-label {
+    font-size: @font-size-sm;
+    color: @text-tertiary;
+    margin-bottom: @space-2;
+  }
+
+  .interests-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: @space-1;
+  }
+
+  .interest-tag {
+    padding: 4px @space-2;
+    background: @color-primary-light;
+    border-radius: @radius-lg;
+    font-size: @font-size-xs;
+    color: @text-secondary;
+    border: 1px solid @color-primary-medium;
+  }
+
+  .common-tag {
+    background: rgba(82, 196, 26, 0.1);
+    border-color: rgba(82, 196, 26, 0.2);
+    color: #52c41a;
+  }
+}
+
+.reasoning-section {
+  background: @color-primary-light;
+  padding: @space-3 @space-4;
+  border-radius: @radius-lg;
+  border-left: 3px solid @color-primary;
+
+  .section-label {
+    font-size: @font-size-xs;
+    color: @color-primary;
+    margin-bottom: @space-1;
+    display: block;
+  }
+
+  .reasoning-text {
+    font-size: @font-size-sm;
+    color: @text-secondary;
+    line-height: @line-height-base;
+  }
+}
+
+.modal-actions {
+  display: flex;
+  gap: @space-3;
+  padding: @space-4 @space-6 @space-6;
+  border-top: 1px solid @border-light;
+
+  .ant-btn {
+    flex: 1;
+    height: 44px;
+    border-radius: @radius-xl;
+    font-size: @font-size-base;
+    font-weight: @font-weight-medium;
+  }
+
+  .pass-action {
+    border-color: rgba(255, 120, 117, 0.25);
+    color: #ff7875;
+
+    &:hover {
+      background: rgba(255, 120, 117, 0.06);
+      border-color: #ff7875;
+    }
+  }
+
+  .like-action {
+    .button-primary();
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: @shadow-primary-strong;
+    }
+  }
+}
+
+// ==================== 响应式设计 ====================
+
+@media (max-width: @breakpoint-md) {
+  .swipe-match-container {
+    max-width: 100%;
+    min-height: 480px;
+  }
+
+  .swipe-cards-area {
+    height: 420px;
+  }
+
+  .swipe-control-buttons {
+    gap: @space-2;
+  }
+
+  .control-btn {
+    width: 44px;
+    height: 44px;
+    font-size: @font-size-lg;
+  }
+}
+
+@media (max-width: @breakpoint-sm) {
+  .swipe-header {
+    padding: @space-2 @space-3;
+  }
+
+  .swipe-cards-area {
+    height: 380px;
+  }
+
+  .control-btn {
+    width: 40px;
+    height: 40px;
+  }
+}

@@ -214,34 +214,5 @@ def get_skills_sync_report() -> dict:
     return checker.generate_report()
 
 
-# ========== FastAPI 路由（用于调试）==========
-
-from fastapi import APIRouter
-
-router = APIRouter(prefix="/api/checker", tags=["系统检查"])
-
-
-@router.get("/skills-sync")
-async def check_skills_sync_endpoint():
-    """检查前后端 Skills 同步情况"""
-    return get_skills_sync_report()
-
-
-@router.get("/backend-skills")
-async def get_backend_skills_endpoint():
-    """获取后端所有 Skills"""
-    checker = SkillsChecker()
-    return {
-        "success": True,
-        "skills": list(checker.get_backend_skills())
-    }
-
-
-@router.get("/frontend-skills")
-async def get_frontend_skills_endpoint():
-    """获取前端所有 Skills"""
-    checker = SkillsChecker()
-    return {
-        "success": True,
-        "skills": list(checker.get_frontend_skills())
-    }
+# 路由已迁移到 api/checker.py
+# 保持工具层职责单一，不再定义 HTTP 路由

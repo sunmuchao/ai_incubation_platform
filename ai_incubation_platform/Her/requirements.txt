@@ -14,6 +14,9 @@ passlib[bcrypt]>=1.7.4
 python-json-logger>=2.0.7
 gunicorn>=21.2.0
 
+# 定时任务调度（心跳机制）
+apscheduler>=3.10.0
+
 # AI 记忆系统
 mem0ai>=1.0.0
 qdrant-client>=1.9.0
@@ -27,5 +30,5 @@ pytest-env>=1.0.0
 pytest-timeout>=2.2.0
 httpx>=0.24.1,<0.28.0
 
-# 孵化器统一 Agent 运行时（DeerFlow 2.0）— 见 PLATFORM_AGENT_STANDARD.md
--e ../deerflow-integration
+# 孵化器统一 Agent 运行时（DeerFlow 2.0）— Her 项目本地集成
+-e ./deerflow-integration

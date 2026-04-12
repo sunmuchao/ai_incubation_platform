@@ -83,7 +83,7 @@ class EmotionAnalysisTool:
 
     name = "emotion_analysis"
     description = "分析用户情感状态，检测情绪波动"
-    tags = ["emotion", "analysis", "p11"]
+    tags = ["emotion", "analysis"]
 
     @staticmethod
     def get_input_schema() -> dict:
@@ -126,7 +126,7 @@ class SafetyGuardianTool:
 
     name = "safety_guardian"
     description = "检测安全风险，提供分级响应"
-    tags = ["safety", "guardian", "p11"]
+    tags = ["safety", "guardian"]
 
     @staticmethod
     def execute(
@@ -155,7 +155,7 @@ class SilenceBreakerTool:
 
     name = "silence_breaker"
     description = "检测对话沉默，生成破冰话题"
-    tags = ["silence", "icebreaker", "p12"]
+    tags = ["silence", "icebreaker"]
 
     @staticmethod
     def execute(
@@ -184,7 +184,7 @@ class EmotionMediatorTool:
 
     name = "emotion_mediator"
     description = "检测争吵，提供调解建议"
-    tags = ["emotion", "mediation", "p12"]
+    tags = ["emotion", "mediation"]
 
     @staticmethod
     def execute(
@@ -213,7 +213,7 @@ class LoveLanguageTranslatorTool:
 
     name = "love_language_translator"
     description = "解读表面话语背后的真实需求"
-    tags = ["love_language", "translation", "p13"]
+    tags = ["love_language", "translation"]
 
     @staticmethod
     def execute(
@@ -238,7 +238,7 @@ class RelationshipProphetTool:
 
     name = "relationship_prophet"
     description = "预测关系发展趋势"
-    tags = ["relationship", "prediction", "p13"]
+    tags = ["relationship", "prediction"]
 
     @staticmethod
     def execute(
@@ -265,7 +265,7 @@ class DateCoachTool:
 
     name = "date_coach"
     description = "提供约会指导和策略"
-    tags = ["dating", "coach", "p14"]
+    tags = ["dating", "coach"]
 
     @staticmethod
     def execute(
@@ -290,7 +290,7 @@ class DateAssistantTool:
 
     name = "date_assistant"
     description = "约会实时协助"
-    tags = ["dating", "assistant", "p14"]
+    tags = ["dating", "assistant"]
 
     @staticmethod
     def execute(
@@ -315,7 +315,7 @@ class RelationshipCuratorTool:
 
     name = "relationship_curator"
     description = "策划关系纪念和里程碑"
-    tags = ["relationship", "curator", "p15"]
+    tags = ["relationship", "curator"]
 
     @staticmethod
     def execute(
@@ -342,7 +342,7 @@ class RiskControlTool:
 
     name = "risk_control"
     description = "企业数据看板与绩效分析"
-    tags = ["risk_control", "dashboard", "p8"]
+    tags = ["risk_control", "dashboard"]
 
     @staticmethod
     def execute(
@@ -367,7 +367,7 @@ class ShareGrowthTool:
 
     name = "share_growth"
     description = "分享策略与增长分析"
-    tags = ["share", "growth", "p9"]
+    tags = ["share", "growth"]
 
     @staticmethod
     def execute(
@@ -392,7 +392,7 @@ class PerformanceCoachTool:
 
     name = "performance_coach"
     description = "关系绩效与里程碑追踪"
-    tags = ["performance", "coach", "p10"]
+    tags = ["performance", "coach"]
 
     @staticmethod
     def execute(
@@ -419,7 +419,7 @@ class ActivityDirectorTool:
 
     name = "activity_director"
     description = "活动策划与地点推荐"
-    tags = ["activity", "director", "p10"]
+    tags = ["activity", "director"]
 
     @staticmethod
     def execute(
@@ -444,7 +444,7 @@ class VideoDateCoachTool:
 
     name = "video_date_coach"
     description = "视频约会全流程指导"
-    tags = ["video_date", "coach", "p10"]
+    tags = ["video_date", "coach"]
 
     @staticmethod
     def execute(
@@ -469,7 +469,7 @@ class ConversationMatchmakerTool:
 
     name = "conversation_matchmaker"
     description = "对话式匹配与关系分析"
-    tags = ["conversation", "matching", "p10"]
+    tags = ["conversation", "matching"]
 
     @staticmethod
     def execute(

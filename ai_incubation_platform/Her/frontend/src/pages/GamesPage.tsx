@@ -36,8 +36,8 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons'
-import type { CoupleGame, GameType } from '../types/p10_types'
-import { coupleGameApi } from '../api/p10_api'
+import type { CoupleGame, GameType } from '../types/milestoneTypes'
+import { coupleGameApi } from '../api/milestoneApi'
 import AgentFloatingBall from '../components/AgentFloatingBall'
 import { authStorage } from '../utils/storage'
 import './GamesPage.less'

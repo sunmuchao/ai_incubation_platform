@@ -1,0 +1,220 @@
+/**
+ * 快速入门页面样式
+ */
+
+.quick-start-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  // 欢迎卡片
+  .welcome-card {
+    max-width: 400px;
+    text-align: center;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  }
+
+  // 步骤卡片
+  .step-card {
+    max-width: 400px;
+    text-align: center;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+
+    .ant-input {
+      margin-bottom: 16px;
+      border-radius: 8px;
+    }
+
+    .hot-cities {
+      margin: 12px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+
+      .city-tag {
+        cursor: pointer;
+        border-radius: 16px;
+        padding: 4px 12px;
+        &:hover {
+          background: #1890ff;
+          color: white;
+        }
+      }
+    }
+  }
+
+  // 选项按钮通用样式
+  .option-btn {
+    min-width: 80px;
+    height: 48px;
+    margin: 8px;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: all 0.3s;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+    }
+  }
+
+  // 年龄选项
+  .age-options {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 360px;
+  }
+
+  // 性别选项
+  .gender-options {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+
+    .gender-btn {
+      min-width: 120px;
+      height: 60px;
+      font-size: 18px;
+    }
+  }
+
+  // 关系目标选项
+  .goal-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .goal-btn {
+      width: 100%;
+      height: 56px;
+      font-size: 18px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+  }
+
+  // 匹配结果容器
+  .matches-container {
+    max-width: 400px;
+    width: 100%;
+  }
+
+  // AI 消息
+  .ai-message {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+
+    .ant-typography {
+      font-size: 16px;
+    }
+  }
+
+  // 匹配卡片
+  .match-card {
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+
+    .match-header {
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+
+      .match-info {
+        flex: 1;
+      }
+    }
+
+    .match-preview {
+      padding: 8px 16px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      margin: 8px 16px;
+    }
+
+    .social-proof {
+      padding: 12px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .match-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      padding: 16px;
+      border-top: 1px solid #f0f0f0;
+
+      .ant-btn {
+        min-width: 80px;
+      }
+    }
+  }
+
+  // 新推荐卡片
+  .next-matches-card {
+    border-radius: 16px;
+    text-align: center;
+
+    .feedback-response {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+  }
+
+  // 不喜欢选项
+  .dislike-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+
+    .dislike-btn {
+      width: 100%;
+      height: 48px;
+      font-size: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 8px;
+    }
+  }
+}
+
+// 反馈弹窗样式
+.feedback-modal {
+  .ant-modal-content {
+    border-radius: 16px;
+    padding: 24px;
+  }
+
+  .ant-modal-header {
+    text-align: center;
+    border-bottom: none;
+  }
+
+  .ant-modal-body {
+    text-align: center;
+  }
+}

@@ -351,6 +351,6 @@ def analyze_text(
 # 测试函数
 if __name__ == "__main__":
     # 简单测试
-    print("Testing LLM client...")
+    logger.info("Testing LLM client...")
     response = call_llm("你好，请做一个简单的自我介绍。")
-    print(f"Response: {response}")
+    logger.info(f"Response: {response}")

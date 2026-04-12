@@ -7,8 +7,8 @@
  * 4. 情境化交互 - 功能融入对话流
  */
 
-import React, { useState, useEffect, useRef } from 'react'
-import { Layout, Typography, Space, Button, Avatar, notification, Drawer, message } from 'antd'
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react'
+import { Layout, Typography, Space, Button, Avatar, notification, Drawer, message, Spin } from 'antd'
 import {
   UserOutlined,
   CommentOutlined,
@@ -16,14 +16,22 @@ import {
 import { useTranslation } from 'react-i18next'
 import type { MatchCandidate } from '../types'
 import ChatInterface from '../components/ChatInterface'
-import ChatRoom from '../components/ChatRoom'
-import MatchCard from '../components/MatchCard'
-import PushNotifications from '../components/PushNotifications'
-import AgentFloatingBall from '../components/AgentFloatingBall'
-import { FeaturesDrawer, FeaturesButton, Feature } from '../components/FeaturesDrawer'
+// 🚀 [性能优化] 懒加载大型组件，减少初始 bundle 大小
+const ChatRoom = lazy(() => import('../components/ChatRoom'))
+const MatchCard = lazy(() => import('../components/MatchCard'))
+const FeaturesDrawer = lazy(() => import('../components/FeaturesDrawer'))
+const PushNotifications = lazy(() => import('../components/PushNotifications'))
+const AgentFloatingBall = lazy(() => import('../components/AgentFloatingBall'))
+const SwipeMatchPage = lazy(() => import('./SwipeMatchPage'))
+const WhoLikesMePage = lazy(() => import('./WhoLikesMePage'))
+const YourTurnReminder = lazy(() => import('../components/YourTurnReminder'))
+// 🚀 [性能优化] FeaturesButton 需要立即渲染，直接导入
+import { FeaturesButton } from '../components/FeaturesDrawer'
+import type { Feature } from '../components/FeaturesDrawer'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import HerAvatar from '../assets/her-avatar.svg'
 import { chatApi, conversationMatchingApi } from '../api'
+import { herStorage } from '../utils/storage'
 import './HomePage.less'
 
 const { Header, Content } = Layout
@@ -45,6 +53,9 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
   const [matchesCache, setMatchesCache] = useState<Record<string, MatchCandidate>>({})
   const [hasNewMessage, setHasNewMessage] = useState(false)
   const [featuresDrawerOpen, setFeaturesDrawerOpen] = useState(false) // 功能抽屉状态
+  const [showSwipeMatch, setShowSwipeMatch] = useState(false) // 滑动匹配页面状态
+  const [showWhoLikesMe, setShowWhoLikesMe] = useState(false) // Who Likes Me 页面状态
+  const [herSleeping, setHerSleeping] = useState(herStorage.isSleepingInChat()) // Her 休眠状态
   const userId = userInfo?.username || 'user-anonymous-dev'
 
   // 已通知的消息 ID 集合，避免重复弹窗
@@ -212,25 +223,87 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
     setChatRoomMatch(match)
   }
 
-  // 处理功能选择 - 在对话区生成功能卡片
+  // 处理功能选择 - 在对话区生成功能卡片或切换页面
   const handleFeatureSelect = (feature: Feature) => {
+    // 滑动匹配功能 - 直接显示滑动页面
+    if (feature.action === 'swipe') {
+      setShowSwipeMatch(true)
+      return
+    }
+
+    // Who Likes Me 功能 - 直接显示页面
+    if (feature.action === 'who_likes_me') {
+      setShowWhoLikesMe(true)
+      return
+    }
+
+    // Your Turn 功能 - 触发 ChatInterface 显示 YourTurnReminder
+    if (feature.action === 'your_turn') {
+      window.dispatchEvent(new CustomEvent('trigger-feature', {
+        detail: { feature }
+      }))
+      return
+    }
+
     message.info(`正在打开「${feature.name}」...`)
 
-    // TODO: 触发 ChatInterface 生成对应的功能卡片
-    // 这里可以通过事件或状态传递给 ChatInterface
+    // 其他功能触发 ChatInterface 生成对应的功能卡片
     window.dispatchEvent(new CustomEvent('trigger-feature', {
       detail: { feature }
     }))
   }
 
+  // 从滑动匹配页面返回
+  const handleBackFromSwipe = () => {
+    setShowSwipeMatch(false)
+  }
+
+  // 从 Who Likes Me 页面返回
+
   const renderView = () => {
+    // 滑动匹配页面
+    if (showSwipeMatch) {
+      return (
+        <div className="swipe-match-view">
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip="加载滑动匹配..." /></div>}>
+            <SwipeMatchPage onBack={handleBackFromSwipe} />
+          </Suspense>
+        </div>
+      )
+    }
+
+    // Who Likes Me 页面
+    if (showWhoLikesMe) {
+      return (
+        <div className="who-likes-me-view">
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip="加载喜欢你的人..." /></div>}>
+            <WhoLikesMePage
+              userId={userId}
+              onMatch={(_matchId, matchData) => {
+                // 匹配成功后打开聊天
+                if (matchData?.targetUserId) {
+                  handleOpenChatRoom(matchData.targetUserId, '新匹配')
+                }
+                setShowWhoLikesMe(false)
+              }}
+            />
+          </Suspense>
+        </div>
+      )
+    }
+
     if (chatRoomMatch) {
       return (
         <div className="chat-room-view">
-          <ChatRoom
-            match={chatRoomMatch}
-            onBack={handleBackToChat}
-          />
+          {/* 🚀 [性能优化] Suspense 包裹懒加载的 ChatRoom */}
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip="加载聊天室..." /></div>}>
+            <ChatRoom
+              match={chatRoomMatch}
+              onBack={handleBackToChat}
+              herSleeping={herSleeping}
+              onHerSleepChange={setHerSleeping}
+            />
+          </Suspense>
         </div>
       )
     }
@@ -266,14 +339,17 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
           <Space size="middle">
             {/* 语言切换 */}
             <LanguageSwitcher trigger="icon" size="small" />
-            <PushNotifications
+            {/* 🚀 [性能优化] Suspense 包裹懒加载的 PushNotifications */}
+            <Suspense fallback={<Spin size="small" />}>
+              <PushNotifications
                 unreadCount={unreadCount}
                 conversations={conversations}
                 matchesCache={matchesCache}
                 onOpenChatRoom={handleOpenChatRoom}
               />
-            {/* 聊天室模式下隐藏功能按钮，专注聊天 */}
-            {!chatRoomMatch && <FeaturesButton onClick={() => setFeaturesDrawerOpen(true)} />}
+            </Suspense>
+            {/* 聊天室或滑动匹配模式下隐藏功能按钮，专注当前体验 */}
+              {!chatRoomMatch && !showSwipeMatch && !showWhoLikesMe && <FeaturesButton onClick={() => setFeaturesDrawerOpen(true)} />}
             <Space>
               {userInfo && (
                 <Text type="secondary" style={{ fontSize: 14 }}>
@@ -308,36 +384,43 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
           open={!!selectedMatch}
           onClose={handleCloseMatchDetail}
         >
-          <MatchCard
-            match={selectedMatch}
-            onLike={() => {}}
-            onPass={() => {}}
-            onSuperLike={() => {}}
-            onMessage={() => handleStartChat(selectedMatch)}
-          />
+          {/* 🚀 [性能优化] Suspense 包裹懒加载的 MatchCard */}
+          <Suspense fallback={<div style={{ padding: 24, textAlign: 'center' }}><Spin size="large" /></div>}>
+            <MatchCard
+              match={selectedMatch}
+              onLike={() => {}}
+              onPass={() => {}}
+              onSuperLike={() => {}}
+              onMessage={() => handleStartChat(selectedMatch)}
+            />
+          </Suspense>
         </Drawer>
       )}
 
       {/* 功能抽屉 - 轻量级功能入口 */}
-      <FeaturesDrawer
-        open={featuresDrawerOpen}
-        onClose={() => setFeaturesDrawerOpen(false)}
-        onFeatureSelect={handleFeatureSelect}
-      />
+      <Suspense fallback={null}>
+        <FeaturesDrawer
+          open={featuresDrawerOpen}
+          onClose={() => setFeaturesDrawerOpen(false)}
+          onFeatureSelect={handleFeatureSelect}
+        />
+      </Suspense>
 
       {/* PWA 安装提示 - 临时禁用，方便调试 */}
       {/* <PWAInstallPrompt /> */}
 
-      {/* 悬浮球 - 快速对话入口（只在聊天室模式显示，沉浸式聊天不显示数字） */}
-      {chatRoomMatch && (
-        <AgentFloatingBall
-          visible={true}
-          hasNewMessage={hasNewMessage}
-          chatContext={{
-            partnerId: chatRoomMatch.user?.id || '',
-            partnerName: chatRoomMatch.user?.name || 'TA',
-          }}
-        />
+      {/* 悬浮球 - 快速对话入口（只在聊天室模式显示，休眠时隐藏） */}
+      {chatRoomMatch && !herSleeping && (
+        <Suspense fallback={null}>
+          <AgentFloatingBall
+            visible={true}
+            hasNewMessage={hasNewMessage}
+            chatContext={{
+              partnerId: chatRoomMatch.user?.id || '',
+              partnerName: chatRoomMatch.user?.name || 'TA',
+            }}
+          />
+        </Suspense>
       )}
     </Layout>
   )

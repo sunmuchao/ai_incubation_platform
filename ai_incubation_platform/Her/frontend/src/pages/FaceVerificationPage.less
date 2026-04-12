@@ -1,0 +1,345 @@
+// ==================== FaceVerificationPage 样式 ====================
+
+@import '../styles/design-tokens.less';
+
+.face-verification-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: @bg-base;
+  padding: @space-4;
+
+  &.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+// ==================== 页面头部 ====================
+
+.page-header {
+  margin-bottom: @space-4;
+  text-align: center;
+
+  .ant-typography {
+    margin-bottom: @space-1;
+  }
+}
+
+// ==================== 页面内容 ====================
+
+.page-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: @space-4;
+}
+
+// ==================== 认证步骤 ====================
+
+.verification-steps {
+  background: @bg-subtle;
+  padding: @space-4;
+  border-radius: @radius-xl;
+  margin-bottom: @space-4;
+
+  .ant-steps-item-title {
+    font-size: @font-size-sm;
+  }
+
+  .ant-steps-icon {
+    font-size: 18px;
+  }
+}
+
+// ==================== 步骤内容 ====================
+
+.step-content {
+  flex: 1;
+  background: @bg-subtle;
+  border-radius: @radius-2xl;
+  padding: @space-6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+// ==================== 步骤 0：介绍 ====================
+
+.step-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: @space-4;
+  max-width: 400px;
+  text-align: center;
+}
+
+.intro-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: @space-2;
+
+  .intro-icon {
+    font-size: 48px;
+    color: @color-primary;
+  }
+}
+
+.intro-desc {
+  font-size: @font-size-base;
+  color: @text-secondary;
+  line-height: @line-height-relaxed;
+}
+
+.badge-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: @space-2;
+
+  .preview-label {
+    font-size: @font-size-sm;
+    color: @text-tertiary;
+  }
+}
+
+.verification-benefits {
+  display: flex;
+  flex-direction: column;
+  gap: @space-2;
+  width: 100%;
+  margin-top: @space-4;
+}
+
+.benefit-card {
+  display: flex;
+  align-items: center;
+  gap: @space-2;
+  padding: @space-3;
+
+  .benefit-icon {
+    font-size: 20px;
+    color: @color-primary;
+  }
+
+  .ant-card-body {
+    padding: @space-2 @space-3;
+  }
+}
+
+.start-btn {
+  .button-primary();
+  border-radius: @radius-xl;
+  min-width: 200px;
+  margin-top: @space-4;
+}
+
+// ==================== 步骤 1：拍照 ====================
+
+.step-capture {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: @space-4;
+  width: 100%;
+  max-width: 400px;
+}
+
+.camera-container {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 4/3;
+  background: @bg-base;
+  border-radius: @radius-xl;
+  overflow: hidden;
+  position: relative;
+  border: 2px solid @border-primary;
+}
+
+.camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-canvas {
+  display: none;
+}
+
+.camera-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: @space-2;
+  color: @text-tertiary;
+
+  .placeholder-icon {
+    font-size: 48px;
+  }
+}
+
+.capture-tips {
+  display: flex;
+  align-items: center;
+  gap: @space-2;
+  padding: @space-2 @space-3;
+  background: @color-primary-light;
+  border-radius: @radius-lg;
+}
+
+.capture-actions {
+  display: flex;
+  gap: @space-3;
+  margin-top: @space-4;
+}
+
+// ==================== 步骤 2：确认 ====================
+
+.step-confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: @space-4;
+  width: 100%;
+}
+
+.photo-preview {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 4/3;
+  border-radius: @radius-xl;
+  overflow: hidden;
+  border: 2px solid @color-primary;
+  box-shadow: @shadow-primary;
+
+  .preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.confirm-actions {
+  display: flex;
+  gap: @space-3;
+  margin-top: @space-4;
+
+  .ant-btn {
+    min-width: 120px;
+    border-radius: @radius-xl;
+  }
+
+  .ant-btn-primary {
+    .button-primary();
+  }
+}
+
+.verification-failed {
+  width: 100%;
+  max-width: 400px;
+  margin-top: @space-4;
+}
+
+// ==================== 步骤 3：完成 ====================
+
+.step-complete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: @space-4;
+  width: 100%;
+}
+
+.result-details {
+  width: 100%;
+  max-width: 400px;
+  margin-top: @space-4;
+  border-radius: @radius-xl;
+
+  .ant-card-body {
+    padding: @space-4;
+  }
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: @space-3;
+  margin-bottom: @space-3;
+
+  .detail-label {
+    font-size: @font-size-sm;
+    color: @text-secondary;
+    min-width: 80px;
+  }
+
+  .detail-value {
+    font-size: @font-size-lg;
+    font-weight: @font-weight-semibold;
+    color: @color-primary;
+  }
+
+  .ant-progress {
+    flex: 1;
+  }
+}
+
+// ==================== 响应式设计 ====================
+
+@media (max-width: @breakpoint-md) {
+  .face-verification-page {
+    padding: @space-3;
+  }
+
+  .page-content {
+    gap: @space-3;
+  }
+
+  .verification-steps {
+    padding: @space-3;
+  }
+
+  .step-content {
+    padding: @space-4;
+  }
+
+  .camera-container {
+    max-width: 280px;
+  }
+
+  .photo-preview {
+    max-width: 280px;
+  }
+}
+
+@media (max-width: @breakpoint-sm) {
+  .verification-steps {
+    .ant-steps-item-title {
+      display: none; // 只显示图标
+    }
+  }
+
+  .camera-container {
+    max-width: 100%;
+  }
+
+  .photo-preview {
+    max-width: 100%;
+  }
+
+  .confirm-actions {
+    flex-direction: column;
+
+    .ant-btn {
+      width: 100%;
+    }
+  }
+}

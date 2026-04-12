@@ -41,8 +41,8 @@ import {
   PlusOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
-import type { DateSuggestion, DateVenue, DateType } from '../types/p10_types'
-import { dateSuggestionApi } from '../api/p10_api'
+import type { DateSuggestion, DateVenue, DateType } from '../types/milestoneTypes'
+import { dateSuggestionApi } from '../api/milestoneApi'
 import { authStorage } from '../utils/storage'
 import './DateSuggestionsPage.less'
 

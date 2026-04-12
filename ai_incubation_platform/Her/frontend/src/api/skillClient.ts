@@ -26,6 +26,10 @@ import type {
   ChatAssistantSkillResponse,
   SafetyGuardianEmergencyParams,
   SafetyGuardianEmergencyResponse,
+  ConversationMatchmakerSkillParams,
+  ConversationMatchmakerSkillResponse,
+  ProfileCollectionSkillParams,
+  ProfileCollectionSkillResponse,
 } from '../types/skill'
 import { authStorage } from '../utils/storage'
 

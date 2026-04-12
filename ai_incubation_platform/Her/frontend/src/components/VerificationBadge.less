@@ -1,0 +1,146 @@
+// ==================== VerificationBadge 样式 ====================
+
+@import '../styles/design-tokens.less';
+
+// ==================== 认证徽章 ====================
+
+.verification-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: @space-1;
+  border-radius: @radius-md;
+  transition: all @transition-fast;
+  cursor: default;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+
+  .badge-icon {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+  }
+
+  .badge-text {
+    font-weight: @font-weight-medium;
+    margin-left: @space-1;
+  }
+}
+
+// ==================== 徽章提示 ====================
+
+.badge-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: @space-2;
+  padding: @space-2;
+}
+
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: @space-2;
+
+  .tooltip-icon {
+    font-size: 18px;
+  }
+
+  .tooltip-name {
+    font-size: @font-size-base;
+    font-weight: @font-weight-semibold;
+  }
+}
+
+.tooltip-desc {
+  font-size: @font-size-sm;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+// ==================== 认证标记 ====================
+
+.verified-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  animation: verified-pulse 2s ease-in-out infinite;
+}
+
+@keyframes verified-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+// ==================== 认证图标 ====================
+
+.verified-icon-wrapper {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.verified-icon {
+  font-size: 12px;
+  animation: verified-pulse 2s ease-in-out infinite;
+}
+
+// ==================== 各级别徽章颜色 ====================
+
+// 蓝星认证
+.badge-blue-star {
+  background-color: rgba(24, 144, 255, 0.1);
+  border-color: rgba(24, 144, 255, 0.3);
+  color: #1890ff;
+}
+
+// 金星认证
+.badge-gold-star {
+  background-color: rgba(250, 173, 14, 0.1);
+  border-color: rgba(250, 173, 14, 0.3);
+  color: #faad14;
+}
+
+// 铂金星认证
+.badge-platinum-star {
+  background-color: rgba(149, 222, 100, 0.1);
+  border-color: rgba(149, 222, 100, 0.3);
+  color: #95de64;
+}
+
+// 钻石星认证
+.badge-diamond-star {
+  background-color: rgba(212, 165, 154, 0.1);
+  border-color: rgba(212, 165, 154, 0.3);
+  color: #D4A59A;
+}
+
+// ==================== 响应式设计 ====================
+
+@media (max-width: @breakpoint-md) {
+  .verification-badge {
+    .badge-text {
+      font-size: @font-size-xs;
+    }
+  }
+}
+
+@media (max-width: @breakpoint-sm) {
+  .verification-badge {
+    .badge-text {
+      display: none; // 小屏幕只显示图标
+    }
+  }
+
+  .badge-tooltip {
+    .tooltip-desc {
+      font-size: @font-size-xs;
+    }
+  }
+}

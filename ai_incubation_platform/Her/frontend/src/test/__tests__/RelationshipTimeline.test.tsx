@@ -7,10 +7,10 @@ import React from 'react'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import RelationshipTimeline from '../../components/RelationshipTimeline'
-import { milestoneApi } from '../../api/p10_api'
+import { milestoneApi } from '../../api/milestoneApi'
 
-// Mock p10_api
-jest.mock('../../api/p10_api', () => ({
+// Mock milestoneApi
+jest.mock('../../api/milestoneApi', () => ({
   milestoneApi: {
     getMilestoneTimeline: jest.fn(),
     getMilestoneStatistics: jest.fn(),

@@ -1,0 +1,436 @@
+// ==================== SwipeMatchCard 样式 - Tinder 风式滑动体验 ====================
+
+@import '../styles/design-tokens.less';
+
+// ==================== 卡片容器 ====================
+
+.swipe-match-card {
+  position: absolute;
+  width: 100%;
+  max-width: 360px;
+  height: 480px;
+  margin: 0 auto;
+  border-radius: @radius-2xl;
+  overflow: hidden;
+  background: @bg-subtle;
+  box-shadow: @shadow-md;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  border: 3px solid transparent;
+  transition-property: transform, opacity, border-color, box-shadow;
+
+  &.active {
+    cursor: grab;
+    z-index: 100;
+    box-shadow: @shadow-lg;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  &.exiting {
+    pointer-events: none;
+  }
+
+  // 非活跃卡片（堆叠在后面）
+  &:not(.active) {
+    cursor: default;
+    filter: brightness(0.95);
+  }
+}
+
+// ==================== 卡片内容 ====================
+
+.swipe-card-content {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, @color-primary-light 0%, @bg-subtle 30%);
+}
+
+// ==================== 头部区域 ====================
+
+.swipe-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: @space-6 @space-5;
+  position: relative;
+}
+
+.avatar-container {
+  position: relative;
+  display: inline-block;
+}
+
+.swipe-avatar {
+  border: 4px solid white;
+  box-shadow: @shadow-md;
+  border-radius: @radius-xl;
+  transition: transform @transition-base;
+
+  &:hover {
+    transform: scale(1.02);
+  }
+}
+
+.verified-badge {
+  position: absolute;
+  bottom: 8px;
+  right: -4px;
+  font-size: @font-size-xs;
+  background: linear-gradient(135deg, @color-primary 0%, @color-primary-hover 100%);
+  color: @text-inverse;
+  border-radius: @radius-full;
+  min-width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: @shadow-primary;
+  border: 2px solid white;
+}
+
+// ==================== 兼容度徽章 ====================
+
+.compatibility-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: @space-2 @space-3;
+  background: white;
+  border-radius: @radius-xl;
+  box-shadow: @shadow-sm;
+  border: 1px solid @border-primary;
+}
+
+.compatibility-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: @radius-full;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.compatibility-inner {
+  width: 44px;
+  height: 44px;
+  border-radius: @radius-full;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+// ==================== 内容区域 ====================
+
+.swipe-card-body {
+  padding: @space-4 @space-5;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-header {
+  display: flex;
+  align-items: center;
+  gap: @space-2;
+  margin-bottom: @space-1;
+}
+
+.user-name {
+  font-size: @font-size-xl;
+  font-weight: @font-weight-semibold;
+  color: @text-primary;
+  letter-spacing: @letter-spacing-tight;
+}
+
+.user-age {
+  font-size: @font-size-lg;
+  color: @text-tertiary;
+  font-weight: @font-weight-normal;
+}
+
+.user-location {
+  display: flex;
+  align-items: center;
+  gap: @space-1;
+  color: @text-secondary;
+  font-size: @font-size-sm;
+  margin-bottom: @space-3;
+
+  .anticon {
+    font-size: @font-size-xs;
+    color: @color-primary;
+  }
+}
+
+.user-bio {
+  color: @text-secondary;
+  line-height: @line-height-base;
+  margin-bottom: @space-3;
+  font-size: @font-size-sm;
+  .text-ellipsis-lines(2);
+}
+
+// ==================== 兴趣标签 ====================
+
+.interests-section {
+  margin-top: auto;
+}
+
+.interest-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: @space-1;
+}
+
+.interest-tag {
+  padding: 4px @space-2;
+  background: @color-primary-light;
+  border-radius: @radius-lg;
+  font-size: @font-size-xs;
+  color: @text-secondary;
+  border: 1px solid @color-primary-medium;
+  transition: all @transition-fast;
+  display: inline-flex;
+  align-items: center;
+
+  .anticon {
+    color: #52c41a;
+  }
+
+  &.more {
+    background: @color-accent-light;
+    border-color: @color-accent-medium;
+    color: @color-accent;
+  }
+}
+
+// ==================== 滑动反馈覆盖层 ====================
+
+.swipe-feedback-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.feedback-icon {
+  animation: feedback-pulse 0.3s ease-out;
+}
+
+.feedback-text {
+  font-size: @font-size-2xl;
+  font-weight: @font-weight-bold;
+  letter-spacing: @letter-spacing-wide;
+  margin-top: @space-2;
+  text-transform: uppercase;
+}
+
+@keyframes feedback-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+// ==================== 限制警告 ====================
+
+.limit-warning {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  padding: @space-4 @space-6;
+  border-radius: @radius-xl;
+  box-shadow: @shadow-lg;
+  z-index: 20;
+  text-align: center;
+  animation: warning-appear 0.2s ease-out;
+}
+
+@keyframes warning-appear {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+// ==================== 滑动指示器 ====================
+
+.swipe-indicators {
+  position: absolute;
+  bottom: @space-4;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: @space-6;
+  z-index: 5;
+}
+
+.indicator {
+  width: 48px;
+  height: 48px;
+  border-radius: @radius-full;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: @font-size-xl;
+  box-shadow: @shadow-sm;
+  transition: all @transition-base;
+
+  &.pass-indicator {
+    color: #ff7875;
+    border: 2px solid rgba(255, 120, 117, 0.3);
+  }
+
+  &.super-like-indicator {
+    color: @color-primary;
+    border: 2px solid @color-primary-medium;
+  }
+
+  &.like-indicator {
+    color: #52c41a;
+    border: 2px solid rgba(82, 196, 26, 0.3);
+  }
+}
+
+// ==================== 滑出动画 ====================
+
+@keyframes swipe-out-right {
+  from {
+    transform: translateX(0) rotate(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(500px) rotate(20deg);
+    opacity: 0;
+  }
+}
+
+@keyframes swipe-out-left {
+  from {
+    transform: translateX(0) rotate(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-500px) rotate(-20deg);
+    opacity: 0;
+  }
+}
+
+@keyframes swipe-out-up {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-500px);
+    opacity: 0;
+  }
+}
+
+// ==================== 响应式设计 ====================
+
+@media (max-width: @breakpoint-md) {
+  .swipe-match-card {
+    max-width: 100%;
+    height: 420px;
+    border-radius: @radius-xl;
+  }
+
+  .swipe-card-header {
+    padding: @space-4;
+  }
+
+  .swipe-avatar {
+    width: 100px !important;
+    height: 100px !important;
+  }
+
+  .swipe-card-body {
+    padding: @space-3 @space-4;
+  }
+
+  .swipe-indicators {
+    gap: @space-4;
+  }
+
+  .indicator {
+    width: 40px;
+    height: 40px;
+    font-size: @font-size-lg;
+  }
+}
+
+@media (max-width: @breakpoint-sm) {
+  .swipe-match-card {
+    height: 380px;
+  }
+
+  .swipe-card-header {
+    padding: @space-3;
+  }
+
+  .swipe-avatar {
+    width: 80px !important;
+    height: 80px !important;
+  }
+
+  .compatibility-circle {
+    width: 48px;
+    height: 48px;
+  }
+
+  .compatibility-inner {
+    width: 38px;
+    height: 38px;
+  }
+
+  .user-name {
+    font-size: @font-size-lg;
+  }
+
+  .indicator {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+// ==================== 桌面端优化 ====================
+
+@media (min-width: @breakpoint-lg) {
+  .swipe-match-card {
+    &:hover:not(.active) {
+      box-shadow: @shadow-lg;
+    }
+  }
+}

@@ -9,15 +9,34 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // 🚀 [性能优化] build 配置 - 拆分大型第三方库
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Ant Design 组件库单独打包
+          'antd': ['antd'],
+          // React 核心库
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // 国际化
+          'i18n': ['i18next', 'react-i18next'],
+          // HTTP 请求库
+          'axios': ['axios'],
+        },
+      },
+    },
+    // 提高 chunk 大小警告阈值，因为 antd 本身就很大
+    chunkSizeWarningLimit: 600,
+  },
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.svg'],
       manifest: {
-        name: 'Her - AI 情感伴侣',
+        name: 'Her - AI 情感顾问',
         short_name: 'Her',
-        description: '你的 AI 情感伴侣和关系教练',
+        description: '你的 AI 情感顾问和关系教练',
         theme_color: '#FDFBFD',
         background_color: '#FDFBFD',
         display: 'standalone',

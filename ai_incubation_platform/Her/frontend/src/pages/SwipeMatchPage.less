@@ -1,0 +1,145 @@
+// ==================== SwipeMatchPage 样式 ====================
+
+@import '../styles/design-tokens.less';
+
+.swipe-match-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: @bg-base;
+}
+
+// ==================== 顶部导航 ====================
+
+.swipe-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: @space-3 @space-4;
+  background: @bg-subtle;
+  border-bottom: 1px solid @border-light;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.back-btn,
+.help-btn {
+  color: @text-secondary;
+  font-size: @font-size-sm;
+  transition: all @transition-fast;
+
+  &:hover {
+    color: @color-primary;
+    background: @color-primary-light;
+  }
+}
+
+.page-title {
+  margin: 0 !important;
+  font-size: @font-size-lg;
+  font-weight: @font-weight-semibold;
+  color: @text-primary;
+}
+
+// ==================== 滑动说明 ====================
+
+.swipe-instructions {
+  display: flex;
+  justify-content: center;
+  padding: @space-2 @space-4;
+  background: @bg-subtle;
+  border-bottom: 1px solid @border-light;
+
+  .ant-space {
+    font-size: @font-size-xs;
+  }
+
+  .instruction-icon {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    border-radius: @radius-sm;
+    font-size: @font-size-xs;
+    margin-right: @space-1;
+
+    &.like {
+      background: rgba(82, 196, 26, 0.15);
+      color: #52c41a;
+    }
+
+    &.pass {
+      background: rgba(255, 120, 117, 0.15);
+      color: #ff7875;
+    }
+
+    &.super {
+      background: @color-primary-light;
+      color: @color-primary;
+    }
+  }
+}
+
+// ==================== 内容区域 ====================
+
+.swipe-page-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: @space-4;
+  overflow: hidden;
+}
+
+// ==================== 底部提示 ====================
+
+.swipe-page-footer {
+  display: flex;
+  justify-content: center;
+  padding: @space-3 @space-4;
+  background: @bg-subtle;
+  border-top: 1px solid @border-light;
+}
+
+.footer-tip {
+  font-size: @font-size-sm;
+  text-align: center;
+}
+
+// ==================== 响应式设计 ====================
+
+@media (max-width: @breakpoint-md) {
+  .swipe-page-header {
+    padding: @space-2 @space-3;
+  }
+
+  .page-title {
+    font-size: @font-size-base;
+  }
+
+  .swipe-instructions {
+    padding: @space-1 @space-2;
+
+    .ant-space {
+      font-size: 10px;
+    }
+  }
+
+  .swipe-page-content {
+    padding: @space-2;
+  }
+}
+
+@media (max-width: @breakpoint-sm) {
+  .swipe-page-header {
+    .back-btn {
+      padding: 0 @space-1;
+    }
+  }
+
+  .swipe-instructions {
+    display: none; // 小屏幕隐藏说明
+  }
+}

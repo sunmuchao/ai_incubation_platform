@@ -1,0 +1,315 @@
+// ==================== GiftStore 样式 ====================
+
+@import '../styles/design-tokens.less';
+
+.gift-store-modal {
+  .ant-modal-content {
+    border-radius: @radius-2xl;
+    overflow: hidden;
+  }
+
+  .ant-modal-header {
+    background: linear-gradient(135deg, @color-primary-light 0%, @color-accent-light 100%);
+    border-bottom: none;
+    padding: @space-4 @space-6;
+  }
+
+  .ant-modal-title {
+    display: flex;
+    align-items: center;
+    gap: @space-2;
+    color: @text-primary;
+    font-weight: @font-weight-semibold;
+  }
+
+  .ant-modal-body {
+    padding: @space-4 @space-6;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}
+
+.gift-modal-title {
+  display: flex;
+  align-items: center;
+  gap: @space-2;
+}
+
+.gift-store-content {
+  display: flex;
+  flex-direction: column;
+  gap: @space-4;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: @space-8;
+}
+
+// ==================== 分类标签 ====================
+
+.gift-category-tabs {
+  .ant-tabs-nav {
+    margin-bottom: @space-3;
+  }
+
+  .ant-tabs-tab {
+    padding: @space-1 @space-3;
+    font-size: @font-size-sm;
+  }
+
+  .ant-tabs-tab-active {
+    .ant-tabs-tab-btn {
+      color: @color-primary;
+      font-weight: @font-weight-medium;
+    }
+  }
+
+  .ant-tabs-ink-bar {
+    background: @color-primary;
+  }
+}
+
+// ==================== 礼物网格 ====================
+
+.gift-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: @space-3;
+  padding: @space-2 0;
+}
+
+.gift-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: @space-3;
+  border-radius: @radius-lg;
+  border: 2px solid transparent;
+  background: @bg-subtle;
+  transition: all @transition-fast;
+  cursor: pointer;
+  min-height: 100px;
+
+  &:hover {
+    border-color: @color-primary-medium;
+    background: @color-primary-light;
+    transform: translateY(-2px);
+  }
+
+  &.selected {
+    border-color: @color-primary;
+    background: @color-primary-light;
+    box-shadow: @shadow-primary;
+
+    .gift-icon {
+      transform: scale(1.1);
+    }
+  }
+
+  &.free {
+    .gift-price {
+      color: #52c41a;
+    }
+  }
+}
+
+.gift-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: @space-2;
+}
+
+.gift-icon {
+  font-size: 32px;
+  line-height: 1;
+  transition: transform @transition-fast;
+}
+
+.popular-badge,
+.new-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  font-size: @font-size-xs;
+
+  .ant-badge-count {
+    padding: 0 4px;
+    min-width: 30px;
+    height: 16px;
+    line-height: 16px;
+    border-radius: @radius-sm;
+  }
+}
+
+.popular-badge .ant-badge-count {
+  background: #ff4d4f;
+}
+
+.new-badge .ant-badge-count {
+  background: #52c41a;
+}
+
+.gift-name {
+  font-size: @font-size-sm;
+  color: @text-primary;
+  text-align: center;
+  margin-bottom: @space-1;
+}
+
+.gift-price {
+  font-size: @font-size-xs;
+  color: @text-tertiary;
+  font-weight: @font-weight-medium;
+}
+
+// ==================== 发送区域 ====================
+
+.gift-send-section {
+  display: flex;
+  flex-direction: column;
+  gap: @space-3;
+  padding: @space-4;
+  background: @bg-base;
+  border-radius: @radius-xl;
+  border: 1px solid @border-light;
+  margin-top: @space-4;
+}
+
+.target-user-info {
+  display: flex;
+  align-items: center;
+  gap: @space-2;
+
+  .user-name {
+    font-size: @font-size-base;
+    font-weight: @font-weight-medium;
+    color: @text-primary;
+  }
+}
+
+.selected-gift-preview {
+  display: flex;
+  align-items: center;
+  gap: @space-3;
+  padding: @space-3;
+  background: @color-primary-light;
+  border-radius: @radius-lg;
+
+  .preview-icon {
+    font-size: 28px;
+  }
+
+  .preview-info {
+    flex: 1;
+
+    .preview-name {
+      font-size: @font-size-base;
+      color: @text-primary;
+      font-weight: @font-weight-medium;
+      display: block;
+    }
+
+    .preview-desc {
+      font-size: @font-size-xs;
+      color: @text-tertiary;
+      display: block;
+    }
+  }
+
+  .gift-count-control {
+    display: flex;
+    align-items: center;
+    gap: @space-1;
+
+    .ant-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: @radius-md;
+    }
+
+    .count-display {
+      width: 32px;
+      text-align: center;
+      font-size: @font-size-base;
+      font-weight: @font-weight-medium;
+    }
+  }
+}
+
+.gift-message-input {
+  border-radius: @radius-lg;
+
+  .ant-input {
+    border-radius: @radius-md;
+  }
+}
+
+.gift-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .total-price {
+    font-size: @font-size-lg;
+    font-weight: @font-weight-semibold;
+    color: @color-primary;
+  }
+
+  .send-gift-btn {
+    .button-primary();
+    border-radius: @radius-xl;
+    min-width: 120px;
+  }
+}
+
+// ==================== 响应式设计 ====================
+
+@media (max-width: @breakpoint-md) {
+  .gift-store-modal {
+    .ant-modal-content {
+      max-width: 95vw;
+    }
+  }
+
+  .gift-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: @space-2;
+  }
+
+  .gift-card {
+    min-height: 80px;
+    padding: @space-2;
+  }
+
+  .gift-icon {
+    font-size: 24px;
+  }
+
+  .gift-action-bar {
+    flex-direction: column;
+    gap: @space-3;
+
+    .send-gift-btn {
+      width: 100%;
+    }
+  }
+}
+
+@media (max-width: @breakpoint-sm) {
+  .gift-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .gift-category-tabs {
+    .ant-tabs-tab {
+      font-size: @font-size-xs;
+      padding: @space-1 @space-2;
+    }
+  }
+}

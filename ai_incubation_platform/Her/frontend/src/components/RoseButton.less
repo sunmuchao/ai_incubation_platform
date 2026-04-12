@@ -1,0 +1,169 @@
+// ==================== RoseButton 样式 ====================
+
+@import '../styles/design-tokens.less';
+
+.rose-button {
+  display: inline-flex;
+  align-items: center;
+  gap: @space-1;
+  border-radius: @radius-lg;
+  transition: all @transition-bounce;
+  border-width: 2px;
+  font-weight: @font-weight-medium;
+
+  // 有玫瑰状态
+  &.has-rose {
+    color: #D4A59A;
+    border-color: rgba(212, 165, 154, 0.3);
+    background: rgba(212, 165, 154, 0.08);
+
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, #D4A59A 0%, #C88B8B 100%);
+      border-color: #D4A59A;
+      color: white;
+      box-shadow: 0 4px 16px rgba(212, 165, 154, 0.25);
+      transform: scale(1.05);
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.95);
+    }
+  }
+
+  // 无玫瑰状态
+  &.no-rose {
+    color: @text-tertiary;
+    border-color: @border-medium;
+    background: @bg-base;
+
+    &:hover:not(:disabled) {
+      border-color: @border-strong;
+      color: @text-secondary;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .rose-count {
+    font-size: @font-size-sm;
+    margin-left: @space-1;
+    font-weight: @font-weight-semibold;
+  }
+}
+
+// ==================== 发送玫瑰弹窗 ====================
+
+.rose-send-modal {
+  .ant-modal-content {
+    border-radius: @radius-2xl;
+  }
+
+  .ant-modal-header {
+    border-radius: @radius-2xl @radius-2xl 0 0;
+    background: linear-gradient(135deg, @color-primary-light 0%, @color-accent-light 100%);
+    border-bottom: none;
+  }
+
+  .ant-modal-title {
+    display: flex;
+    align-items: center;
+    gap: @space-2;
+    color: @text-primary;
+    font-weight: @font-weight-semibold;
+  }
+
+  .ant-modal-body {
+    padding: @space-5 @space-6;
+  }
+
+  .ant-modal-footer {
+    padding: @space-4 @space-6 @space-5;
+    border-top: 1px solid @border-light;
+  }
+}
+
+.rose-modal-title {
+  display: flex;
+  align-items: center;
+  gap: @space-2;
+}
+
+.rose-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: @space-4;
+}
+
+.target-user-info {
+  display: flex;
+  align-items: center;
+  gap: @space-1;
+}
+
+.rose-description {
+  background: @color-primary-light;
+  padding: @space-3 @space-4;
+  border-radius: @radius-lg;
+  border-left: 3px solid @color-primary;
+  font-size: @font-size-sm;
+  color: @text-secondary;
+  line-height: @line-height-base;
+  margin-bottom: 0;
+}
+
+.rose-message-input {
+  .input-label {
+    font-size: @font-size-sm;
+    color: @text-secondary;
+    margin-bottom: @space-2;
+    display: block;
+  }
+
+  .ant-input {
+    border-radius: @radius-lg;
+  }
+}
+
+.rose-balance-tip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: @space-2 @space-3;
+  background: @bg-base;
+  border-radius: @radius-lg;
+  font-size: @font-size-xs;
+}
+
+.rose-send-btn {
+  .button-primary();
+  border-radius: @radius-lg;
+}
+
+// ==================== 响应式设计 ====================
+
+@media (max-width: @breakpoint-md) {
+  .rose-button {
+    .rose-count {
+      font-size: @font-size-xs;
+    }
+  }
+
+  .rose-send-modal {
+    .ant-modal-content {
+      max-width: 90vw;
+    }
+  }
+}
+
+@media (max-width: @breakpoint-sm) {
+  .rose-button {
+    padding: @space-1 @space-2;
+
+    .rose-count {
+      display: none; // 小屏幕隐藏数字
+    }
+  }
+}

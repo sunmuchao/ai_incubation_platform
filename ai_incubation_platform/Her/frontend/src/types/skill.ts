@@ -475,3 +475,57 @@ export interface GiftSuggestionSkillResponse {
     }
   }
 }
+
+// ==================== 对话式匹配 Skill ====================
+
+// 对话式匹配 Skill 参数
+export interface ConversationMatchmakerSkillParams {
+  user_id: string
+  action: 'match_by_intent' | 'get_daily_recommend' | 'suggest_topics' | 'analyze_compatibility'
+  intent_text?: string
+  match_id?: string
+  target_user_id?: string
+}
+
+// 对话式匹配 Skill 响应
+export interface ConversationMatchmakerSkillResponse {
+  success: boolean
+  ai_message?: string
+  candidates?: SkillMatchCandidate[]
+  recommendations?: Array<{
+    user_id: string
+    name: string
+    avatar_url?: string
+    match_score: number
+    reason: string
+  }>
+  topics?: Array<{
+    topic: string
+    reason: string
+    icebreaker?: string
+  }>
+  compatibility_score?: number
+  analysis?: Record<string, any>
+}
+
+// ==================== 画像收集 Skill ====================
+
+// 画像收集 Skill 参数
+export interface ProfileCollectionSkillParams {
+  user_id: string
+  action: 'start_session' | 'send_message' | 'get_progress' | 'complete_session'
+  session_id?: string
+  message?: string
+}
+
+// 画像收集 Skill 响应
+export interface ProfileCollectionSkillResponse {
+  success: boolean
+  session_id?: string
+  opening_message?: string
+  ai_response?: string
+  progress?: number
+  completed_dimensions?: string[]
+  profile?: Record<string, any>
+  recommendations?: string[]
+}

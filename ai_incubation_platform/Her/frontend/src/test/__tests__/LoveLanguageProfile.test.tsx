@@ -7,14 +7,13 @@ import React from 'react'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import LoveLanguageProfile from '../../components/LoveLanguageProfile'
-import { loveLanguageProfileApi } from '../../api/p13_api'
+import { relationshipCoachSkill } from '../../api/skillClient'
 
-// Mock p13_api
-jest.mock('../../api/p13_api', () => ({
-  loveLanguageProfileApi: {
-    getUserLoveLanguageProfile: jest.fn(),
-    analyzeUserLoveLanguage: jest.fn(),
-    getLoveLanguageDescription: jest.fn(),
+// Mock relationshipCoachSkill (替代已删除的 loveLanguageProfileApi)
+jest.mock('../../api/skillClient', () => ({
+  relationshipCoachSkill: {
+    analyzeLoveLanguage: jest.fn(),
+    getLoveLanguageTranslation: jest.fn(),
   },
 }))
 

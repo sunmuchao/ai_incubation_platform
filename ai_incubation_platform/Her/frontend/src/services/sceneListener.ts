@@ -45,7 +45,6 @@ class SceneListener {
   init(userId: string) {
     this.userId = userId
     this.isInitialized = true
-    console.log('[SceneListener] Initialized for user:', userId)
   }
 
   /**
@@ -181,7 +180,6 @@ class SceneListener {
       const result: SceneDetectResult = response.data
 
       if (result.push_actions && result.push_actions.length > 0) {
-        console.log('[SceneListener] Scene detected:', result.trigger, result.push_actions)
         return result.push_actions
       }
 

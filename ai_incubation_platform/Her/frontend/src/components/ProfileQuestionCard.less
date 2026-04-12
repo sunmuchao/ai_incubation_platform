@@ -32,6 +32,30 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
+
+    &.hidden {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+  }
+
+  // Loading 覆盖层
+  .loading-overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    margin-bottom: 12px;
+  }
+
+  // 错误提示
+  .error-overlay {
+    padding: 12px;
+    margin-bottom: 12px;
+    text-align: center;
+    background: rgba(255, 77, 79, 0.06);
+    border-radius: 8px;
   }
 
   // 单选卡片

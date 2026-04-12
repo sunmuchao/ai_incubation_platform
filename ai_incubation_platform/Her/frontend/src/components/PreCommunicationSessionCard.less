@@ -1,0 +1,21 @@
+/**
+ * AI 预沟通会话卡片样式
+ */
+
+.precomm-container {
+  .generative-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .precomm-card {
+    border-radius: 12px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+  }
+}

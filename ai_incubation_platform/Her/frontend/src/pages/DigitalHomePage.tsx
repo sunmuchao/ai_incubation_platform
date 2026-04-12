@@ -35,8 +35,8 @@ import {
   FireOutlined,
   StarOutlined,
 } from '@ant-design/icons'
-import { milestoneApi } from '../api/p10_api'
-import type { Milestone } from '../types/p10_types'
+import { milestoneApi } from '../api/milestoneApi'
+import type { Milestone } from '../types/milestoneTypes'
 import { authStorage } from '../utils/storage'
 import './DigitalHomePage.less'
 
@@ -100,7 +100,7 @@ const DigitalHomePage: React.FC<DigitalHomePageProps> = ({ userId, partnerId }) 
   const [hasNewMessage, setHasNewMessage] = useState(false)
 
   const currentUserId = userId || authStorage.getUserId()
-  const currentPartnerId = partnerId || 'user_002' // TODO: 从关系状态获取
+  const currentPartnerId = partnerId || 'user_002' // 注：测试用硬编码，实际应从关系状态获取
 
   useEffect(() => {
     loadMilestones()

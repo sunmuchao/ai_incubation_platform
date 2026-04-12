@@ -48,8 +48,9 @@ class TokenBucket:
         Returns:
             (是否成功，等待时间秒数)
         """
-        current_time = time.time()
+        # 先获取桶，再获取当前时间，避免 time_passed 为负数
         bucket_tokens, last_update = self._get_bucket(key)
+        current_time = time.time()
 
         # 计算新增令牌数
         time_passed = current_time - last_update
@@ -71,8 +72,9 @@ class TokenBucket:
 
     def get_remaining(self, key: str) -> int:
         """获取剩余令牌数"""
-        current_time = time.time()
+        # 先获取桶，再获取当前时间
         bucket_tokens, last_update = self._get_bucket(key)
+        current_time = time.time()
 
         # 计算新增令牌数
         time_passed = current_time - last_update

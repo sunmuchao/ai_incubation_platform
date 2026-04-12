@@ -11,8 +11,7 @@ import './locales/i18n'
 import { initIOSOptimizations } from './utils/iosUtils'
 
 // 初始化移动端优化
-const iosInit = initIOSOptimizations()
-console.log('📱 Device Info:', iosInit)
+initIOSOptimizations()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -455,7 +455,7 @@ class CacheManager:
         # 无 Redis 配置时也认为健康（降级到内存缓存）
         return True
 
-    # ========== 用户数据变更时的主动缓存失效（P20 增强） ==========
+    # ========== 用户数据变更时的主动缓存失效（Future 增强） ==========
 
     def invalidate_user_all_cache(self, user_id: str, reason: str = "unknown") -> Dict[str, bool]:
         """

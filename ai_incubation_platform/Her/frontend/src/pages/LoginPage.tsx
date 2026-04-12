@@ -255,7 +255,17 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
         try {
           const loginResponse = await userApi.login(values.email, passwordHash)
           if (loginResponse.access_token) {
-            authStorage.saveAuth({ token: loginResponse.access_token, user: loginResponse.user })
+            // 保存完整的用户信息（包含注册时填写的数据）
+            const fullUserInfo = {
+              id: response.id,
+              username: values.username,
+              name: values.name,
+              email: values.email,
+              age: values.age,
+              gender: values.gender,
+              location: values.location,
+            }
+            authStorage.saveAuth({ token: loginResponse.access_token, user: fullUserInfo })
             registrationStorage.reset()
             message.success('注册并登录成功！')
             onLoginSuccess?.()
@@ -266,14 +276,17 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
           // 自动登录失败，提示用户手动登录
         }
 
-        // 如果自动登录失败，只保存用户信息并提示手动登录
-        const userInfo = {
+        // 如果自动登录失败，保存完整用户信息并提示手动登录
+        const fullUserInfo = {
           id: response.id,
           username: values.username,
           name: values.name,
           email: values.email,
+          age: values.age,
+          gender: values.gender,
+          location: values.location,
         }
-        authStorage.setUser(userInfo)
+        authStorage.setUser(fullUserInfo)
         registrationStorage.reset()
         message.success('注册成功！请使用邮箱登录')
         setActiveTab('login')

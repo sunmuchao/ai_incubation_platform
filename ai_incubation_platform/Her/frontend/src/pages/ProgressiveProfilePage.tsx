@@ -330,7 +330,7 @@ const ProgressiveProfilePage: React.FC<{
       if (data.success) {
         // 跳转到游戏页面或显示游戏组件
         message.info(`开始${data.data.test_name}！`)
-        // TODO: 实现游戏组件
+        // 游戏组件渲染（当前为 placeholder，后续可集成 StressTest 等游戏化测试）
       }
     } catch (error) {
       console.error('Start game error:', error)
@@ -341,7 +341,7 @@ const ProgressiveProfilePage: React.FC<{
    * 微信授权
    */
   const handleWechatAuth = async () => {
-    // TODO: 实现微信授权流程
+    // 微信授权流程（需集成 wechatApi 或调用原生 SDK）
     message.info('正在跳转微信授权...')
   }
 

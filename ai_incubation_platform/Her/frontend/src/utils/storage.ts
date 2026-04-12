@@ -42,6 +42,7 @@ const STORAGE_KEYS = {
   REGISTRATION_COMPLETED: 'has_completed_registration_conversation',
   TEST_USER_ID: 'test_user_id',
   PWA_INSTALL_DISMISSED: 'pwa-install-dismissed',
+  HER_SLEEPING_IN_CHAT: 'her_sleeping_in_chat', // 聊天室中 Her 休眠偏好
 } as const
 
 // ==================== 认证存储 ====================
@@ -71,7 +72,7 @@ export const authStorage = {
     try {
       return JSON.parse(userStr) as UserInfo
     } catch {
-      console.error('Failed to parse user info from localStorage')
+      // JSON 解析失败，返回 null
       return null
     }
   },
@@ -178,6 +179,24 @@ export const pwaStorage = {
   },
 }
 
+// ==================== Her 悬浮球存储 ====================
+
+export const herStorage = {
+  /**
+   * 检查在聊天室中 Her 是否处于休眠状态
+   */
+  isSleepingInChat(): boolean {
+    return localStorage.getItem(STORAGE_KEYS.HER_SLEEPING_IN_CHAT) === 'true'
+  },
+
+  /**
+   * 设置 Her 在聊天室中的休眠状态
+   */
+  setSleepingInChat(sleeping: boolean): void {
+    localStorage.setItem(STORAGE_KEYS.HER_SLEEPING_IN_CHAT, sleeping ? 'true' : 'false')
+  },
+}
+
 // ==================== 通用存储工具 ====================
 
 export const storage = {
@@ -227,5 +246,6 @@ export default {
   registration: registrationStorage,
   dev: devStorage,
   pwa: pwaStorage,
+  her: herStorage,
   ...storage,
 }

@@ -182,34 +182,5 @@ def get_api_checker_report() -> dict:
     return checker.generate_report()
 
 
-# ========== FastAPI 路由（用于调试）==========
-
-from fastapi import APIRouter
-
-router = APIRouter(prefix="/api/checker", tags=["系统检查"])
-
-
-@router.get("/api-registration")
-async def check_api_registration_endpoint():
-    """检查 API 注册情况"""
-    return get_api_checker_report()
-
-
-@router.get("/defined-routers")
-async def get_defined_routers_endpoint():
-    """获取所有定义的路由"""
-    checker = APIChecker()
-    return {
-        "success": True,
-        "routers": list(checker.get_defined_routers())
-    }
-
-
-@router.get("/registered-routers")
-async def get_registered_routers_endpoint():
-    """获取所有已注册的路由"""
-    checker = APIChecker()
-    return {
-        "success": True,
-        "routers": list(checker.get_registered_routers())
-    }
+# 路由已迁移到 api/checker.py
+# 保持工具层职责单一，不再定义 HTTP 路由

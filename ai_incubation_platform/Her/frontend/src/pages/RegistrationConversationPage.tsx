@@ -50,23 +50,23 @@ const RegistrationConversationPage: React.FC<{
     initConversation()
   }, [])
 
-  // 布局诊断日志
+  // 布局诊断（生产环境已禁用）
   useEffect(() => {
+    // 开发环境可通过 localStorage.setItem('debug_layout', 'true') 启用
+    const debugLayout = localStorage.getItem('debug_layout') === 'true'
+    if (!debugLayout) return
+
     const checkLayout = () => {
       const card = document.querySelector('.conversation-card') as HTMLElement
       const chatArea = document.querySelector('.chat-scroll-area') as HTMLElement
       const messages = document.querySelector('.messages-wrapper') as HTMLElement
       const input = document.querySelector('.input-section') as HTMLElement
 
-      const cardExceeds = (card?.scrollHeight || 0) > (card?.clientHeight || 0)
-      const messagesOverflowing = (messages?.scrollHeight || 0) > (messages?.clientHeight || 0)
-      const inputInViewport = (input?.getBoundingClientRect()?.bottom || 0) <= window.innerHeight
-
       console.log('[Layout Check]', {
-        card: { clientHeight: card?.clientHeight, scrollHeight: card?.scrollHeight, exceeds: cardExceeds },
+        card: { clientHeight: card?.clientHeight, scrollHeight: card?.scrollHeight },
         chatArea: { clientHeight: chatArea?.clientHeight, scrollHeight: chatArea?.scrollHeight },
-        messages: { clientHeight: messages?.clientHeight, scrollHeight: messages?.scrollHeight, overflowing: messagesOverflowing },
-        input: { inViewport: inputInViewport, top: input?.getBoundingClientRect()?.top },
+        messages: { clientHeight: messages?.clientHeight, scrollHeight: messages?.scrollHeight },
+        input: { inViewport: (input?.getBoundingClientRect()?.bottom || 0) <= window.innerHeight },
         viewport: window.innerHeight
       })
     }
@@ -77,7 +77,6 @@ const RegistrationConversationPage: React.FC<{
   }, [conversationHistory])
 
   useEffect(() => {
-    console.log('[RegistrationPage] conversationHistory changed, count:', conversationHistory.length)
     scrollToBottom()
   }, [conversationHistory])
 
@@ -97,7 +96,6 @@ const RegistrationConversationPage: React.FC<{
 
       if (user) {
         setCurrentUser(user)
-        console.log('Using user from storage:', user)
       }
 
       if (!user) {
