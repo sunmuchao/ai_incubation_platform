@@ -6,10 +6,12 @@
 - description: 工具描述
 - input_schema: JSONSchema 输入定义
 - handler: 处理函数
+
+注：MatchTool 已废弃，匹配功能使用 DeerFlow her_find_matches_tool。
+注：ConversationMatchmakerTool 已废弃，使用 ConversationMatchService。
 """
 from agent.tools.registry import ToolRegistry
 from agent.tools.profile_tool import ProfileTool
-from agent.tools.match_tool import MatchTool
 from agent.tools.reasoning_tool import ReasoningTool
 from agent.tools.logging_tool import LoggingTool
 from agent.tools.autonomous_tools import (
@@ -34,14 +36,13 @@ from agent.tools.skill_tool import (
     PerformanceCoachTool,
     ActivityDirectorTool,
     VideoDateCoachTool,
-    ConversationMatchmakerTool,
+    # 注：ConversationMatchmakerTool 已废弃
     register_skill_tools
 )
 
 __all__ = [
     "ToolRegistry",
     "ProfileTool",
-    "MatchTool",
     "ReasoningTool",
     "LoggingTool",
     "CompatibilityAnalysisTool",
@@ -64,7 +65,7 @@ __all__ = [
     "PerformanceCoachTool",
     "ActivityDirectorTool",
     "VideoDateCoachTool",
-    "ConversationMatchmakerTool",
+    # 注：ConversationMatchmakerTool 已废弃
     "register_skill_tools",
 ]
 

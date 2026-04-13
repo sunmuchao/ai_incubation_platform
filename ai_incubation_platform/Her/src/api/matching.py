@@ -6,14 +6,8 @@ Identity 优化：
 - 集成限流保护
 - 优化数据库查询
 
-Values 新增（竞品分析优化）:
-- 破冰问题生成 (参考 Tinder/Guide)
-- 地理位置距离计算 (参考 Tinder 附近的人)
-- 性格兼容性分析 (参考 OkCupid 大五人格)
-
-DigitalTwin 新增（竞品分析优化）:
-- 安全机制 (参考 Bumble 举报/封禁系统)
-- 兴趣社交 (参考 Soul 灵魂匹配/兴趣社区)
+架构说明：新架构使用 ConversationMatchService + HerAdvisorService (AI Native)，
+详见 HER_ADVISOR_ARCHITECTURE.md
 """
 from fastapi import APIRouter, HTTPException, Depends, Body
 from typing import List, Optional, Dict, Any
@@ -24,7 +18,6 @@ import uuid
 
 from models.user import MatchResult, User
 from models.membership import MembershipTier
-from matching.matcher import matchmaker
 from db.database import get_db
 from db.repositories import UserRepository
 from utils.logger import logger, get_trace_id
@@ -82,12 +75,13 @@ async def get_matches(
     service=Depends(get_user_service)
 ):
     """
-    获取推荐匹配对象
+    获取推荐匹配对象（使用 AI Native 匹配）
 
-    优化：
+    新架构：
+    - ConversationMatchService 从数据库查询候选人
+    - HerAdvisorService (AI) 判断匹配度
     - 缓存匹配结果（10 分钟）
-    - 限流保护（50 次/秒突发）
-    - limit 验证：1-100 范围
+    - 限流保护
     """
     trace_id = get_trace_id()
 
@@ -109,44 +103,37 @@ async def get_matches(
         logger.warning(f"📡 [MATCH:FIND] FAILED trace_id={trace_id} user not found: {user_id}")
         raise HTTPException(status_code=404, detail="User not found")
 
-    from api.users import _from_db
+    # 使用 ConversationMatchService 执行匹配（AI Native）
+    from services.conversation_match_service import get_conversation_match_service
+    match_service = get_conversation_match_service()
 
-    # 确保用户已在匹配系统中注册
-    if user_id not in matchmaker._users:
-        matchmaker.register_user(_from_db(db_user).model_dump())
-        logger.info(f"📡 [MATCH:FIND] User {user_id} registered to matching system on demand")
+    result = await match_service.execute_matching(user_id, limit=limit)
 
-    matches = matchmaker.find_matches(user_id, limit=limit)
-    logger.info(f"📡 [MATCH:FIND] Found {len(matches)} matches for user: {user_id}")
+    if not result.get("success"):
+        logger.warning(f"📡 [MATCH:FIND] FAILED trace_id={trace_id} error={result.get('error')}")
+        raise HTTPException(status_code=500, detail=result.get("error", "Matching failed"))
 
+    candidates = result.get("candidates", [])
+    logger.info(f"📡 [MATCH:FIND] Found {len(candidates)} matches for user: {user_id}")
+
+    # 格式化结果
     results = []
-    current_user = _from_db(db_user)
-    for match in matches:
-        matched_db_user = service.get_by_id(match['user_id'])
-        # 冷启动/测试环境下可能出现：算法候选存在，但数据库读取返回 None。
-        # 为保证核心匹配链路可用，这里回退到 matchmaker 内存数据构造 User。
-        if matched_db_user:
-            matched_user = _from_db(matched_db_user)
-        else:
-            candidate_data = matchmaker._users.get(match["user_id"])
-            if not candidate_data:
-                continue
-            matched_user = User(**candidate_data)
-
-        # 生成匹配解释
-        reasoning = matchmaker.generate_match_reasoning(
-            current_user.model_dump(),
-            matched_user.model_dump(),
-            match['score'],
-            match['breakdown']
-        )
-        common_interests = list(set(matched_user.interests) & set(current_user.interests))
+    for candidate in candidates:
         results.append({
-            'user': matched_user,
-            'compatibility_score': match['score'],
-            'score_breakdown': match['breakdown'],
-            'common_interests': common_interests,
-            'reasoning': reasoning
+            'user': User(
+                id=candidate.get("user_id"),
+                name=candidate.get("name"),
+                age=candidate.get("age"),
+                gender=candidate.get("gender"),
+                location=candidate.get("location"),
+                bio=candidate.get("bio"),
+                avatar=candidate.get("avatar_url"),
+                interests=candidate.get("interests", []),
+            ),
+            'compatibility_score': candidate.get("compatibility_score"),
+            'score_breakdown': candidate.get("score_breakdown", {}),
+            'common_interests': candidate.get("common_interests", []),
+            'reasoning': candidate.get("reasoning", "AI 综合评估推荐")
         })
 
     # 写入缓存
@@ -161,7 +148,7 @@ async def get_mutual_matches(
     user_id: str,
     service=Depends(get_user_service)
 ):
-    """获取双向匹配对象"""
+    """获取双向匹配对象（从数据库查询）"""
     logger.info(f"Getting mutual matches for user: {user_id}")
 
     # 尝试从缓存读取
@@ -176,24 +163,30 @@ async def get_mutual_matches(
         logger.warning(f"Get mutual matches failed: user not found: {user_id}")
         raise HTTPException(status_code=404, detail="User not found")
 
-    from api.users import _from_db
-
-    # 确保用户已在匹配系统中注册
-    if user_id not in matchmaker._users:
-        matchmaker.register_user(_from_db(db_user).model_dump())
-        logger.info(f"User {user_id} registered to matching system on demand")
-
-    mutuals = matchmaker.get_mutual_matches(user_id)
-    logger.info(f"Found {len(mutuals)} mutual matches for user: {user_id}")
+    # 注：matchmaker.get_mutual_matches 已废弃
+    # 从数据库查询双向匹配记录
+    from sqlalchemy import text
+    db = next(get_db())
+    mutual_records = db.execute(
+        text("""
+            SELECT m.user_id_1, m.user_id_2, m.compatibility_score
+            FROM match_history m
+            WHERE (m.user_id_1 = :user_id OR m.user_id_2 = :user_id)
+            AND m.status = 'matched'
+        """),
+        {"user_id": user_id}
+    ).fetchall()
 
     results = []
-    for match in mutuals:
-        matched_db_user = service.get_by_id(match['user_id'])
+    for record in mutual_records:
+        matched_id = record[0] if record[0] != user_id else record[1]
+        matched_db_user = service.get_by_id(matched_id)
         if matched_db_user:
+            from api.users import _from_db
             matched_user = _from_db(matched_db_user)
             results.append({
                 'user': matched_user,
-                'compatibility_score': match['score'],
+                'compatibility_score': record[2] or 0.5,
             })
 
     # 写入缓存
@@ -208,7 +201,7 @@ async def calculate_compatibility(
     target_user_id: str,
     service=Depends(get_user_service)
 ):
-    """计算两人之间的匹配度"""
+    """计算两人之间的匹配度（使用 AI 判断）"""
     logger.info(f"Calculating compatibility between {user_id} and {target_user_id}")
 
     # 检查用户是否存在
@@ -219,24 +212,36 @@ async def calculate_compatibility(
         logger.warning(f"Calculate compatibility failed: user not found")
         raise HTTPException(status_code=404, detail="User not found")
 
-    from api.users import _from_db
-    user = _from_db(db_user)
-    target = _from_db(db_target)
+    # 注：matchmaker._calculate_compatibility 已废弃
+    # 使用 HerAdvisorService (AI) 判断匹配度
+    from services.her_advisor_service import get_her_advisor_service
+    from services.user_profile_service import get_user_profile_service
 
-    score, breakdown = matchmaker._calculate_compatibility(
-        user.model_dump(),
-        target.model_dump()
+    profile_service = get_user_profile_service()
+    her_advisor = get_her_advisor_service()
+
+    # 获取用户画像
+    self_a, desire_a = await profile_service.get_or_create_profile(user_id)
+    self_b, desire_b = await profile_service.get_or_create_profile(target_user_id)
+
+    # AI 判断匹配度
+    advice = await her_advisor.generate_match_advice(
+        user_id, (self_a, desire_a),
+        target_user_id, (self_b, desire_b)
     )
 
-    common_interests = list(set(user.interests) & set(target.interests))
+    score = advice.compatibility_score
+    breakdown = {
+        "interests": advice.interest_alignment,
+        "values": advice.value_alignment,
+        "lifestyle": advice.lifestyle_fit,
+    }
 
-    # 使用算法模块的统一匹配解释生成
-    reasoning = matchmaker.generate_match_reasoning(
-        user.model_dump(),
-        target.model_dump(),
-        score,
-        breakdown
-    )
+    # 从画像获取共同兴趣
+    common_interests = list(set(self_a.interests or []) & set(self_b.interests or []))
+
+    # AI 生成的匹配解释
+    reasoning = advice.match_reasoning or "AI 综合评估"
 
     logger.info(f"Compatibility score between {user_id} and {target_user_id}: {score:.3f}")
 
@@ -247,7 +252,7 @@ async def calculate_compatibility(
         score_breakdown=breakdown,
         reasoning=reasoning,
         common_interests=common_interests,
-        potential_issues=[]
+        potential_issues=advice.potential_challenges or []
     )
 
 
@@ -399,6 +404,10 @@ async def get_nearby_users(
     """
     获取附近的用户
 
+    性能优化版本：
+    - 使用数据库筛选候选用户（减少计算量）
+    - 限制最大候选数量（防止全量计算）
+
     参考 Tinder 的附近的人功能
 
     Args:
@@ -414,11 +423,18 @@ async def get_nearby_users(
 
     from api.users import _from_db
 
-    # 获取所有用户并筛选
-    all_users = service.list_all()
+    # 性能优化：只获取活跃用户，且限制候选数量
+    # 实际生产环境应使用 Geo 数据库索引（如 PostGIS）
+    all_users = service.list_all(is_active=True)
+
+    # 限制候选数量，防止全量计算
+    max_candidates = min(len(all_users), 200)
+    candidate_users = all_users[:max_candidates]
+
     nearby_users = []
 
-    for user in all_users:
+    # 批量计算距离
+    for user in candidate_users:
         if user.id == user_id:
             continue
 
@@ -667,6 +683,10 @@ async def get_recommendations(
     """
     获取推荐用户列表（用于滑动交互）
 
+    新架构（AI Native）：
+    - ConversationMatchService 从数据库查询候选人
+    - HerAdvisorService (AI) 判断匹配度
+
     Args:
         limit: 返回数量上限
         age_min: 最小年龄
@@ -683,79 +703,63 @@ async def get_recommendations(
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    from api.users import _from_db
-    current_user_obj = _from_db(db_user)
+    # 使用 ConversationMatchService 执行匹配（AI Native）
+    from services.conversation_match_service import get_conversation_match_service
+    match_service = get_conversation_match_service()
 
-    # 获取所有用户进行筛选
-    all_users = service.list_all()
+    # 构建额外的过滤条件
+    extra_filters = {}
+    if age_min:
+        extra_filters["age_min"] = age_min
+    if age_max:
+        extra_filters["age_max"] = age_max
+    if distance:
+        extra_filters["max_distance_km"] = distance
+
+    result = await match_service.execute_matching(
+        user_id,
+        limit=limit,
+        extra_filters=extra_filters
+    )
+
+    if not result.get("success"):
+        logger.warning(f"Recommendation failed: {result.get('error')}")
+        return []
+
+    candidates = result.get("candidates", [])
+
+    # 批量查询认证状态（优化 N+1 查询）
+    candidate_ids = [c.get("user_id") for c in candidates]
+    from sqlalchemy import text
+    verified_users = db.execute(
+        text("SELECT user_id FROM identity_verifications WHERE user_id IN :user_ids AND verification_status = 'verified'"),
+        {"user_ids": tuple(candidate_ids) if candidate_ids else ('')}
+    ).fetchall()
+    verified_user_ids = {row[0] for row in verified_users}
+
     recommendations = []
-
-    for user in all_users:
-        if user.id == user_id:
-            continue
-
-        user_obj = _from_db(user)
-
-        # 年龄筛选
-        if age_min and user_obj.age < age_min:
-            continue
-        if age_max and user_obj.age > age_max:
-            continue
-
-        # 距离筛选
-        if distance:
-            user_distance = GeoService.calculate_distance(db_user.location, user_obj.location)
-            if user_distance is None or user_distance > distance:
-                continue
-
-        # 基本兼容性检查（性取向、性别偏好等）
-        if not matchmaker._check_basic_compatibility(current_user_obj.model_dump(), user_obj.model_dump()):
-            logger.debug(f"User {user_id} skipped {user.id} due to basic incompatibility")
-            continue
-
-        # 计算匹配度
-        try:
-            score, breakdown = matchmaker._calculate_compatibility(
-                current_user_obj.model_dump(),
-                user_obj.model_dump()
-            )
-        except Exception as e:
-            logger.warning(f"Compatibility calculation failed for {user_id} -> {user.id}: {e}")
-            score = 0.5
-            breakdown = {}
-
-        # 生成匹配原因
-        reasoning = matchmaker.generate_match_reasoning(
-            current_user_obj.model_dump(),
-            user_obj.model_dump(),
-            score,
-            breakdown
-        )
-
-        # 检查认证状态
-        from sqlalchemy import text
-        identity_db = db.execute(
-            text("SELECT * FROM identity_verifications WHERE user_id = :user_id AND verification_status = 'verified'"),
-            {"user_id": user.id}
-        ).fetchone()
-        is_verified = identity_db is not None
-
+    for candidate in candidates:
         recommendations.append({
-            "id": user.id,
-            "name": user.name,
-            "username": user.name,
-            "age": user.age,
-            "gender": user.gender,
-            "location": user.location,
-            "avatar_url": user.avatar_url,
-            "bio": user.bio,
-            "interests": json.loads(user.interests) if user.interests and user.interests != "" else [],
-            "goal": user.goal if hasattr(user, 'goal') else "serious",
-            "verified": is_verified,
-            "compatibility_score": round(score, 2),
-            "match_reason": reasoning,
-            "compatibility_reason": reasoning,
+            "id": candidate.get("user_id"),
+            "name": candidate.get("name"),
+            "username": candidate.get("name"),
+            "age": candidate.get("age"),
+            "gender": candidate.get("gender"),
+            "location": candidate.get("location"),
+            "avatar_url": candidate.get("avatar_url"),
+            "bio": candidate.get("bio"),
+            "interests": candidate.get("interests", []),
+            "goal": candidate.get("goal", "serious"),
+            "verified": candidate.get("user_id") in verified_user_ids,
+            "compatibility_score": round(candidate.get("compatibility_score", 0.5), 2),
+            "match_reason": candidate.get("reasoning", "AI 综合评估推荐"),
+            "compatibility_reason": candidate.get("reasoning", "AI 综合评估推荐"),
         })
+
+    # 按匹配度排序
+    recommendations.sort(key=lambda x: x["compatibility_score"], reverse=True)
+
+    return recommendations[:limit]
 
     # 按匹配度排序
     recommendations.sort(key=lambda x: x["compatibility_score"], reverse=True)

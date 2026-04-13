@@ -131,10 +131,10 @@ async def get_preparation_suggestions(
     """
     try:
         # 获取约会计划
-        from models.date_reminder import DatePlanDB
+        from models.date_reminder import DateReminderPlanDB
         from db.models import UserDB
 
-        plan = db.query(DatePlanDB).filter(DatePlanDB.id == plan_id).first()
+        plan = db.query(DateReminderPlanDB).filter(DateReminderPlanDB.id == plan_id).first()
         if not plan:
             raise HTTPException(status_code=404, detail="约会计划不存在")
 

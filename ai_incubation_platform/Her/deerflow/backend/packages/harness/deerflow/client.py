@@ -122,6 +122,7 @@ class DeerFlowClient:
         agent_name: str | None = None,
         available_skills: set[str] | None = None,
         middlewares: Sequence[AgentMiddleware] | None = None,
+        user_id: str | None = None,
     ):
         """Initialize the client.
 
@@ -139,6 +140,7 @@ class DeerFlowClient:
             agent_name: Name of the agent to use.
             available_skills: Optional set of skill names to make available. If None (default), all scanned skills are available.
             middlewares: Optional list of custom middlewares to inject into the agent.
+            user_id: User ID for memory isolation. Each user has independent memory file.
         """
         if config_path is not None:
             reload_app_config(config_path)
@@ -155,6 +157,7 @@ class DeerFlowClient:
         self._agent_name = agent_name
         self._available_skills = set(available_skills) if available_skills is not None else None
         self._middlewares = list(middlewares) if middlewares else []
+        self._user_id = user_id  # 用户隔离 ID
 
         # Lazy agent — created on first call, recreated when config changes.
         self._agent = None
@@ -200,6 +203,7 @@ class DeerFlowClient:
             "thinking_enabled": overrides.get("thinking_enabled", self._thinking_enabled),
             "is_plan_mode": overrides.get("plan_mode", self._plan_mode),
             "subagent_enabled": overrides.get("subagent_enabled", self._subagent_enabled),
+            "user_id": overrides.get("user_id", self._user_id),  # 用户隔离 ID
         }
         return RunnableConfig(
             configurable=configurable,
@@ -216,6 +220,7 @@ class DeerFlowClient:
             cfg.get("subagent_enabled"),
             self._agent_name,
             frozenset(self._available_skills) if self._available_skills is not None else None,
+            cfg.get("user_id", self._user_id),  # 用户隔离：user_id 变化时重建 agent
         )
 
         if self._agent is not None and self._agent_config_key == key:
@@ -225,6 +230,7 @@ class DeerFlowClient:
         model_name = cfg.get("model_name")
         subagent_enabled = cfg.get("subagent_enabled", False)
         max_concurrent_subagents = cfg.get("max_concurrent_subagents", 3)
+        user_id = cfg.get("user_id", self._user_id)  # 用户隔离
 
         kwargs: dict[str, Any] = {
             "model": create_chat_model(name=model_name, thinking_enabled=thinking_enabled),
@@ -235,6 +241,7 @@ class DeerFlowClient:
                 max_concurrent_subagents=max_concurrent_subagents,
                 agent_name=self._agent_name,
                 available_skills=self._available_skills,
+                user_id=user_id,  # 用户隔离
             ),
             "state_schema": ThreadState,
         }

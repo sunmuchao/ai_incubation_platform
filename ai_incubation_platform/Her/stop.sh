@@ -34,6 +34,11 @@ if [ -f /tmp/her_backend.pid ]; then
     rm -f /tmp/her_backend.pid
 fi
 pkill -f "uvicorn main:app" 2>/dev/null && echo -e "${GREEN}✓ 已停止 uvicorn 进程${NC}"
+pkill -f "uvicorn src.main:app" 2>/dev/null
+
+# 停止 pytest 测试进程（避免资源冲突）
+echo -e "${YELLOW}停止 pytest 测试进程...${NC}"
+pkill -f "pytest" 2>/dev/null && echo -e "${GREEN}✓ 已停止 pytest 进程${NC}" || echo "pytest 进程不存在"
 
 # 停止 Her 前端
 echo -e "${YELLOW}停止 Her 前端服务...${NC}"

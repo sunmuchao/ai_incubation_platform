@@ -116,6 +116,23 @@ class Paths:
         """Path to the persisted memory file: `{base_dir}/memory.json`."""
         return self.base_dir / "memory.json"
 
+    def user_memory_file(self, user_id: str) -> Path:
+        """
+        Path to user-isolated memory file: `{base_dir}/users/{user_id}/memory.json`
+
+        【用户隔离】每个用户有独立的 memory 文件，防止数据混用。
+
+        Args:
+            user_id: 用户唯一标识
+
+        Returns:
+            用户专属的 memory.json 路径
+        """
+        # 验证 user_id 格式（防止路径注入）
+        if not _SAFE_THREAD_ID_RE.match(user_id):
+            raise ValueError(f"Invalid user_id {user_id!r}: only alphanumeric characters, hyphens, and underscores are allowed.")
+        return self.base_dir / "users" / user_id / "memory.json"
+
     @property
     def user_md_file(self) -> Path:
         """Path to the global user profile file: `{base_dir}/USER.md`."""

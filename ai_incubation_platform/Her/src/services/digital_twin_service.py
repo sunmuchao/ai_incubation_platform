@@ -382,7 +382,12 @@ class DigitalTwinService(BaseService):
 
         try:
             import asyncio
-            llm_response = asyncio.run(llm_client.generate_chat(prompt))
+            # 使用新的事件循环调用异步方法（线程安全）
+            new_loop = asyncio.new_event_loop()
+            try:
+                llm_response = new_loop.run_until_complete(llm_client.generate_chat(prompt))
+            finally:
+                new_loop.close()
 
             # 解析 LLM 响应
             message, analysis = self._parse_llm_response(llm_response)

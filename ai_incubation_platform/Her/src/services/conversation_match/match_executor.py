@@ -1,0 +1,194 @@
+"""
+MatchExecutor - 匹配执行器
+
+职责：
+- 从数据库查询候选人池
+- 让 AI 判断每个候选人的匹配度
+- 返回排序后的匹配结果
+
+从 ConversationMatchService 提取的方法：
+- _execute_matching
+- _query_candidate_pool
+- _get_compatible_goals
+"""
+from typing import Dict, Any, List, Optional
+from dataclasses import dataclass
+
+from utils.logger import logger
+from utils.db_session_manager import db_session
+from db.models import UserDB
+from services.user_profile_service import get_user_profile_service
+from services.her_advisor_service import HerAdvisorService, SelfProfile, DesireProfile
+
+
+@dataclass
+class MatchCandidate:
+    """匹配候选人结果"""
+    user_id: str
+    score: float
+    candidate_profile: Dict[str, Any]
+    her_advice: Any = None
+
+
+class MatchExecutor:
+    """
+    匹配执行器
+
+    负责从数据库查询候选人并让 AI 判断匹配度
+    """
+
+    def __init__(
+        self,
+        profile_service=None,
+        her_advisor=None,
+    ):
+        self._profile_service = profile_service or get_user_profile_service()
+        self._her_advisor = her_advisor or HerAdvisorService()
+
+    async def execute_matching(
+        self,
+        user_id: str,
+        self_profile: SelfProfile,
+        desire_profile: DesireProfile,
+        extracted_conditions: Dict[str, Any],
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """
+        执行匹配 - AI 直接判断匹配度
+
+        不再使用 matcher.py 算分数，而是：
+        1. 从数据库查询候选人池
+        2. 让 HerAdvisorService（AI）判断每个候选人的匹配度
+        """
+        logger.info(f"[MatchExecutor] 执行匹配 for user {user_id}")
+
+        # 从数据库查询候选人
+        candidates = self._query_candidate_pool(
+            user_id=user_id,
+            self_profile=self_profile,
+            desire_profile=desire_profile,
+            extracted_conditions=extracted_conditions,
+            limit=limit
+        )
+
+        if not candidates:
+            logger.info(f"[MatchExecutor] 没有找到候选人")
+            return []
+
+        # 让 AI 判断每个候选人的匹配度
+        matches = []
+        for candidate in candidates:
+            candidate_id = candidate.get("id")
+
+            # 获取候选人画像
+            candidate_self, candidate_desire = await self._profile_service.get_or_create_profile(candidate_id)
+
+            # 让 Her 顾问判断匹配度
+            advice = await self._her_advisor.generate_match_advice(
+                user_id_a=user_id,
+                user_id_b=candidate_id,
+                user_a_profile=(self_profile, desire_profile),
+                user_b_profile=(candidate_self, candidate_desire),
+                compatibility_score=0.5  # 基础分数，AI 会重新判断
+            )
+
+            # AI 判断的匹配度
+            score = advice.compatibility_score if advice else 0.5
+
+            matches.append({
+                "user_id": candidate_id,
+                "score": score,
+                "candidate_profile": candidate_self.to_dict(),
+                "her_advice": advice,
+            })
+
+        # 按匹配度排序
+        matches.sort(key=lambda x: x["score"], reverse=True)
+
+        logger.info(f"[MatchExecutor] AI 判断了 {len(matches)} 个候选人")
+        return matches[:5]  # 返回前 5 个
+
+    def _query_candidate_pool(
+        self,
+        user_id: str,
+        self_profile: SelfProfile,
+        desire_profile: DesireProfile,
+        extracted_conditions: Dict[str, Any],
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """从数据库查询候选人池"""
+        candidates = []
+
+        with db_session() as db:
+            # 构建查询
+            query = db.query(UserDB).filter(
+                UserDB.id != user_id,
+                UserDB.is_active == True,
+                UserDB.is_permanently_banned == False
+            )
+
+            # 关系目标兼容性
+            if self_profile.relationship_goal:
+                compatible_goals = self._get_compatible_goals(self_profile.relationship_goal)
+                query = query.filter(UserDB.relationship_goal.in_(compatible_goals))
+
+            # 年龄范围
+            age_range = extracted_conditions.get("age_range")
+            if age_range:
+                query = query.filter(
+                    UserDB.age >= age_range[0],
+                    UserDB.age <= age_range[1]
+                )
+            elif self_profile.age:
+                query = query.filter(
+                    UserDB.age >= max(18, self_profile.age - 5),
+                    UserDB.age <= min(60, self_profile.age + 5)
+                )
+
+            # 地点筛选
+            location = extracted_conditions.get("location")
+            if location:
+                query = query.filter(UserDB.location.contains(location))
+
+            # 按创建时间排序
+            query = query.order_by(UserDB.created_at.desc())
+
+            users = query.limit(limit).all()
+
+            for u in users:
+                candidates.append({
+                    "id": u.id,
+                    "name": u.name,
+                    "age": u.age,
+                    "gender": u.gender,
+                    "location": u.location,
+                    "relationship_goal": u.relationship_goal,
+                    "education": getattr(u, "education", None),
+                    "occupation": getattr(u, "occupation", None),
+                    "income": getattr(u, "income", None),
+                })
+
+        return candidates
+
+    def _get_compatible_goals(self, goal: str) -> List[str]:
+        """获取兼容的关系目标"""
+        compatible_groups = {
+            "serious": ["serious", "marriage"],
+            "marriage": ["marriage", "serious"],
+            "dating": ["dating", "casual", "serious"],
+            "casual": ["casual", "dating"],
+        }
+        return compatible_groups.get(goal, [goal])
+
+
+# 全局实例
+_match_executor: Optional[MatchExecutor] = None
+
+
+def get_match_executor() -> MatchExecutor:
+    """获取匹配执行器单例"""
+    global _match_executor
+    if _match_executor is None:
+        _match_executor = MatchExecutor()
+        logger.info("MatchExecutor initialized")
+    return _match_executor

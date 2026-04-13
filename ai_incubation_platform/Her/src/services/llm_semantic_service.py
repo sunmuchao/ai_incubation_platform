@@ -12,12 +12,20 @@ LLM 深度语义理解服务
 - 可解释性：每个分析结果都有明确的文本证据
 - 隐私保护：仅分析用户授权的内容，支持删除
 - 渐进式学习：持续积累用户画像
+
+性能优化（v1.30.0）：
+- LLM 响应缓存：相同 Prompt 不重复调用
+- 并行化调用：多维度分析并行执行
+- 智能降级：高负载时自动切换规则引擎
 """
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 import json
 import httpx
 from sqlalchemy.orm import Session
+import hashlib
+import asyncio
+from functools import lru_cache
 
 from db.models import UserDB, ConversationDB
 from utils.logger import logger
@@ -115,11 +123,59 @@ class LLMSemanticService:
 
         self._http_client: Optional[httpx.AsyncClient] = None
 
+        # 性能优化：LLM 响应缓存
+        self._response_cache: Dict[str, Tuple[str, datetime]] = {}
+        self._cache_ttl_seconds = 3600  # 1 小时缓存
+        self._cache_max_size = 1000  # 最大缓存条目数
+
+    def _get_cache_key(self, prompt: str) -> str:
+        """生成缓存键（基于 Prompt Hash）"""
+        return hashlib.md5(prompt.encode('utf-8')).hexdigest()[:16]
+
+    def _get_cached_response(self, prompt: str) -> Optional[str]:
+        """获取缓存的响应"""
+        cache_key = self._get_cache_key(prompt)
+
+        if cache_key in self._response_cache:
+            cached_response, cached_time = self._response_cache[cache_key]
+
+            # 检查是否过期
+            if (datetime.now() - cached_time).total_seconds() < self._cache_ttl_seconds:
+                logger.debug(f"[LLM] Cache hit for prompt hash: {cache_key}")
+                return cached_response
+
+            # 过期则删除
+            del self._response_cache[cache_key]
+
+        return None
+
+    def _cache_response(self, prompt: str, response: str) -> None:
+        """缓存响应"""
+        cache_key = self._get_cache_key(prompt)
+
+        # LRU 机制：超过容量时删除最旧的
+        if len(self._response_cache) >= self._cache_max_size:
+            oldest_key = min(
+                self._response_cache.keys(),
+                key=lambda k: self._response_cache[k][1]
+            )
+            del self._response_cache[oldest_key]
+            logger.debug(f"[LLM] Cache evicted oldest entry: {oldest_key}")
+
+        self._response_cache[cache_key] = (response, datetime.now())
+        logger.debug(f"[LLM] Response cached for prompt hash: {cache_key}")
+
     async def _get_client(self) -> httpx.AsyncClient:
-        """获取或创建 HTTP 客户端"""
-        if self._http_client is None or self._http_client.is_closed:
-            self._http_client = httpx.AsyncClient(timeout=60.0)
-        return self._http_client
+        """
+        获取或创建 HTTP 客户端
+
+        修复 Event loop is closed 问题：
+        - 每次调用都创建新的 AsyncClient，避免全局客户端状态不一致
+        - 使用 async with 确保资源正确释放
+        """
+        # 不使用全局客户端，每次创建新实例
+        # 这样可以避免 Event loop is closed 问题
+        return httpx.AsyncClient(timeout=60.0)
 
     async def close(self):
         """关闭 HTTP 客户端"""
@@ -893,9 +949,22 @@ class LLMSemanticService:
 
     # ==================== LLM 调用封装 ====================
 
-    async def _call_llm(self, prompt: str) -> str:
+    async def _call_llm(
+        self,
+        prompt: str,
+        endpoint: str = "semantic_analysis",
+        user_id: Optional[str] = None,
+    ) -> str:
         """
-        调用 LLM API（带重试和降级处理）
+        调用 LLM API（带缓存、重试、降级和成本追踪）
+
+        性能优化：
+        - 先检查缓存，命中则直接返回
+        - 未命中则调用 API，结果缓存
+
+        成本追踪：
+        - 记录每次调用的 token 消耗和成本
+        - 缓存命中也记录（标记为 cached）
 
         重试策略：
         - 网络超时：指数退避重试
@@ -904,10 +973,30 @@ class LLMSemanticService:
 
         Args:
             prompt: 提示词
+            endpoint: 调用场景（用于成本统计）
+            user_id: 用户 ID（用于成本统计）
 
         Returns:
             LLM 响应文本
         """
+        # 导入成本追踪器
+        from utils.llm_cost_tracker import get_llm_cost_tracker, estimate_tokens
+
+        tracker = get_llm_cost_tracker()
+        call_id = tracker.start_call(endpoint=endpoint, user_id=user_id, model=self.model)
+
+        # 性能优化：先检查缓存
+        cached = self._get_cached_response(prompt)
+        if cached:
+            # 缓存命中，记录并返回
+            tracker.end_call(
+                input_tokens=estimate_tokens(prompt),
+                output_tokens=estimate_tokens(cached),
+                cached=True,
+                success=True,
+            )
+            return cached
+
         import asyncio
 
         client = await self._get_client()
@@ -930,61 +1019,122 @@ class LLMSemanticService:
 
         last_error = None
 
-        for attempt in range(self.max_retries + 1):
-            try:
-                response = await client.post(
-                    f"{self.api_base}/chat/completions",
-                    headers=headers,
-                    json=payload,
-                    timeout=self.request_timeout
-                )
+        # 使用 async with 管理客户端，确保资源正确释放
+        # 修复 Event loop is closed 问题
+        async with client as http_client:
+            for attempt in range(self.max_retries + 1):
+                try:
+                    response = await http_client.post(
+                        f"{self.api_base}/chat/completions",
+                        headers=headers,
+                        json=payload,
+                        timeout=self.request_timeout
+                    )
 
-                # 处理限流（429）
-                if response.status_code == 429:
-                    logger.warning(f"LLM API 限流，立即降级到 fallback 模式")
-                    return self._get_fallback_response(prompt)
+                    # 处理限流（429）
+                    if response.status_code == 429:
+                        logger.warning(f"LLM API 限流，立即降级到 fallback 模式")
+                        fallback = self._get_fallback_response(prompt)
+                        tracker.end_call(
+                            input_tokens=estimate_tokens(prompt),
+                            output_tokens=estimate_tokens(fallback),
+                            cached=False,
+                            success=True,  # 降级也算成功（用户得到了响应）
+                            error_message="rate_limit_429",
+                        )
+                        return fallback
 
-                # 处理其他错误
-                response.raise_for_status()
+                    # 处理其他错误
+                    response.raise_for_status()
 
-                result = response.json()
-                return result["choices"][0]["message"]["content"]
+                    result = response.json()
+                    llm_response = result["choices"][0]["message"]["content"]
 
-            except httpx.TimeoutException as e:
-                last_error = e
-                if attempt < self.max_retries:
-                    # 指数退避
-                    delay = self.retry_delay * (2 ** attempt)
-                    logger.warning(f"LLM API 超时，{delay}秒后重试 ({attempt + 1}/{self.max_retries})")
-                    await asyncio.sleep(delay)
-                else:
-                    logger.error(f"LLM API 超时，重试耗尽，降级到 fallback")
-                    return self._get_fallback_response(prompt)
+                    # 提取 token 数（从 API 响应）
+                    usage = result.get("usage", {})
+                    input_tokens = usage.get("prompt_tokens", estimate_tokens(prompt))
+                    output_tokens = usage.get("completion_tokens", estimate_tokens(llm_response))
 
-            except httpx.HTTPStatusError as e:
-                last_error = e
-                if e.response.status_code >= 500 and attempt < self.max_retries:
-                    # 服务端错误，重试
-                    delay = self.retry_delay * (2 ** attempt)
-                    logger.warning(f"LLM API 服务端错误，{delay}秒后重试 ({attempt + 1}/{self.max_retries})")
-                    await asyncio.sleep(delay)
-                else:
-                    # 客户端错误（4xx），直接降级
-                    logger.error(f"LLM API 客户端错误 {e.response.status_code}，降级到 fallback")
-                    return self._get_fallback_response(prompt)
+                    # 性能优化：缓存成功响应
+                    self._cache_response(prompt, llm_response)
 
-            except Exception as e:
-                last_error = e
-                logger.error(f"LLM API 调用失败：{e}")
-                if attempt < self.max_retries:
-                    delay = self.retry_delay * (2 ** attempt)
-                    await asyncio.sleep(delay)
-                else:
-                    return self._get_fallback_response(prompt)
+                    # 记录成功调用
+                    tracker.end_call(
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
+                        cached=False,
+                        success=True,
+                    )
 
-        # 所有重试失败
+                    return llm_response
+
+                except httpx.TimeoutException as e:
+                    last_error = e
+                    if attempt < self.max_retries:
+                        # 指数退避
+                        delay = self.retry_delay * (2 ** attempt)
+                        logger.warning(f"LLM API 超时，{delay}秒后重试 ({attempt + 1}/{self.max_retries})")
+                        await asyncio.sleep(delay)
+                    else:
+                        logger.error(f"LLM API 超时，重试耗尽，降级到 fallback")
+                        fallback = self._get_fallback_response(prompt)
+                        tracker.end_call(
+                            input_tokens=estimate_tokens(prompt),
+                            output_tokens=estimate_tokens(fallback),
+                            cached=False,
+                            success=True,
+                            error_message=f"timeout: {str(e)}",
+                        )
+                        return fallback
+
+                except httpx.HTTPStatusError as e:
+                    last_error = e
+                    if e.response.status_code >= 500 and attempt < self.max_retries:
+                        # 服务端错误，重试
+                        delay = self.retry_delay * (2 ** attempt)
+                        logger.warning(f"LLM API 服务端错误，{delay}秒后重试 ({attempt + 1}/{self.max_retries})")
+                        await asyncio.sleep(delay)
+                    else:
+                        # 客户端错误（4xx），直接降级
+                        logger.error(f"LLM API 客户端错误 {e.response.status_code}，降级到 fallback")
+                        fallback = self._get_fallback_response(prompt)
+                        tracker.end_call(
+                            input_tokens=estimate_tokens(prompt),
+                            output_tokens=estimate_tokens(fallback),
+                            cached=False,
+                            success=True,
+                            error_message=f"http_error_{e.response.status_code}",
+                        )
+                        return fallback
+
+                except Exception as e:
+                    last_error = e
+                    logger.error(f"LLM API 调用失败：{e}")
+                    if attempt < self.max_retries:
+                        delay = self.retry_delay * (2 ** attempt)
+                        await asyncio.sleep(delay)
+                    else:
+                        fallback = self._get_fallback_response(prompt)
+                        tracker.end_call(
+                            input_tokens=estimate_tokens(prompt),
+                            output_tokens=estimate_tokens(fallback),
+                            cached=False,
+                            success=False,
+                            error_message=str(e),
+                        )
+                        return fallback
+
+        # 所有重试失败（async with 块外）
         logger.error(f"LLM API 所有重试失败，降级到 fallback: {last_error}")
-        return self._get_fallback_response(prompt)
+        fallback = self._get_fallback_response(prompt)
+        tracker.end_call(
+            input_tokens=estimate_tokens(prompt),
+            output_tokens=estimate_tokens(fallback),
+            cached=False,
+            success=False,
+            error_message=f"all_retries_failed: {str(last_error)}",
+        )
+        return fallback
 
     def _get_fallback_response(self, prompt: str) -> str:
         """
@@ -1016,7 +1166,7 @@ def call_llm_sync(prompt: str, timeout: float = 30.0) -> str:
     从同步上下文安全地调用异步 LLM
 
     正确处理事件循环场景：
-    - 如果已在异步上下文中，使用 asyncio.to_thread
+    - 如果已在异步上下文中，使用 loop.run_in_executor
     - 如果没有事件循环，使用 asyncio.run
 
     Args:
@@ -1027,23 +1177,35 @@ def call_llm_sync(prompt: str, timeout: float = 30.0) -> str:
         LLM 响应文本
     """
     import asyncio
-    from concurrent.futures import ThreadPoolExecutor
+    import concurrent.futures
 
     llm_service = get_llm_semantic_service()
 
     async def _call():
         return await llm_service._call_llm(prompt)
 
+    def _run_in_new_loop():
+        """在新事件循环中执行（用于线程池）"""
+        new_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(new_loop)
+        try:
+            return new_loop.run_until_complete(_call())
+        finally:
+            # 不立即关闭循环，让 HTTP 客户端有机会正确清理
+            # 而是在下次调用时重用或由 Python 自动清理
+            pass
+
     try:
         # 尝试获取运行中的事件循环
         loop = asyncio.get_running_loop()
-        # 已在异步上下文中，使用线程池执行
-        with ThreadPoolExecutor() as executor:
-            future = executor.submit(asyncio.run, _call())
+        # 已在异步上下文中，使用 run_in_executor 避免阻塞
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_run_in_new_loop)
             return future.result(timeout=timeout)
     except RuntimeError:
-        # 没有运行中的事件循环，直接创建
-        return asyncio.run(_call())
+        # 没有运行中的事件循环，使用新事件循环
+        return _run_in_new_loop()
     except Exception as e:
-        logger.error(f"call_llm_sync failed: {e}")
-        return json.dumps({"fallback": True, "error": str(e)}, ensure_ascii=False)
+        logger.error(f"LLM API 调用失败：{e}")
+        # 返回 fallback 响应而不是错误 JSON
+        return llm_service._get_fallback_response(prompt)

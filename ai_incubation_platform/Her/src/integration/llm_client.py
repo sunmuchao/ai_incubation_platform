@@ -512,21 +512,55 @@ class LLMIntegrationClient:
         :return: LLM 响应（JSON 格式）
         """
         # 1. 尝试 LLM 调用
-        if self.enabled and self.api_key and self.client:
+        if self.enabled and self.api_key:
             try:
-                response = await self._call_llm_with_retry(prompt)
-                # 尝试解析为 JSON
-                try:
-                    return json.loads(response)
-                except json.JSONDecodeError:
-                    # 如果不是 JSON，返回原始文本
-                    return {"text": response}
+                # 每次调用创建新的 client，避免跨线程 event loop 问题
+                async with httpx.AsyncClient(timeout=float(self.timeout)) as client:
+                    response = await self._call_llm_with_client(client, prompt)
+                    # 尝试解析为 JSON
+                    try:
+                        return json.loads(response)
+                    except json.JSONDecodeError:
+                        # 如果不是 JSON，返回原始文本
+                        return {"text": response}
 
             except Exception as e:
                 logger.error(f"LLM chat failed: {e}, falling back to {self.fallback_mode}")
 
         # 2. 降级方案
         return self._fallback_chat(prompt)
+
+    async def _call_llm_with_client(self, client: httpx.AsyncClient, prompt: str) -> str:
+        """使用指定 client 调用 LLM API"""
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+        }
+
+        for attempt in range(self.retry_count + 1):
+            try:
+                response = await client.post(
+                    f"{self.api_base}/chat/completions",
+                    headers=headers,
+                    json=payload
+                )
+                response.raise_for_status()
+                result = response.json()
+                return result["choices"][0]["message"]["content"]
+            except Exception as e:
+                logger.warning(f"LLM call attempt {attempt + 1} failed: {e}")
+                if attempt < self.retry_count:
+                    import asyncio
+                    await asyncio.sleep(1.0 * (attempt + 1))
+                else:
+                    raise
 
     def _fallback_chat(self, prompt: str) -> Dict[str, Any]:
         """降级方案：返回模拟响应"""

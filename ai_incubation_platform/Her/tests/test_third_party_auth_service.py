@@ -14,6 +14,8 @@
 10. 边界条件测试 (6 tests)
 
 总计: 48 个测试用例
+
+注意：使用 fixture 级别的 mock，避免污染全局命名空间
 """
 import pytest
 import os
@@ -30,68 +32,63 @@ _src_dir = os.path.join(os.path.dirname(_current_dir), 'src')
 if _src_dir not in sys.path:
     sys.path.insert(0, _src_dir)
 
-# ============= Mock 必要模块以避免依赖问题 =============
-# 创建完整的 sqlalchemy mock 结构
-_sqlalchemy_mock = MagicMock()
-_sqlalchemy_mock.orm = MagicMock()
-_sqlalchemy_mock.orm.Session = MagicMock()
-_sqlalchemy_mock.orm.session = MagicMock()
-_sqlalchemy_mock.orm.session.Session = MagicMock()
-_sqlalchemy_mock.pool = MagicMock()
-_sqlalchemy_mock.pool.StaticPool = MagicMock()
-_sqlalchemy_mock.engine = MagicMock()
-_sqlalchemy_mock.engine.Engine = MagicMock()
-_sqlalchemy_mock.sql = MagicMock()
-_sqlalchemy_mock.sql.func = MagicMock()
-
-# Mock sqlalchemy 相关模块（第三方授权服务不使用数据库）
-sys.modules['sqlalchemy'] = _sqlalchemy_mock
-sys.modules['sqlalchemy.orm'] = _sqlalchemy_mock.orm
-sys.modules['sqlalchemy.orm.session'] = _sqlalchemy_mock.orm.session
-sys.modules['sqlalchemy.pool'] = _sqlalchemy_mock.pool
-sys.modules['sqlalchemy.engine'] = _sqlalchemy_mock.engine
-sys.modules['sqlalchemy.sql'] = _sqlalchemy_mock.sql
-
-# Mock db 模块及其所有子模块
-_db_mock = MagicMock()
-_db_mock.database = MagicMock()
-_db_mock.models = MagicMock()
-_db_mock.payment_models = MagicMock()
-_db_mock.audit = MagicMock()
-_db_mock.user_models = MagicMock()
-_db_mock.match_models = MagicMock()
-_db_mock.message_models = MagicMock()
-_db_mock.relationship_models = MagicMock()
-sys.modules['db'] = _db_mock
-sys.modules['db.database'] = _db_mock.database
-sys.modules['db.models'] = _db_mock.models
-sys.modules['db.payment_models'] = _db_mock.payment_models
-sys.modules['db.audit'] = _db_mock.audit
-sys.modules['db.user_models'] = _db_mock.user_models
-sys.modules['db.match_models'] = _db_mock.match_models
-sys.modules['db.message_models'] = _db_mock.message_models
-sys.modules['db.relationship_models'] = _db_mock.relationship_models
-
-# Mock pythonjsonlogger（logger 依赖）
-_pjl_mock = MagicMock()
-_pjl_mock.jsonlogger = MagicMock()
-sys.modules['pythonjsonlogger'] = _pjl_mock
-sys.modules['pythonjsonlogger.jsonlogger'] = _pjl_mock.jsonlogger
-
-# Mock mem0（如果被其他服务导入）
-sys.modules['mem0'] = MagicMock()
-sys.modules['mem0.configs'] = MagicMock()
-sys.modules['mem0.configs.base'] = MagicMock()
-
 # 设置环境变量避免其他模块的导入问题
 os.environ['OPENAI_API_KEY'] = 'test-key'
 os.environ['OPENAI_BASE_URL'] = 'https://test.api/v1'
 
+# 注意：不在此处做模块级别的 mock，避免污染全局命名空间
+# 使用 fixture 级别的 mock 来隔离测试
+
 
 # ============= 测试基础设施 =============
 
+@pytest.fixture(scope="class")
+def mock_db_for_auth():
+    """为第三方授权服务测试 mock db 模块（仅在当前测试类有效）"""
+    # Mock db 模块及其所有子模块
+    _db_mock = MagicMock()
+    _db_mock.database = MagicMock()
+    _db_mock.models = MagicMock()
+    _db_mock.payment_models = MagicMock()
+    _db_mock.audit = MagicMock()
+    _db_mock.user_models = MagicMock()
+    _db_mock.match_models = MagicMock()
+    _db_mock.message_models = MagicMock()
+    _db_mock.relationship_models = MagicMock()
+
+    # 保存原始模块
+    original_modules = {}
+    modules_to_mock = [
+        'db', 'db.database', 'db.models', 'db.payment_models', 'db.audit',
+        'db.user_models', 'db.match_models', 'db.message_models', 'db.relationship_models'
+    ]
+
+    for module_name in modules_to_mock:
+        original_modules[module_name] = sys.modules.get(module_name, None)
+
+    # 应用 mock
+    sys.modules['db'] = _db_mock
+    sys.modules['db.database'] = _db_mock.database
+    sys.modules['db.models'] = _db_mock.models
+    sys.modules['db.payment_models'] = _db_mock.payment_models
+    sys.modules['db.audit'] = _db_mock.audit
+    sys.modules['db.user_models'] = _db_mock.user_models
+    sys.modules['db.match_models'] = _db_mock.match_models
+    sys.modules['db.message_models'] = _db_mock.message_models
+    sys.modules['db.relationship_models'] = _db_mock.relationship_models
+
+    yield _db_mock
+
+    # 恢复原始模块
+    for module_name, original in original_modules.items():
+        if original is not None:
+            sys.modules[module_name] = original
+        else:
+            sys.modules.pop(module_name, None)
+
+
 @pytest.fixture
-def third_party_auth_service():
+def third_party_auth_service(mock_db_for_auth):
     """创建第三方授权服务实例"""
     from services.third_party_auth_service import ThirdPartyAuthService
     service = ThirdPartyAuthService()

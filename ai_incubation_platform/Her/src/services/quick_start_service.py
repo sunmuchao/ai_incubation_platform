@@ -38,11 +38,15 @@ from services.vector_adjustment_service import (
 
 @dataclass
 class QuickStartInput:
-    """快速入门输入（4个硬条件）"""
+    """快速入门输入（4个硬条件 + 3个可选字段）"""
     age: int
     gender: str  # male, female, other
     location: str
     relationship_goal: str  # serious, marriage, dating, casual
+    # 可选字段（提高匹配精度）
+    education: Optional[str] = None  # high_school, college, bachelor, bachelor_student, master, master_student, phd, phd_student
+    occupation: Optional[str] = None  # student, tech, finance, education, medical, government, business, freelancer, other
+    income: Optional[str] = None  # no_income, under_10, 10-20, 20-30, 30-50, over_50, private
 
 
 @dataclass
@@ -543,10 +547,18 @@ class QuickStartService(BaseService[QuickStartRecordDB]):
         with db_session() as db:
             user = db.query(UserDB).filter(UserDB.id == user_id).first()
             if user:
+                # 核心字段
                 user.age = input_data.age
                 user.gender = input_data.gender
                 user.location = input_data.location
                 user.relationship_goal = input_data.relationship_goal
+                # 可选字段（提高匹配精度）
+                if input_data.education:
+                    user.education = input_data.education
+                if input_data.occupation:
+                    user.occupation = input_data.occupation
+                if input_data.income:
+                    user.income = input_data.income
                 db.commit()
                 logger.info(f"[QuickStart] Updated user profile for user={user_id}")
 

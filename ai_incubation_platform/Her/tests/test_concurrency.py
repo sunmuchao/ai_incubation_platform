@@ -25,7 +25,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from models.user import UserCreate, User, Gender
 from db.models import UserDB, ChatMessageDB, ChatConversationDB
 from db.database import get_db
-from matching.matcher import matchmaker
+# 注：matching.matcher 已废弃删除，匹配逻辑在 ConversationMatchService
 
 
 # ============= 并发测试配置 =============

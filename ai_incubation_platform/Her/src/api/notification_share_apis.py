@@ -27,7 +27,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from db.database import get_db
 from auth.jwt import get_current_user
@@ -44,6 +44,8 @@ router_share = APIRouter(prefix="/api/share", tags=["Notification-分享机制"]
 # ============= 请求/响应模型 =============
 
 class NotificationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     user_id: str
     notification_type: str
@@ -57,9 +59,6 @@ class NotificationResponse(BaseModel):
     priority: str
     push_sent: bool
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class UnreadCountResponse(BaseModel):
@@ -97,6 +96,8 @@ class CreateInviteCodeRequest(BaseModel):
 
 
 class InviteCodeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     code: str
     code_type: str
@@ -108,9 +109,6 @@ class InviteCodeResponse(BaseModel):
     is_active: bool
     expires_at: Optional[datetime]
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ValidateInviteCodeRequest(BaseModel):
@@ -139,6 +137,8 @@ class CreateShareRecordRequest(BaseModel):
 
 
 class ShareRecordResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     user_id: str
     share_type: str
@@ -148,9 +148,6 @@ class ShareRecordResponse(BaseModel):
     click_count: int
     convert_count: int
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ShareStatsResponse(BaseModel):
@@ -169,6 +166,8 @@ class InviteStatsResponse(BaseModel):
 
 
 class SharePosterResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     poster_key: str
     poster_name: str
@@ -176,9 +175,6 @@ class SharePosterResponse(BaseModel):
     background_url: Optional[str]
     is_default: bool
     use_count: int
-
-    class Config:
-        from_attributes = True
 
 
 # ============= 通知系统 API =============

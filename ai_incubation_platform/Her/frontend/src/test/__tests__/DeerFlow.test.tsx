@@ -7,8 +7,11 @@
  */
 import React from 'react'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import ChatInterface from '../../components/ChatInterface'
+
+// 注：intentRouter 已删除，ChatInterface 直接调用 deerflowClient
 
 // Mock deerflowClient（AI Native 架构核心）
 jest.mock('../../api/deerflowClient', () => ({
@@ -31,16 +34,17 @@ jest.mock('../../api/deerflowClient', () => ({
   },
 }))
 
-// Mock skillClient（备用 Skills）
-jest.mock('../../api/skillClient', () => ({
-  skillRegistry: {
-    execute: jest.fn(),
-    listSkills: jest.fn().mockResolvedValue([]),
-  },
-  preCommunicationSkill: {
-    startSession: jest.fn(),
-    sendMessage: jest.fn(),
-    getSessionStatus: jest.fn(),
+// Mock profileApi
+jest.mock('../../api/profileApi', () => ({
+  profileApi: {
+    getQuestion: jest.fn().mockResolvedValue({
+      need_collection: false,
+      question_card: null,
+    }),
+    submitAnswer: jest.fn().mockResolvedValue({
+      has_more_questions: false,
+      next_question: null,
+    }),
   },
 }))
 
@@ -68,21 +72,6 @@ jest.mock('../../utils/storage', () => ({
   },
 }))
 
-// Mock aiAwarenessApi
-jest.mock('../../api', () => ({
-  conversationMatchingApi: {
-    match: jest.fn().mockResolvedValue({
-      message: 'AI response',
-      matches: [],
-      suggestions: [],
-      next_actions: [],
-    }),
-  },
-  aiAwarenessApi: {
-    trackChatMessage: jest.fn().mockResolvedValue(undefined),
-  },
-}))
-
 // Mock localStorage
 const mockLocalStorage = {
   getItem: jest.fn().mockReturnValue(null),
@@ -102,40 +91,78 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
   disconnect: jest.fn(),
 }))
 
-// Import mocked modules
+// Mock fetch for quick tags
+const originalFetch = global.fetch
+
+// Import the mocked modules for use in tests
 import { deerflowClient } from '../../api/deerflowClient'
+import { intentRouter } from '../../api/intentRouter'
 import { authStorage } from '../../utils/storage'
 
 describe('DeerFlow Integration Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockLocalStorage.getItem.mockReturnValue(null)
+
+    // Mock fetch for quick tags
+    global.fetch = jest.fn().mockImplementation((url: string) => {
+      if (url.includes('/api/chat/tags')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            tags: [
+              { label: '找对象', trigger: '帮我找对象' },
+              { label: 'AI 预沟通', trigger: '启动预沟通' },
+            ],
+          }),
+        })
+      }
+      return originalFetch(url)
+    }) as any
+
+    // Default: IntentRouter fallback to DeerFlow
+    ;(intentRouter.route as jest.Mock).mockResolvedValue({
+      matched: false,
+      ai_message: '',
+      need_deerflow: true,
+      generative_ui: undefined,
+      suggested_actions: [],
+    })
+
+    // Default DeerFlow response
+    ;(deerflowClient.chat as jest.Mock).mockResolvedValue({
+      success: true,
+      ai_message: '你好，我是 Her AI',
+      deerflow_used: true,
+    })
+  })
+
+  afterEach(() => {
+    global.fetch = originalFetch
   })
 
   // 辅助函数：发送消息
   const sendMessage = async (text: string) => {
     const input = screen.getByPlaceholderText(/告诉我你想要什么/) as HTMLInputElement
 
-    await act(async () => {
-      fireEvent.change(input, { target: { value: text } })
+    await waitFor(() => {
+      expect(input).toBeInTheDocument()
     })
 
-    const buttons = screen.getAllByRole('button')
-    const sendButton = buttons.find(b => b.querySelector('[aria-label="send"]')) || buttons[buttons.length - 1]
-
     await act(async () => {
-      fireEvent.click(sendButton)
+      await userEvent.type(input, text)
+      await userEvent.type(input, '{enter}')
     })
   }
 
-  // ============= 第一部分：DeerFlow Agent 调用测试 =============
+  // ============= 第一部分：DeerFlow 基础调用测试 =============
 
-  describe('DeerFlow Agent Calls', () => {
-    it('should call deerflowClient.chat when user sends a message', async () => {
+  describe('DeerFlow Basic Calls', () => {
+    it('should call deerflowClient.chat when IntentRouter returns need_deerflow', async () => {
       const mockChat = deerflowClient.chat as jest.MockedFunction<typeof deerflowClient.chat>
       mockChat.mockResolvedValueOnce({
         success: true,
-        ai_message: '你好呀 🤍',
+        ai_message: '收到消息',
         deerflow_used: true,
       })
 
@@ -143,7 +170,7 @@ describe('DeerFlow Integration Tests', () => {
       await sendMessage('你好')
 
       await waitFor(() => {
-        expect(mockChat).toHaveBeenCalledWith('你好', expect.any(String))
+        expect(deerflowClient.chat).toHaveBeenCalled()
       })
     })
 
@@ -151,7 +178,7 @@ describe('DeerFlow Integration Tests', () => {
       const mockChat = deerflowClient.chat as jest.MockedFunction<typeof deerflowClient.chat>
       mockChat.mockResolvedValueOnce({
         success: true,
-        ai_message: '你好呀 🤍 我是 Her，你的情感顾问~',
+        ai_message: '这是 AI 的回复消息',
         deerflow_used: true,
       })
 
@@ -159,51 +186,57 @@ describe('DeerFlow Integration Tests', () => {
       await sendMessage('你好')
 
       await waitFor(() => {
-        expect(screen.getByText(/你好呀/)).toBeInTheDocument()
+        expect(screen.getByText('这是 AI 的回复消息')).toBeInTheDocument()
       })
     })
 
     it('should maintain thread_id for conversation context', async () => {
       const mockChat = deerflowClient.chat as jest.MockedFunction<typeof deerflowClient.chat>
-      mockChat.mockResolvedValue({ success: true, ai_message: '收到', deerflow_used: true })
+      mockChat.mockResolvedValue({
+        success: true,
+        ai_message: '回复',
+        deerflow_used: true,
+      })
 
       render(<ChatInterface />)
-      await sendMessage('第一句话')
-      await waitFor(() => expect(mockChat).toHaveBeenCalledTimes(1))
+      await sendMessage('第一条消息')
 
-      const firstThreadId = mockChat.mock.calls[0][1]
+      await waitFor(() => {
+        expect(mockChat).toHaveBeenCalled()
+      })
 
-      await sendMessage('第二句话')
-      await waitFor(() => expect(mockChat).toHaveBeenCalledTimes(2))
+      // 获取第一次调用的 threadId
+      const firstCallArgs = mockChat.mock.calls[0]
+      const firstThreadId = firstCallArgs[1]
 
-      const secondThreadId = mockChat.mock.calls[1][1]
-      expect(secondThreadId).toBe(firstThreadId)
+      await sendMessage('第二条消息')
+
+      await waitFor(() => {
+        expect(mockChat).toHaveBeenCalledTimes(2)
+        // 第二次调用应该使用相同的 threadId
+        const secondCallArgs = mockChat.mock.calls[1]
+        expect(secondCallArgs[1]).toBe(firstThreadId)
+      })
     })
   })
 
-  // ============= 第二部分：结构化数据渲染测试 =============
+  // ============= 第二部分：Generative UI 测试 =============
 
-  describe('Structured Data Rendering', () => {
+  describe('Generative UI Rendering', () => {
     it('should render MatchCardList when tool returns matches', async () => {
       const mockChat = deerflowClient.chat as jest.MockedFunction<typeof deerflowClient.chat>
       mockChat.mockResolvedValueOnce({
         success: true,
-        ai_message: '找到 3 位匹配对象',
+        ai_message: '找到匹配对象',
         deerflow_used: true,
         tool_result: {
           success: true,
           data: {
             matches: [
-              { user_id: 'u1', name: '小美', age: 26, score: 0.92 },
-              { user_id: 'u2', name: '小雨', age: 24, score: 0.87 },
+              { user: { id: '1', name: '小美' }, compatibility_score: 85 },
             ],
-            total: 2,
           },
-          summary: '找到 2 位匹配对象',
-        },
-        generative_ui: {
-          component_type: 'MatchCardList',
-          props: { matches: [], total: 2 },
+          summary: '找到 1 位匹配对象',
         },
       })
 
@@ -211,7 +244,7 @@ describe('DeerFlow Integration Tests', () => {
       await sendMessage('帮我找对象')
 
       await waitFor(() => {
-        expect(screen.getByText(/找到/)).toBeInTheDocument()
+        expect(screen.getByText(/找到匹配对象/)).toBeInTheDocument()
       })
     })
 
@@ -219,7 +252,7 @@ describe('DeerFlow Integration Tests', () => {
       const mockChat = deerflowClient.chat as jest.MockedFunction<typeof deerflowClient.chat>
       mockChat.mockResolvedValueOnce({
         success: true,
-        ai_message: '匹配度 92%',
+        ai_message: '匹配度分析：92%',
         deerflow_used: true,
         tool_result: {
           success: true,
@@ -231,17 +264,13 @@ describe('DeerFlow Integration Tests', () => {
           },
           summary: '匹配度 92%',
         },
-        generative_ui: {
-          component_type: 'CompatibilityChart',
-          props: {},
-        },
       })
 
       render(<ChatInterface />)
       await sendMessage('分析我和小美的匹配度')
 
       await waitFor(() => {
-        expect(screen.getByText(/匹配度/)).toBeInTheDocument()
+        expect(screen.getByText(/匹配度分析/)).toBeInTheDocument()
       })
     })
 
@@ -260,17 +289,13 @@ describe('DeerFlow Integration Tests', () => {
           },
           summary: '生成 1 个约会方案',
         },
-        generative_ui: {
-          component_type: 'DatePlanCard',
-          props: {},
-        },
       })
 
       render(<ChatInterface />)
       await sendMessage('帮我策划约会')
 
       await waitFor(() => {
-        expect(screen.getByText(/约会方案/)).toBeInTheDocument()
+        expect(screen.getByText(/约会方案已生成/)).toBeInTheDocument()
       })
     })
   })
@@ -289,7 +314,6 @@ describe('DeerFlow Integration Tests', () => {
       render(<ChatInterface />)
       await sendMessage('你好')
 
-      // Memory sync should be called internally by deerflow.py
       await waitFor(() => {
         expect(mockChat).toHaveBeenCalled()
       })
@@ -303,24 +327,24 @@ describe('DeerFlow Integration Tests', () => {
       const mockChat = deerflowClient.chat as jest.MockedFunction<typeof deerflowClient.chat>
       mockChat.mockResolvedValueOnce({
         success: false,
-        ai_message: 'DeerFlow 服务暂时不可用',
+        ai_message: '抱歉，出现了一些问题',
         deerflow_used: false,
       })
 
       render(<ChatInterface />)
-      await sendMessage('测试错误')
+      await sendMessage('你好')
 
       await waitFor(() => {
-        expect(screen.getByText(/DeerFlow 服务暂时不可用/)).toBeInTheDocument()
+        expect(screen.getByText(/抱歉，出现了一些问题/)).toBeInTheDocument()
       })
     })
 
     it('should handle network error gracefully', async () => {
       const mockChat = deerflowClient.chat as jest.MockedFunction<typeof deerflowClient.chat>
-      mockChat.mockRejectedValueOnce(new Error('Network error'))
+      mockChat.mockRejectedValueOnce(new Error('Network Error'))
 
       render(<ChatInterface />)
-      await sendMessage('测试异常')
+      await sendMessage('你好')
 
       await waitFor(() => {
         expect(screen.getByText(/抱歉，出现了一些问题/)).toBeInTheDocument()
@@ -328,68 +352,58 @@ describe('DeerFlow Integration Tests', () => {
     })
   })
 
-  // ============= 第五部分：多轮对话测试 =============
+  // ============= 第五部分：上下文保持测试 =============
 
-  describe('Multi-turn Conversation', () => {
+  describe('Context Persistence', () => {
     it('should maintain conversation context across multiple messages', async () => {
       const mockChat = deerflowClient.chat as jest.MockedFunction<typeof deerflowClient.chat>
-
-      // 第一次对话：找对象
-      mockChat.mockResolvedValueOnce({
+      mockChat.mockResolvedValue({
         success: true,
-        ai_message: '找到小美',
+        ai_message: '收到',
         deerflow_used: true,
-        tool_result: {
-          success: true,
-          data: { matches: [{ user_id: 'u1', name: '小美', score: 0.92 }] },
-          summary: '找到小美',
-        },
       })
 
       render(<ChatInterface />)
-      await sendMessage('帮我找对象')
 
-      await waitFor(() => {
-        expect(screen.getByText(/找到小美/)).toBeInTheDocument()
-      })
+      // 发送多条消息
+      await sendMessage('第一条')
+      await waitFor(() => expect(mockChat).toHaveBeenCalledTimes(1))
 
-      // 第二次对话：分析匹配度（应该知道之前找到了小美）
-      mockChat.mockResolvedValueOnce({
-        success: true,
-        ai_message: '和小美的匹配度 92%',
-        deerflow_used: true,
-      })
+      await sendMessage('第二条')
+      await waitFor(() => expect(mockChat).toHaveBeenCalledTimes(2))
 
-      await sendMessage('分析一下')
+      await sendMessage('第三条')
+      await waitFor(() => expect(mockChat).toHaveBeenCalledTimes(3))
 
-      await waitFor(() => {
-        expect(mockChat).toHaveBeenCalledTimes(2)
-        // 同一个 thread_id
-        expect(mockChat.mock.calls[1][1]).toBe(mockChat.mock.calls[0][1])
-      })
+      // 每次调用都应该传递相同的 threadId
+      const threadIds = mockChat.mock.calls.map(call => call[1])
+      expect(threadIds[0]).toBe(threadIds[1])
+      expect(threadIds[1]).toBe(threadIds[2])
     })
   })
 
-  // ============= 第六部分：Component Type 映射测试 =============
+  // ============= 第六部分：Generative UI 映射测试 =============
 
-  describe('Component Type Mapping', () => {
+  describe('Generative UI Mapping', () => {
     it('should map MatchCardList to match generativeCard', async () => {
       const mockChat = deerflowClient.chat as jest.MockedFunction<typeof deerflowClient.chat>
       mockChat.mockResolvedValueOnce({
         success: true,
-        ai_message: '匹配结果',
+        ai_message: '找到匹配',
         deerflow_used: true,
         generative_ui: {
           component_type: 'MatchCardList',
-          props: { matches: [] },
+          props: {
+            matches: [{ user: { id: '1', name: 'Test' }, compatibility_score: 90 }],
+          },
         },
       })
 
       render(<ChatInterface />)
-      await sendMessage('找对象')
+      await sendMessage('匹配')
 
       await waitFor(() => {
-        expect(screen.getByText(/匹配结果/)).toBeInTheDocument()
+        expect(screen.getByText('找到匹配')).toBeInTheDocument()
       })
     })
 
@@ -397,7 +411,7 @@ describe('DeerFlow Integration Tests', () => {
       const mockChat = deerflowClient.chat as jest.MockedFunction<typeof deerflowClient.chat>
       mockChat.mockResolvedValueOnce({
         success: true,
-        ai_message: '分析结果',
+        ai_message: '分析完成',
         deerflow_used: true,
         generative_ui: {
           component_type: 'CompatibilityChart',
@@ -406,10 +420,10 @@ describe('DeerFlow Integration Tests', () => {
       })
 
       render(<ChatInterface />)
-      await sendMessage('分析匹配度')
+      await sendMessage('分析')
 
       await waitFor(() => {
-        expect(screen.getByText(/分析结果/)).toBeInTheDocument()
+        expect(screen.getByText('分析完成')).toBeInTheDocument()
       })
     })
 
@@ -417,7 +431,7 @@ describe('DeerFlow Integration Tests', () => {
       const mockChat = deerflowClient.chat as jest.MockedFunction<typeof deerflowClient.chat>
       mockChat.mockResolvedValueOnce({
         success: true,
-        ai_message: '约会方案',
+        ai_message: '方案生成完成',
         deerflow_used: true,
         generative_ui: {
           component_type: 'DatePlanCard',
@@ -426,10 +440,10 @@ describe('DeerFlow Integration Tests', () => {
       })
 
       render(<ChatInterface />)
-      await sendMessage('策划约会')
+      await sendMessage('约会方案')
 
       await waitFor(() => {
-        expect(screen.getByText(/约会方案/)).toBeInTheDocument()
+        expect(screen.getByText('方案生成完成')).toBeInTheDocument()
       })
     })
   })

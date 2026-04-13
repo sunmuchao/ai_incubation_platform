@@ -12,16 +12,8 @@ import {
   MessageOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import type { AIPreCommunicationSession } from '../types'
-
-// 辅助函数（从已删除的 aiInterlocutor.ts 迁移）
-const getCompatibilityLevel = (score: number): string => {
-  if (score >= 90) return '极高'
-  if (score >= 80) return '很高'
-  if (score >= 70) return '较高'
-  if (score >= 60) return '中等'
-  return '较低'
-}
 import './PreCommunicationSessionCard.less'
 
 const { Text } = Typography
@@ -38,6 +30,17 @@ export const PreCommunicationSessionCard: React.FC<PreCommunicationSessionCardPr
   onViewMessages,
   onStartChat,
 }) => {
+  const { t } = useTranslation()
+
+  // 辅助函数（从已删除的 aiInterlocutor.ts 迁移）
+  const getCompatibilityLevel = (score: number): string => {
+    if (score >= 90) return t('conversation.compatibilityLevel.veryHigh')
+    if (score >= 80) return t('conversation.compatibilityLevel.high')
+    if (score >= 70) return t('conversation.compatibilityLevel.mediumHigh')
+    if (score >= 60) return t('conversation.compatibilityLevel.medium')
+    return t('conversation.compatibilityLevel.low')
+  }
+
   // 获取状态颜色
   const getSessionStatusColor = (status: string): string => {
     const colors: Record<string, string> = {
@@ -53,11 +56,11 @@ export const PreCommunicationSessionCard: React.FC<PreCommunicationSessionCardPr
   // 获取状态文本
   const getSessionStatusText = (status: string): string => {
     const texts: Record<string, string> = {
-      pending: '等待中',
-      analyzing: '分析中',
-      chatting: '对话中',
-      completed: '已完成',
-      cancelled: '已取消',
+      pending: t('conversation.sessionStatus.pending'),
+      analyzing: t('conversation.sessionStatus.analyzing'),
+      chatting: t('conversation.sessionStatus.chatting'),
+      completed: t('conversation.sessionStatus.completed'),
+      cancelled: t('conversation.sessionStatus.cancelled'),
     }
     return texts[status] || status
   }
@@ -73,7 +76,7 @@ export const PreCommunicationSessionCard: React.FC<PreCommunicationSessionCardPr
   if (!sessions || sessions.length === 0) {
     return (
       <Card className="generative-card" size="small">
-        <Empty description="暂无 AI 预沟通会话" />
+        <Empty description={t('common.noData')} />
       </Card>
     )
   }
@@ -81,7 +84,7 @@ export const PreCommunicationSessionCard: React.FC<PreCommunicationSessionCardPr
   return (
     <div className="generative-card-container precomm-container">
       <Text type="secondary" style={{ fontSize: 12, marginBottom: 8, display: 'block' }}>
-        AI 预沟通会话列表
+        {t('precomm.sessionList')}
       </Text>
       <div className="generative-cards-grid">
         {sessions.slice(0, 5).map((session) => {
@@ -132,7 +135,7 @@ export const PreCommunicationSessionCard: React.FC<PreCommunicationSessionCardPr
                     <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
                   )}
                   <Text type="secondary" style={{ fontSize: 11 }}>
-                    硬指标{session.hard_check_passed ? '通过' : '未通过'}
+                    {t('precomm.hardCheck', { status: session.hard_check_passed ? t('precomm.passed') : t('precomm.notPassed') })}
                   </Text>
                 </div>
 
@@ -140,7 +143,7 @@ export const PreCommunicationSessionCard: React.FC<PreCommunicationSessionCardPr
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <HeartOutlined style={{ color: session.values_check_passed ? '#52c41a' : '#ff4d4f' }} />
                   <Text type="secondary" style={{ fontSize: 11 }}>
-                    价值观{session.values_check_passed ? '通过' : '未通过'}
+                    {t('precomm.valuesCheck', { status: session.values_check_passed ? t('precomm.passed') : t('precomm.notPassed') })}
                   </Text>
                 </div>
 
@@ -167,7 +170,7 @@ export const PreCommunicationSessionCard: React.FC<PreCommunicationSessionCardPr
                     onClick={() => onViewMessages(session.session_id)}
                     disabled={session.conversation_rounds === 0}
                   >
-                    查看对话
+                    {t('precomm.viewChat')}
                   </Button>
                   {isCompleted && isRecommended && (
                     <Button
@@ -176,7 +179,7 @@ export const PreCommunicationSessionCard: React.FC<PreCommunicationSessionCardPr
                       icon={<ThunderboltOutlined />}
                       onClick={() => onStartChat(session)}
                     >
-                      开始聊天
+                      {t('precomm.startChat')}
                     </Button>
                   )}
                 </Space>

@@ -251,3 +251,57 @@ def authenticate_user(username: str, password: str, stored_hash: str) -> Optiona
     logger.info(f"User authenticated successfully: {username}")
     # 这里使用 username 作为 user_id（简化处理）
     return username
+
+
+async def get_admin_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> str:
+    """
+    获取管理员用户 ID（依赖注入）
+
+    使用方式：admin_user_id: str = Depends(get_admin_user)
+
+    验证流程：
+    1. 解析 Bearer Token 获取 user_id
+    2. 查询数据库获取用户信息
+    3. 检查用户是否是管理员
+
+    Returns:
+        str: 管理员用户的 user_id
+
+    Raises:
+        HTTPException: 401 如果 token 无效
+        HTTPException: 403 如果用户不是管理员
+    """
+    token = credentials.credentials
+    user_id = decode_access_token(token)
+
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # 查询数据库获取用户信息
+    from utils.db_session_manager import db_session
+    from db.models import UserDB
+
+    with db_session() as db:
+        user = db.query(UserDB).filter(UserDB.id == user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # 检查是否是管理员
+        from utils.admin_check import is_admin_user
+        if not is_admin_user(user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="需要管理员权限才能执行此操作"
+            )
+
+    return user_id

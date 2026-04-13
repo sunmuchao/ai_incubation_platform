@@ -1,12 +1,21 @@
 """
-Future 数据模型定义 - v1.20 AI 约会助手
+AI 约会助手数据模型 (原 Future 模块) - v1.20+
 
-AI 约会助手功能包括：
-- 智能聊天助手（回复建议/话题推荐）
-- 约会策划引擎（地点/时间/活动）
-- 关系咨询服务（情感问题解答）
-- 情感分析服务（聊天记录分析）
-- 恋爱日记（关系记录）
+注意：文件名 "future_models" 是历史命名，实际为正在使用的 AI 约会助手核心模型。
+
+包含功能：
+- 智能聊天助手（回复建议/话题推荐） → ChatAssistantSuggestionDB
+- 约会策划引擎（地点/时间/活动） → DatePlanDB（注意：与 date_reminder.py 的 DateReminderPlanDB 不同表）
+- 约会地点数据库 → DateVenueDB (内部重命名为 DateVenueP20DB 避免冲突)
+- 关系咨询服务（情感问题解答） → RelationshipConsultationDB
+- 情感分析服务（聊天记录分析） → ChatEmotionTrendDB
+- 恋爱日记（关系记录） → LoveDiaryEntryDB, LoveDiaryMemoryDB
+- 关系时间线 → RelationshipTimelineDB
+- 行为信用 → BehaviorCreditDB, BehaviorCreditEventDB
+
+表名说明：
+- DatePlanDB → date_plans (AI 约会策划)
+- DateReminderPlanDB → date_reminder_plans (约会提醒，见 date_reminder.py)
 """
 from sqlalchemy import Column, String, Integer, Float, DateTime, Boolean, Text, ForeignKey, JSON, UniqueConstraint
 from sqlalchemy.sql import func

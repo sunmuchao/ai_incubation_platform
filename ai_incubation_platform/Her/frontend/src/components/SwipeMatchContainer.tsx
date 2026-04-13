@@ -14,6 +14,7 @@ import {
   EnvironmentOutlined,
   StarFilled,
 } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import type { MatchCandidate, SwipeAction, SwipeLimit } from '../types'
 import { matchingApi, aiAwarenessApi } from '../api'
 import { authStorage } from '../utils/storage'
@@ -38,6 +39,7 @@ interface MatchNotification {
 }
 
 const SwipeMatchContainer: React.FC = () => {
+  const { t } = useTranslation()
   // 状态
   const [candidates, setCandidates] = useState<MatchCandidate[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -78,7 +80,7 @@ const SwipeMatchContainer: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to load candidates:', error)
-      message.error('加载推荐失败，请稍后重试')
+      message.error(t('match.loadFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -166,7 +168,7 @@ const SwipeMatchContainer: React.FC = () => {
   // 回退功能（Rewind）
   const handleRewind = useCallback(() => {
     if (swipeHistory.length === 0) {
-      message.info('没有可以回退的操作')
+      message.info(t('match.noUndo'))
       return
     }
 
@@ -180,14 +182,14 @@ const SwipeMatchContainer: React.FC = () => {
     // 更新计数
     swipeCountRef.current -= 1
 
-    message.success('已回退上一操作')
+    message.success(t('match.undoSuccess'))
   }, [swipeHistory])
 
   // 发起对话
   const handleStartChat = useCallback(() => {
     if (matchNotification) {
       // 跳转聊天页面（实际应使用路由 navigate('/chat')）
-      message.info('即将跳转到聊天页面')
+      message.info(t('match.goToChat'))
       setMatchNotification(null)
     }
   }, [matchNotification])

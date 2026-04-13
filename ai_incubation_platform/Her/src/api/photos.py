@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from db.database import get_db
 from auth.jwt import get_current_user
@@ -95,6 +95,8 @@ def validate_file_upload(file: UploadFile, content: bytes) -> tuple[bool, str]:
 
 class PhotoResponse(BaseModel):
     """照片响应模型"""
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     user_id: str
     photo_url: str
@@ -108,9 +110,6 @@ class PhotoResponse(BaseModel):
     like_count: int = 0
     view_count: int = 0
     created_at: str
-
-    class Config:
-        from_attributes = True
 
 
 class PhotoUploadRequest(BaseModel):

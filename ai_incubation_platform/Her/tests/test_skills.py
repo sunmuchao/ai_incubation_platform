@@ -12,7 +12,7 @@ import os
 # 添加 src 路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from agent.skills.matchmaking_skill import get_matchmaking_skill
+# 注：matchmaking_skill 已废弃删除，匹配逻辑在 ConversationMatchService/HerAdvisorService
 from agent.skills.precommunication_skill import get_precommunication_skill
 from agent.skills.omniscient_insight_skill import get_omniscient_insight_skill
 from agent.skills.relationship_coach_skill import get_relationship_coach_skill
@@ -30,10 +30,7 @@ def skill_registry():
     return initialize_default_skills()
 
 
-@pytest.fixture
-def matchmaking_skill():
-    """获取匹配助手 Skill"""
-    return get_matchmaking_skill()
+# 注：geo_location_skill, gift_ordering_skill, matchmaking_skill 已删除，改用 REST API 或 HerAdvisorService
 
 
 @pytest.fixture
@@ -78,79 +75,14 @@ class TestSkillRegistry:
 
     def test_get_metadata(self, skill_registry):
         """测试获取 Skill 元数据"""
-        metadata = skill_registry.get_metadata("matchmaking_assistant")
+        # matchmaking_assistant 已删除，使用 bill_analysis 测试
+        metadata = skill_registry.get_metadata("bill_analysis")
         assert metadata is not None
         assert "description" in metadata
 
 
-# ========== 测试匹配助手 Skill ==========
-
-class TestMatchmakingSkill:
-    """测试匹配助手 Skill"""
-
-    @pytest.mark.asyncio
-    async def test_execute_with_user_intent(self, matchmaking_skill):
-        """测试基于用户意图执行匹配"""
-        # Mock the internal methods to avoid LLM calls and workflow execution
-        mock_intent_result = {
-            "intent_type": "interest_match",
-            "limit": 5,
-            "min_score": 0.6,
-            "hard_requirements": [],
-            "soft_preferences": ["喜欢旅行"],
-            "emotional_state": "normal",
-            "confidence": 0.8
-        }
-
-        mock_workflow_result = {
-            "recommendations": [
-                {"user_id": "match-1", "name": "Test Match", "score": 0.85}
-            ]
-        }
-
-        # Patch the internal methods directly on the skill instance
-        matchmaking_skill._parse_intent = MagicMock(return_value=mock_intent_result)
-
-        with patch("agent.workflows.autonomous_workflows.AutoMatchRecommendWorkflow") as MockWorkflow:
-            mock_instance = MagicMock()
-            mock_instance.execute.return_value = mock_workflow_result
-            MockWorkflow.return_value = mock_instance
-
-            result = await matchmaking_skill.execute(
-                user_intent="帮我找一个喜欢旅行的女生",
-                context={"user_id": "user-test-123"}
-            )
-
-            assert result["success"] is True
-            assert "ai_message" in result
-            assert "matches" in result or "generative_ui" in result
-
-    @pytest.mark.asyncio
-    async def test_daily_recommendation(self, matchmaking_skill):
-        """测试每日推荐触发"""
-        result = await matchmaking_skill.trigger_daily("user-test-123")
-
-        # 应该返回触发结果
-        assert "triggered" in result
-
-    @pytest.mark.asyncio
-    async def test_quality_match_trigger(self, matchmaking_skill):
-        """测试高质量匹配触发"""
-        result = await matchmaking_skill.trigger_quality_match("user-test-123")
-
-        assert "triggered" in result
-
-    def test_input_schema(self, matchmaking_skill):
-        """测试输入 Schema"""
-        schema = matchmaking_skill.get_input_schema()
-        assert schema["type"] == "object"
-        assert "properties" in schema
-
-    def test_output_schema(self, matchmaking_skill):
-        """测试输出 Schema"""
-        schema = matchmaking_skill.get_output_schema()
-        assert schema["type"] == "object"
-        assert "properties" in schema
+# 注：TestMatchmakingSkill 已删除，matchmaking_skill 废弃
+# 匹配逻辑在 ConversationMatchService 和 HerAdvisorService 中测试
 
 
 # ========== 测试账单分析 Skill ==========
@@ -331,17 +263,11 @@ class TestAINativeFeatures:
         # 所有 Skills 都应该有 autonomous_trigger 方法
         assert hasattr(bill_analysis_skill, 'autonomous_trigger')
 
-    @pytest.mark.asyncio
-    async def test_conversation_priority(self, matchmaking_skill):
+    @pytest.mark.skip(reason="matchmaking_skill 已废弃删除，匹配逻辑在 HerAdvisorService")
+    async def test_conversation_priority(self):
         """测试对话优先 - 支持自然语言输入"""
-        # 用户可以说"帮我找对象"这样的自然语言
-        result = await matchmaking_skill.execute(
-            user_intent="帮我找一个对象",
-            context={"user_id": "user-test-123"}
-        )
-
-        assert result["success"] is True
-        assert "ai_message" in result  # AI 生成的自然语言响应
+        # matchmaking_skill 已废弃删除
+        # 匹配逻辑在 HerAdvisorService 中，详见 test_her_advisor_service.py
 
     def test_generative_ui(self):
         """测试 Generative UI - 界面动态生成"""

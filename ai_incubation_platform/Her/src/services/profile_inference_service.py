@@ -450,13 +450,12 @@ class AIProfileInferencer:
             ]
 
             if len(liked_profiles) >= 10:
-                # 分析喜欢的人群特征
-                # 这里可以调用 LLM 分析喜欢的用户画像特征
+                # TODO: 调用 LLM 分析喜欢的用户画像特征，提取共同偏好
                 pass
 
         # 分析互动模式
         if interaction_history:
-            # 分析互动深度、频率等
+            # TODO: 分析互动深度、频率等，推断沟通偏好
             pass
 
         return ProfileInferenceResult(

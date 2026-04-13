@@ -145,7 +145,6 @@ make test
 cd deerflow/backend
 PYTHONPATH=packages/harness pytest tests/test_her_tools.py -v
 pytest tests/test_ai_companion_service.py -v
-pytest tests/test_matcher.py -v
 pytest tests/test_membership_service.py -v
 
 # 查看测试覆盖率
@@ -170,6 +169,40 @@ pytest --cov=src --cov-report=html
 | P9 | 推送通知系统、分享机制、邀请码 | ✅ |
 | P10-P17 | 深度认知、感官洞察、情感调解等下一代功能 | ✅ 模型定义完成 |
 | P18-P22 | AI 预沟通、消费画像、地理轨迹等 | ✅ 模型定义完成 |
+| P23 | 用户置信度评估系统 | ✅ |
+
+### 用户置信度评估系统 (v1.30.0)
+
+**核心理念**：非二元验证（通过/未通过），而是概率性置信度评估（0-100%）。
+
+**置信度计算公式**：
+```
+overall_confidence = base_score (0.3)
+  + identity_verified × 0.25      # 身份验证
+  + cross_validation × 0.20       # 交叉验证（年龄-学历、职业-收入匹配）
+  + behavior_consistency × 0.15   # 行为一致性
+  + social_endorsement × 0.10     # 社交背书
+```
+
+**置信度等级**：
+
+| 等级 | 分数范围 | 名称 | UI 标识 |
+|------|---------|------|--------|
+| very_high | 80-100% | 极可信 | 💎 金色 |
+| high | 60-80% | 较可信 | 🌟 绿色 |
+| medium | 40-60% | 普通用户 | ✓ 蓝色 |
+| low | 0-40% | 需谨慎 | ⚠️ 橙色 |
+
+**交叉验证规则**：
+- 年龄-学历匹配：25岁+本科 ≈ 毕业年份 2021-2023
+- 职业-收入匹配：程序员+<5k = 异常概率高
+- 地理-活跃时间：北京+凌晨3点活跃 = 异常
+
+**API 端点**：
+- `GET /api/profile/confidence` - 获取完整置信度详情
+- `GET /api/profile/confidence/summary` - 获取置信度摘要
+- `POST /api/profile/confidence/refresh` - 手动刷新评估
+- `GET /api/profile/confidence/recommendations` - 获取验证建议
 
 ### AI Native 架构增强 (v1.28.0)
 
@@ -269,16 +302,17 @@ Her/
 │   ├── api/                    # API 路由层
 │   │   ├── users.py            # 用户接口
 │   │   ├── matching.py         # 匹配接口
-│   │   ├── safety.py           # 安全风控接口 (P7)
-│   │   ├── conversations_v2.py # 对话分析接口
-│   │   ├── errors.py           # 统一错误处理 (P20 新增)
-│   │   └── ...
+│   │   ├── chat.py             # 聊天接口
+│   │   ├── deerflow.py         # DeerFlow Agent 路由 (v1.29.0)
+│   │   ├── her_advisor.py      # Her 顾问接口 (v1.29.0)
+│   │   ├── errors.py           # 统一错误处理
+│   │   └── ...                 # 其他 API 模块
 │   ├── services/               # 业务逻辑层
-│   │   ├── base_service.py     # 服务基类 (P20 增强：通用 CRUD 方法)
-│   │   ├── safety_ai_service.py    # 安全风控 AI (P7)
-│   │   ├── conversation_analysis_service.py  # 对话分析
-│   │   ├── behavior_learning_service.py      # 行为学习
-│   │   └── ...
+│   │   ├── base_service.py     # 服务基类（通用 CRUD 方法）
+│   │   ├── matching_service.py # 匹配服务
+│   │   ├── chat_service.py     # 聊天服务
+│   │   ├── her_advisor_service.py  # Her 顾问服务 (v1.29.0)
+│   │   └── ...                 # 其他服务
 │   ├── models/                 # 数据模型
 │   │   ├── user.py             # 用户模型
 │   │   ├── membership.py       # 会员模型
@@ -291,35 +325,39 @@ Her/
 │   │   ├── payment_models.py   # 支付数据库模型
 │   │   └── audit.py            # 审计日志
 │   ├── matching/               # 匹配算法
-│   │   └── matcher.py          # 匹配引擎
-│   ├── auth/                   # 认证模块
-│   │   ├── jwt.py              # JWT 认证
-│   │   └── ...
-│   ├── middleware/             # 中间件
-│   │   ├── rate_limiter.py     # API 限流
-│   │   └── ...
-│   ├── cache/                  # 缓存模块
-│   │   └── cache_manager.py    # 缓存管理
-│   ├── agent/                  # AI Agent 模块 (v1.28.0 新增)
-│   │   ├── skills/             # Agent Skills
-│   │   │   ├── precommunication_skill.py
-│   │   │   ├── bill_analysis_skill.py
-│   │   │   ├── geo_location_skill.py
-│   │   │   ├── gift_ordering_skill.py
-│   │   │   └── registry.py
+│   │   ├── matcher.py          # 匹配引擎
+│   │   ├── rule_engine.py      # 规则引擎
+│   │   ├── agentic_engine.py   # Agent 引擎 (v1.29.0)
+│   │   └── engine_switch.py    # 引擎切换器 (v1.29.0)
+│   ├── agent/                  # AI Agent 模块
+│   │   ├── skills/             # Agent Skills (30+ Skills)
 │   │   ├── tools/              # Agent 工具
 │   │   └── workflows/          # Agent 工作流
-│   ├── llm/                    # LLM 集成 (v1.28.0 新增)
+│   ├── integration/            # 外部服务集成
+│   │   ├── llm_client.py       # LLM 客户端
+│   │   ├── aliyun_sms_client.py # 阿里云短信
+│   │   ├── amap_client.py      # 高德地图
+│   │   └── jpush_client.py     # 极光推送
+│   ├── llm/                    # LLM 集成
 │   │   └── skill_enhancer.py   # Skill 意图理解与响应生成
-│   ├── integration/            # 外部服务集成 (v1.28.0 新增)
-│   │   └── external_services.py # 账单/地理/礼物服务客户端
+│   ├── cache/                  # 缓存模块
+│   │   ├── cache_manager.py    # 缓存管理
+│   │   └── semantic_cache.py   # 语义缓存
+│   ├── middleware/             # 中间件
+│   │   └── rate_limiter.py     # API 限流
+│   ├── auth/                   # 认证模块
+│   │   └── jwt.py              # JWT 认证
+│   ├── utils/                  # 工具模块
+│   │   ├── logger.py           # 日志
+│   │   ├── db_session_manager.py # 数据库会话管理
+│   │   └── ...                 # 其他工具
 │   ├── config.py               # 配置管理
 │   └── main.py                 # 应用入口
-├── tests/                      # 测试文件
+├── tests/                      # 测试文件（89+ 测试文件）
 │   ├── test_matcher.py         # 匹配引擎测试
 │   ├── test_skills.py          # AI Native Skills 测试
-│   ├── test_ai_companion_service.py
-│   └── ...
+│   ├── test_her_advisor_service.py # Her 顾问测试
+│   └── ...                     # 其他测试
 ├── frontend/                   # 前端页面
 │   ├── src/
 │   │   ├── components/         # React 组件
@@ -327,16 +365,34 @@ Her/
 │   │   │   ├── ChatRoom.tsx            # 聊天室
 │   │   │   ├── MatchCard.tsx           # 匹配卡片
 │   │   │   ├── GenerativeUI.tsx        # Generative UI 组件库
-│   │   │   └── ...
+│   │   │   └── ...                     # 其他组件
 │   │   ├── pages/              # 页面组件
 │   │   │   ├── HomePage.tsx            # 主页
 │   │   │   ├── LoginPage.tsx           # 登录页
-│   │   │   └── ...
-│   │   ├── api/                # API 客户端
+│   │   │   └── ...                     # 其他页面
+│   │   ├── api/                # API 客户端（统一入口）
+│   │   │   ├── apiClient.ts            # 统一认证入口
+│   │   │   ├── deerflowClient.ts       # DeerFlow 客户端
+│   │   │   ├── intentRouter.ts         # 意图路由
+│   │   │   └── ...                     # 其他 API 模块
 │   │   └── styles/             # 全局样式
 │   ├── package.json
 │   └── vite.config.ts
+├── deerflow/                   # DeerFlow Agent 运行时 (v1.29.0)
+│   └── backend/
+│       └── packages/harness/
+│           └── deerflow/community/her_tools/  # Her Tools
+├── docs/                       # 文档目录
+│   ├── DUAL_ENGINE_MATCH_ARCHITECTURE.md  # 双引擎架构
+│   ├── VECTOR_MATCH_SYSTEM_DESIGN.md      # 向量匹配设计
+│   └── ...                     # 其他文档
+├── src/
+│   ├── HER_ADVISOR_ARCHITECTURE.md  # Her 顾问架构设计
+│   └── MATCHING_ARCHITECTURE.md     # 匹配架构设计
 ├── requirements.txt            # 依赖列表
+├── Makefile                    # 一键启动命令
+├── start.sh                    # 启动脚本
+├── stop.sh                     # 停止脚本
 └── README.md                   # 本文档
 ```
 
@@ -345,7 +401,7 @@ Her/
 当前测试覆盖情况：
 
 ```
-总计：1875 测试用例（pytest 收集）
+总计：3492 测试用例（pytest 收集）
 
 # 运行全量测试
 pytest -v

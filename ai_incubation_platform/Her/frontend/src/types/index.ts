@@ -44,6 +44,21 @@ export interface SwipeFeedbackOverlay {
   opacity: number
 }
 
+/**
+ * 前端组件使用的匹配候选人统一格式
+ *
+ * 区别说明：
+ * - MatchCandidate: 前端组件统一格式（嵌套 User 对象）
+ * - SkillMatchCandidate (见 skill.ts): Skill/API 返回的原始数据（扁平结构）
+ *
+ * 转换示例：
+ *   // SkillMatchCandidate → MatchCandidate
+ *   const matchCandidate = {
+ *     user: { id: skillMatch.user_id, name: skillMatch.name, ... },
+ *     compatibility_score: skillMatch.score,
+ *     reasoning: skillMatch.reasoning,
+ *   }
+ */
 export interface MatchCandidate {
   user: User
   compatibility_score: number
@@ -85,15 +100,37 @@ export interface ConversationMatchResponse {
   // AI Native 用户画像收集
   question_card?: QuestionCard  // AI 生成的个人信息收集卡片
   need_profile_collection?: boolean  // 是否需要收集信息
+  // Her 顾问服务新增字段
+  bias_analysis?: {
+    has_bias: boolean
+    bias_type?: string
+    bias_description?: string
+    actual_suitable_type?: string
+    potential_risks?: string[]
+    adjustment_suggestion?: string
+    confidence: number
+  }
+  proactive_suggestion?: {
+    suggestions: Array<{
+      type: string
+      importance: string
+      message: string
+      suggestion: string
+    }>
+    has_critical_suggestion: boolean
+  }
 }
 
-// 流式响应类型
+// 流式响应类型（Agent Native 架构扩展）
 export interface StreamChunk {
-  type: 'text' | 'match' | 'suggestion' | 'done'
+  type: 'text' | 'match' | 'suggestion' | 'done' | 'values' | 'messages-tuple' | 'custom'
   content?: string
   matches?: MatchCandidate[]
+  candidates?: MatchCandidate[]  // DeerFlow 兼容名称
   suggestions?: string[]
   next_actions?: string[]
+  // DeerFlow 流式事件额外字段
+  data?: Record<string, any>
 }
 
 export interface DailyRecommendResponse {

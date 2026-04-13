@@ -56,7 +56,7 @@ class DateReminderService(BaseService):
         Returns:
             约会计划详情
         """
-        from models.date_reminder import DatePlanDB
+        from models.date_reminder import DateReminderPlanDB
 
         plan_id = str(uuid.uuid4())
 
@@ -68,7 +68,7 @@ class DateReminderService(BaseService):
         }
         reminders = reminder_settings or default_reminders
 
-        plan = DatePlanDB(
+        plan = DateReminderPlanDB(
             id=plan_id,
             user_id=user_id,
             partner_id=partner_id,
@@ -113,15 +113,15 @@ class DateReminderService(BaseService):
         Returns:
             约会列表
         """
-        from models.date_reminder import DatePlanDB
+        from models.date_reminder import DateReminderPlanDB
 
         now = datetime.now()
 
-        dates = self.db.query(DatePlanDB).filter(
-            DatePlanDB.user_id == user_id,
-            DatePlanDB.date_time > now,
-            DatePlanDB.status != "cancelled"
-        ).order_by(DatePlanDB.date_time).limit(limit).all()
+        dates = self.db.query(DateReminderPlanDB).filter(
+            DateReminderPlanDB.user_id == user_id,
+            DateReminderPlanDB.date_time > now,
+            DateReminderPlanDB.status != "cancelled"
+        ).order_by(DateReminderPlanDB.date_time).limit(limit).all()
 
         return [
             {
@@ -161,16 +161,16 @@ class DateReminderService(BaseService):
         Returns:
             待提醒列表
         """
-        from models.date_reminder import DatePlanDB
+        from models.date_reminder import DateReminderPlanDB
 
         now = datetime.now()
 
         # 查询所有即将到来的约会
-        upcoming = self.db.query(DatePlanDB).filter(
-            DatePlanDB.user_id == user_id,
-            DatePlanDB.date_time > now,
-            DatePlanDB.date_time <= now + timedelta(hours=24),
-            DatePlanDB.status == "scheduled"
+        upcoming = self.db.query(DateReminderPlanDB).filter(
+            DateReminderPlanDB.user_id == user_id,
+            DateReminderPlanDB.date_time > now,
+            DateReminderPlanDB.date_time <= now + timedelta(hours=24),
+            DateReminderPlanDB.status == "scheduled"
         ).all()
 
         reminders = []
@@ -220,9 +220,9 @@ class DateReminderService(BaseService):
 
     def mark_reminder_sent(self, plan_id: str, reminder_type: str) -> bool:
         """标记提醒已发送"""
-        from models.date_reminder import DatePlanDB
+        from models.date_reminder import DateReminderPlanDB
 
-        plan = self.db.query(DatePlanDB).filter(DatePlanDB.id == plan_id).first()
+        plan = self.db.query(DateReminderPlanDB).filter(DateReminderPlanDB.id == plan_id).first()
         if not plan:
             return False
 
@@ -314,9 +314,9 @@ class DateReminderService(BaseService):
         Returns:
             是否成功
         """
-        from models.date_reminder import DatePlanDB
+        from models.date_reminder import DateReminderPlanDB
 
-        plan = self.db.query(DatePlanDB).filter(DatePlanDB.id == plan_id).first()
+        plan = self.db.query(DateReminderPlanDB).filter(DateReminderPlanDB.id == plan_id).first()
         if not plan:
             return False
 

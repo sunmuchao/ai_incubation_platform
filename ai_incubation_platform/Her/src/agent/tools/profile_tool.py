@@ -2,12 +2,12 @@
 画像读取工具
 
 用于读取用户完整画像，包括基本信息、兴趣价值观、偏好设置等。
+架构说明：用户数据从数据库 UserDB 查询，详见 HER_ADVISOR_ARCHITECTURE.md
 """
 from typing import Dict, Any, Optional
 from db.database import get_db
 from db.repositories import UserRepository
 from utils.logger import logger
-from matching.matcher import matchmaker
 
 
 class ProfileTool:
@@ -65,14 +65,7 @@ class ProfileTool:
             # 从数据库读取用户
             db_user = user_repo.get_by_id(user_id)
             if not db_user:
-                # 尝试从匹配系统内存中读取
-                memory_user = matchmaker._users.get(user_id)
-                if memory_user:
-                    logger.info(f"ProfileTool: User found in memory: {user_id}")
-                    return {
-                        "source": "memory",
-                        "profile": memory_user
-                    }
+                # 注：matchmaker._users 已废弃，不再从内存读取
                 logger.warning(f"ProfileTool: User not found: {user_id}")
                 return {"error": "User not found"}
 

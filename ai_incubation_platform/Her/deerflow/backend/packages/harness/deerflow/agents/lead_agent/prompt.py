@@ -507,11 +507,12 @@ combined with a FastAPI gateway for REST API access [citation:FastAPI](https://f
 """
 
 
-def _get_memory_context(agent_name: str | None = None) -> str:
+def _get_memory_context(agent_name: str | None = None, user_id: str | None = None) -> str:
     """Get memory context for injection into system prompt.
 
     Args:
         agent_name: If provided, loads per-agent memory. If None, loads global memory.
+        user_id: If provided, loads per-user memory. Each user has independent memory file.
 
     Returns:
         Formatted memory context string wrapped in XML tags, or empty string if disabled.
@@ -524,7 +525,9 @@ def _get_memory_context(agent_name: str | None = None) -> str:
         if not config.enabled or not config.injection_enabled:
             return ""
 
-        memory_data = get_memory_data(agent_name)
+        # 优先级：user_id > agent_name > global
+        # user_id 用于用户隔离，每个用户有独立的 memory 文件
+        memory_data = get_memory_data(agent_name, user_id)
         memory_content = format_memory_for_injection(memory_data, max_tokens=config.max_injection_tokens)
 
         if not memory_content.strip():
@@ -674,9 +677,9 @@ def _build_custom_mounts_section() -> str:
     return f"\n**Custom Mounted Directories:**\n{mounts_list}\n- If the user needs files outside `/mnt/user-data`, use these absolute container paths directly when they match the requested directory"
 
 
-def apply_prompt_template(subagent_enabled: bool = False, max_concurrent_subagents: int = 3, *, agent_name: str | None = None, available_skills: set[str] | None = None) -> str:
-    # Get memory context
-    memory_context = _get_memory_context(agent_name)
+def apply_prompt_template(subagent_enabled: bool = False, max_concurrent_subagents: int = 3, *, agent_name: str | None = None, available_skills: set[str] | None = None, user_id: str | None = None) -> str:
+    # Get memory context (支持用户隔离)
+    memory_context = _get_memory_context(agent_name, user_id)
 
     # Include subagent section only if enabled (from runtime parameter)
     n = max_concurrent_subagents

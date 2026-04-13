@@ -1,186 +1,112 @@
 """
-路由注册中心
+路由自动注册中心
 
-将所有路由注册逻辑集中管理，保持 main.py 简洁。
+使用自动扫描机制替代手动导入，减少维护成本。
+
+自动扫描规则：
+1. 扫描 api/*.py 所有文件
+2. 提取所有以 'router' 开头的变量（router, router_xxx）
+3. 自动注册到 FastAPI 应用
+
+版本历史：
+- v1.0.0: 手动导入（43 个路由文件，180+ 行代码）
+- v2.0.0: 自动扫描注册（~50 行代码）
 """
 from fastapi import FastAPI
+import importlib
+import pathlib
+from typing import List
+
 from utils.logger import logger
+
+
+def discover_routers(api_dir: pathlib.Path) -> List[tuple]:
+    """
+    发现所有 API 路由器
+
+    Args:
+        api_dir: api 目录路径
+
+    Returns:
+        [(router_name, router_object), ...] 列表
+    """
+    routers = []
+
+    for py_file in api_dir.glob("*.py"):
+        # 排除 __init__.py 和非路由文件
+        if py_file.name.startswith("_"):
+            continue
+
+        module_name = f"api.{py_file.stem}"
+
+        try:
+            module = importlib.import_module(module_name)
+
+            # 提取所有以 'router' 开头的变量
+            for attr_name in dir(module):
+                if attr_name.startswith("router"):
+                    router_obj = getattr(module, attr_name)
+                    # 验证是否是 APIRouter
+                    if hasattr(router_obj, "routes"):
+                        routers.append((attr_name, router_obj))
+                        logger.debug(f"[RouterDiscovery] 发现路由: {module_name}.{attr_name}")
+
+        except Exception as e:
+            logger.warning(f"[RouterDiscovery] 导入 {module_name} 失败: {e}")
+
+    return routers
 
 
 def register_all_routers(app: FastAPI) -> None:
     """
-    注册所有路由到 FastAPI 应用
+    自动注册所有路由到 FastAPI 应用
+
+    使用自动扫描机制，无需手动维护导入列表
     """
-    logger.info("Starting router registration...")
+    logger.info("[RouterRegistry] 开始自动扫描注册路由...")
+
+    # 获取 api 目录路径
+    api_dir = pathlib.Path(__file__).parent.parent / "api"
+
+    if not api_dir.exists():
+        logger.error(f"[RouterRegistry] API 目录不存在: {api_dir}")
+        return
+
+    # 发现所有路由器
+    routers = discover_routers(api_dir)
+
+    # 注册到应用
     registered_count = 0
+    for router_name, router_obj in routers:
+        try:
+            app.include_router(router_obj)
+            registered_count += 1
+            logger.debug(f"[RouterRegistry] 注册成功: {router_name}")
+        except Exception as e:
+            logger.error(f"[RouterRegistry] 注册 {router_name} 失败: {e}")
 
-    # ========== 核心路由 ==========
-    from api.users import router as users_router
-    from api.matching import router as matching_router
-    from api.relationship import router as relationship_router
-    from api.activities import router as activities_router
-    from api.profile import router as profile_router
+    logger.info(f"[RouterRegistry] 路由自动注册完成，共 {registered_count} 个路由器")
 
-    app.include_router(users_router)
-    app.include_router(matching_router)
-    app.include_router(relationship_router)
-    app.include_router(activities_router)
-    app.include_router(profile_router)
-    registered_count += 5
+    # 打印路由摘要（便于调试）
+    _print_router_summary(app, registered_count)
 
-    # ========== 扩展路由 ==========
-    from api.photos import router as photos_router
-    from api.identity_verification import router as identity_router
-    from api.chat import router as chat_router
-    from api.membership import router as membership_router
-    from api.verification_badges import router as verification_router
-    from api.ai_companion import router as companion_router
-    from api.relationship_preferences import router as relationship_pref_router
 
-    app.include_router(photos_router)
-    app.include_router(identity_router)
-    app.include_router(chat_router)
-    app.include_router(membership_router)
-    app.include_router(verification_router)
-    app.include_router(companion_router)
-    app.include_router(relationship_pref_router)
-    registered_count += 7
+def _print_router_summary(app: FastAPI, total_count: int) -> None:
+    """打印路由摘要信息"""
+    routes_by_prefix = {}
 
-    # ========== 通知分享路由 ==========
-    from api.notification_share_apis import router_notifications, router_share
-    app.include_router(router_notifications)
-    app.include_router(router_share)
-    registered_count += 2
+    for route in app.routes:
+        if hasattr(route, "path"):
+            prefix = route.path.split("/")[1] if route.path.count("/") >= 1 else "root"
+            if prefix not in routes_by_prefix:
+                routes_by_prefix[prefix] = 0
+            routes_by_prefix[prefix] += 1
 
-    # ========== Milestone 路由 ==========
-    from api.milestone_apis import router_milestones, router_date_suggestions, router_couple_games
-    app.include_router(router_milestones)
-    app.include_router(router_date_suggestions)
-    app.include_router(router_couple_games)
-    registered_count += 3
-
-    # ========== LifeIntegration 路由 ==========
-    from api.life_integration_apis import (
-        router_date_plan, router_album, router_tribe, router_digital_home,
-        router_family_sim, router_stress_test, router_growth, router_trust
-    )
-    app.include_router(router_date_plan)
-    app.include_router(router_album)
-    app.include_router(router_tribe)
-    app.include_router(router_digital_home)
-    app.include_router(router_family_sim)
-    app.include_router(router_stress_test)
-    app.include_router(router_growth)
-    app.include_router(router_trust)
-    registered_count += 8
-
-    # ========== 微信登录路由 ==========
-    from api.wechat_login import router as wechat_login_router
-    app.include_router(wechat_login_router)
-    registered_count += 1
-
-    # ========== Rose 玫瑰表达路由 ==========
-    from api.rose import router as rose_router
-    app.include_router(rose_router)
-    registered_count += 1
-
-    # ========== Gift 虚拟礼物路由 ==========
-    from api.gift import router as gift_router
-    app.include_router(gift_router)
-    registered_count += 1
-
-    # ========== FaceVerification 人脸认证路由 ==========
-    from api.face_verification import router as face_verification_router
-    app.include_router(face_verification_router)
-    registered_count += 1
-
-    # ========== Your Turn 提醒路由 ==========
-    from api.your_turn import router as your_turn_router
-    app.include_router(your_turn_router)
-    registered_count += 1
-
-    # ========== Who Likes Me 路由 ==========
-    from api.who_likes_me import router as who_likes_me_router
-    app.include_router(who_likes_me_router)
-    registered_count += 1
-
-    # ========== Photo Comment 路由 ==========
-    from api.photo_comment import router as photo_comment_router
-    app.include_router(photo_comment_router)
-    registered_count += 1
-
-    # ========== Video Clip 路由 ==========
-    from api.video_clip import router as video_clip_router
-    app.include_router(video_clip_router)
-    registered_count += 1
-
-    # ========== Matching Preference 路由 ==========
-    from api.matching_preference import router as matching_preference_router
-    app.include_router(matching_preference_router)
-    registered_count += 1
-
-    # ========== Date Reminder 路由 ==========
-    from api.date_reminder import router as date_reminder_router
-    app.include_router(date_reminder_router)
-    registered_count += 1
-
-    # ========== Gift Integration 路由 ==========
-    from api.gift_integration import router as gift_integration_router
-    app.include_router(gift_integration_router)
-    registered_count += 1
-
-    # ========== v1.x 功能路由 ==========
-    from api.payment import router as payment_router
-    from api.video_date import router as video_date_router
-    from api.performance import router as performance_router
-    app.include_router(payment_router)
-    app.include_router(video_date_router)
-    app.include_router(performance_router)
-    registered_count += 3
-
-    # ========== AI Native 路由 ==========
-    from api.ai_awareness import router as ai_awareness_router
-    from api.skills import router as skills_router
-    from api.agent_intervention import router as agent_intervention_router
-    from api.llm_cache import router as llm_cache_router
-    from api.digital_twin import router as digital_twin_router
-    from api.scene_detection import router as scene_detection_router
-    from api.checker import router as checker_router
-    from api.grayscale_apis import router as grayscale_router
-    from api.autonomous_apis import router as autonomous_router
-    from api.deerflow import router as deerflow_router
-    app.include_router(ai_awareness_router)
-    app.include_router(skills_router)
-    app.include_router(agent_intervention_router)
-    app.include_router(llm_cache_router)
-    app.include_router(digital_twin_router)
-    app.include_router(scene_detection_router)
-    app.include_router(checker_router)
-    app.include_router(grayscale_router)
-    app.include_router(autonomous_router)
-    app.include_router(deerflow_router)
-    registered_count += 10
-
-    logger.info(f"All routers registered successfully. Total: {registered_count}")
-
-    # ========== 已删除路由说明 ==========
-    # 以下功能已迁移至 Skill 层，不再暴露 HTTP 路由：
-    # - behavior, recommendation, safety: 改用 Skill 调用
-    # - emotion_analysis, behavior_lab, conflict_handling: 改用 Skill 调用
-    # - values_evolution, perception_layer: 改用 Skill 调用
-    # - love_language_profile, date_simulation: 改用 Skill 调用
-    # - conversation_matching, registration_conversation: 改用 Skill 调用
-    # - deep_icebreaker, joint_activity: 改用 Skill 调用
-    # - message_interpretation, stress_test: 改用 Skill 调用
-    #
-    # 已合并路由：
-    # - conversations → chat.py
-    # - video → video_date.py
-    # - api_checker + skills_checker → checker.py
+    logger.info(f"[RouterRegistry] 路由分布: {dict(sorted(routes_by_prefix.items()))}")
 
 
 def get_api_endpoints_summary() -> dict:
-    """获取 API 端点摘要"""
+    """获取 API 端点摘要（兼容旧接口）"""
     return {
         "core": "/api/users, /api/matching, /api/relationship",
         "social": "/api/chat, /api/photos, /api/activities",
@@ -188,6 +114,112 @@ def get_api_endpoints_summary() -> dict:
         "safety": "/api/identity, /api/verification",
         "ai_features": "/api/ai-companion, /api/skills",
         "milestone": "/api/milestones, /api/date-suggestions, /api/couple-games",
-        "life_integration": "/api/date-plan, /api/album, /api/tribe, /api/digital-home",
+        "life_integration": "/api/autonomous-dating, /api/relationship-albums, /api/tribe",
         "ai_native": "/api/ai-awareness, /api/deerflow, /api/autonomous",
     }
+
+
+# ============= 保留手动注册备份（过渡期使用）============
+
+def register_all_routers_manual(app: FastAPI) -> None:
+    """
+    手动注册所有路由（备份方案）
+
+    如果自动扫描出现问题，可以切换到此方法
+    注意：此方法与自动扫描使用相同的文件名和路由器命名
+    """
+    logger.info("Starting router registration (manual backup mode)...")
+    registered_count = 0
+
+    # ========== 单路由文件（39 个）==========
+    # 注意：errors.py 没有 router，它是工具模块
+    single_router_files = [
+        ("activities", "router"),
+        ("verification_badges", "router"),
+        ("date_reminder", "router"),
+        ("deerflow", "router"),
+        ("grayscale_apis", "router"),
+        ("relationship", "router"),
+        ("gift_integration", "router"),
+        ("checker", "router"),
+        ("digital_twin", "router"),
+        ("wechat_login", "router"),
+        ("skills", "router"),
+        ("identity_verification", "router"),
+        ("payment", "router"),
+        ("rose", "router"),
+        ("who_likes_me", "router"),
+        ("llm_cache", "router"),
+        ("membership", "router"),
+        ("video_clip", "router"),
+        ("profile", "router"),
+        ("autonomous_apis", "router"),
+        ("performance", "router"),
+        ("ai_awareness", "router"),
+        ("relationship_preferences", "router"),
+        ("profile_confidence", "router"),
+        ("her_advisor", "router"),
+        ("photos", "router"),
+        ("face_verification", "router"),
+        ("ai_companion", "router"),
+        ("matching", "router"),
+        ("your_turn", "router"),
+        ("scene_detection", "router"),
+        ("chat", "router"),
+        ("gift", "router"),
+        ("agent_intervention", "router"),
+        ("video_date", "router"),
+        ("photo_comment", "router"),
+        ("matching_preference", "router"),
+        ("users", "router"),
+    ]
+
+    for file_name, router_name in single_router_files:
+        try:
+            module = importlib.import_module(f"api.{file_name}")
+            router = getattr(module, router_name)
+            app.include_router(router)
+            registered_count += 1
+        except Exception as e:
+            logger.warning(f"[ManualBackup] 注册 {file_name}.{router_name} 失败: {e}")
+
+    # ========== 多路由文件（3 个文件，11 个路由器）==========
+
+    # milestone_apis.py: 3 个路由器
+    try:
+        from api.milestone_apis import router_milestones, router_date_suggestions, router_couple_games
+        app.include_router(router_milestones)
+        app.include_router(router_date_suggestions)
+        app.include_router(router_couple_games)
+        registered_count += 3
+    except Exception as e:
+        logger.warning(f"[ManualBackup] 注册 milestone_apis 路由失败: {e}")
+
+    # life_integration_apis.py: 8 个路由器
+    try:
+        from api.life_integration_apis import (
+            router_date_plan, router_album, router_tribe, router_digital_home,
+            router_family_sim, router_stress_test, router_growth, router_trust
+        )
+        app.include_router(router_date_plan)
+        app.include_router(router_album)
+        app.include_router(router_tribe)
+        app.include_router(router_digital_home)
+        app.include_router(router_family_sim)
+        app.include_router(router_stress_test)
+        app.include_router(router_growth)
+        app.include_router(router_trust)
+        registered_count += 8
+    except Exception as e:
+        logger.warning(f"[ManualBackup] 注册 life_integration_apis 路由失败: {e}")
+
+    # notification_share_apis.py: 2 个路由器
+    try:
+        from api.notification_share_apis import router_notifications, router_share
+        app.include_router(router_notifications)
+        app.include_router(router_share)
+        registered_count += 2
+    except Exception as e:
+        logger.warning(f"[ManualBackup] 注册 notification_share_apis 路由失败: {e}")
+
+    logger.info(f"All routers registered successfully (manual backup). Total: {registered_count}")

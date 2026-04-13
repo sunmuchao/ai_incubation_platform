@@ -2,7 +2,7 @@
 统一配置管理模块
 所有配置从环境变量读取，支持.env 文件
 """
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional, List
 import os
 from dotenv import load_dotenv
@@ -16,6 +16,11 @@ load_dotenv(os.path.join(_base_dir, '.env'))
 
 class Settings(BaseSettings):
     """应用配置"""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=False,
+    )
 
     # 服务配置
     app_version: str = "0.5.0"
@@ -146,10 +151,6 @@ class Settings(BaseSettings):
         for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
         if o.strip()
     ]
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
 
 
 # 全局配置实例

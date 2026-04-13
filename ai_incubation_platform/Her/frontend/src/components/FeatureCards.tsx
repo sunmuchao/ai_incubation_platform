@@ -62,12 +62,7 @@ import {
 
 import photosApi from '../api/photosApi'
 import { SkeletonCard, SkeletonText } from './Skeleton'
-import {
-  silenceBreakerSkill,
-  chatAssistantSkill,
-  activityDirectorSkill,
-  relationshipCoachSkill
-} from '../api/skillClient'
+import { deerflowClient } from '../api/deerflowClient'
 import { authStorage } from '../utils/storage'
 
 const { Title, Text, Paragraph } = Typography
@@ -948,9 +943,18 @@ const DeepIcebreakerCard: React.FC<DeepIcebreakerCardProps> = ({ onTopicSelect }
     setLoading(true)
     try {
       const userId = authStorage.getUserId()
-      const result = await silenceBreakerSkill.generateTopics(userId, 'partner-test', {})
-      if (result.success) {
-        setTopics(result.topics || [])
+      const result = await deerflowClient.chat("帮我生成一些破冰话题，让我可以和匹配对象开启对话")
+
+      // Agent Native 架构：优先从 ai_message 解析 JSON
+      const parsed = deerflowClient.parseToolResult(result)
+      if (parsed?.type === 'topics' && parsed.data.topics?.length > 0) {
+        setTopics(parsed.data.topics)
+      } else if (result.success && result.tool_result?.data?.topics) {
+        // 降级：从 tool_result.data 获取（兼容旧架构）
+        setTopics(result.tool_result.data.topics)
+      } else {
+        // 如果没有结构化数据，从 AI 消息中解析
+        setTopics([{ topic_content: result.ai_message }])
       }
     } catch (error) {
       message.error('生成话题失败')
@@ -1019,11 +1023,12 @@ const MessageInterpretationCard: React.FC<MessageInterpretationCardProps> = ({
     setLoading(true)
     try {
       const userId = authStorage.getUserId()
-      const result = await chatAssistantSkill.getSuggestions(userId, partnerId)
+      const result = await deerflowClient.chat(`帮我解读这条消息的含义并给出回复建议："${messageContent}"`)
       if (result.success) {
+        const suggestions = result.tool_result?.data?.suggestions || [result.ai_message]
         setInterpretation({
-          meaning: '对方想要继续对话',
-          suggestions: result.data?.suggestions || ['好的，继续聊聊吧']
+          meaning: result.tool_result?.data?.meaning || '对方想要继续对话',
+          suggestions
         })
       }
     } catch (error) {
@@ -1097,9 +1102,22 @@ const JointActivityCard: React.FC<JointActivityCardProps> = ({
     setLoading(true)
     try {
       const userId = authStorage.getUserId()
-      const result = await activityDirectorSkill.recommendActivity(userId, partnerProfile?.id || 'partner-test', {})
-      if (result.success) {
-        setActivities(result.activities || [])
+      const result = await deerflowClient.chat("推荐一些适合我们两个人的约会活动")
+
+      // Agent Native 架构：优先从 ai_message 解析 JSON
+      const parsed = deerflowClient.parseToolResult(result)
+      if (parsed?.type === 'date_plans' && parsed.data.plans?.length > 0) {
+        setActivities(parsed.data.plans)
+      } else if (parsed?.type === 'activities' && parsed.data.activities?.length > 0) {
+        setActivities(parsed.data.activities)
+      } else if (result.success && result.tool_result?.data?.activities) {
+        // 降级：从 tool_result.data 获取（兼容旧架构）
+        setActivities(result.tool_result.data.activities)
+      } else if (result.success && result.tool_result?.data?.plans) {
+        setActivities(result.tool_result.data.plans)
+      } else {
+        // 如果没有结构化数据，从 AI 消息中解析
+        setActivities([{ activity_name: 'AI推荐', description: result.ai_message }])
       }
     } catch (error) {
       message.error('推荐失败')
@@ -1165,10 +1183,10 @@ const StressTestCard: React.FC<StressTestCardProps> = ({
   const startTest = async () => {
     setLoading(true)
     try {
-      const result = await relationshipCoachSkill.createStressTest(userId, partnerId, 'value_conflict')
+      const result = await deerflowClient.chat("帮我创建一个关系压力测试，测试我们的价值观冲突应对能力")
       if (result.success) {
         message.success('测试已创建，请在弹窗中完成测试')
-        onComplete?.({ testId: result.test_id })
+        onComplete?.({ testId: result.tool_result?.data?.test_id || 'test-' + Date.now() })
       }
     } catch (error) {
       message.error('创建测试失败')

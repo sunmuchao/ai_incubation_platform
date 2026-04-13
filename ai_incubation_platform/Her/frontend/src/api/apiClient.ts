@@ -2,12 +2,42 @@
  * 统一的 Axios API 客户端配置
  *
  * 所有 API 模块应导入此实例，避免重复配置
+ *
+ * 统一认证入口：
+ * - getAuthHeaders() - 获取认证头
+ * - getCurrentUserId() - 获取当前用户 ID（从 useCurrentUserId.ts 统一导出）
  */
 
 import axios from 'axios'
 import { authStorage, devStorage } from '@/utils/storage'
+import { getCurrentUserId as _getCurrentUserId } from '@/hooks/useCurrentUserId'
 
 const API_BASE_URL = ''
+
+// ==================== 统一认证入口 ====================
+
+/**
+ * 获取认证请求头
+ *
+ * 所有 API 模块应使用此函数，避免重复实现
+ */
+export function getAuthHeaders(): Record<string, string> {
+  const token = authStorage.getToken()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+  return headers
+}
+
+/**
+ * 获取当前用户 ID
+ *
+ * 统一从 useCurrentUserId.ts 导出，确保单一真相来源
+ */
+export const getCurrentUserId = _getCurrentUserId
+
+// ==================== Axios 客户端 ====================
 
 // 创建统一的 axios 实例
 export const apiClient = axios.create({

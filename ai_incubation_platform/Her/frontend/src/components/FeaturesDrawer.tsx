@@ -14,7 +14,7 @@ import {
   GiftOutlined, PictureOutlined,
   VerifiedOutlined, CrownOutlined, HeartFilled, AppstoreOutlined, SwapOutlined,
   HeartOutlined, SettingOutlined,
-  CalendarOutlined, VideoCameraOutlined
+  CalendarOutlined, VideoCameraOutlined, SafetyCertificateOutlined
 } from '@ant-design/icons'
 
 const { Text, Paragraph } = Typography
@@ -81,6 +81,13 @@ export const FEATURES: Feature[] = [
     name: '约会提醒',
     description: '管理约会计划',
     action: 'date_reminder',
+  },
+  {
+    icon: <SafetyCertificateOutlined style={{ color: '#52c41a', fontSize: 20 }} />,
+    name: '可信度管理',
+    description: '查看你的置信度评估和验证建议',
+    action: 'confidence',
+    badge: '新'
   },
   {
     icon: <VideoCameraOutlined style={{ color: PRIMARY_COLOR, fontSize: 20 }} />,

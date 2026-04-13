@@ -24,6 +24,7 @@ const PushNotifications = lazy(() => import('../components/PushNotifications'))
 const AgentFloatingBall = lazy(() => import('../components/AgentFloatingBall'))
 const SwipeMatchPage = lazy(() => import('./SwipeMatchPage'))
 const WhoLikesMePage = lazy(() => import('./WhoLikesMePage'))
+const ConfidenceManagementPage = lazy(() => import('./ConfidenceManagementPage'))
 const YourTurnReminder = lazy(() => import('../components/YourTurnReminder'))
 // 🚀 [性能优化] FeaturesButton 需要立即渲染，直接导入
 import { FeaturesButton } from '../components/FeaturesDrawer'
@@ -55,6 +56,7 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
   const [featuresDrawerOpen, setFeaturesDrawerOpen] = useState(false) // 功能抽屉状态
   const [showSwipeMatch, setShowSwipeMatch] = useState(false) // 滑动匹配页面状态
   const [showWhoLikesMe, setShowWhoLikesMe] = useState(false) // Who Likes Me 页面状态
+  const [showConfidence, setShowConfidence] = useState(false) // 置信度管理页面状态
   const [herSleeping, setHerSleeping] = useState(herStorage.isSleepingInChat()) // Her 休眠状态
   const userId = userInfo?.username || 'user-anonymous-dev'
 
@@ -126,8 +128,8 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
             const partnerName = cachedMatch?.user?.name || partnerId
 
             notification.info({
-              message: '收到新消息',
-              description: `${partnerName}: ${conv.last_message_preview || '发来了一条消息'}`,
+              message: t('conversation.newMessageNotify'),
+              description: `${partnerName}: ${conv.last_message_preview || t('conversation.sentMessage')}`,
               icon: <CommentOutlined style={{ color: '#1890ff' }} />,
               duration: 5,
               placement: 'topRight',
@@ -237,6 +239,12 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
       return
     }
 
+    // 置信度管理功能 - 直接显示页面
+    if (feature.action === 'confidence') {
+      setShowConfidence(true)
+      return
+    }
+
     // Your Turn 功能 - 触发 ChatInterface 显示 YourTurnReminder
     if (feature.action === 'your_turn') {
       window.dispatchEvent(new CustomEvent('trigger-feature', {
@@ -245,7 +253,7 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
       return
     }
 
-    message.info(`正在打开「${feature.name}」...`)
+    message.info(t('home.openingFeature', { name: feature.name }))
 
     // 其他功能触发 ChatInterface 生成对应的功能卡片
     window.dispatchEvent(new CustomEvent('trigger-feature', {
@@ -259,13 +267,21 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
   }
 
   // 从 Who Likes Me 页面返回
+  const handleBackFromWhoLikesMe = () => {
+    setShowWhoLikesMe(false)
+  }
+
+  // 从置信度管理页面返回
+  const handleBackFromConfidence = () => {
+    setShowConfidence(false)
+  }
 
   const renderView = () => {
     // 滑动匹配页面
     if (showSwipeMatch) {
       return (
         <div className="swipe-match-view">
-          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip="加载滑动匹配..." /></div>}>
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip={t('home.loadingSwipeMatch')} /></div>}>
             <SwipeMatchPage onBack={handleBackFromSwipe} />
           </Suspense>
         </div>
@@ -276,13 +292,13 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
     if (showWhoLikesMe) {
       return (
         <div className="who-likes-me-view">
-          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip="加载喜欢你的人..." /></div>}>
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip={t('home.loadingWhoLikesMe')} /></div>}>
             <WhoLikesMePage
               userId={userId}
               onMatch={(_matchId, matchData) => {
                 // 匹配成功后打开聊天
                 if (matchData?.targetUserId) {
-                  handleOpenChatRoom(matchData.targetUserId, '新匹配')
+                  handleOpenChatRoom(matchData.targetUserId, t('home.newMatch'))
                 }
                 setShowWhoLikesMe(false)
               }}
@@ -292,11 +308,22 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
       )
     }
 
+    // 置信度管理页面
+    if (showConfidence) {
+      return (
+        <div className="confidence-view">
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip="加载置信度数据..." /></div>}>
+            <ConfidenceManagementPage onBack={handleBackFromConfidence} />
+          </Suspense>
+        </div>
+      )
+    }
+
     if (chatRoomMatch) {
       return (
         <div className="chat-room-view">
           {/* 🚀 [性能优化] Suspense 包裹懒加载的 ChatRoom */}
-          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip="加载聊天室..." /></div>}>
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip={t('home.loadingChatRoom')} /></div>}>
             <ChatRoom
               match={chatRoomMatch}
               onBack={handleBackToChat}
@@ -349,7 +376,7 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
               />
             </Suspense>
             {/* 聊天室或滑动匹配模式下隐藏功能按钮，专注当前体验 */}
-              {!chatRoomMatch && !showSwipeMatch && !showWhoLikesMe && <FeaturesButton onClick={() => setFeaturesDrawerOpen(true)} />}
+              {!chatRoomMatch && !showSwipeMatch && !showWhoLikesMe && !showConfidence && <FeaturesButton onClick={() => setFeaturesDrawerOpen(true)} />}
             <Space>
               {userInfo && (
                 <Text type="secondary" style={{ fontSize: 14 }}>

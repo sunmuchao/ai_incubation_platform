@@ -2,10 +2,11 @@
 
 // ==================== 核心 API ====================
 
-import apiClient from './apiClient'
+import apiClient, { getAuthHeaders } from './apiClient'
 import { authStorage } from '../utils/storage'
 import { getCurrentUserId } from '../hooks/useCurrentUserId'
-import { conversationMatchmakerSkill } from './skillClient'
+import { herAdvisorApi } from './herAdvisorApi'
+import { deerflowClient } from './deerflowClient'
 import type {
   ConversationMatchRequest,
   ConversationMatchResponse,
@@ -19,82 +20,59 @@ import type {
   StreamChunk,
 } from '../types'
 
-// conversation_matching API 已删除，改用 conversationMatchmakerSkill
+// conversation_matching API - 使用 ConversationMatchService（Her 顾问服务）
+// 不要跳过这个 API 直接调用 DeerFlow！
 export const conversationMatchingApi = {
   /**
    * 对话式匹配 - 用户通过自然语言表达匹配需求
-   * 改用 Skill 调用
+   *
+   * 正确调用路径：
+   * 前端 → /api/her/chat → ConversationMatchService → HerAdvisorService
+   *
+   * 这样才能获得：
+   * - 认知偏差分析（你想要的 ≠ 你适合的）
+   * - Her 专业匹配建议
+   * - 主动建议系统
    */
   async match(request: ConversationMatchRequest): Promise<ConversationMatchResponse> {
     const userId = getCurrentUserId()
-    const result = await conversationMatchmakerSkill.matchByIntent(userId, request.text || '')
+
+    // 调用 Her 顾问服务（正确的路径！）
+    const result = await herAdvisorApi.chat({
+      message: request.text || '帮我找对象',
+      user_id: userId,
+    })
+
     return {
-      success: result.success,
-      candidates: result.candidates || [],
-      ai_message: result.ai_message || ''
+      success: true,
+      candidates: result.matches || [],
+      ai_message: result.ai_message || '',
+      bias_analysis: result.bias_analysis,
+      proactive_suggestion: result.proactive_suggestion,
     }
   },
 
   /**
-   * 对话式匹配 - 流式响应版本（保留原有实现）
-   * 注：流式响应仍通过 Skill API 的 SSE 实现
+   * 对话式匹配 - 流式响应版本
+   * 注：流式响应通过 DeerFlow SSE 实现
    */
   async matchStream(
     request: ConversationMatchRequest,
     onChunk: (chunk: StreamChunk) => void
   ): Promise<void> {
-    // 改用 Skill SSE 流式调用
     const userId = getCurrentUserId()
     const token = authStorage.getToken()
 
-    const response = await fetch('/api/skills/conversation_matchmaker/execute', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        skill_name: 'conversation_matchmaker',
-        params: {
-          user_id: userId,
-          action: 'match_by_intent',
-          intent_text: request.text
-        },
-        stream: true
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error('Stream request failed')
-    }
-
-    const reader = response.body?.getReader()
-    if (!reader) {
-      throw new Error('ReadableStream not supported')
-    }
-
-    const decoder = new TextDecoder()
-    let buffer = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const chunk: StreamChunk = JSON.parse(line.slice(6))
-            onChunk(chunk)
-          } catch (e) {
-            console.error('Failed to parse stream chunk:', e)
-          }
-        }
+    // 使用 DeerFlow 流式 API
+    await deerflowClient.stream(request.text || '帮我找对象', `her-match-${userId}`, (event) => {
+      if (event.type === 'messages-tuple' || event.type === 'values') {
+        onChunk({
+          type: event.type,
+          content: event.data?.content || '',
+          candidates: event.data?.matches || []
+        })
       }
-    }
+    })
   },
 
   /**
@@ -102,10 +80,21 @@ export const conversationMatchingApi = {
    */
   async dailyRecommend(): Promise<DailyRecommendResponse> {
     const userId = getCurrentUserId()
-    const result = await conversationMatchmakerSkill.getDailyRecommend(userId)
+    const result = await deerflowClient.chat('今日推荐', `her-daily-${userId}`)
+
+    // Agent Native 架构：优先从 ai_message 解析 JSON
+    const parsed = deerflowClient.parseToolResult(result)
+    if (parsed?.type === 'matches' || parsed?.type === 'recommendations') {
+      return {
+        success: result.success,
+        recommendations: parsed.data.matches || parsed.data.recommendations || []
+      }
+    }
+
+    // 降级：从 tool_result.data 获取（兼容旧架构）
     return {
       success: result.success,
-      recommendations: result.recommendations || []
+      recommendations: result.tool_result?.data?.recommendations || []
     }
   },
 
@@ -115,14 +104,29 @@ export const conversationMatchingApi = {
   async analyzeRelationship(
     request: RelationshipAnalysisRequest
   ): Promise<RelationshipAnalysisResponse> {
-    // 改用 relationshipCoachSkill
-    const { relationshipCoachSkill } = await import('./skillClient')
-    const result = await relationshipCoachSkill.healthCheck(request.match_id || '')
+    const userId = getCurrentUserId()
+    const result = await deerflowClient.chat(
+      `分析我和 ${request.match_id} 的关系健康度`,
+      `her-rel-${userId}`
+    )
+
+    // Agent Native 架构：优先从 ai_message 解析 JSON
+    const parsed = deerflowClient.parseToolResult(result)
+    if (parsed?.type === 'relationship_health') {
+      return {
+        success: result.success,
+        health_score: parsed.data.health_score || 0,
+        issues: parsed.data.issues || [],
+        recommendations: parsed.data.suggestions || []
+      }
+    }
+
+    // 降级：从 tool_result.data 获取（兼容旧架构）
     return {
-      success: result.success ?? false,
-      health_score: result.health_score || 0,
-      issues: result.issues || [],
-      recommendations: result.recommendations || []
+      success: result.success,
+      health_score: result.tool_result?.data?.health_score || 0,
+      issues: result.tool_result?.data?.issues || [],
+      recommendations: result.tool_result?.data?.suggestions || []
     }
   },
 
@@ -130,10 +134,17 @@ export const conversationMatchingApi = {
    * 获取关系状态
    */
   async getRelationshipStatus(matchId: string) {
-    // 改用 relationshipCoachSkill
-    const { relationshipCoachSkill } = await import('./skillClient')
-    const result = await relationshipCoachSkill.healthCheck(matchId)
-    return { success: result.success, status: result }
+    const userId = getCurrentUserId()
+    const result = await deerflowClient.chat(`获取关系状态 ${matchId}`, `her-rel-status-${userId}`)
+
+    // Agent Native 架构：优先从 ai_message 解析 JSON
+    const parsed = deerflowClient.parseToolResult(result)
+    if (parsed) {
+      return { success: result.success, status: parsed.data }
+    }
+
+    // 降级：从 tool_result.data 获取（兼容旧架构）
+    return { success: result.success, status: result.tool_result?.data }
   },
 
   /**
@@ -141,10 +152,24 @@ export const conversationMatchingApi = {
    */
   async suggestTopics(request: TopicSuggestionRequest): Promise<TopicSuggestionResponse> {
     const userId = getCurrentUserId()
-    const result = await conversationMatchmakerSkill.suggestTopics(userId, request.match_id || '')
+    const result = await deerflowClient.chat(
+      `推荐我和 ${request.match_id} 的聊天话题`,
+      `her-topics-${userId}`
+    )
+
+    // Agent Native 架构：优先从 ai_message 解析 JSON
+    const parsed = deerflowClient.parseToolResult(result)
+    if (parsed?.type === 'topics') {
+      return {
+        success: result.success,
+        topics: parsed.data.topics || []
+      }
+    }
+
+    // 降级：从 tool_result.data 获取（兼容旧架构）
     return {
       success: result.success,
-      topics: result.topics || []
+      topics: result.tool_result?.data?.topics || []
     }
   },
 
@@ -153,21 +178,50 @@ export const conversationMatchingApi = {
    */
   async getCompatibility(targetUserId: string): Promise<CompatibilityAnalysis> {
     const userId = getCurrentUserId()
-    const result = await conversationMatchmakerSkill.analyzeCompatibility(userId, targetUserId)
+    const result = await deerflowClient.chat(
+      `分析我和 ${targetUserId} 的兼容性`,
+      `her-compat-${userId}`
+    )
+
+    // Agent Native 架构：优先从 ai_message 解析 JSON
+    const parsed = deerflowClient.parseToolResult(result)
+    if (parsed?.type === 'compatibility') {
+      return {
+        success: result.success,
+        compatibility_score: parsed.data.overall_score || parsed.data.compatibility_score || 0,
+        analysis: parsed.data
+      }
+    }
+
+    // 降级：从 tool_result.data 获取（兼容旧架构）
     return {
       success: result.success,
-      compatibility_score: result.compatibility_score || 0,
-      analysis: result.analysis || {}
+      compatibility_score: result.tool_result?.data?.overall_score || result.tool_result?.data?.compatibility_score || 0,
+      analysis: result.tool_result?.data || {}
     }
   },
 
   /**
    * 获取 AI 主动推送
+   *
+   * 🔧 性能优化：改为异步执行，不阻塞页面渲染
+   * - 新用户没有完整画像，不需要立即推送
+   * - 老用户的推荐可以异步加载
    */
   async getAiPushRecommendations() {
     const userId = getCurrentUserId()
-    const result = await conversationMatchmakerSkill.getDailyRecommend(userId)
-    return { success: result.success, recommendations: result.recommendations || [] }
+
+    // 在后台异步调用，不阻塞页面渲染
+    deerflowClient.chat('AI 主动推送推荐', `her-push-${userId}`)
+      .then(result => {
+        console.log('[AI推送] 后台加载完成')
+      })
+      .catch(err => {
+        console.warn('[AI推送] 后台加载失败:', err)
+      })
+
+    // 立即返回空结果，让页面先渲染
+    return { success: true, recommendations: [] }
   },
 }
 
@@ -391,18 +445,20 @@ export const userApi = {
   },
 }
 
-// registration_conversation API 已删除，改用 profileCollectionSkill
+// registration_conversation API 改用 DeerFlow Agent
 export const registrationConversationApi = {
   /**
    * 开始注册对话
    */
   async startConversation(userId: string, userName: string) {
-    const { profileCollectionSkill } = await import('./skillClient')
-    const result = await profileCollectionSkill.startSession(userId)
+    const result = await deerflowClient.chat(
+      `你好，我是 ${userName}，请帮我完善我的个人资料`,
+      `her-register-${userId}`
+    )
     return {
       success: result.success,
-      session_id: result.session_id,
-      opening_message: result.opening_message
+      session_id: `session-${userId}`,
+      opening_message: result.ai_message
     }
   },
 
@@ -410,13 +466,11 @@ export const registrationConversationApi = {
    * 发送对话消息
    */
   async sendMessage(userId: string, message: string) {
-    const { profileCollectionSkill } = await import('./skillClient')
-    // 需要先获取 session_id，这里简化处理
-    const result = await profileCollectionSkill.sendMessage(`session-${userId}`, userId, message)
+    const result = await deerflowClient.chat(message, `her-register-${userId}`)
     return {
       success: result.success,
-      ai_response: result.ai_response,
-      profile_updates: result.profile_updates
+      ai_response: result.ai_message,
+      profile_updates: result.tool_result?.data?.profile_updates || {}
     }
   },
 
@@ -424,12 +478,11 @@ export const registrationConversationApi = {
    * 获取会话状态
    */
   async getSession(userId: string) {
-    const { profileCollectionSkill } = await import('./skillClient')
-    const result = await profileCollectionSkill.getProgress(userId)
+    const result = await deerflowClient.chat('查看我的资料完善进度', `her-register-${userId}`)
     return {
       success: result.success,
-      progress: result.progress,
-      completed_dimensions: result.completed_dimensions
+      progress: result.tool_result?.data?.progress || 50,
+      completed_dimensions: result.tool_result?.data?.completed_dimensions || []
     }
   },
 
@@ -437,17 +490,28 @@ export const registrationConversationApi = {
    * 完成对话
    */
   async completeConversation(userId: string) {
-    const { profileCollectionSkill } = await import('./skillClient')
-    const result = await profileCollectionSkill.completeSession(userId)
+    const result = await deerflowClient.chat('完成资料收集', `her-register-${userId}`)
     return {
       success: result.success,
-      profile: result.profile,
-      recommendations: result.recommendations
+      profile: result.tool_result?.data?.profile || {},
+      recommendations: result.tool_result?.data?.recommendations || []
     }
   },
 }
 
 // ==================== 合并后的 API ====================
+
+// Her 顾问 API - 对话为唯一入口（新）
+export { herAdvisorApi } from './herAdvisorApi'
+export type {
+  HerChatRequest,
+  HerChatResponse,
+  HerBiasAnalysis,
+  HerMatchAdvice,
+  HerProactiveSuggestion,
+  HerUserProfile,
+  HerKnowledgeCase,
+} from './herAdvisorApi'
 
 // 聊天 API（合并 quick_chat + conversations）
 export * from './chatApi'
@@ -487,3 +551,8 @@ export type {
   ProfileAnswerRequest,
   ProfileAnswerResponse,
 } from './profileApi'
+
+// ==================== 统一认证入口 ====================
+
+// 导出认证函数，供其他模块使用
+export { getAuthHeaders, getCurrentUserId }

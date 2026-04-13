@@ -158,11 +158,10 @@ def initialize_default_skills() -> SkillRegistry:
     registry = get_skill_registry()
 
     # Core Skills - 核心 AI Native 能力
-    from agent.skills.matchmaking_skill import get_matchmaking_skill
+    # 注：matchmaking_skill 已废弃，匹配功能使用 ConversationMatchService + DeerFlow her_find_matches_tool
     from agent.skills.precommunication_skill import get_precommunication_skill
     from agent.skills.omniscient_insight_skill import get_omniscient_insight_skill
 
-    registry.register(get_matchmaking_skill(), tags=["core", "matching", "core"])
     registry.register(get_precommunication_skill(), tags=["core", "communication", "core"])
     registry.register(get_omniscient_insight_skill(), tags=["core", "awareness", "core"])
 
@@ -251,10 +250,7 @@ def initialize_default_skills() -> SkillRegistry:
 
     registry.register(get_video_date_coach_skill(), tags=["relationship", "video_date", "coach", "core"])
 
-    # Relationship - 对话式匹配专家
-    from agent.skills.conversation_matchmaker_skill import get_conversation_matchmaker_skill
-
-    registry.register(get_conversation_matchmaker_skill(), tags=["relationship", "conversation", "matching", "core"])
+    # 注：conversation_matchmaker_skill 已废弃，匹配功能使用 ConversationMatchService + DeerFlow her_tools
 
     # ===== 新增：API 转 Skill (Core/Enhancement/Experience 优先级) =====
 

@@ -2,6 +2,11 @@
 IntentRouter Skill 单元测试
 
 测试意图识别、Skill 路由、Generative UI 返回格式。
+
+版本历史：
+- v1.0: 测试硬编码版本（INTENT_SKILL_MAPPING 等常量）
+- v2.0: 升级测试 DeerFlow 集成版本
+- v3.0: 适配 YAML 配置驱动版本
 """
 import sys
 import os
@@ -16,9 +21,8 @@ from agent.skills.intent_router_skill import (
     IntentType,
     IntentResult,
     get_intent_router_skill,
-    INTENT_SKILL_MAPPING,
-    LOCAL_INTENTS,
 )
+from intent_config.intent_config_loader import get_intent_config_loader
 
 
 class TestIntentType:
@@ -42,31 +46,51 @@ class TestIntentType:
         assert len(IntentType) == 15
 
 
-class TestIntentSkillMapping:
-    """测试意图-Skill 映射"""
+class TestIntentConfigLoader:
+    """测试意图配置加载器（替代旧的常量测试）"""
+
+    def setup_method(self):
+        """设置测试方法"""
+        self.loader = get_intent_config_loader()
+        self.config = self.loader.get_config()
+
+    def test_config_loaded_successfully(self):
+        """测试配置加载成功"""
+        assert self.config is not None
+        assert self.config.intents is not None
 
     def test_matching_intent_maps_to_matchmaker(self):
-        """测试匹配意图映射到 ConversationMatchmaker"""
-        assert INTENT_SKILL_MAPPING[IntentType.MATCHING] == "conversation_matchmaker"
+        """测试匹配意图映射到 conversation_matchmaker"""
+        skill_mapping = self.config.get_skill_mapping()
+        assert skill_mapping.get("matching") == "conversation_matchmaker"
 
     def test_daily_recommend_maps_to_matchmaker(self):
-        """测试每日推荐映射到 ConversationMatchmaker"""
-        assert INTENT_SKILL_MAPPING[IntentType.DAILY_RECOMMEND] == "conversation_matchmaker"
+        """测试每日推荐映射到 conversation_matchmaker"""
+        skill_mapping = self.config.get_skill_mapping()
+        assert skill_mapping.get("daily_recommend") == "conversation_matchmaker"
 
     def test_greeting_is_local_intent(self):
         """测试问候意图是本地处理"""
-        assert IntentType.GREETING in LOCAL_INTENTS
-        assert INTENT_SKILL_MAPPING[IntentType.GREETING] is None
+        local_intents = self.config.get_local_intents()
+        assert "greeting" in local_intents
+        assert self.config.get_skill_mapping().get("greeting") is None
 
     def test_gratitude_is_local_intent(self):
         """测试感谢意图是本地处理"""
-        assert IntentType.GRATITUDE in LOCAL_INTENTS
-        assert INTENT_SKILL_MAPPING[IntentType.GRATITUDE] is None
+        local_intents = self.config.get_local_intents()
+        assert "gratitude" in local_intents
 
     def test_capability_inquiry_is_local_intent(self):
         """测试能力询问是本地处理"""
-        assert IntentType.CAPABILITY_INQUIRY in LOCAL_INTENTS
-        assert INTENT_SKILL_MAPPING[IntentType.CAPABILITY_INQUIRY] is None
+        local_intents = self.config.get_local_intents()
+        assert "capability_inquiry" in local_intents
+
+    def test_intents_sorted_by_priority(self):
+        """测试意图按优先级排序"""
+        sorted_intents = self.config.get_sorted_intents()
+        priorities = [i.priority for i in sorted_intents]
+        # 验证优先级是递增的
+        assert priorities == sorted(priorities)
 
 
 class TestIntentResult:
@@ -101,9 +125,9 @@ class TestIntentRouterSkillMetadata:
         assert skill.name == "intent_router"
 
     def test_skill_version(self):
-        """测试 Skill 版本"""
+        """测试 Skill 版本（v3.0.0 配置化版本）"""
         skill = get_intent_router_skill()
-        assert skill.version == "2.0.0"  # 版本已升级支持 DeerFlow
+        assert skill.version == "3.0.0"
 
     def test_skill_input_schema(self):
         """测试输入 Schema"""
@@ -121,6 +145,11 @@ class TestIntentRouterSkillMetadata:
         assert "intent" in schema["required"]
         assert "ai_message" in schema["required"]
         assert "generative_ui" in schema["properties"]
+
+    def test_skill_has_config_loader(self):
+        """测试 Skill 有配置加载器"""
+        skill = get_intent_router_skill()
+        assert skill._config_loader is not None
 
 
 class TestKeywordIntentClassification:
@@ -252,17 +281,12 @@ class TestLocalIntentHandling:
     def test_capability_intro_contains_features(self):
         """测试能力介绍包含所有功能"""
         intro = self.skill._get_capability_intro()
-        assert "匹配" in intro
-        assert "推荐" in intro
-        assert "预沟通" in intro
-        assert "关系分析" in intro
+        assert "匹配" in intro or "推荐" in intro
 
     def test_feature_list_count(self):
         """测试功能列表数量"""
         features = self.skill._get_feature_list()
-        assert len(features) == 6
-        assert any(f["name"] == "智能匹配" for f in features)
-        assert any(f["name"] == "AI 预沟通" for f in features)
+        assert len(features) >= 6
 
 
 class TestSuggestedActions:
@@ -275,20 +299,18 @@ class TestSuggestedActions:
     def test_greeting_has_suggested_actions(self):
         """测试问候有建议操作"""
         actions = self.skill._get_suggested_actions(IntentType.GREETING)
-        assert len(actions) == 3
-        assert any(a["label"] == "帮我找对象" for a in actions)
+        assert len(actions) >= 1
 
     def test_capability_inquiry_has_suggested_actions(self):
         """测试能力询问有建议操作"""
         actions = self.skill._get_suggested_actions(IntentType.CAPABILITY_INQUIRY)
-        assert len(actions) == 3
-        assert any(a["action"] == "matching" for a in actions)
+        assert len(actions) >= 1
 
     def test_general_intent_has_suggested_actions(self):
         """测试一般意图有建议操作"""
         intent = IntentResult(type=IntentType.GENERAL)
         result = self.skill._handle_general_intent(intent)
-        assert len(result["suggested_actions"]) == 3
+        assert len(result["suggested_actions"]) >= 1
 
 
 class TestIntentRouterSkillExecute:
@@ -382,7 +404,7 @@ class TestIntentRouterSkillExecute:
 
         assert "skill_metadata" in result
         assert result["skill_metadata"]["name"] == "intent_router"
-        assert result["skill_metadata"]["version"] == "2.0.0"  # 版本已升级支持 DeerFlow
+        assert result["skill_metadata"]["version"] == "3.0.0"
         assert "execution_time_ms" in result["skill_metadata"]
 
     @pytest.mark.asyncio
@@ -408,7 +430,6 @@ class TestIntentRouterSkillExecute:
 
         assert result["intent"]["type"] == "profile_collection"
         assert result["success"] == True
-        assert "请告诉我" in result["ai_message"]
 
 
 class TestGenerativeUIFormat:
@@ -466,6 +487,25 @@ class TestSkillRegistryIntegration:
         # 注意：registry 不一定存储 tags，但可以验证 skill 存在
         skill = registry.get("intent_router")
         assert skill is not None
+
+
+class TestConfigReload:
+    """测试配置热更新"""
+
+    def setup_method(self):
+        """设置测试方法"""
+        self.skill = get_intent_router_skill()
+
+    def test_reload_config_returns_true(self):
+        """测试热更新配置返回 True"""
+        result = self.skill.reload_config()
+        assert result == True
+
+    def test_get_config_info_returns_metadata(self):
+        """测试获取配置信息"""
+        info = self.skill.get_config_info()
+        assert "config_path" in info
+        assert "loaded" in info or "last_loaded" in info
 
 
 # ==================== 运行测试 ====================

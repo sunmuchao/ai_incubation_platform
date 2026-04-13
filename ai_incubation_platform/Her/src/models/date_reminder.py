@@ -6,9 +6,9 @@ from sqlalchemy.sql import func
 from db.database import Base
 
 
-class DatePlanDB(Base):
-    """约会计划"""
-    __tablename__ = "date_plans"
+class DateReminderPlanDB(Base):
+    """约会提醒计划（用于提醒服务，区别于 AI 约会策划的 DatePlanDB）"""
+    __tablename__ = "date_reminder_plans"
 
     id = Column(String(36), primary_key=True, index=True)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)

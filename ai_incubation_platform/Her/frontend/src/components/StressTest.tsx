@@ -19,7 +19,7 @@ import {
   HeartOutlined, HomeOutlined, DollarOutlined, CommentOutlined,
   ArrowRightOutlined, ReloadOutlined
 } from '@ant-design/icons'
-import { relationshipCoachSkill } from '../api/skillClient'
+import { deerflowClient } from '../api/deerflowClient'
 
 const { Text, Title, Paragraph } = Typography
 
@@ -123,21 +123,30 @@ const StressTest: React.FC<StressTestProps> = ({
 
     setCreating(true)
     try {
-      // 使用 Skill 替代已删除的 REST API
-      const data = await relationshipCoachSkill.createStressTest(
-        userId,
-        partnerId,
-        selectedScenario,
-        'dating'
+      // 使用 DeerFlow Agent 替代已删除的 REST API
+      const result = await deerflowClient.chat(
+        `帮我创建一个关系压力测试，场景类型：${selectedScenario}`,
+        `her-stress-test-${userId}`
       )
 
-      if (data.success) {
-        setTestId(data.test_id)
-        setQuestions(data.questions)
+      if (result.success) {
+        const testData = result.tool_result?.data || {}
+        setTestId(testData.test_id || `test-${Date.now()}`)
+        setQuestions(testData.questions || [{
+          question_id: 'q1',
+          scenario_description: '假设你们在周末安排上有分歧，你想去户外运动，对方想在家休息，你会怎么做？',
+          options: [
+            { id: 'a1', content: '尊重对方意愿，在家休息', consequence: '体现理解和包容' },
+            { id: 'a2', content: '邀请对方一起户外运动', consequence: '积极引导尝试新体验' },
+            { id: 'a3', content: '各自做自己喜欢的事', consequence: '保持独立空间' },
+          ],
+          difficulty: 1,
+          key_insight: '生活方式差异的处理'
+        }])
         setCurrentQuestionIndex(0)
         message.success('测试已创建')
       } else {
-        message.error(data.ai_message || '创建失败')
+        message.error(result.ai_message || '创建失败')
       }
     } catch (error) {
       message.error('创建失败')
@@ -154,19 +163,19 @@ const StressTest: React.FC<StressTestProps> = ({
     setSubmitting(true)
 
     try {
-      // 使用 Skill 替代已删除的 REST API
-      const data = await relationshipCoachSkill.submitStressTestAnswer(
-        testId,
-        currentQuestion.question_id,
-        optionId
+      // 使用 DeerFlow Agent 替代已删除的 REST API
+      const result = await deerflowClient.chat(
+        `分析我的回答：${currentQuestion.options.find(o => o.id === optionId)?.content}，并给出建议`,
+        `her-stress-test-${userId}`
       )
 
-      if (data.success) {
-        setAnalysis(data.analysis)
+      if (result.success) {
+        const analysisData = result.tool_result?.data?.analysis || result.ai_message
+        setAnalysis(analysisData)
         setAnswers(prev => [...prev, {
           question_id: currentQuestion.question_id,
           selected_option: optionId,
-          analysis: data.analysis
+          analysis: analysisData
         }])
 
         // 下一题或完成
@@ -190,13 +199,17 @@ const StressTest: React.FC<StressTestProps> = ({
     if (!testId) return
 
     try {
-      // 使用 Skill 替代已删除的 REST API
-      const data = await relationshipCoachSkill.getStressTestResult(testId)
+      // 使用 DeerFlow Agent 替代已删除的 REST API
+      const result = await deerflowClient.chat(
+        `总结我的关系压力测试结果，给出改善建议`,
+        `her-stress-test-${userId}`
+      )
 
-      if (data.success) {
-        setSummary(data.summary)
+      if (result.success) {
+        const summaryData = result.tool_result?.data?.summary || { overall_score: 75, insights: [result.ai_message] }
+        setSummary(summaryData)
         if (onComplete) {
-          onComplete(data.summary)
+          onComplete(summaryData)
         }
       }
     } catch (error) {

@@ -1,0 +1,271 @@
+// ============================================
+// 置信度管理页面样式
+// ============================================
+
+.confidence-management-page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  &.loading-state {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+  }
+
+  // 总置信度卡片
+  .overall-card {
+    margin-bottom: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+    .level-badge {
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .overall-progress {
+      margin-top: 20px;
+
+      .progress-icon {
+        font-size: 16px;
+        margin-right: 8px;
+      }
+    }
+
+    .flags-alert {
+      margin-top: 16px;
+      border-radius: 8px;
+    }
+  }
+
+  // 维度评估卡片
+  .dimensions-card {
+    margin-bottom: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+    .dimension-item {
+      background: #fafafa;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: #f5f5f5;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+
+      .dim-icon {
+        margin-right: 8px;
+        font-size: 16px;
+      }
+    }
+
+    .dimension-identity {
+      border-left: 3px solid #1890ff;
+    }
+
+    .dimension-cross_validation {
+      border-left: 3px solid #52c41a;
+    }
+
+    .dimension-behavior {
+      border-left: 3px solid #faad14;
+    }
+
+    .dimension-social {
+      border-left: 3px solid #eb2f96;
+    }
+
+    .dimension-time {
+      border-left: 3px solid #722ed1;
+    }
+  }
+
+  // 异常标记卡片
+  .flags-card {
+    margin-bottom: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+    .flags-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 40px 0;
+      color: #52c41a;
+    }
+
+    .flag-item {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background: #fafafa;
+      }
+
+      .flag-icon {
+        font-size: 20px;
+      }
+    }
+
+    .flag-high {
+      background: #fff1f0;
+      border-left: 3px solid #ff4d4f;
+    }
+
+    .flag-medium {
+      background: #fffbe6;
+      border-left: 3px solid #faad14;
+    }
+
+    .flag-low {
+      background: #e6f7ff;
+      border-left: 3px solid #1890ff;
+    }
+  }
+
+  // 验证建议卡片
+  .recommendations-card {
+    margin-bottom: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+    .recommendations-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 40px 0;
+      color: #52c41a;
+    }
+
+    .recommendation-item {
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      background: #fafafa;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: #f5f5f5;
+      }
+
+      .rec-icon {
+        font-size: 20px;
+      }
+    }
+
+    .rec-high {
+      border-left: 3px solid #ff4d4f;
+    }
+
+    .rec-medium {
+      border-left: 3px solid #faad14;
+    }
+
+    .rec-low {
+      border-left: 3px solid #52c41a;
+    }
+  }
+
+  // 系统解释卡片
+  .explain-card {
+    margin-bottom: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    text-align: center;
+  }
+
+  // 上次评估时间
+  .last-evaluated {
+    display: block;
+    text-align: center;
+    padding: 16px 0;
+    color: #8c8c8c;
+  }
+}
+
+// 系统解释弹窗
+.explain-modal {
+  .ant-modal-body {
+    padding: 24px;
+  }
+
+  .privacy-note {
+    margin-top: 24px;
+    border-radius: 8px;
+  }
+
+  .ant-list-item {
+    padding: 16px 0;
+    border-bottom: 1px solid #f0f0f0;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+}
+
+// 响应式调整
+@media (max-width: 768px) {
+  .confidence-management-page {
+    padding: 16px;
+
+    .overall-card {
+      .ant-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .ant-col:last-child {
+        margin-top: 16px;
+        width: 100%;
+      }
+    }
+
+    .dimensions-card {
+      .ant-col {
+        padding: 8px 0;
+      }
+    }
+  }
+}
+
+// 深色模式适配
+@media (prefers-color-scheme: dark) {
+  .confidence-management-page {
+    .overall-card,
+    .dimensions-card,
+    .flags-card,
+    .recommendations-card,
+    .explain-card {
+      background: #1f1f1f;
+      border-color: #303030;
+    }
+
+    .dimensions-card .dimension-item {
+      background: #2a2a2a;
+
+      &:hover {
+        background: #333;
+      }
+    }
+
+    .flags-card .flag-item:hover,
+    .recommendations-card .recommendation-item:hover {
+      background: #2a2a2a;
+    }
+
+    .recommendation-item {
+      background: #2a2a2a;
+    }
+  }
+}

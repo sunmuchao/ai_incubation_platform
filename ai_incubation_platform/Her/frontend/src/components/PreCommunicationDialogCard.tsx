@@ -6,6 +6,7 @@
 import React from 'react'
 import { Card, Space, Tag, Typography, Timeline, Empty } from 'antd'
 import { HeartFilled } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import './PreCommunicationDialogCard.less'
 
 const { Text, Paragraph } = Typography
@@ -27,10 +28,12 @@ interface PreCommunicationDialogCardProps {
 export const PreCommunicationDialogCard: React.FC<PreCommunicationDialogCardProps> = React.memo(({
   messages,
 }) => {
+  const { t } = useTranslation()
+
   if (!messages || messages.length === 0) {
     return (
       <Card className="generative-card" size="small">
-        <Empty description="暂无对话内容" />
+        <Empty description={t('common.noData')} />
       </Card>
     )
   }
@@ -47,12 +50,12 @@ export const PreCommunicationDialogCard: React.FC<PreCommunicationDialogCardProp
               <Space direction="vertical" size="small" style={{ width: '100%' }}>
                 <div>
                   <Tag color={msg.sender_agent.includes('agent_1') ? 'blue' : 'purple'}>
-                    {msg.sender_agent.includes('agent_1') ? 'AI 替身 A' : 'AI 替身 B'}
+                    {msg.sender_agent.includes('agent_1') ? t('precomm.agentA') : t('precomm.agentB')}
                   </Tag>
                   <Tag>{msg.message_type || 'text'}</Tag>
                   {msg.topic_tag && <Tag>{msg.topic_tag}</Tag>}
                   <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>
-                    第{msg.round_number}轮
+                    {t('precomm.roundNumber', { number: msg.round_number })}
                   </Text>
                 </div>
                 <Paragraph style={{ margin: 0, fontSize: 13 }}>{msg.content}</Paragraph>

@@ -40,8 +40,8 @@ export OPENAI_MODEL='glm-5'
 export DEER_FLOW_CONFIG_PATH="$DEERFLOW_DIR/config.yaml"
 export DEER_FLOW_EXTENSIONS_CONFIG_PATH="$DEERFLOW_DIR/extensions_config.json"
 
-# 端口配置
-HER_BACKEND_PORT=8000
+# 端口配置（与 .env 保持一致）
+HER_BACKEND_PORT=8002
 HER_FRONTEND_PORT=3005
 DEERFLOW_LANGGRAPH_PORT=2024
 DEERFLOW_GATEWAY_PORT=8001
@@ -55,11 +55,14 @@ echo ""
 # ==================== Step 1: 停止已有服务 ====================
 echo -e "${YELLOW}[1/5] 停止已有服务...${NC}"
 pkill -f "uvicorn main:app" 2>/dev/null
+pkill -f "uvicorn src.main:app" 2>/dev/null
 pkill -f "vite" 2>/dev/null
 pkill -f "langgraph" 2>/dev/null
 pkill -f "deerflow" 2>/dev/null
+# 停止 pytest 测试进程，避免与后端资源冲突
+pkill -f "pytest" 2>/dev/null
 sleep 2
-echo -e "${GREEN}✓ 已停止旧服务${NC}"
+echo -e "${GREEN}✓ 已停止旧服务（包括 pytest 测试进程）${NC}"
 echo ""
 
 # ==================== Step 2: 启动 DeerFlow ====================
@@ -85,12 +88,14 @@ else
     echo "DeerFlow PID: $DEERFLOW_PID"
 
     # 等待 DeerFlow 启动（最多等待30秒）
-    echo "等待 DeerFlow 启动..."
+    # 注意：make dev 只启动 LangGraph Server (2024)，不启动 Gateway (8001)
+    # Her 通过 DeerFlowClient（嵌入式客户端）直接调用 Agent，无需 Gateway
+    echo "等待 DeerFlow LangGraph Server 启动..."
     MAX_WAIT=30
     WAIT_COUNT=0
     while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
-        if curl -s "http://localhost:$DEERFLOW_GATEWAY_PORT/health" > /dev/null 2>&1; then
-            echo -e "${GREEN}✓ DeerFlow Gateway 启动成功: http://localhost:$DEERFLOW_GATEWAY_PORT${NC}"
+        if curl -s "http://localhost:$DEERFLOW_LANGGRAPH_PORT/info" > /dev/null 2>&1; then
+            echo -e "${GREEN}✓ DeerFlow LangGraph Server 启动成功: http://localhost:$DEERFLOW_LANGGRAPH_PORT${NC}"
             break
         fi
         sleep 1
@@ -108,14 +113,20 @@ echo ""
 
 # ==================== Step 3: 启动 Her 后端 ====================
 echo -e "${YELLOW}[3/5] 启动 Her 后端服务...${NC}"
-cd "$BACKEND_DIR"
+cd "$PROJECT_ROOT"
 
-# 添加 DeerFlow 路径到 PYTHONPATH
-PYTHONPATH="$BACKEND_DIR:$DEERFLOW_BACKEND_DIR/packages/harness"
+# 使用 DeerFlow 的虚拟环境启动 Her 后端
+# 原因：Anaconda Python 的 langchain 版本太旧，缺少 create_agent
+# DeerFlow 的 .venv 有完整的 langgraph/langchain 依赖
+DEERFLOW_VENV="$DEERFLOW_BACKEND_DIR/.venv/bin/python"
 
-nohup uvicorn main:app --host 0.0.0.0 --port $HER_BACKEND_PORT > /tmp/her_backend.log 2>&1 &
+# 添加 DeerFlow 路径到 PYTHONPATH（用于导入 deerflow 模块）
+export PYTHONPATH="$BACKEND_DIR:$DEERFLOW_BACKEND_DIR/packages/harness"
+export HER_PROJECT_ROOT="$PROJECT_ROOT"
+
+nohup $DEERFLOW_VENV -m uvicorn src.main:app --host 0.0.0.0 --port $HER_BACKEND_PORT > /tmp/her_backend.log 2>&1 &
 HER_BACKEND_PID=$!
-echo "Her 后端 PID: $HER_BACKEND_PID"
+echo "Her 后端 PID: $HER_BACKEND_PID (using DeerFlow venv)"
 
 # 等待后端启动（最多等待30秒）
 echo "等待 Her 后端启动..."
@@ -173,8 +184,7 @@ echo ""
 if [ "$DEERFLOW_ENABLED" = true ]; then
     echo -e "${BLUE}DeerFlow Agent 运行时:${NC}"
     echo -e "  LangGraph Server:  http://localhost:$DEERFLOW_LANGGRAPH_PORT"
-    echo -e "  Gateway API:       http://localhost:$DEERFLOW_GATEWAY_PORT"
-    echo -e "  Gateway Health:    http://localhost:$DEERFLOW_GATEWAY_PORT/health"
+    echo -e "  LangGraph Info:    http://localhost:$DEERFLOW_LANGGRAPH_PORT/info"
     echo -e "  DeerFlow 状态:     http://localhost:$HER_BACKEND_PORT/api/deerflow/status"
     echo ""
 fi

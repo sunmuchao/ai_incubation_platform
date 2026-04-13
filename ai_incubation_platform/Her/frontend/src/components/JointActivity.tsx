@@ -1,7 +1,7 @@
 /**
  * 共同活动推荐组件
  *
- * 改用 activityDirectorSkill 替代已删除的 /api/joint-activities REST API
+ * 改用 DeerFlow Agent 替代已删除的 /api/joint-activities REST API
  */
 
 import React, { useState } from 'react'
@@ -14,7 +14,7 @@ import {
   HeartOutlined, EnvironmentOutlined, BulbOutlined,
   CheckCircleOutlined, CopyOutlined
 } from '@ant-design/icons'
-import { activityDirectorSkill } from '../api/skillClient'
+import { deerflowClient } from '../api/deerflowClient'
 
 const { Text, Title, Paragraph } = Typography
 
@@ -96,23 +96,36 @@ const JointActivity: React.FC<JointActivityProps> = ({
 
     setLoading(true)
     try {
-      // 改用 Skill 替代已删除的 REST API
+      // 改用 DeerFlow Agent 替代已删除的 REST API
       const userId = userProfile?.id || 'user-test-001'
-      const partnerId = partnerProfile?.id || 'partner-test-001'
 
-      const result = await activityDirectorSkill.recommendActivity(
-        userId,
-        partnerId,
-        {
-          activity_type: selectedType,
-          location: location,
-          budget: budgetPreference === 'low' ? 100 : budgetPreference === 'high' ? 500 : 300
-        }
+      const result = await deerflowClient.chat(
+        `推荐一些适合我们在${location}的约会活动，预算${budgetPreference === 'low' ? '较低' : budgetPreference === 'high' ? '充足' : '适中'}，时间${timeBudget === 'quick' ? '1-2小时' : timeBudget === 'half_day' ? '半天' : '全天'}${selectedType ? `，类型偏好：${selectedType}` : ''}`,
+        `her-activity-${userId}`
       )
 
       if (result.success) {
-        setActivities(result.activities || [])
-        message.success('已生成推荐')
+        // Agent Native 架构：优先从 ai_message 解析 JSON
+        const parsed = deerflowClient.parseToolResult(result)
+        let activitiesData: any[] = []
+
+        if (parsed?.type === 'date_plans' && parsed.data.plans?.length > 0) {
+          activitiesData = parsed.data.plans
+        } else if (parsed?.type === 'activities' && parsed.data.activities?.length > 0) {
+          activitiesData = parsed.data.activities
+        } else {
+          // 降级：从 tool_result.data 获取（兼容旧架构）
+          activitiesData = result.tool_result?.data?.activities || result.tool_result?.data?.plans || []
+        }
+
+        if (activitiesData.length > 0) {
+          setActivities(activitiesData)
+          message.success('已生成推荐')
+        } else {
+          // 如果没有结构化数据，从 AI 消息中解析
+          setActivities([{ activity_name: 'AI推荐', description: result.ai_message, confidence: 0.8 }])
+          message.success('已生成推荐')
+        }
       } else {
         message.error(result.ai_message || '生成失败')
       }

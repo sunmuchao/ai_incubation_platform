@@ -1,29 +1,14 @@
 """
 红娘 Agent 工作流模块
 
-包含所有预定义的工作流：
-- 匹配工作流
+包含预定义的工作流：
 - 约会工作流
-- 自主匹配工作流
-- 关系健康度工作流
-- 破冰助手工作流
+
+注：MatchWorkflow 和 autonomous_workflows 已废弃。
+匹配功能使用 ConversationMatchService + DeerFlow her_tools。
 """
-from agent.workflows.match_workflow import MatchWorkflow
 from agent.workflows.date_workflow import DateWorkflow
-from agent.workflows.autonomous_workflows import (
-    AutoMatchRecommendWorkflow,
-    RelationshipHealthCheckWorkflow,
-    AutoIcebreakerWorkflow,
-    register_autonomous_workflows,
-    run_workflow
-)
 
 __all__ = [
-    "MatchWorkflow",
     "DateWorkflow",
-    "AutoMatchRecommendWorkflow",
-    "RelationshipHealthCheckWorkflow",
-    "AutoIcebreakerWorkflow",
-    "register_autonomous_workflows",
-    "run_workflow",
 ]

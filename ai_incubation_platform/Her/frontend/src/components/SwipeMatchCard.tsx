@@ -16,7 +16,7 @@ import type { MatchCandidate, SwipeAction } from '../types'
 import { aiAwarenessApi, matchingApi } from '../api'
 import RoseButton from './RoseButton'
 import VerificationBadge from './VerificationBadge'
-import { authStorage } from '../utils/storage'
+import { useCurrentUserId } from '../hooks/useCurrentUserId'
 import './SwipeMatchCard.less'
 
 const { Text, Paragraph } = Typography
@@ -68,8 +68,8 @@ const SwipeMatchCard: React.FC<SwipeMatchCardProps> = ({
   const [isExiting, setIsExiting] = useState(false)
   const [feedbackVisible, setFeedbackVisible] = useState(false)
 
-  // 用户 ID
-  const getCurrentUserId = useCallback(() => authStorage.getUserId(), [])
+  // 使用统一的 userId hook
+  const currentUserId = useCurrentUserId()
 
   // 兼容性分数
   const compatibilityPercent = useMemo(() => {
@@ -219,10 +219,9 @@ const SwipeMatchCard: React.FC<SwipeMatchCardProps> = ({
 
       // 延迟后触发回调
       setTimeout(async () => {
-        const userId = getCurrentUserId()
-        if (userId && match.user?.id) {
+        if (currentUserId && match.user?.id) {
           // 记录行为追踪
-          aiAwarenessApi.trackSwipe(userId, match.user.id, action).catch(() => {})
+          aiAwarenessApi.trackSwipe(currentUserId, match.user.id, action).catch(() => {})
 
           // 调用匹配 API
           try {
@@ -239,7 +238,7 @@ const SwipeMatchCard: React.FC<SwipeMatchCardProps> = ({
         onSwipe?.(action, match)
       }, ANIMATION_CONFIG.exitDuration)
     },
-    [getCurrentUserId, match, onSwipe, onSwipeComplete]
+    [currentUserId, match, onSwipe, onSwipeComplete]
   )
 
   // 触摸事件处理

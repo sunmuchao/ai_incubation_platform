@@ -55,9 +55,35 @@ class UserRepository:
         """根据 ID 获取用户"""
         return self.db.query(UserDB).filter(UserDB.id == user_id).first()
 
+    def get_by_ids(self, user_ids: List[str]) -> Dict[str, UserDB]:
+        """
+        批量获取用户（优化 N+1 查询）
+
+        Args:
+            user_ids: 用户 ID 列表
+
+        Returns:
+            用户 ID -> UserDB 的映射字典
+        """
+        if not user_ids:
+            return {}
+
+        # 单次批量查询
+        users = self.db.query(UserDB).filter(UserDB.id.in_(user_ids)).all()
+
+        # 构建 ID -> User 映射
+        return {user.id: user for user in users}
+
     def get_by_email(self, email: str) -> Optional[UserDB]:
         """根据邮箱获取用户"""
         return self.db.query(UserDB).filter(UserDB.email == email).first()
+
+    def get_by_email_batch(self, emails: List[str]) -> Dict[str, UserDB]:
+        """批量获取用户（按邮箱）"""
+        if not emails:
+            return {}
+        users = self.db.query(UserDB).filter(UserDB.email.in_(emails)).all()
+        return {user.email: user for user in users}
 
     def get_by_username(self, username: str) -> Optional[UserDB]:
         """根据用户名（name）获取用户"""

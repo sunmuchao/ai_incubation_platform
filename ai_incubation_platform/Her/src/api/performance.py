@@ -6,12 +6,17 @@ v1.23 新增功能：
 - 慢查询日志查询
 - 性能优化建议
 - 缓存管理
+
+v1.31 新增功能：
+- LLM 成本监控
+- LLM 调用统计
 """
 from fastapi import APIRouter, HTTPException, status, Query
 from typing import List, Optional
 from datetime import datetime, timedelta
 from services.performance_service import perf_service, SlowQueryLogger, PerformanceMonitor
 from cache import cache_manager
+from utils.llm_cost_tracker import get_llm_cost_tracker
 
 router = APIRouter(prefix="/api/performance", tags=["性能优化"])
 
@@ -196,3 +201,62 @@ async def health_check():
         "slow_queries_count": slow_stats.get("total_slow_queries", 0),
         "api_error_rate": api_stats.get("error_rate", 0)
     }
+
+
+# ==================== LLM 成本监控 API ====================
+
+@router.get("/llm/stats")
+async def get_llm_stats():
+    """
+    获取 LLM 成本统计
+
+    返回：
+    - 总调用次数
+    - 总 token 消耗
+    - 总成本（元）
+    - 缓存命中率
+    - 错误率
+    - 平均响应时间
+    """
+    tracker = get_llm_cost_tracker()
+    return tracker.get_stats()
+
+
+@router.get("/llm/cost-by-endpoint")
+async def get_llm_cost_by_endpoint():
+    """
+    按场景统计 LLM 成本
+
+    返回各场景（matching, bias_analysis, precommunication 等）的成本明细
+    """
+    tracker = get_llm_cost_tracker()
+    return tracker.get_cost_by_endpoint()
+
+
+@router.get("/llm/recent-calls")
+async def get_llm_recent_calls(
+    limit: int = Query(default=100, ge=1, le=500, description="返回记录数")
+):
+    """
+    获取最近的 LLM 调用记录
+
+    Args:
+        limit: 返回记录数
+    """
+    tracker = get_llm_cost_tracker()
+    return {
+        "total": limit,
+        "records": tracker.get_recent_records(limit=limit)
+    }
+
+
+@router.post("/llm/reset-stats")
+async def reset_llm_stats():
+    """
+    重置 LLM 统计数据
+
+    注意：此操作会清空所有统计数据，用于测试或定期清理
+    """
+    tracker = get_llm_cost_tracker()
+    tracker.clear_records()
+    return {"message": "LLM cost stats reset successfully"}

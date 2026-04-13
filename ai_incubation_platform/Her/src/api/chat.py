@@ -11,7 +11,7 @@ import random
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from datetime import datetime
 import re
 
@@ -73,6 +73,8 @@ class MessageSendRequest(BaseModel):
 
 class MessageResponse(BaseModel):
     """消息响应"""
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     conversation_id: str
     sender_id: str
@@ -84,12 +86,11 @@ class MessageResponse(BaseModel):
     created_at: str
     metadata: Optional[dict] = None
 
-    class Config:
-        from_attributes = True
-
 
 class ConversationResponse(BaseModel):
     """会话响应"""
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     user_id_1: str
     user_id_2: str
@@ -98,9 +99,6 @@ class ConversationResponse(BaseModel):
     last_message_preview: Optional[str] = None
     unread_count: int = 0
     created_at: str
-
-    class Config:
-        from_attributes = True
 
 
 class MarkReadRequest(BaseModel):

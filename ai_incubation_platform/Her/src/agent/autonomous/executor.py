@@ -170,6 +170,7 @@ class HeartbeatExecutor:
         调用 LLM
 
         适配现有 LLMIntegrationClient.generate_chat
+        使用线程安全的调用方式，避免 event loop 问题
         """
         if self.llm_client is None:
             logger.warning(f"🫀 [EXECUTOR:{heartbeat_id}] LLM client not available, using mock response")
@@ -178,8 +179,12 @@ class HeartbeatExecutor:
         try:
             logger.debug(f"🫀 [EXECUTOR:{heartbeat_id}] Calling LLM with prompt length={len(prompt)}")
 
-            # 使用 asyncio 运行异步方法
-            response = asyncio.run(self.llm_client.generate_chat(prompt))
+            # 使用新的事件循环调用异步方法（线程安全）
+            new_loop = asyncio.new_event_loop()
+            try:
+                response = new_loop.run_until_complete(self.llm_client.generate_chat(prompt))
+            finally:
+                new_loop.close()
 
             # 提取响应文本
             if isinstance(response, dict):

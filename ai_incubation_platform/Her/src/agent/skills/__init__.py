@@ -2,18 +2,19 @@
 Agent Skills 包
 
 提供所有 Agent Skill 的实现和注册。
+
+架构说明：匹配功能使用 ConversationMatchService + HerAdvisorService (AI Native)，
+详见 HER_ADVISOR_ARCHITECTURE.md
 """
 from typing import List
 from agent.skills.base import BaseSkill
 from agent.skills.registry import SkillRegistry, get_skill_registry, initialize_default_skills
-from agent.skills.matchmaking_skill import MatchmakingSkill, get_matchmaking_skill
 from agent.skills.precommunication_skill import PreCommunicationSkill, get_precommunication_skill
 from agent.skills.omniscient_insight_skill import OmniscientInsightSkill, get_omniscient_insight_skill
 from agent.skills.relationship_coach_skill import RelationshipCoachSkill, get_relationship_coach_skill
 from agent.skills.date_planning_skill import DatePlanningSkill, get_date_planning_skill
 from agent.skills.bill_analysis_skill import BillAnalysisSkill, get_bill_analysis_skill
 from agent.skills.gift_suggestion_skill import GiftSuggestionSkill, get_gift_suggestion_skill
-# 注：geo_location 已删除，改用 REST API
 
 __all__ = [
     # 基类
@@ -25,8 +26,6 @@ __all__ = [
     "initialize_default_skills",
 
     # Identity Skills - 核心 AI Native 能力
-    "MatchmakingSkill",
-    "get_matchmaking_skill",
     "PreCommunicationSkill",
     "get_precommunication_skill",
     "OmniscientInsightSkill",
@@ -47,12 +46,6 @@ __all__ = [
 
 # 技能元数据
 SKILL_METADATA = {
-    "matchmaking_assistant": {
-        "name": "匹配助手",
-        "priority": "Identity",
-        "category": "core",
-        "description": "AI 红娘助手，帮助用户找到合适的匹配对象"
-    },
     "pre_communication": {
         "name": "AI 预沟通",
         "priority": "Identity",
@@ -75,7 +68,7 @@ SKILL_METADATA = {
         "name": "约会策划",
         "priority": "Values",
         "category": "dating",
-        "description": "AI 约会策划师"
+        "description": "AI 纠会策划师"
     },
     "bill_analysis": {
         "name": "账单分析",

@@ -134,18 +134,42 @@ class RoseService(BaseService):
 
         rose_source = self._determine_rose_source(balance_db)
 
-        # 5. 计算匹配度
-        from matching.matcher import matchmaker
+        # 5. 计算匹配度（使用 AI 判断）
+        # 注：matchmaker 已废弃，使用 HerAdvisorService
         sender_user = user_repo.get_by_id(sender_id)
         if sender_user and target_user:
             from api.users import _from_db
+            from services.her_advisor_service import get_her_advisor_service
+            from services.user_profile_service import get_user_profile_service
+            import asyncio
+
             sender_obj = _from_db(sender_user)
             target_obj = _from_db(target_user)
+
             try:
-                score, _ = matchmaker._calculate_compatibility(
-                    sender_obj.model_dump(),
-                    target_obj.model_dump()
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            try:
+                profile_service = get_user_profile_service()
+                her_advisor = get_her_advisor_service()
+
+                self_a, desire_a = loop.run_until_complete(
+                    profile_service.get_or_create_profile(sender_id)
                 )
+                self_b, desire_b = loop.run_until_complete(
+                    profile_service.get_or_create_profile(request.target_user_id)
+                )
+
+                advice = loop.run_until_complete(
+                    her_advisor.generate_match_advice(
+                        sender_id, (self_a, desire_a),
+                        request.target_user_id, (self_b, desire_b)
+                    )
+                )
+                score = advice.compatibility_score
             except Exception:
                 score = 0.5
         else:

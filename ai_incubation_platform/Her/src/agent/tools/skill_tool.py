@@ -464,29 +464,7 @@ class VideoDateCoachTool:
         return SkillTool.execute("video_date_coach", params)
 
 
-class ConversationMatchmakerTool:
-    """对话式匹配工具 - 封装 ConversationMatchmakerSkill"""
-
-    name = "conversation_matchmaker"
-    description = "对话式匹配与关系分析"
-    tags = ["conversation", "matching"]
-
-    @staticmethod
-    def execute(
-        user_id: str,
-        service_type: str = "intent_matching",
-        context: Optional[Dict] = None
-    ) -> dict:
-        """执行匹配服务"""
-        logger.info(f"ConversationMatchmakerTool: Matching user={user_id}, type={service_type}")
-
-        params = {
-            "user_id": user_id,
-            "service_type": service_type,
-            "context": context or {}
-        }
-
-        return SkillTool.execute("conversation_matchmaker", params)
+# ConversationMatchmakerTool 已删除 - 使用 DeerFlow her_tools 中的 HerFindMatchesTool
 
 
 # 工具注册函数
@@ -513,7 +491,7 @@ def register_skill_tools(registry) -> None:
         ("performance_coach", PerformanceCoachTool),
         ("activity_director", ActivityDirectorTool),
         ("video_date_coach", VideoDateCoachTool),
-        ("conversation_matchmaker", ConversationMatchmakerTool),
+        # 注：conversation_matchmaker 已废弃，使用 DeerFlow her_tools
     ]
 
     for name, tool_class in tools:

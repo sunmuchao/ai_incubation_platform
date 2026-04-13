@@ -1,7 +1,7 @@
 /**
  * 深度破冰话题组件
  *
- * 改用 silenceBreakerSkill 替代已删除的 /api/deep-icebreaker REST API
+ * 改用 DeerFlow Agent 替代已删除的 /api/deep-icebreaker REST API
  */
 
 import React, { useState, useEffect } from 'react'
@@ -13,7 +13,7 @@ import {
   BulbOutlined, QuestionCircleOutlined, BookOutlined, CameraOutlined,
   SendOutlined, CopyOutlined, HeartOutlined, AimOutlined, StarOutlined
 } from '@ant-design/icons'
-import { silenceBreakerSkill } from '../api/skillClient'
+import { deerflowClient } from '../api/deerflowClient'
 
 const { Text, Title, Paragraph } = Typography
 
@@ -89,17 +89,26 @@ const DeepIcebreaker: React.FC<DeepIcebreakerProps> = ({
   const loadTopics = async () => {
     setLoading(true)
     try {
-      // 改用 Skill 替代已删除的 REST API
+      // 改用 DeerFlow Agent 替代已删除的 REST API
       const userId = userProfile?.id || 'user-test-001'
-      const partnerId = partnerProfile?.id || 'partner-test-001'
 
-      const result = await silenceBreakerSkill.generateTopics(userId, partnerId, {
-        conversation_length: conversationContext?.length || 0,
-        engagement_level: 0.5
-      })
+      const result = await deerflowClient.chat(
+        `帮我生成一些深度破冰话题，让我可以和匹配对象开启对话。当前对话深度级别：${selectedDepth}`,
+        `her-icebreaker-${userId}`
+      )
 
       if (result.success) {
-        setTopics(result.topics || [])
+        // Agent Native 架构：优先从 ai_message 解析 JSON
+        const parsed = deerflowClient.parseToolResult(result)
+        if (parsed?.type === 'topics' && parsed.data.topics?.length > 0) {
+          setTopics(parsed.data.topics)
+        } else if (result.tool_result?.data?.topics?.length > 0) {
+          // 降级：从 tool_result.data 获取（兼容旧架构）
+          setTopics(result.tool_result.data.topics)
+        } else {
+          // 如果没有结构化数据，从 AI 消息中解析
+          setTopics([{ topic_content: result.ai_message, topic_type: 'question', depth_level: selectedDepth, confidence: 0.8 }])
+        }
       } else {
         message.error(result.ai_message || '加载话题失败')
       }
@@ -112,11 +121,14 @@ const DeepIcebreaker: React.FC<DeepIcebreakerProps> = ({
 
   const loadProgression = async () => {
     try {
-      // 改用 Skill 替代已删除的 REST API
+      // 改用 DeerFlow Agent 替代已删除的 REST API
       const convLength = conversationContext?.length || 0
-      const result = await silenceBreakerSkill.getProgression(convLength, 0.5)
+      const result = await deerflowClient.chat(
+        `分析我和匹配对象的对话进展，当前对话长度：${convLength}`,
+        `her-progression-${userProfile?.id || 'user-test'}`
+      )
       if (result.success) {
-        setProgression(result)
+        setProgression(result.tool_result?.data || { current_depth: 1, suggested_next: 2 })
       }
     } catch (error) {
       // 静默失败

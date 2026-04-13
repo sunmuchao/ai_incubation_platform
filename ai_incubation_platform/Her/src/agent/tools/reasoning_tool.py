@@ -2,10 +2,10 @@
 解释生成工具
 
 用于生成匹配结果的详细解释说明。
+架构说明：新架构使用 HerAdvisorService (AI) 生成解释，详见 HER_ADVISOR_ARCHITECTURE.md
 """
 from typing import Dict, Any, Optional, List
 from utils.logger import logger
-from matching.matcher import matchmaker
 
 
 class ReasoningTool:
@@ -75,7 +75,7 @@ class ReasoningTool:
         Args:
             user_id: 当前用户 ID
             target_user_id: 匹配对象 ID
-            score: 匹配度分数（可选，不传则自动计算）
+            score: 匹配度分数（可选，不传则由 AI 判断）
             breakdown: 各维度分数（可选）
             include_suggestions: 是否包含破冰建议
 
@@ -85,55 +85,78 @@ class ReasoningTool:
         logger.info(f"ReasoningTool: Generating reasoning for {user_id} -> {target_user_id}")
 
         try:
-            # 获取用户信息
-            user_data = matchmaker._users.get(user_id)
-            target_data = matchmaker._users.get(target_user_id)
+            # 注：matchmaker 已废弃，使用数据库 + HerAdvisorService (AI)
+            from db.repositories import UserRepository
+            from db.database import get_db
+            from services.her_advisor_service import get_her_advisor_service
+            from services.user_profile_service import get_user_profile_service
 
-            if not user_data or not target_data:
-                return {"error": "User data not found in matching system"}
+            db = next(get_db())
+            user_repo = UserRepository(db)
 
-            # 如果未提供分数，自动计算
-            if score is None or breakdown is None:
-                score, breakdown = matchmaker._calculate_compatibility(user_data, target_data)
+            # 从数据库获取用户
+            db_user = user_repo.get_by_id(user_id)
+            db_target = user_repo.get_by_id(target_user_id)
 
-            # 生成匹配解释
-            reasoning = matchmaker.generate_match_reasoning(
-                user_data,
-                target_data,
-                score,
-                breakdown
+            if not db_user or not db_target:
+                return {"error": "User data not found in database"}
+
+            # 使用 UserProfileService 获取画像
+            profile_service = get_user_profile_service()
+            her_advisor = get_her_advisor_service()
+
+            # 获取用户画像（异步调用）
+            import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            self_a, desire_a = loop.run_until_complete(
+                profile_service.get_or_create_profile(user_id)
+            )
+            self_b, desire_b = loop.run_until_complete(
+                profile_service.get_or_create_profile(target_user_id)
             )
 
-            # 计算共同兴趣
-            user_interests = set(user_data.get('interests', []))
-            target_interests = set(target_data.get('interests', []))
+            # 使用 AI 判断匹配度（如果未提供分数）
+            if score is None:
+                advice = loop.run_until_complete(
+                    her_advisor.generate_match_advice(
+                        user_id, (self_a, desire_a),
+                        target_user_id, (self_b, desire_b)
+                    )
+                )
+                score = advice.compatibility_score
+                breakdown = {
+                    "interests": advice.interest_alignment,
+                    "values": advice.value_alignment,
+                    "lifestyle": advice.lifestyle_fit,
+                }
+
+            # 从画像获取共同兴趣
+            user_interests = set(self_a.interests or [])
+            target_interests = set(self_b.interests or [])
             common_interests = list(user_interests & target_interests)
 
             result = {
-                "reasoning": reasoning,
+                "reasoning": f"AI 分析：{score:.1%} 匹配度。基于兴趣、价值观、生活方式的综合评估。",
                 "compatibility_score": score,
-                "score_breakdown": breakdown,
+                "score_breakdown": breakdown or {},
                 "common_interests": common_interests,
-                "match_dimensions": {
-                    "interests": breakdown.get('interests', 0),
-                    "values": breakdown.get('values', 0),
-                    "age": breakdown.get('age', 0),
-                    "location": breakdown.get('location', 0)
-                }
+                "match_dimensions": breakdown or {}
             }
 
             # 可选：添加破冰建议
             if include_suggestions:
                 from integration.llm_client import llm_client
-                import asyncio
-
                 try:
-                    # 注意：这里可能在同步上下文中调用异步函数
                     icebreakers = llm_client._get_default_icebreakers(common_interests)
                     result["icebreaker_suggestions"] = icebreakers[:3]
                 except Exception as e:
                     logger.warning(f"ReasoningTool: Failed to generate icebreakers: {e}")
-                    result["icebreaker_suggestions"] = llm_client._get_default_icebreakers(common_interests)[:3]
+                    result["icebreaker_suggestions"] = []
 
             logger.info(f"ReasoningTool: Reasoning generated successfully")
 

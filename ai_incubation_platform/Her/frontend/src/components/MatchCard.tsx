@@ -18,7 +18,8 @@ import { aiAwarenessApi } from '../api'
 import { AIFeedback } from './AIFeedback'
 import RoseButton from './RoseButton'
 import VerificationBadge from './VerificationBadge'
-import { authStorage } from '../utils/storage'
+import ConfidenceBadge from './ConfidenceBadge'
+import { useCurrentUserId } from '../hooks/useCurrentUserId'
 import './MatchCard.less'
 
 const { Text, Paragraph } = Typography
@@ -45,7 +46,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
   const [feedbackAction, setFeedbackAction] = useState<'like' | 'pass' | 'super_like' | null>(null)
   const [feedbackVisible, setFeedbackVisible] = useState(false)
 
-  const getCurrentUserId = useCallback(() => authStorage.getUserId(), [])
+  // 使用统一的 userId hook
+  const currentUserId = useCurrentUserId()
 
   // 兼容性分数
   const compatibilityPercent = useMemo(() => {
@@ -69,34 +71,31 @@ const MatchCard: React.FC<MatchCardProps> = ({
 
   const handleLike = useCallback(() => {
     setLiked(true)
-    const userId = getCurrentUserId()
-    if (userId && match.user?.id) {
-      aiAwarenessApi.trackSwipe(userId, match.user.id, 'like').catch(() => {})
+    if (currentUserId && match.user?.id) {
+      aiAwarenessApi.trackSwipe(currentUserId, match.user.id, 'like').catch(() => {})
     }
     setFeedbackAction('like')
     setFeedbackVisible(true)
     onLike?.()
-  }, [getCurrentUserId, match.user?.id, onLike])
+  }, [currentUserId, match.user?.id, onLike])
 
   const handleSuperLike = useCallback(() => {
-    const userId = getCurrentUserId()
-    if (userId && match.user?.id) {
-      aiAwarenessApi.trackSwipe(userId, match.user.id, 'super_like').catch(() => {})
+    if (currentUserId && match.user?.id) {
+      aiAwarenessApi.trackSwipe(currentUserId, match.user.id, 'super_like').catch(() => {})
     }
     setFeedbackAction('super_like')
     setFeedbackVisible(true)
     onSuperLike?.()
-  }, [getCurrentUserId, match.user?.id, onSuperLike])
+  }, [currentUserId, match.user?.id, onSuperLike])
 
   const handlePass = useCallback(() => {
-    const userId = getCurrentUserId()
-    if (userId && match.user?.id) {
-      aiAwarenessApi.trackSwipe(userId, match.user.id, 'pass').catch(() => {})
+    if (currentUserId && match.user?.id) {
+      aiAwarenessApi.trackSwipe(currentUserId, match.user.id, 'pass').catch(() => {})
     }
     setFeedbackAction('pass')
     setFeedbackVisible(true)
     onPass?.()
-  }, [getCurrentUserId, match.user?.id, onPass])
+  }, [currentUserId, match.user?.id, onPass])
 
   const renderCompatibilityBadge = () => (
     <div className="compatibility-badge">
@@ -171,6 +170,16 @@ const MatchCard: React.FC<MatchCardProps> = ({
             />
             {match.user?.verified && (
               <VerificationBadge verified size="small" className="verified-badge" />
+            )}
+            {/* v1.30: 置信度徽章 */}
+            {match.user?.id && (
+              <ConfidenceBadge
+                userId={match.user.id}
+                size="small"
+                showTooltip={true}
+                showPercent={false}
+                className="confidence-badge-inline"
+              />
             )}
           </div>
           {renderCompatibilityBadge()}

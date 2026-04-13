@@ -1421,31 +1421,46 @@ class TestSafetyZoneDBCRUD:
 
     def test_read_safety_zone(self, db_session):
         """测试查询安全区域"""
-        zone = make_safety_zone(
-            id="zone_read_1",
+        # 创建两种类型的安全区域用于查询测试
+        zone_danger = make_safety_zone(
+            id="zone_read_danger",
             zone_type="danger",
             name="危险区域",
         )
-        db_session.add(zone)
+        zone_safe = make_safety_zone(
+            id="zone_read_safe",
+            zone_type="safe",
+            name="安全区域",
+        )
+        db_session.add(zone_danger)
+        db_session.add(zone_safe)
         db_session.commit()
 
         # 按 ID 查询
         found = db_session.query(SafetyZoneDB).filter(
-            SafetyZoneDB.id == "zone_read_1"
+            SafetyZoneDB.id == "zone_read_danger"
         ).first()
         assert found is not None
+        assert found.zone_type == "danger"
 
-        # 按类型查询
+        # 按类型查询 safe
         safe_zones = db_session.query(SafetyZoneDB).filter(
             SafetyZoneDB.zone_type == "safe"
         ).all()
         assert len(safe_zones) >= 1
+        assert safe_zones[0].id == "zone_read_safe"
+
+        # 按类型查询 danger
+        danger_zones = db_session.query(SafetyZoneDB).filter(
+            SafetyZoneDB.zone_type == "danger"
+        ).all()
+        assert len(danger_zones) >= 1
 
         # 查询活跃区域
         active = db_session.query(SafetyZoneDB).filter(
             SafetyZoneDB.is_active == True
         ).all()
-        assert len(active) >= 1
+        assert len(active) >= 2
 
     def test_update_safety_zone(self, db_session):
         """测试更新安全区域"""

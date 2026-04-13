@@ -6,11 +6,18 @@
 - 匹配结果缓存
 - 会话状态管理
 - 通用缓存项
+
+性能优化（v1.30.0）：
+- 内存缓存 LRU 淘汰机制（防止无限增长）
+- 线程安全锁（防止并发竞争）
+- 结构化失效索引（提升失效效率）
 """
 import json
 import hashlib
-from typing import Optional, Any, Dict, List
-from datetime import timedelta
+import threading
+from collections import OrderedDict
+from typing import Optional, Any, Dict, List, Set
+from datetime import timedelta, datetime
 from config import settings
 from utils.logger import logger
 
@@ -30,9 +37,14 @@ class CacheManager:
     缓存管理器单例类
 
     提供多层缓存策略：
-    1. L1: 内存缓存（最快，容量小）
+    1. L1: 内存缓存（最快，容量小，带 LRU）
     2. L2: Redis 缓存（较快，容量大，可共享）
     3. L3: 数据库（最慢，持久化）
+
+    性能优化（v1.30.0）：
+    - 内存缓存使用 OrderedDict 实现 LRU 淘汰
+    - 线程安全锁保护并发操作
+    - 结构化失效索引（用户 -> 缓存键映射）
     """
 
     _instance: Optional["CacheManager"] = None
@@ -51,14 +63,22 @@ class CacheManager:
     SESSION_TTL = timedelta(hours=24)
     GENERIC_TTL = timedelta(hours=1)
 
+    # 性能优化：内存缓存配置
+    MEMORY_CACHE_MAX_SIZE = 1000  # 最大条目数
+
     def __new__(cls) -> "CacheManager":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
             cls._instance._redis_client = None
-            cls._instance._memory_cache: Dict[str, Any] = {}
+            # 性能优化：使用 OrderedDict 实现 LRU
+            cls._instance._memory_cache: OrderedDict = OrderedDict()
             cls._instance._cache_hits = 0
             cls._instance._cache_misses = 0
+            # 性能优化：线程安全锁
+            cls._instance._lock = threading.RLock()
+            # 性能优化：用户 -> 缓存键索引（加速失效）
+            cls._instance._user_key_index: Dict[str, Set[str]] = {}
         return cls._instance
 
     @classmethod
@@ -93,6 +113,38 @@ class CacheManager:
             logger.warning(f"Failed to connect to Redis: {e}, falling back to memory cache")
             self._redis_client = None
 
+    def _evict_if_needed(self) -> None:
+        """LRU 淘汰：超过容量时删除最旧的条目"""
+        with self._lock:
+            while len(self._memory_cache) > self.MEMORY_CACHE_MAX_SIZE:
+                # OrderedDict 的 popitem(last=False) 删除最旧的条目
+                oldest_key, _ = self._memory_cache.popitem(last=False)
+                # 同时清理用户索引
+                self._remove_from_user_index(oldest_key)
+                logger.debug(f"[Cache] LRU evicted: {oldest_key}")
+
+    def _add_to_user_index(self, user_id: str, cache_key: str) -> None:
+        """将缓存键添加到用户索引"""
+        with self._lock:
+            if user_id not in self._user_key_index:
+                self._user_key_index[user_id] = set()
+            self._user_key_index[user_id].add(cache_key)
+
+    def _remove_from_user_index(self, cache_key: str) -> None:
+        """从用户索引中移除缓存键"""
+        with self._lock:
+            for user_id, keys in self._user_key_index.items():
+                keys.discard(cache_key)
+            # 清理空的用户索引
+            empty_users = [u for u, keys in self._user_key_index.items() if not keys]
+            for u in empty_users:
+                del self._user_key_index[u]
+
+    def _get_user_keys(self, user_id: str) -> Set[str]:
+        """获取用户的所有缓存键"""
+        with self._lock:
+            return self._user_key_index.get(user_id, set()).copy()
+
     def _serialize(self, value: Any) -> str:
         """序列化值为 JSON 字符串"""
         return json.dumps(value, default=str, ensure_ascii=False)
@@ -125,11 +177,14 @@ class CacheManager:
         """获取用户画像缓存"""
         key = self._make_key(self.PROFILE_KEY, user_id)
 
-        # 先查内存缓存
-        if key in self._memory_cache:
-            self._cache_hits += 1
-            logger.debug(f"Profile cache hit (memory): {user_id}")
-            return self._memory_cache[key]
+        # 性能优化：线程安全 + LRU 顺序维护
+        with self._lock:
+            if key in self._memory_cache:
+                self._cache_hits += 1
+                # LRU: 访问时移动到末尾（最近使用）
+                self._memory_cache.move_to_end(key)
+                logger.debug(f"Profile cache hit (memory): {user_id}")
+                return self._memory_cache[key]
 
         # 再查 Redis
         if self._redis_client:
@@ -140,7 +195,11 @@ class CacheManager:
                     logger.debug(f"Profile cache hit (redis): {user_id}")
                     profile = self._deserialize(value)
                     # 回写到内存缓存
-                    self._memory_cache[key] = profile
+                    with self._lock:
+                        self._memory_cache[key] = profile
+                        self._memory_cache.move_to_end(key)
+                        self._add_to_user_index(user_id, key)
+                        self._evict_if_needed()
                     return profile
             except RedisError as e:
                 logger.warning(f"Redis get profile failed: {e}")
@@ -153,8 +212,12 @@ class CacheManager:
         """设置用户画像缓存"""
         key = self._make_key(self.PROFILE_KEY, user_id)
 
-        # 内存缓存
-        self._memory_cache[key] = profile
+        # 性能优化：线程安全 + LRU 淘汰
+        with self._lock:
+            self._memory_cache[key] = profile
+            self._memory_cache.move_to_end(key)  # 新条目放到末尾
+            self._add_to_user_index(user_id, key)
+            self._evict_if_needed()
 
         # Redis 缓存
         if self._redis_client:
@@ -171,8 +234,10 @@ class CacheManager:
         """失效用户画像缓存"""
         key = self._make_key(self.PROFILE_KEY, user_id)
 
-        # 清除内存缓存
-        self._memory_cache.pop(key, None)
+        # 性能优化：线程安全
+        with self._lock:
+            self._memory_cache.pop(key, None)
+            self._user_key_index.pop(user_id, None)
 
         # 清除 Redis 缓存
         if self._redis_client:
@@ -190,11 +255,13 @@ class CacheManager:
         """获取匹配结果缓存"""
         key = self._make_key(self.MATCH_RESULT_KEY, user_id, str(limit))
 
-        # 先查内存缓存
-        if key in self._memory_cache:
-            self._cache_hits += 1
-            logger.debug(f"Match result cache hit (memory): {user_id}")
-            return self._memory_cache[key]
+        # 性能优化：线程安全 + LRU
+        with self._lock:
+            if key in self._memory_cache:
+                self._cache_hits += 1
+                self._memory_cache.move_to_end(key)
+                logger.debug(f"Match result cache hit (memory): {user_id}")
+                return self._memory_cache[key]
 
         # 再查 Redis
         if self._redis_client:
@@ -205,7 +272,11 @@ class CacheManager:
                     logger.debug(f"Match result cache hit (redis): {user_id}")
                     result = self._deserialize(value)
                     # 回写到内存缓存
-                    self._memory_cache[key] = result
+                    with self._lock:
+                        self._memory_cache[key] = result
+                        self._memory_cache.move_to_end(key)
+                        self._add_to_user_index(user_id, key)
+                        self._evict_if_needed()
                     return result
             except RedisError as e:
                 logger.warning(f"Redis get match result failed: {e}")
@@ -218,8 +289,12 @@ class CacheManager:
         """设置匹配结果缓存"""
         key = self._make_key(self.MATCH_RESULT_KEY, user_id, str(limit))
 
-        # 内存缓存
-        self._memory_cache[key] = matches
+        # 性能优化：线程安全 + LRU
+        with self._lock:
+            self._memory_cache[key] = matches
+            self._memory_cache.move_to_end(key)
+            self._add_to_user_index(user_id, key)
+            self._evict_if_needed()
 
         # Redis 缓存
         if self._redis_client:
@@ -233,21 +308,29 @@ class CacheManager:
         return True
 
     def invalidate_match_result(self, user_id: str) -> bool:
-        """失效用户匹配结果缓存（清除所有 limit 配置）"""
-        pattern = self._make_key(self.MATCH_RESULT_KEY, user_id, "*")
+        """失效用户匹配结果缓存（使用用户索引加速）"""
+        # 性能优化：使用用户索引获取所有相关键，O(1) 复杂度
+        user_keys = self._get_user_keys(user_id)
 
-        # 清除内存缓存（遍历匹配）
-        keys_to_delete = [k for k in self._memory_cache.keys() if k.startswith(f"{self.MATCH_RESULT_KEY}{user_id}:")]
-        for key in keys_to_delete:
-            del self._memory_cache[key]
+        # 筛选出匹配结果相关的键
+        match_keys_to_delete = [
+            k for k in user_keys
+            if k.startswith(f"{self.MATCH_RESULT_KEY}{user_id}:")
+        ]
+
+        # 清除内存缓存
+        with self._lock:
+            for key in match_keys_to_delete:
+                self._memory_cache.pop(key, None)
+            # 清理用户索引
+            self._user_key_index.pop(user_id, None)
 
         # 清除 Redis 缓存
         if self._redis_client:
             try:
-                keys = self._redis_client.keys(pattern)
-                if keys:
-                    self._redis_client.delete(*keys)
-                    logger.debug(f"Match result cache invalidated: {user_id}")
+                if match_keys_to_delete:
+                    self._redis_client.delete(*match_keys_to_delete)
+                    logger.debug(f"Match result cache invalidated: {user_id}, keys={len(match_keys_to_delete)}")
                 return True
             except RedisError as e:
                 logger.warning(f"Redis delete match result failed: {e}")

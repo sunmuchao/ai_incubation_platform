@@ -19,12 +19,30 @@
 // ==================== 类型定义 ====================
 
 export interface UserInfo {
+  id?: string  // 🎯 [修复] 添加数据库 UUID
   username: string
   name: string
   email?: string
   age?: number
   gender?: string
+  location?: string
+  relationship_goal?: string
   avatar?: string
+  // ===== QuickStart 收集的重要匹配字段 =====
+  education?: string  // 学历
+  occupation?: string // 职业
+  income?: number     // 收入（万元）
+  housing?: string    // 房产情况
+  // ===== 核心维度（无法行为推断，必须问卷）=====
+  height?: number     // 身高 (v11)
+  has_car?: boolean   // 是否有车 (v15)
+  want_children?: string  // 是否想要孩子 (v17) 🔴 一票否决
+  spending_style?: string // 消费观念 (v27) 🔴 一票否决
+  family_importance?: number  // 家庭重要程度 (v16)
+  work_life_balance?: string  // 工作生活平衡 (v23)
+  migration_willingness?: number  // 迁移意愿 (v160)
+  accept_remote?: boolean   // 异地接受度 (v163)
+  sleep_type?: string  // 作息类型 (v88)
   [key: string]: any
 }
 
@@ -78,10 +96,18 @@ export const authStorage = {
   },
 
   /**
-   * 获取用户 ID (username)
+   * 获取用户 ID
+   *
+   * 🎯 [修复] 优先返回数据库 UUID (user.id)，用于后端查询
+   * 如果没有 id，则返回 username（兼容旧数据）
    */
   getUserId(): string {
     const user = this.getUser()
+    // 优先返回数据库 UUID
+    if (user?.id) {
+      return user.id
+    }
+    // 兼容旧数据：返回 username
     return user?.username || 'anonymous'
   },
 

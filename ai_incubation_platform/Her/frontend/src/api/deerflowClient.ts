@@ -13,25 +13,9 @@
  *   const response = await deerflowClient.chat("帮我找对象", threadId);
  */
 
-import { authStorage } from '../utils/storage';
+import { getAuthHeaders, getCurrentUserId } from './apiClient'
 
-const API_BASE_URL = '/api';
-
-// 获取认证头
-const getAuthHeaders = (): Record<string, string> => {
-  const token = authStorage.getToken();
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  return headers;
-};
-
-// 获取用户 ID
-const getUserId = (): string => {
-  const user = authStorage.getUser();
-  return user?.id || 'user-anonymous-dev';
-};
+const API_BASE_URL = '/api'
 
 /**
  * DeerFlow 响应类型
@@ -139,8 +123,8 @@ export const deerflowClient = {
    * @returns DeerFlow 响应
    */
   async chat(message: string, threadId?: string): Promise<DeerFlowResponse> {
-    const userId = getUserId();
-    const actualThreadId = threadId || `her-${userId}-${Date.now()}`;
+    const userId = getCurrentUserId()
+    const actualThreadId = threadId || `her-${userId}-${Date.now()}`
 
     try {
       const response = await fetch(`${API_BASE_URL}/deerflow/chat`, {
@@ -182,7 +166,7 @@ export const deerflowClient = {
     threadId: string,
     onEvent: (event: DeerFlowStreamEvent) => void
   ): Promise<void> {
-    const userId = getUserId();
+    const userId = getCurrentUserId()
 
     try {
       const response = await fetch(`${API_BASE_URL}/deerflow/stream`, {
@@ -246,7 +230,7 @@ export const deerflowClient = {
    * @returns 同步的 facts 数量
    */
   async syncMemory(): Promise<{ success: boolean; facts_count: number; message: string }> {
-    const userId = getUserId();
+    const userId = getCurrentUserId()
 
     try {
       const response = await fetch(`${API_BASE_URL}/deerflow/memory/sync`, {
@@ -312,7 +296,95 @@ export const deerflowClient = {
   },
 
   /**
-   * 解析工具返回的结构化数据
+   * 从 Agent 的 ai_message 中解析 JSON 代码块
+   *
+   * Agent Native 架构中，Agent 在 markdown 中输出结构化数据：
+   * ```json
+   * {"topics": [...]}
+   * ```
+   *
+   * 此方法提取并解析这些 JSON 代码块
+   */
+  parseAgentJsonOutput(response: DeerFlowResponse): {
+    type: string;
+    data: any;
+    natural_message: string;
+  } | null {
+    if (!response.ai_message) {
+      return null;
+    }
+
+    // 提取 markdown JSON 代码块
+    const jsonMatch = response.ai_message.match(/```json\s*([\s\S]*?)\s*```/);
+    if (!jsonMatch) {
+      return null;
+    }
+
+    try {
+      const jsonData = JSON.parse(jsonMatch[1]);
+      // 提取自然语言部分（JSON 代码块之前的内容）
+      const naturalMessage = response.ai_message.split('```json')[0].trim();
+
+      // 根据 JSON 结构判断类型
+      if (jsonData.topics) {
+        return {
+          type: 'topics',
+          data: {
+            topics: jsonData.topics,
+            total: jsonData.total,
+            context_analysis: jsonData.context_analysis,
+          },
+          natural_message: naturalMessage,
+        };
+      }
+
+      if (jsonData.icebreakers) {
+        return {
+          type: 'icebreakers',
+          data: {
+            icebreakers: jsonData.icebreakers,
+            best_pick: jsonData.best_pick,
+          },
+          natural_message: naturalMessage,
+        };
+      }
+
+      if (jsonData.plans) {
+        return {
+          type: 'date_plans',
+          data: {
+            plans: jsonData.plans,
+            best_pick: jsonData.best_pick,
+          },
+          natural_message: naturalMessage,
+        };
+      }
+
+      if (jsonData.matches) {
+        return {
+          type: 'matches',
+          data: {
+            matches: jsonData.matches,
+            total: jsonData.total,
+          },
+          natural_message: naturalMessage,
+        };
+      }
+
+      // 未知 JSON 结构，返回原始数据
+      return {
+        type: 'unknown',
+        data: jsonData,
+        natural_message: naturalMessage,
+      };
+    } catch (error) {
+      console.error('Failed to parse Agent JSON output:', error);
+      return null;
+    }
+  },
+
+  /**
+   * 解析工具返回的结构化数据（兼容旧架构）
    *
    * 根据 component_type 返回对应类型的数据
    */
@@ -320,6 +392,16 @@ export const deerflowClient = {
     type: string;
     data: any;
   } | null {
+    // Agent Native 架构：优先从 ai_message 解析 JSON
+    const agentOutput = this.parseAgentJsonOutput(response);
+    if (agentOutput) {
+      return {
+        type: agentOutput.type,
+        data: agentOutput.data,
+      };
+    }
+
+    // 降级：从 tool_result.data 解析（兼容旧架构）
     if (!response.tool_result?.success) {
       return null;
     }

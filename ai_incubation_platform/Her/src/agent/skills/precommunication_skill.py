@@ -7,6 +7,9 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 from agent.skills.base import BaseSkill
 from utils.logger import logger
+from utils.db_session_manager import db_session
+from db.models import MatchHistoryDB, ConversationDB, UserDB
+import json
 
 
 class PreCommunicationSkill:
@@ -280,106 +283,215 @@ class PreCommunicationSkill:
         }
 
     async def _list_sessions(self, user_id: str) -> dict:
-        """列出用户的预沟通会话"""
-        # 注：当前使用模拟数据，待对接数据库
-        logger.info(f"PreCommunicationSkill: Listing sessions for user={user_id}")
+        """
+        列出用户的预沟通会话（真实数据库查询）
 
-        # 模拟数据
-        sessions = [
-            {
-                "id": "precomm-match-1-20260411",
-                "user_id_1": user_id,
-                "user_id_2": "partner-1",
-                "user_a_name": "我",
-                "user_b_name": "TA",
-                "status": "completed",
-                "compatibility_score": 0.85,
-                "message_count": 50,
-                "created_at": "2026-04-10T10:00:00",
-                "completed_at": "2026-04-10T12:00:00",
-                "recommendation": "proceed_to_chat"
-            },
-            {
-                "id": "precomm-match-2-20260411",
-                "user_id_1": user_id,
-                "user_id_2": "partner-2",
-                "user_a_name": "我",
-                "user_b_name": "TA",
-                "status": "in_progress",
-                "message_count": 25,
-                "created_at": "2026-04-11T10:00:00",
-                "progress_percentage": 50
+        【架构修正】
+        原设计：返回 Mock 数据（不可用）
+        新设计：从 match_history 表查询真实的匹配记录
+        """
+        logger.info(f"[PreCommunication] Listing sessions for user={user_id}")
+
+        sessions = []
+
+        try:
+            with db_session() as db:
+                # 查询用户的所有匹配记录（预沟通会话即匹配记录）
+                matches = db.query(MatchHistoryDB).filter(
+                    (MatchHistoryDB.user_id_1 == user_id) | (MatchHistoryDB.user_id_2 == user_id),
+                    MatchHistoryDB.status.in_(['accepted', 'pending'])  # 只返回有效的匹配
+                ).order_by(MatchHistoryDB.created_at.desc()).limit(10).all()
+
+                for match in matches:
+                    # 确定对方是谁
+                    partner_id = match.user_id_2 if match.user_id_1 == user_id else match.user_id_1
+
+                    # 获取对方用户信息
+                    partner = db.query(UserDB).filter(UserDB.id == partner_id).first()
+                    partner_name = partner.name if partner else "TA"
+
+                    # 解析共同兴趣
+                    common_interests = []
+                    if match.common_interests:
+                        try:
+                            common_interests = json.loads(match.common_interests)
+                        except json.JSONDecodeError:
+                            common_interests = match.common_interests.split(",") if match.common_interests else []
+
+                    # 计算进度（基于互动次数）
+                    progress_percentage = min(100, match.interaction_count * 2) if match.interaction_count else 0
+
+                    sessions.append({
+                        "id": match.id,
+                        "user_id_1": match.user_id_1,
+                        "user_id_2": match.user_id_2,
+                        "user_a_name": "我",
+                        "user_b_name": partner_name,
+                        "status": match.status,
+                        "compatibility_score": match.compatibility_score,
+                        "message_count": match.interaction_count or 0,
+                        "created_at": match.created_at.isoformat() if match.created_at else "",
+                        "completed_at": match.updated_at.isoformat() if match.updated_at and match.status == 'accepted' else "",
+                        "recommendation": "proceed_to_chat" if match.status == 'accepted' else "continue_precomm",
+                        "common_interests": common_interests,
+                        "relationship_stage": match.relationship_stage,
+                        "progress_percentage": progress_percentage,
+                    })
+
+            return {
+                "success": True,
+                "sessions": sessions,
+                "total_count": len(sessions),
+                "ai_message": f"找到 {len(sessions)} 个匹配会话" if sessions else "暂无匹配会话"
             }
-        ]
 
-        return {
-            "success": True,
-            "sessions": sessions,
-            "total_count": len(sessions),
-            "ai_message": f"找到 {len(sessions)} 个 AI 预沟通会话"
-        }
+        except Exception as e:
+            logger.error(f"[PreCommunication] Failed to list sessions: {e}")
+            # 降级：返回空列表而不是 Mock 数据
+            return {
+                "success": False,
+                "sessions": [],
+                "total_count": 0,
+                "ai_message": f"查询失败：{str(e)}",
+                "error": str(e)
+            }
 
     async def _get_messages(self, session_id: str) -> dict:
-        """获取预沟通会话的对话消息"""
-        # 注：当前使用模拟数据，待对接数据库
-        logger.info(f"PreCommunicationSkill: Getting messages for session={session_id}")
+        """
+        获取预沟通会话的对话消息（真实数据库查询）
 
-        # 模拟消息数据
-        messages = [
-            {
-                "id": "msg-1",
-                "role": "ai_user_a",
-                "content": "你好呀，看到你喜欢旅行，最近有去过什么好玩的地方吗？",
-                "timestamp": "2026-04-10T10:05:00"
-            },
-            {
-                "id": "msg-2",
-                "role": "ai_user_b",
-                "content": "你好！最近去了云南，风景特别美，你平时喜欢去哪里旅行呢？",
-                "timestamp": "2026-04-10T10:10:00"
-            },
-            {
-                "id": "msg-3",
-                "role": "ai_user_a",
-                "content": "我比较喜欢去海边，觉得海边特别放松。听说云南有很多少数民族，感觉很有趣~",
-                "timestamp": "2026-04-10T10:15:00"
-            },
-            {
-                "id": "msg-4",
-                "role": "ai_user_b",
-                "content": "是的！少数民族的服饰和文化都很有特色。海边我也喜欢，可能因为平时工作压力大，海边能让人放松~",
-                "timestamp": "2026-04-10T10:20:00"
-            },
-            {
-                "id": "msg-5",
-                "role": "ai_user_a",
-                "content": "确实，旅行是最好的放松方式。你平时做什么工作呢？",
-                "timestamp": "2026-04-10T10:25:00"
+        【架构修正】
+        原设计：返回 Mock 数据（不可用）
+        新设计：从 conversations 表查询真实的对话消息
+        """
+        logger.info(f"[PreCommunication] Getting messages for session={session_id}")
+
+        messages = []
+
+        try:
+            with db_session() as db:
+                # 先获取匹配记录，确认用户 ID
+                match = db.query(MatchHistoryDB).filter(MatchHistoryDB.id == session_id).first()
+
+                if not match:
+                    return {
+                        "success": False,
+                        "session_id": session_id,
+                        "messages": [],
+                        "total_count": 0,
+                        "ai_message": "会话不存在"
+                    }
+
+                # 查询该匹配的对话消息
+                conversations = db.query(ConversationDB).filter(
+                    ((ConversationDB.user_id_1 == match.user_id_1) & (ConversationDB.user_id_2 == match.user_id_2)) |
+                    ((ConversationDB.user_id_1 == match.user_id_2) & (ConversationDB.user_id_2 == match.user_id_1))
+                ).order_by(ConversationDB.created_at.asc()).limit(50).all()
+
+                for conv in conversations:
+                    # 解析话题标签
+                    topic_tags = []
+                    if conv.topic_tags:
+                        try:
+                            topic_tags = json.loads(conv.topic_tags)
+                        except json.JSONDecodeError:
+                            topic_tags = conv.topic_tags.split(",") if conv.topic_tags else []
+
+                    messages.append({
+                        "id": conv.id,
+                        "role": "user" if conv.sender_id == match.user_id_1 else "partner",
+                        "content": conv.message_content,
+                        "timestamp": conv.created_at.isoformat() if conv.created_at else "",
+                        "message_type": conv.message_type,
+                        "topic_tags": topic_tags,
+                        "sentiment_score": conv.sentiment_score,
+                    })
+
+            return {
+                "success": True,
+                "session_id": session_id,
+                "messages": messages,
+                "total_count": len(messages),
+                "ai_message": f"对话历史（共 {len(messages)} 条）" if messages else "暂无对话消息"
             }
-        ]
 
-        return {
-            "success": True,
-            "session_id": session_id,
-            "messages": messages,
-            "total_count": len(messages),
-            "ai_message": f"AI 预沟通对话历史（共 {len(messages)} 条）"
-        }
+        except Exception as e:
+            logger.error(f"[PreCommunication] Failed to get messages: {e}")
+            # 降级：返回空列表而不是 Mock 数据
+            return {
+                "success": False,
+                "session_id": session_id,
+                "messages": [],
+                "total_count": 0,
+                "ai_message": f"查询失败：{str(e)}",
+                "error": str(e)
+            }
 
     def _get_match_info(self, match_id: str) -> Optional[dict]:
-        """获取匹配信息"""
-        # 注：当前使用模拟数据，待对接数据库
-        logger.info(f"PreCommunicationSkill: Getting match info for {match_id}")
-        # 这里使用模拟数据
-        return {
-            "id": match_id,
-            "user_id_1": "user-1",
-            "user_id_2": "user-2",
-            "user_a_profile_completeness": 0.85,
-            "user_b_profile_completeness": 0.90,
-            "base_score": 0.78,
-            "common_interests": ["旅行", "美食"]
-        }
+        """
+        获取匹配信息（真实数据库查询）
+
+        【架构修正】
+        原设计：返回 Mock 数据（不可用）
+        新设计：从 match_history 和 users 表查询真实数据
+        """
+        logger.info(f"[PreCommunication] Getting match info for {match_id}")
+
+        try:
+            with db_session() as db:
+                # 查询匹配记录
+                match = db.query(MatchHistoryDB).filter(MatchHistoryDB.id == match_id).first()
+
+                if not match:
+                    logger.warning(f"[PreCommunication] Match {match_id} not found")
+                    return None
+
+                # 查询双方用户信息
+                user_a = db.query(UserDB).filter(UserDB.id == match.user_id_1).first()
+                user_b = db.query(UserDB).filter(UserDB.id == match.user_id_2).first()
+
+                # 计算资料完整度
+                def calculate_profile_completeness(user: UserDB) -> float:
+                    if not user:
+                        return 0.0
+                    completeness = 0.0
+                    if user.name: completeness += 0.2
+                    if user.age: completeness += 0.15
+                    if user.gender: completeness += 0.15
+                    if user.location: completeness += 0.15
+                    if user.relationship_goal: completeness += 0.15
+                    if user.bio: completeness += 0.1
+                    return min(1.0, completeness)
+
+                user_a_completeness = calculate_profile_completeness(user_a)
+                user_b_completeness = calculate_profile_completeness(user_b)
+
+                # 解析共同兴趣
+                common_interests = []
+                if match.common_interests:
+                    try:
+                        common_interests = json.loads(match.common_interests)
+                    except json.JSONDecodeError:
+                        common_interests = match.common_interests.split(",") if match.common_interests else []
+
+                return {
+                    "id": match.id,
+                    "user_id_1": match.user_id_1,
+                    "user_id_2": match.user_id_2,
+                    "user_a_name": user_a.name if user_a else "用户A",
+                    "user_b_name": user_b.name if user_b else "用户B",
+                    "user_a_profile_completeness": user_a_completeness,
+                    "user_b_profile_completeness": user_b_completeness,
+                    "base_score": match.compatibility_score,
+                    "common_interests": common_interests,
+                    "status": match.status,
+                    "relationship_stage": match.relationship_stage,
+                    "interaction_count": match.interaction_count or 0,
+                }
+
+        except Exception as e:
+            logger.error(f"[PreCommunication] Failed to get match info: {e}")
+            return None
 
     def _should_start_precomm(self, match_info: dict) -> dict:
         """判断是否适合启动预沟通"""

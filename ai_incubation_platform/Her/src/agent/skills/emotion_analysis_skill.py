@@ -696,16 +696,22 @@ def analyze_text_emotion_sync(text: str, context: Optional[Dict[str, Any]] = Non
 
     skill = get_emotion_analysis_skill()
 
+    def _run_in_new_loop(text: str, context: dict = None):
+        """在新事件循环中执行（线程安全）"""
+        new_loop = asyncio.new_event_loop()
+        try:
+            return new_loop.run_until_complete(skill.analyze_text_emotion(text, context))
+        finally:
+            new_loop.close()
+
     try:
         loop = asyncio.get_running_loop()
         with ThreadPoolExecutor() as executor:
-            future = executor.submit(
-                asyncio.run,
-                skill.analyze_text_emotion(text, context)
-            )
+            future = executor.submit(_run_in_new_loop, text, context)
             return future.result(timeout=15)
     except RuntimeError:
-        return asyncio.run(skill.analyze_text_emotion(text, context))
+        # 没有运行中的事件循环，使用新事件循环
+        return _run_in_new_loop(text, context)
 
 
 # 全局 Skill 实例

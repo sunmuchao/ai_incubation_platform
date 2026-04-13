@@ -5,8 +5,9 @@
  */
 
 import React from 'react'
-import { Card, Button, Space, Typography, Tag, Checkbox, Radio, message, Spin } from 'antd'
-import { CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons'
+import { Card, Button, Space, Typography, Tag, Checkbox, Radio, message, Spin, Input } from 'antd'
+import { CheckCircleOutlined, LoadingOutlined, ForwardOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import './ProfileQuestionCard.less'
 
 const { Text, Title } = Typography
@@ -20,11 +21,13 @@ interface QuestionOption {
 interface ProfileQuestionCardProps {
   question: string
   subtitle?: string
-  questionType: 'single_choice' | 'multiple_choice' | 'tags'
+  questionType: 'single_choice' | 'multiple_choice' | 'tags' | 'input'
   options: QuestionOption[]
   dimension: string
   depth?: number  // 追问深度，0=首次提问，1+=追问
+  optional?: boolean  // 是否为可选字段（用户可跳过）
   onAnswer: (dimension: string, value: string | string[], depth: number) => Promise<void>  // 改为 Promise
+  onSkip?: (dimension: string) => Promise<void>  // 跳过回调
 }
 
 const ProfileQuestionCard: React.FC<ProfileQuestionCardProps> = ({
@@ -34,11 +37,16 @@ const ProfileQuestionCard: React.FC<ProfileQuestionCardProps> = ({
   options,
   dimension,
   depth = 0,
+  optional = false,
   onAnswer,
+  onSkip,
 }) => {
+  const { t } = useTranslation()
   const [selectedValues, setSelectedValues] = React.useState<string[]>([])
+  const [inputValue, setInputValue] = React.useState('')
   const [submitted, setSubmitted] = React.useState(false)
   const [loading, setLoading] = React.useState(false)  // 新增 loading 状态
+  const [skipping, setSkipping] = React.useState(false)  // 跳过 loading 状态
   const [error, setError] = React.useState<string | null>(null)  // 新增 error 状态
 
   // 单选点击
@@ -51,11 +59,50 @@ const ProfileQuestionCard: React.FC<ProfileQuestionCardProps> = ({
 
     try {
       await onAnswer(dimension, value, depth)
+      setLoading(false)  // 成功后关闭 loading
     } catch (err) {
       console.error('Failed to submit answer:', err)
       setError('提交失败，请重试')
       setSubmitted(false)  // 允许重新选择
       setLoading(false)
+    }
+  }
+
+  // 输入框提交
+  const handleInputSubmit = async () => {
+    if (!inputValue.trim()) {
+      message.warning('请输入内容')
+      return
+    }
+    if (submitted || loading) return
+
+    setSubmitted(true)
+    setLoading(true)
+    setError(null)
+
+    try {
+      await onAnswer(dimension, inputValue.trim(), depth)
+      setLoading(false)  // 成功后关闭 loading
+    } catch (err) {
+      console.error('Failed to submit answer:', err)
+      setError('提交失败，请重试')
+      setSubmitted(false)
+      setLoading(false)
+    }
+  }
+
+  // 跳过处理
+  const handleSkip = async () => {
+    if (skipping || !onSkip) return
+    setSkipping(true)
+    setError(null)
+
+    try {
+      await onSkip(dimension)
+    } catch (err) {
+      console.error('Failed to skip:', err)
+      setError('跳过失败，请重试')
+      setSkipping(false)
     }
   }
 
@@ -92,6 +139,47 @@ const ProfileQuestionCard: React.FC<ProfileQuestionCardProps> = ({
       setLoading(false)
     }
   }
+
+  // 渲染输入框
+  const renderInput = () => (
+    <div className="question-options input-choice">
+      {loading && (
+        <div className="loading-overlay">
+          <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
+          <Text type="secondary" style={{ marginTop: 12 }}>正在处理...</Text>
+        </div>
+      )}
+      {error && (
+        <div className="error-overlay">
+          <Text type="danger">{error}</Text>
+        </div>
+      )}
+      <Input
+        placeholder={t('conversation.inputPlaceholder')}
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onPressEnter={handleInputSubmit}
+        disabled={submitted || loading}
+        size="large"
+        style={{ borderRadius: 12 }}
+      />
+      {!submitted && inputValue.trim() && (
+        <Button
+          type="primary"
+          block
+          onClick={handleInputSubmit}
+          style={{
+            marginTop: 12,
+            background: 'linear-gradient(135deg, #D4A59A 0%, #C88B8B 100%)',
+            border: 'none',
+            borderRadius: 20,
+          }}
+        >
+          确认
+        </Button>
+      )}
+    </div>
+  )
 
   // 渲染单选
   const renderSingleChoice = () => (
@@ -213,6 +301,11 @@ const ProfileQuestionCard: React.FC<ProfileQuestionCardProps> = ({
             再说说看~
           </Tag>
         )}
+        {optional && (
+          <Tag color="#999" style={{ marginBottom: 8, fontSize: 11 }}>
+            {t('conversation.qsOptional')}
+          </Tag>
+        )}
         <Title level={5} className="question-text">{question}</Title>
         {subtitle && (
           <Text type="secondary" className="question-subtitle">{subtitle}</Text>
@@ -223,7 +316,30 @@ const ProfileQuestionCard: React.FC<ProfileQuestionCardProps> = ({
         {questionType === 'single_choice' && renderSingleChoice()}
         {questionType === 'multiple_choice' && renderMultipleChoice()}
         {questionType === 'tags' && renderTags()}
+        {questionType === 'input' && renderInput()}
       </div>
+
+      {/* 可选字段的跳过按钮 */}
+      {optional && !submitted && !loading && !skipping && onSkip && (
+        <div className="skip-footer" style={{ marginTop: 12, textAlign: 'center' }}>
+          <Button
+            type="text"
+            onClick={handleSkip}
+            icon={<ForwardOutlined />}
+            style={{ color: '#999' }}
+          >
+            {t('conversation.qsSkip')}
+          </Button>
+        </div>
+      )}
+
+      {/* 跳过 loading */}
+      {skipping && (
+        <div className="loading-overlay" style={{ marginTop: 12 }}>
+          <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
+          <Text type="secondary" style={{ marginTop: 12 }}>正在跳过...</Text>
+        </div>
+      )}
     </Card>
   )
 }

@@ -1,7 +1,7 @@
 /**
  * 消息解读组件
  *
- * 改用 chatAssistantSkill 替代已删除的 /api/message-interpretation REST API
+ * 改用 DeerFlow Agent 替代已删除的 /api/message-interpretation REST API
  */
 
 import React, { useState } from 'react'
@@ -10,7 +10,7 @@ import {
   BulbOutlined, SmileOutlined, AimOutlined, MessageOutlined, LinkOutlined, SearchOutlined,
   ThunderboltOutlined, CloseOutlined, CopyOutlined
 } from '@ant-design/icons'
-import { chatAssistantSkill } from '../api/skillClient'
+import { deerflowClient } from '../api/deerflowClient'
 
 const { Text, Title, Paragraph } = Typography
 
@@ -68,14 +68,18 @@ const MessageInterpretation: React.FC<MessageInterpretationProps> = ({
   const handleInterpret = async () => {
     setLoading(true)
     try {
-      // 改用 Skill 替代已删除的 REST API
-      const result = await chatAssistantSkill.getSuggestions(userId, partnerId)
+      // 改用 DeerFlow Agent 替代已删除的 REST API
+      const result = await deerflowClient.chat(
+        `帮我解读这条消息："${messageContent}"，分析含义、情感、意图，并给出回复建议`,
+        `her-interpret-${userId}`
+      )
 
       if (!result.success) {
         throw new Error('解读失败')
       }
 
       // 构造解读结果
+      const interpretationData = result.tool_result?.data || {}
       setResult({
         interpretation_id: `interpret-${Date.now()}`,
         message_id: messageId,

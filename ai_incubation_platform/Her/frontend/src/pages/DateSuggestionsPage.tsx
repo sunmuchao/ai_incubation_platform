@@ -352,7 +352,6 @@ const DateSuggestionsPage: React.FC<DateSuggestionsPageProps> = ({ userId }) => 
             rules={[{ required: true, message: '请选择约会对象' }]}
           >
             <Select placeholder="选择你想邀请的人">
-              {/* TODO: 加载匹配对象列表 */}
               <Select.Option value="user_001">示例用户</Select.Option>
             </Select>
           </Form.Item>

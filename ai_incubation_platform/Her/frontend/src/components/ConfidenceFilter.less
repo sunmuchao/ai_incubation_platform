@@ -1,0 +1,105 @@
+// ============================================
+// 置信度筛选组件样式
+// ============================================
+
+.confidence-filter-card {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 12px;
+
+  .level-radio-group {
+    width: 100%;
+
+    .ant-radio-button-wrapper {
+      padding: 4px 12px;
+      font-size: 13px;
+      border-radius: 4px;
+
+      &:first-child {
+        border-radius: 4px;
+      }
+
+      &:last-child {
+        border-radius: 4px;
+      }
+
+      &:hover {
+        background: #e6f7ff;
+      }
+
+      &.ant-radio-button-wrapper-checked {
+        background: #1890ff;
+        color: #fff;
+        border-color: #1890ff;
+
+        &:hover {
+          background: #40a9ff;
+        }
+      }
+    }
+  }
+
+  .slider-container {
+    padding: 8px 0;
+
+    .ant-slider {
+      margin-top: 12px;
+
+      .ant-slider-track {
+        background: linear-gradient(90deg, #fa8c16 0%, #1890ff 50%, #52c41a 80%, #faad14 100%);
+      }
+
+      .ant-slider-handle {
+        border-color: #1890ff;
+
+        &:hover {
+          border-color: #40a9ff;
+        }
+
+        &:focus {
+          border-color: #40a9ff;
+          box-shadow: 0 0 0 5px rgba(24, 144, 255, 0.2);
+        }
+      }
+    }
+
+    .ant-slider-mark-text {
+      font-size: 12px;
+      color: #8c8c8c;
+    }
+  }
+
+  .filter-summary {
+    padding: 8px 0;
+    border-top: 1px solid #e8e8e8;
+    margin-top: 8px;
+  }
+
+  .ant-switch {
+    &.ant-switch-checked {
+      background-color: #52c41a;
+    }
+  }
+}
+
+// 深色模式适配
+@media (prefers-color-scheme: dark) {
+  .confidence-filter-card {
+    background: #2a2a2a;
+
+    .level-radio-group .ant-radio-button-wrapper {
+      &:hover {
+        background: #333;
+      }
+
+      &.ant-radio-button-wrapper-checked {
+        background: #1890ff;
+        color: #fff;
+      }
+    }
+
+    .filter-summary {
+      border-top-color: #303030;
+    }
+  }
+}

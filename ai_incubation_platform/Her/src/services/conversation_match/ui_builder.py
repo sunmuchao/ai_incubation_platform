@@ -1,0 +1,199 @@
+"""
+UIBuilder - UI 构建器
+
+职责：
+- 构建 Generative UI
+- 构建建议操作
+- 构建追问响应
+
+从 ConversationMatchService 提取的方法：
+- _build_generative_ui
+- _build_suggested_actions
+- _build_quality_check_followup_response
+"""
+from typing import Dict, Any, List, Optional
+
+from utils.logger import logger
+
+
+class UIBuilder:
+    """
+    UI 构建器
+
+    负责构建前端展示所需的 UI 结构和建议操作
+    """
+
+    def build_generative_ui(
+        self,
+        matches: List[Any],
+        intent: Any,
+    ) -> Dict[str, Any]:
+        """构建 Generative UI"""
+        if not matches:
+            return {
+                "component_type": "EmptyState",
+                "props": {
+                    "message": "没有找到匹配对象",
+                    "suggestion": "试试放宽条件",
+                }
+            }
+
+        # 构建匹配卡片列表
+        match_cards = []
+        for match in matches:
+            card = {
+                "id": match.get("candidate_id"),
+                "name": match.get("candidate_name"),
+                "score": match.get("compatibility_score"),
+                "reasoning": match.get("match_reasoning"),
+                "her_advice": match.get("her_advice").to_dict() if hasattr(match.get("her_advice"), 'to_dict') else None,
+                "risk_warnings": match.get("risk_warnings"),
+            }
+            match_cards.append(card)
+
+        return {
+            "component_type": "MatchCardList",
+            "props": {
+                "matches": match_cards,
+                "loading": False,
+                "show_her_advice": True,
+            }
+        }
+
+    def build_suggested_actions(
+        self,
+        matches: List[Any],
+        bias_analysis: Any,
+    ) -> List[Dict[str, str]]:
+        """构建建议操作"""
+        actions = []
+
+        if matches:
+            actions.append({
+                "label": "查看第一个",
+                "action": f"view_{matches[0].get('candidate_id')}",
+            })
+            actions.append({
+                "label": "查看更多",
+                "action": "show_more_matches",
+            })
+
+        if bias_analysis and hasattr(bias_analysis, 'has_bias') and bias_analysis.has_bias:
+            actions.append({
+                "label": "听听 Her 的建议",
+                "action": "show_her_analysis",
+            })
+
+        actions.append({
+            "label": "调整条件",
+            "action": "adjust_conditions",
+        })
+
+        return actions
+
+    def build_quality_check_followup_response(
+        self,
+        intent: Any,
+        quality_check: Any,
+        original_message: str,
+    ) -> Dict[str, Any]:
+        """
+        构建查询质量校验未通过时的追问响应
+
+        不执行查询，而是引导用户澄清缺失信息
+        """
+        # 构建追问消息
+        follow_ups = quality_check.follow_up_questions
+
+        if len(follow_ups) == 1:
+            ai_message = follow_ups[0]
+        elif len(follow_ups) > 1:
+            # 多个问题，友好地逐一询问
+            ai_message = "为了帮你找到更合适的对象，我需要了解几个信息：\n\n"
+            for i, q in enumerate(follow_ups[:3], 1):  # 最多问 3 个问题
+                ai_message += f"{i}. {q}\n"
+            ai_message += "\n你可以一次回答，也可以逐个告诉我。"
+        else:
+            # 没有具体问题（可能是清晰性问题）
+            if quality_check.clarity_issues:
+                ai_message = f"我注意到你的需求有些模糊：{quality_check.clarity_issues[0]}。能再说具体一点吗？"
+            else:
+                ai_message = "你能再说详细一点吗？比如你希望找什么样的人？"
+
+        # 构建建议操作（引导用户回答）
+        suggested_actions = []
+        if quality_check.missing_info:
+            for info in quality_check.missing_info[:3]:
+                suggested_actions.append({
+                    "label": f"补充{info}",
+                    "action": f"provide_{info}",
+                })
+        suggested_actions.append({
+            "label": "跳过，直接推荐",
+            "action": "skip_quality_check",
+        })
+
+        # 构建 Generative UI（追问卡片）
+        generative_ui = {
+            "component_type": "QualityCheckFollowUp",
+            "props": {
+                "clarity_issues": quality_check.clarity_issues,
+                "missing_info": quality_check.missing_info,
+                "follow_up_questions": follow_ups,
+                "original_message": original_message,
+            }
+        }
+
+        logger.info(f"[UIBuilder] 构建追问响应: {ai_message[:50]}...")
+
+        return {
+            "ai_message": ai_message,
+            "intent_type": "quality_check_followup",
+            "suggested_actions": suggested_actions,
+            "generative_ui": generative_ui,
+        }
+
+    def build_preference_update_response(
+        self,
+        preference_mentioned: str,
+    ) -> Dict[str, Any]:
+        """构建偏好更新响应"""
+        return {
+            "ai_message": f"好的，我会记住你喜欢{preference_mentioned}的人。下次给你推荐时会更精准！",
+            "intent_type": "preference_update",
+            "suggested_actions": [
+                {"label": "现在找人", "action": "开始匹配"},
+            ],
+            "generative_ui": {
+                "component_type": "SimpleResponse",
+                "props": {"message": f"好的，我会记住你喜欢{preference_mentioned}的人。"},
+            },
+        }
+
+    def build_general_conversation_response(self) -> Dict[str, Any]:
+        """构建一般对话响应"""
+        return {
+            "ai_message": "我在这里随时帮你找人、分析关系、或者聊聊你的想法。有什么需要吗？",
+            "intent_type": "conversation",
+            "suggested_actions": [
+                {"label": "帮我找人", "action": "开始匹配"},
+                {"label": "调整偏好", "action": "更新偏好"},
+            ],
+            "generative_ui": {
+                "component_type": "SimpleResponse",
+                "props": {"message": "我在这里随时帮你找人、分析关系、或者聊聊你的想法。"},
+            },
+        }
+
+
+# 全局实例
+_ui_builder: Optional[UIBuilder] = None
+
+
+def get_ui_builder() -> UIBuilder:
+    """获取 UI 构建器单例"""
+    global _ui_builder
+    if _ui_builder is None:
+        _ui_builder = UIBuilder()
+        logger.info("UIBuilder initialized")
+    return _ui_builder

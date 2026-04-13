@@ -89,7 +89,7 @@ export default defineConfig({
     port: 3005,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8002',  // Her 后端端口（与 .env SERVER_PORT 一致）
         changeOrigin: true,
         ws: true,  // 启用 WebSocket 代理
       },

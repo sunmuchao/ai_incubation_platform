@@ -245,6 +245,34 @@ async def _get_user_profile(user_id: str) -> Dict[str, Any]:
                     "lifestyle": json.loads(getattr(user, "lifestyle", "{}") or "{}"),
                     "values": json.loads(getattr(user, "values", "{}") or "{}"),
                     "deal_breakers": json.loads(getattr(user, "deal_breakers", "{}") or "{}"),
+                    # QuickStart 核心字段
+                    "age": getattr(user, "age", None),
+                    "gender": getattr(user, "gender", None),
+                    "location": getattr(user, "location", None),
+                    # QuickStart 可选字段
+                    "education": getattr(user, "education", None),
+                    "occupation": getattr(user, "occupation", None),
+                    "income": getattr(user, "income", None),
+
+                    # QuickStart 扩展字段
+                    "height": getattr(user, "height", None),
+                    "has_car": getattr(user, "has_car", None),
+                    "housing": getattr(user, "housing", None),
+
+                    # 一票否决维度
+                    "want_children": getattr(user, "want_children", None),
+                    "spending_style": getattr(user, "spending_style", None),
+
+                    # 核心价值观维度
+                    "family_importance": getattr(user, "family_importance", None),
+                    "work_life_balance": getattr(user, "work_life_balance", None),
+
+                    # 迁移能力维度
+                    "migration_willingness": getattr(user, "migration_willingness", None),
+                    "accept_remote": getattr(user, "accept_remote", None),  # ✨ 是否接受异地
+
+                    # 生活方式维度
+                    "sleep_type": getattr(user, "sleep_type", None),
                 }
     except Exception as e:
         logger.debug(f"Failed to get user profile: {e}")
@@ -258,10 +286,21 @@ async def _update_user_profile(user_id: str, profile: Dict[str, Any]) -> bool:
         with db_session() as db:
             user = db.query(UserDB).filter(UserDB.id == user_id).first()
             if user:
-                # 更新各个维度
-                if "relationship_goal" in profile:
-                    user.goal = profile["relationship_goal"]
+                # ===== QuickStart 基础字段（用户本身的属性）=====
+                # 这些字段不能通过行为推断，必须用户填写
+                if "age" in profile:
+                    user.age = profile["age"]
 
+                if "gender" in profile:
+                    user.gender = profile["gender"]
+
+                if "location" in profile:
+                    user.location = profile["location"]
+
+                if "relationship_goal" in profile:
+                    user.relationship_goal = profile["relationship_goal"]
+
+                # ===== 偏好字段（用户想要什么）=====
                 if "interests" in profile:
                     user.interests = profile["interests"]
 
@@ -287,6 +326,7 @@ async def _update_user_profile(user_id: str, profile: Dict[str, Any]) -> bool:
                             user.preferred_age_min = int(parts[0])
                             user.preferred_age_max = int(parts[1])
 
+                # ===== 动态画像字段（从行为推断）=====
                 # 性格特点
                 if "personality" in profile:
                     user.personality = json.dumps(profile["personality"]) if isinstance(profile["personality"], (dict, list)) else profile["personality"]
@@ -302,6 +342,51 @@ async def _update_user_profile(user_id: str, profile: Dict[str, Any]) -> bool:
                 # 底线禁忌
                 if "deal_breakers" in profile:
                     user.deal_breakers = json.dumps(profile["deal_breakers"]) if isinstance(profile["deal_breakers"], (dict, list)) else profile["deal_breakers"]
+
+                # ===== QuickStart 可选字段 =====
+                if "education" in profile:
+                    user.education = profile["education"]
+
+                if "occupation" in profile:
+                    user.occupation = profile["occupation"]
+
+                if "income" in profile:
+                    user.income = profile["income"]
+
+                # ===== QuickStart 扩展字段 =====
+                if "height" in profile:
+                    user.height = profile["height"]
+
+                if "has_car" in profile:
+                    user.has_car = profile["has_car"]
+
+                if "housing" in profile:
+                    user.housing = profile["housing"]
+
+                # ===== 一票否决维度 =====
+                if "want_children" in profile:
+                    user.want_children = profile["want_children"]
+
+                if "spending_style" in profile:
+                    user.spending_style = profile["spending_style"]
+
+                # ===== 核心价值观维度 =====
+                if "family_importance" in profile:
+                    user.family_importance = profile["family_importance"]
+
+                if "work_life_balance" in profile:
+                    user.work_life_balance = profile["work_life_balance"]
+
+                # ===== 迁移能力维度 =====
+                if "migration_willingness" in profile:
+                    user.migration_willingness = profile["migration_willingness"]
+
+                if "accept_remote" in profile:
+                    user.accept_remote = profile["accept_remote"]
+
+                # ===== 生活方式维度 =====
+                if "sleep_type" in profile:
+                    user.sleep_type = profile["sleep_type"]
 
                 db.commit()
                 logger.info(f"Profile updated for user={user_id}: {list(profile.keys())}")

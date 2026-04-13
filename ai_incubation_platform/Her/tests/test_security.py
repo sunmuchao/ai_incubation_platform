@@ -45,30 +45,7 @@ def verify_token(token: str) -> dict:
 
 
 # ============= 测试基础设施 =============
-
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_security.db"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
-TestingSessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine,
-)
-
-
-@pytest.fixture(scope="function")
-def db_session():
-    """创建测试数据库会话"""
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.rollback()
-        db.close()
+# 注：db_session fixture 由 conftest.py 提供，此处不再重复定义
 
 
 @pytest.fixture(scope="function")

@@ -3,6 +3,34 @@
  */
 import '@testing-library/jest-dom'
 
+// Mock global fetch
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve(''),
+    headers: new Headers(),
+  })
+) as any
+
+// Mock Headers
+global.Headers = class Headers {
+  private headers: Record<string, string> = {}
+  append(name: string, value: string) { this.headers[name] = value }
+  get(name: string) { return this.headers[name] || null }
+  set(name: string, value: string) { this.headers[name] = value }
+}
+
+// Mock Response
+global.Response = class Response {
+  ok = true
+  status = 200
+  headers = new Headers()
+  json() { return Promise.resolve({}) }
+  text() { return Promise.resolve('') }
+} as any
+
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

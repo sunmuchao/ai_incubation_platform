@@ -179,6 +179,7 @@ class MemoryMiddleware(AgentMiddleware[MemoryMiddlewareState]):
     2. Only includes user inputs and final assistant responses (ignores tool calls)
     3. The queue uses debouncing to batch multiple updates together
     4. Memory is updated asynchronously via LLM summarization
+    5. Supports user isolation: each user has independent memory file
     """
 
     state_schema = MemoryMiddlewareState
@@ -216,6 +217,10 @@ class MemoryMiddleware(AgentMiddleware[MemoryMiddlewareState]):
             logger.debug("No thread_id in context, skipping memory update")
             return None
 
+        # Get user_id from config for memory isolation
+        config_data = get_config()
+        user_id = config_data.get("configurable", {}).get("user_id")
+
         # Get messages from state
         messages = state.get("messages", [])
         if not messages:
@@ -241,6 +246,7 @@ class MemoryMiddleware(AgentMiddleware[MemoryMiddlewareState]):
             thread_id=thread_id,
             messages=filtered_messages,
             agent_name=self._agent_name,
+            user_id=user_id,  # 用户隔离 ID
             correction_detected=correction_detected,
             reinforcement_detected=reinforcement_detected,
         )

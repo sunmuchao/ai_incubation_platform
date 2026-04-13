@@ -6,6 +6,9 @@ Identity 优化：
 - 添加刷新令牌端点
 - 集成缓存层
 - 集成限流保护
+
+架构说明：新架构使用 ConversationMatchService + HerAdvisorService (AI Native)，
+详见 HER_ADVISOR_ARCHITECTURE.md
 """
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 from typing import List, Optional
@@ -26,14 +29,10 @@ from auth.jwt import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     REFRESH_TOKEN_EXPIRE_DAYS,
 )
-from matching.matcher import MatchmakerAlgorithm
 from utils.logger import logger
 from config import settings
 from cache import cache_manager
 from middleware.rate_limiter import rate_limiter, rate_limit_login
-
-# 创建全局匹配器实例
-matchmaker = MatchmakerAlgorithm()
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -56,13 +55,17 @@ async def register_user(
     - 邮箱唯一性检查
     - 密码哈希存储（SHA-256 + bcrypt 双重哈希）
     """
+    import time
+    start_time = time.time()
+
     # 注册限流保护
     await rate_limit_login(request)
-
-    logger.info(f"New user registration attempt: {user_data.email}")
+    logger.info(f"[REGISTER] {user_data.email} - START at {start_time:.3f}")
 
     # 检查邮箱是否已存在
+    check_start = time.time()
     existing = service.get_by_email(user_data.email)
+    logger.info(f"[REGISTER] {user_data.email} - Email check done in {time.time() - check_start:.3f}s")
     if existing:
         logger.warning(f"Registration failed: email already exists: {user_data.email}")
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -83,22 +86,35 @@ async def register_user(
     # SHA-256 哈希格式：64 个十六进制字符
     is_sha256_hash = len(password) == 64 and all(c in '0123456789abcdef' for c in password.lower())
 
+    # 密码哈希 - 性能关键点
+    hash_start = time.time()
     if is_sha256_hash:
-        # 前端已哈希：对 SHA-256 哈希再进行 bcrypt 存储
         user_dict["password_hash"] = get_password_hash(password)
     else:
-        # 原始密码：进行 bcrypt 哈希（向后兼容）
         user_dict["password_hash"] = get_password_hash(password)
+    logger.info(f"[REGISTER] {user_data.email} - Password hash done in {time.time() - hash_start:.3f}s")
 
     user_dict.pop("password", None)
 
+    # 数据库写入
+    db_start = time.time()
     db_user = service.create(user_dict)
-    logger.info(f"User created successfully: {db_user.id}")
+    logger.info(f"[REGISTER] {user_data.email} - DB create done in {time.time() - db_start:.3f}s")
+    logger.info(f"[REGISTER] {user_data.email} - User created: {db_user.id}, TOTAL: {time.time() - start_time:.3f}s")
 
-    # 注册到匹配系统
-    matchmaker.register_user(_from_db(db_user).model_dump())
-    logger.info(f"User registered to matching system: {db_user.id}")
+    # 注：matchmaker.register_user 已废弃
+    # 新架构：候选人从数据库查询，无需注册到内存池
 
+    # v1.30: 注册后自动评估置信度
+    try:
+        from api.profile_confidence import evaluate_on_register
+        import asyncio
+        asyncio.create_task(evaluate_on_register(db_user.id))
+        logger.info(f"[REGISTER] {user_data.email} - Triggered async confidence evaluation")
+    except Exception as e:
+        logger.warning(f"Failed to trigger confidence evaluation: {e}")
+
+    logger.info(f"[REGISTER] {user_data.email} - COMPLETE in {time.time() - start_time:.3f}s")
     return _from_db(db_user)
 
 
@@ -116,66 +132,65 @@ async def login(
     - 限流保护：同一客户端 10 次突发，1 次/秒补充
     - 密码错误日志记录
     """
+    import time
+    start_time = time.time()
+
     # Identity: 登录限流保护 - 防止暴力破解
     await rate_limit_login(request)
 
-    logger.info(f"Login attempt START: username={credentials.username}")
-    logger.info(f"Login credentials: username={credentials.username}, password_length={len(credentials.password)}")
+    logger.info(f"[LOGIN] {credentials.username} - START at {start_time:.3f}")
+    logger.info(f"[LOGIN] {credentials.username} - Password length: {len(credentials.password)}")
 
     # 尝试多种登录方式：邮箱、用户名、手机号
     user = None
+    lookup_start = time.time()
 
     # 1. 先尝试邮箱登录
     if '@' in credentials.username:
-        logger.info(f"Login: Trying email lookup for: {credentials.username}")
         user = service.get_by_email(credentials.username)
         if user:
-            logger.info(f"Login found user by email: {credentials.username}, user_id={user.id}, password_hash_exists={bool(user.password_hash)}")
-        else:
-            logger.warning(f"Login: No user found with email: {credentials.username}")
+            logger.info(f"[LOGIN] {credentials.username} - Email lookup found user: {user.id} in {time.time() - lookup_start:.3f}s")
 
     # 2. 如果没有找到，尝试用户名登录
     if not user:
-        logger.info(f"Login: Trying username lookup for: {credentials.username}")
         user = service.get_by_username(credentials.username)
         if user:
-            logger.info(f"Login found user by username: {credentials.username}, user_id={user.id}")
+            logger.info(f"[LOGIN] {credentials.username} - Username lookup found user: {user.id} in {time.time() - lookup_start:.3f}s")
 
     # 3. 如果还是没有找到，尝试手机号登录
     if not user and credentials.username.startswith('1'):
-        logger.info(f"Login: Trying phone lookup for: {credentials.username}")
         user = service.get_by_phone(credentials.username)
         if user:
-            logger.info(f"Login found user by phone: {credentials.username}, user_id={user.id}")
+            logger.info(f"[LOGIN] {credentials.username} - Phone lookup found user: {user.id} in {time.time() - lookup_start:.3f}s")
 
-    logger.info(f"Login: Final user lookup result: {'FOUND' if user else 'NOT_FOUND'}")
+    logger.info(f"[LOGIN] {credentials.username} - User lookup done in {time.time() - lookup_start:.3f}s, found: {bool(user)}")
 
     if not user or not user.password_hash:
-        logger.warning(f"Login failed: user not found or no password_hash for: {credentials.username}")
-        logger.warning(f"Login failed details: user={user}, password_hash_exists={bool(user.password_hash) if user else 'N/A'}")
+        logger.warning(f"[LOGIN] {credentials.username} - FAILED: user not found or no password_hash")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
 
-    # 调试密码验证
-    logger.info(f"Login: Verifying password for user: {user.id}")
+    # 密码验证 - 性能关键点（bcrypt）
+    verify_start = time.time()
     password_valid = verify_password(credentials.password, user.password_hash)
-    logger.info(f"Login: Password verification result: {password_valid}")
+    logger.info(f"[LOGIN] {credentials.username} - Password verify done in {time.time() - verify_start:.3f}s, valid: {password_valid}")
 
     if not password_valid:
-        logger.warning(f"Login failed: invalid password for user: {user.id}")
-        logger.warning(f"Login failed: stored password_hash prefix: {user.password_hash[:20]}...")
+        logger.warning(f"[LOGIN] {credentials.username} - FAILED: invalid password")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
 
     # 生成令牌对
+    token_start = time.time()
     access_token, refresh_token = create_token_pair(user.id)
-    logger.info(f"Login successful for user: {user.id}")
+    logger.info(f"[LOGIN] {credentials.username} - Token generation done in {time.time() - token_start:.3f}s")
 
     # AI Native: 触发用户登录事件，取消激活推送计划
+    event_start = time.time()
     try:
         from agent.autonomous.event_listener import emit_event
         emit_event(
@@ -186,7 +201,7 @@ async def login(
             },
             event_source=user.id
         )
-        logger.info(f"Login event 'user_login' emitted for user {user.id}")
+        logger.info(f"[LOGIN] {credentials.username} - Event emitted in {time.time() - event_start:.3f}s")
     except Exception as e:
         logger.warning(f"Failed to emit user_login event: {e}")
 
@@ -201,6 +216,7 @@ async def login(
         "avatar_url": user.avatar_url,
         "bio": user.bio,
     }
+    logger.info(f"[LOGIN] {credentials.username} - COMPLETE in {time.time() - start_time:.3f}s")
     # 将用户信息添加到响应头部（前端可通过响应获取）
     from fastapi.responses import JSONResponse
     return JSONResponse(
@@ -315,9 +331,7 @@ async def update_user(
     update_data = user_data.model_dump(exclude_unset=True)
     updated_user = service.update(user_id, update_data)
 
-    # 更新匹配系统
-    matchmaker.unregister_user(user_id)
-    matchmaker.register_user(_from_db(updated_user).model_dump())
+    # 注：matchmaker 操作已废弃，候选人从数据库查询
 
     # 清除缓存
     cache_manager.invalidate_profile(user_id)
@@ -341,8 +355,8 @@ async def delete_user(
     if db_user.id != current_user_id:
         raise HTTPException(status_code=403, detail="Not allowed to delete this user")
 
-    # 从匹配系统注销
-    matchmaker.unregister_user(user_id)
+    # 注：matchmaker.unregister_user 已废弃，候选人从数据库查询
+
     service.delete(user_id)
 
     # 清除所有缓存

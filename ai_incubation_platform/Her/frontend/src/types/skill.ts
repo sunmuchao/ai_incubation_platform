@@ -69,7 +69,17 @@ export interface SkillAction {
   params: Record<string, any>
 }
 
-// Skill 专用匹配候选人（与 index.ts 的 MatchCandidate 结构不同）
+/**
+ * Skill 专用匹配候选人（与 index.ts 的 MatchCandidate 结构不同）
+ *
+ * 区别说明：
+ * - SkillMatchCandidate: Skill/API 返回的原始数据（扁平结构，user_id 等字段）
+ * - MatchCandidate: 前端组件使用的统一格式（嵌套 User 对象）
+ *
+ * 使用建议：
+ * - API 响应使用 SkillMatchCandidate
+ * - 前端组件展示使用 MatchCandidate（需转换）
+ */
 export interface SkillMatchCandidate {
   user_id: string
   name: string

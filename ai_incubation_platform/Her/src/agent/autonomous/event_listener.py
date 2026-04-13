@@ -356,6 +356,7 @@ def get_listener() -> EventListener:
     """
     获取全局事件监听器
     """
+    global _global_listener
     if _global_listener is None:
         _global_listener = EventListener()
     return _global_listener

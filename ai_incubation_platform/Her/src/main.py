@@ -103,6 +103,20 @@ async def startup_event():
     init_autonomous_tables()
     logger.info("Autonomous agent tables initialized")
 
+    # Her 顾问系统: 初始化数据表和知识库
+    from scripts.migrate_her_advisor import run_migration
+    run_migration()
+    logger.info("Her Advisor system initialized")
+
+    # Her 顾问系统: 初始化服务
+    from services.her_advisor_service import get_her_advisor_service
+    from services.user_profile_service import get_user_profile_service
+    from services.conversation_match_service import get_conversation_match_service
+    her_service = get_her_advisor_service()
+    profile_service = get_user_profile_service()
+    conversation_service = get_conversation_match_service()
+    logger.info("Her Advisor services initialized")
+
     # AI Native: 初始化 Skills 注册表
     from agent.skills.registry import initialize_default_skills
     initialize_default_skills()
@@ -131,52 +145,9 @@ async def startup_event():
     else:
         logger.warning("⚠️ Skills sync check failed, check /api/checker/skills-sync for details")
 
-    # 从数据库加载所有活跃用户到匹配器
-    from db.repositories import UserRepository
-    from matching.matcher import matchmaker
-    from utils.db_session_manager import db_session
-
-    with db_session() as db:
-        user_repo = UserRepository(db)
-        users = user_repo.list_all(is_active=True)
-        loaded_count = 0
-        for db_user in users:
-            try:
-                # 将数据库用户转换为匹配器需要的字典格式
-                interests = []
-                if db_user.interests:
-                    try:
-                        interests = json.loads(db_user.interests)
-                    except json.JSONDecodeError:
-                        interests = db_user.interests.split(",") if db_user.interests else []
-
-                values = {}
-                if db_user.values:
-                    try:
-                        values = json.loads(db_user.values)
-                    except json.JSONDecodeError:
-                        pass
-
-                user_dict = {
-                    "id": db_user.id,
-                    "name": db_user.name,
-                    "email": db_user.email,
-                    "age": db_user.age,
-                    "gender": db_user.gender,
-                    "location": db_user.location,
-                    "bio": db_user.bio or "",
-                    "interests": interests,
-                    "values": values,
-                    "preferred_age_min": db_user.preferred_age_min or 18,
-                    "preferred_age_max": db_user.preferred_age_max or 60,
-                    "preferred_location": db_user.preferred_location,
-                    "preferred_gender": db_user.preferred_gender,
-                }
-                matchmaker.register_user(user_dict)
-                loaded_count += 1
-            except Exception as e:
-                logger.warning(f"Failed to load user {db_user.id} to matchmaker: {e}")
-        logger.info(f"Loaded {loaded_count} users from database to matchmaker")
+    # 注：matchmaker 已废弃
+# 新架构：候选人从数据库查询，AI 直接判断匹配度
+# 无需在启动时加载用户到内存池
 
 # 应用关闭时清理资源
 @app.on_event("shutdown")
@@ -298,16 +269,23 @@ async def get_metrics():
     - 匹配系统统计
     - v1.23: 性能统计
     """
-    from matching.matcher import matchmaker
+    # 注：matchmaker 已废弃，使用数据库查询
     from middleware import rate_limiter
     from services.performance_service import perf_service
+    from db.repositories import UserRepository
+    from utils.db_session_manager import db_session
+
+    # 从数据库获取活跃用户数
+    with db_session() as db:
+        user_repo = UserRepository(db)
+        active_users = len(user_repo.list_all(is_active=True))
 
     return {
         "cache": cache_manager.get_cache_stats(),
         "rate_limiter": rate_limiter.get_stats(),
         "matching": {
-            "registered_users": len(matchmaker._users),
-            "interest_categories": len(matchmaker._interest_popularity),
+            "active_users": active_users,
+            # 注：兴趣类别统计已废弃
         },
         "performance": {
             "uptime_seconds": perf_service.performance_monitor.get_uptime().total_seconds(),
