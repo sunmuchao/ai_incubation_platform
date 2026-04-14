@@ -22,10 +22,10 @@ class SkillCacheConfig:
         # Skill 名称：TTL（秒）
         "risk_control": 600,  # 10 分钟 - 风控数据变化较慢
         "share_growth": 300,  # 5 分钟
-        "conversation_matchmaker": 120,  # 2 分钟 - 匹配推荐更新频繁
+        # 注：conversation_matchmaker 已废弃
         "activity_director": 600,  # 10 分钟 - 地点推荐相对稳定
         "date_coach": 300,  # 5 分钟
-        "date_assistant": 300,  # 5 分钟
+        # 注：date_assistant 已废弃，功能已整合到 date_coach
         "relationship_curator": 600,  # 10 分钟 - 关系数据变化慢
         "performance_coach": 300,  # 5 分钟
         "emotion_translator": 60,  # 1 分钟 - 情感实时变化

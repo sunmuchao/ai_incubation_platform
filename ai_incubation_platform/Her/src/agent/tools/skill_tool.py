@@ -284,30 +284,7 @@ class DateCoachTool:
 
         return SkillTool.execute("date_coach", params)
 
-
-class DateAssistantTool:
-    """约会助手工具 - 封装 DateAssistantSkill"""
-
-    name = "date_assistant"
-    description = "约会实时协助"
-    tags = ["dating", "assistant"]
-
-    @staticmethod
-    def execute(
-        user_id: str,
-        service_type: str = "outfit",
-        date_context: Optional[Dict] = None
-    ) -> dict:
-        """执行约会协助"""
-        logger.info(f"DateAssistantTool: Assisting user={user_id}, type={service_type}")
-
-        params = {
-            "user_id": user_id,
-            "service_type": service_type,
-            "date_context": date_context or {}
-        }
-
-        return SkillTool.execute("date_assistant", params)
+# 注：DateAssistantTool 已废弃，功能已整合到 DateCoachTool
 
 
 class RelationshipCuratorTool:
@@ -484,7 +461,7 @@ def register_skill_tools(registry) -> None:
         ("love_language_translator", LoveLanguageTranslatorTool),
         ("relationship_prophet", RelationshipProphetTool),
         ("date_coach", DateCoachTool),
-        ("date_assistant", DateAssistantTool),
+        # 注：date_assistant 已废弃，功能已整合到 date_coach
         ("relationship_curator", RelationshipCuratorTool),
         ("risk_control", RiskControlTool),
         ("share_growth", ShareGrowthTool),

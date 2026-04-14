@@ -213,10 +213,7 @@ def initialize_default_skills() -> SkillRegistry:
 
     # Dating - 实战演习
     from agent.skills.date_coach_skill import get_date_coach_skill
-    from agent.skills.date_assistant_skill import get_date_assistant_skill
-
-    registry.register(get_date_coach_skill(), tags=["dating", "dating", "coach", "core"])
-    registry.register(get_date_assistant_skill(), tags=["dating", "dating", "assistant", "core"])
+    # 注：date_assistant_skill 已废弃，功能已整合到 date_coach_skill
 
     # Integration - 终极关系
     from agent.skills.relationship_curator_skill import get_relationship_curator_skill
