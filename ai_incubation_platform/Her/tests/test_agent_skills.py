@@ -606,15 +606,8 @@ class TestDefaultSkills:
         # 应该有多个默认 Skill
         assert len(skills) > 0
 
-    def test_get_matchmaking_skill(self):
-        """测试获取匹配 Skill"""
-        from agent.skills.matchmaking_skill import get_matchmaking_skill
-
-        skill = get_matchmaking_skill()
-
-        assert skill.name == "matchmaking_assistant"
-        assert skill.execute is not None
-
+    # 注：matchmaking_skill 已废弃，匹配功能使用 ConversationMatchService + DeerFlow her_tools
+    # 此测试已改为测试 precommunication_skill
     def test_get_precommunication_skill(self):
         """测试获取预沟通 Skill"""
         from agent.skills.precommunication_skill import get_precommunication_skill
@@ -625,80 +618,22 @@ class TestDefaultSkills:
         assert skill.execute is not None
 
     @pytest.mark.asyncio
-    async def test_matchmaking_skill_execute(self, monkeypatch):
-        """测试匹配 Skill 执行"""
-        from agent.skills.matchmaking_skill import get_matchmaking_skill
+    async def test_precommunication_skill_execute(self):
+        """测试预沟通 Skill 执行"""
+        from agent.skills.precommunication_skill import get_precommunication_skill
 
-        skill = get_matchmaking_skill()
+        skill = get_precommunication_skill()
 
         # 测试 execute 方法存在
         assert hasattr(skill, 'execute')
 
-        # Mock workflow execution to prevent timeout
-        mock_workflow_result = {
-            "recommendations": [
-                {
-                    "user_id": "test_match_1",
-                    "user": {"name": "测试对象"},
-                    "score": 0.85,
-                    "reasoning": "兴趣爱好匹配",
-                    "common_interests": ["旅行", "美食"]
-                }
-            ]
-        }
-
-        class MockWorkflow:
-            def execute(self, *args, **kwargs):
-                return mock_workflow_result
-
-        monkeypatch.setattr(
-            "agent.workflows.autonomous_workflows.AutoMatchRecommendWorkflow",
-            MockWorkflow
+        # 调用 execute 方法（简单参数测试）
+        result = await skill.execute(
+            user_id="test_user",
+            match_id="test_match",
+            action="start_conversation"
         )
-
-        # Mock LLM service to prevent timeout
-        mock_llm_service = MagicMock()
-        mock_llm_service.enabled = False
-        monkeypatch.setattr(
-            "services.llm_semantic_service.get_llm_semantic_service",
-            lambda: mock_llm_service
-        )
-
-        # 调用 execute 方法
-        result = await skill.execute(user_intent="找对象", context={"user_id": "test_user"})
         assert "success" in result
-        assert result["success"] is True
-
-    @pytest.mark.asyncio
-    async def test_skill_with_missing_db_session(self, monkeypatch):
-        """测试缺少数据库会话的 Skill"""
-        # 大多数 Skill 需要数据库会话
-        # 测试在缺少会话时的行为
-        from agent.skills.matchmaking_skill import get_matchmaking_skill
-
-        skill = get_matchmaking_skill()
-
-        # Mock workflow and LLM to prevent timeout
-        mock_workflow_result = {"recommendations": []}
-        class MockWorkflow:
-            def execute(self, *args, **kwargs):
-                return mock_workflow_result
-
-        monkeypatch.setattr(
-            "agent.workflows.autonomous_workflows.AutoMatchRecommendWorkflow",
-            MockWorkflow
-        )
-
-        mock_llm_service = MagicMock()
-        mock_llm_service.enabled = False
-        monkeypatch.setattr(
-            "services.llm_semantic_service.get_llm_semantic_service",
-            lambda: mock_llm_service
-        )
-
-        # 执行可能失败，但不应崩溃
-        result = await skill.execute(user_intent="test", context={"user_id": "test"})
-        assert isinstance(result, dict)
 
 
 if __name__ == "__main__":
