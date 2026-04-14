@@ -3,16 +3,33 @@
 
 提供公共服务方法，减少重复代码。
 
-Future 重构增强：
-- 添加通用 CRUD 方法，减少重复代码
-- 统一错误处理模式
-- 使用 db_session 上下文管理器，避免连接泄露
+统一数据库会话管理模式：
+- 推荐方式：使用 db_session 上下文管理器
+- 服务类方式：继承 BaseService，使用 self.db 属性
+- 自动创建：设置 auto_create_session=True 时自动创建会话（使用后需调用 close()）
+
+使用示例:
+    # 方式 1：使用上下文管理器（推荐）
+    with db_session() as db:
+        service = UserService(db=db, model_class=UserDB)
+        users = service.list_all()
+
+    # 方式 2：自动创建会话（需手动关闭）
+    service = UserService(auto_create_session=True, model_class=UserDB)
+    users = service.list_all()
+    service.close()
+
+    # 方式 3：外部传入会话
+    def my_api_endpoint(db: Session = Depends(get_db)):
+        service = UserService(db=db)
+        return service.list_all()
 """
 from typing import Optional, TypeVar, Generic, Type, Any, List, Dict, Callable
 from sqlalchemy.orm import Session, Query
 from sqlalchemy import desc, asc
 from utils.db_session_manager import db_session, db_session_readonly
 from utils.logger import logger
+from db.database import SessionLocal
 
 T = TypeVar('T')
 
@@ -22,48 +39,76 @@ class BaseService(Generic[T]):
     服务层基类
 
     提供公共服务方法：
-    - 数据库会话管理
+    - 数据库会话管理（支持自动创建）
     - 日志记录
     - 通用 CRUD 操作
 
-    使用示例:
-        class UserService(BaseService[UserDB]):
-            def __init__(self, db: Session = None):
-                super().__init__(db, UserDB)
-
-            def get_active_users(self) -> List[UserDB]:
-                return self.list_all(is_active=True)
+    会话管理模式：
+    1. 外部传入（推荐）：MyService(db=session)
+    2. 自动创建：MyService(auto_create_session=True)，使用后需调用 close()
     """
 
-    def __init__(self, db: Optional[Session] = None, model_class: Optional[Type[T]] = None):
+    def __init__(
+        self,
+        db: Optional[Session] = None,
+        model_class: Optional[Type[T]] = None,
+        auto_create_session: bool = False
+    ):
         """
         初始化服务
 
         Args:
-            db: 数据库会话，如果为 None 则自动创建
+            db: 数据库会话，如果为 None 则需要设置 auto_create_session 或外部传入
             model_class: 模型类（用于通用 CRUD 方法）
+            auto_create_session: 是否自动创建会话（使用后需调用 close()）
         """
         self._db = db
         self._model_class = model_class
         self._logger = logger
+        self._auto_create_session = auto_create_session
+        self._own_session = False
+
+        # 如果启用自动创建且未传入会话，则创建新会话
+        if auto_create_session and db is None:
+            self._db = SessionLocal()
+            self._own_session = True
 
     # ==================== 数据库会话管理 ====================
 
     @property
     def db(self) -> Session:
-        """获取数据库会话（需要外部传入或使用 with 语句）"""
+        """获取数据库会话"""
         if self._db is None:
-            raise RuntimeError(
-                "数据库会话未设置。请通过以下方式之一提供会话：\n"
-                "1. 构造函数传入: MyService(db=session)\n"
-                "2. 使用上下文管理器: with db_session() as db: service = MyService(db=db)"
-            )
+            if self._auto_create_session:
+                self._db = SessionLocal()
+                self._own_session = True
+            else:
+                raise RuntimeError(
+                    "数据库会话未设置。请通过以下方式之一提供会话：\n"
+                    "1. 构造函数传入: MyService(db=session)\n"
+                    "2. 使用上下文管理器: with db_session() as db: service = MyService(db=db)\n"
+                    "3. 自动创建: MyService(auto_create_session=True)"
+                )
         return self._db
 
     @db.setter
     def db(self, value: Session):
         """设置数据库会话"""
         self._db = value
+        self._own_session = False
+
+    def close(self):
+        """关闭数据库会话（仅在自动创建时有效）"""
+        if self._own_session and self._db is not None:
+            try:
+                self._db.commit()
+                self._db.close()
+                self._logger.debug("Database session closed")
+            except Exception as e:
+                self._logger.error(f"Failed to close database session: {e}")
+            finally:
+                self._db = None
+                self._own_session = False
 
     @property
     def logger(self):

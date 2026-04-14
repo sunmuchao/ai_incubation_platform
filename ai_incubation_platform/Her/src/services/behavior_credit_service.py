@@ -20,8 +20,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 import json
 
-from db.database import SessionLocal
-from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
+from utils.db_session_manager import db_session, db_session_readonly
 from models.future_models import BehaviorCreditDB, BehaviorCreditEventDB
 from utils.logger import logger
 from services.base_service import BaseService
@@ -69,43 +68,26 @@ class BehaviorCreditService(BaseService):
         "D": ["no_chat_initiate", "reduced_recommendations"],  # 禁止发起聊天、降低推荐优先级
     }
 
-    def __init__(self, db: Optional[Session] = None):
-        super().__init__(db)
-        self._should_close_db: bool = db is None
-
-    def _get_db(self) -> Session:
+    def __init__(self, db: Optional[Session] = None, auto_create_session: bool = False):
         """
-        获取数据库会话
+        初始化服务
 
-        注意：推荐使用 db_session() 上下文管理器代替延迟创建会话模式。
+        Args:
+            db: 数据库会话
+            auto_create_session: 是否自动创建会话（使用后需调用 close()）
 
-        迁移示例:
-            # 旧方式
-            service = BehaviorCreditService()
-            credit = service.get_or_create_credit(user_id)
-            service.close()
-
-            # 新方式（推荐）
+        使用示例:
+            # 推荐：使用上下文管理器
             with db_session() as db:
                 service = BehaviorCreditService(db=db)
                 credit = service.get_or_create_credit(user_id)
-        """
-        if self._db is None:
-            self._db = SessionLocal()
-            self._should_close_db = True
-        return self._db
 
-    def close(self):
-        """关闭数据库会话（仅关闭自己创建的）"""
-        if self._should_close_db and self._db is not None:
-            try:
-                self._db.commit()
-                self._db.close()
-            except Exception as e:
-                logger.error(f"Error closing database session: {e}")
-            finally:
-                self._db = None
-                self._should_close_db = False
+            # 或：自动创建会话（需手动关闭）
+            service = BehaviorCreditService(auto_create_session=True)
+            credit = service.get_or_create_credit(user_id)
+            service.close()
+        """
+        super().__init__(db=db, auto_create_session=auto_create_session)
 
     def get_or_create_credit(self, user_id: str) -> BehaviorCreditDB:
         """获取或创建用户信用记录"""
