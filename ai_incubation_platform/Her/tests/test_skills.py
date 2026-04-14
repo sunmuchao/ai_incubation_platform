@@ -160,80 +160,7 @@ class TestBillAnalysisSkill:
 
 
 # 注：TestGeoLocationSkill, TestGiftOrderingSkill 已删除，改用 REST API 测试
-
-
-# ========== 测试 LLM 增强器 ==========
-
-class TestSkillEnhancer:
-    """测试 LLM 增强的意图理解"""
-
-    @pytest.fixture
-    def intent_parser(self):
-        """获取意图解析器"""
-        from llm.skill_enhancer import get_intent_parser
-        return get_intent_parser()
-
-    @pytest.fixture
-    def response_generator(self):
-        """获取响应生成器"""
-        from llm.skill_enhancer import get_response_generator
-        return get_response_generator()
-
-    def test_parse_matchmaking_intent(self, intent_parser):
-        """测试匹配意图解析"""
-        result = intent_parser._fallback_matchmaking(
-            "帮我找一个喜欢旅行和美食的女生，年龄 25-30 岁",
-            {"user_id": "user-test-123"}
-        )
-
-        assert result["intent_type"] == "active_search"
-        assert len(result["soft_preferences"]) > 0
-
-    def test_parse_gift_intent(self, intent_parser):
-        """测试礼物意图解析"""
-        result = intent_parser._fallback_gift(
-            "女朋友生日快到了，想送个 300 到 500 元的礼物",
-            {"match_id": "match-test-123"}
-        )
-
-        assert result["action"] == "get_suggestions"
-        assert result["occasion"] == "birthday"
-
-    def test_generate_matchmaking_response(self, response_generator):
-        """测试匹配响应生成"""
-        skill_result = {
-            "matches": [
-                {
-                    "name": "小红",
-                    "score": 0.85,
-                    "reasoning": "你们都热爱旅行和探索未知",
-                    "common_interests": ["旅行", "美食", "阅读"]
-                }
-            ]
-        }
-
-        result = response_generator._generate_default_response(skill_result)
-
-        assert "ai_message" in result
-        assert "generative_ui" in result
-
-    def test_generate_generative_ui(self, response_generator):
-        """测试 Generative UI 生成"""
-        # 测试匹配轮播 UI
-        ui_config = response_generator._generate_generative_ui(
-            "matchmaking_assistant",
-            {"matches": [{"name": "用户 1"}, {"name": "用户 2"}, {"name": "用户 3"}, {"name": "用户 4"}]}
-        )
-
-        assert ui_config["component_type"] == "match_carousel"
-
-        # 测试礼物网格 UI
-        ui_config = response_generator._generate_generative_ui(
-            "gift_ordering",
-            {"gift_suggestions": [{"name": "礼物 1"}, {"name": "礼物 2"}]}
-        )
-
-        assert ui_config["component_type"] == "gift_grid"
+# 注：TestSkillEnhancer 已删除，llm.skill_enhancer 模块已废弃
 
 
 # ========== 测试外部服务集成 ==========
@@ -541,20 +468,8 @@ class TestDateCoachSkill:
         assert "realtime_tips" in result["coach_result"]
 
 
-class TestDateAssistantSkillDeprecated:
-    """测试 DateAssistantSkill 废弃状态"""
-
-    def test_deprecated_warning(self):
-        """测试废弃声明存在"""
-        from agent.skills.date_assistant_skill import __doc__
-        assert "DEPRECATED" in __doc__ or "废弃" in __doc__
-
-    def test_date_coach_has_realtime_help(self):
-        """测试 DateCoachSkill 包含实时指导功能"""
-        from agent.skills.date_coach_skill import DateCoachSkill
-
-        skill = DateCoachSkill()
-        assert hasattr(skill, '_provide_realtime_help')
+# 注：TestDateAssistantSkillDeprecated 已删除，date_assistant_skill 模块已废弃
+# DateCoachSkill 包含 realtime_help 功能的测试在 TestDateCoachSkill 中
 
 
 class TestAPIArchitectureIntegration:
