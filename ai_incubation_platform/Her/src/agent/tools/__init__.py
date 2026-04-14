@@ -9,6 +9,7 @@
 
 注：MatchTool 已废弃，匹配功能使用 DeerFlow her_find_matches_tool。
 注：ConversationMatchmakerTool 已废弃，使用 ConversationMatchService。
+注：DateAssistantTool 已废弃，功能已整合到 DateCoachTool。
 """
 from agent.tools.registry import ToolRegistry
 from agent.tools.profile_tool import ProfileTool
@@ -29,7 +30,7 @@ from agent.tools.skill_tool import (
     LoveLanguageTranslatorTool,
     RelationshipProphetTool,
     DateCoachTool,
-    DateAssistantTool,
+    # 注：DateAssistantTool 已废弃，功能已整合到 DateCoachTool
     RelationshipCuratorTool,
     RiskControlTool,
     ShareGrowthTool,
@@ -58,7 +59,7 @@ __all__ = [
     "LoveLanguageTranslatorTool",
     "RelationshipProphetTool",
     "DateCoachTool",
-    "DateAssistantTool",
+    # 注：DateAssistantTool 已废弃
     "RelationshipCuratorTool",
     "RiskControlTool",
     "ShareGrowthTool",
