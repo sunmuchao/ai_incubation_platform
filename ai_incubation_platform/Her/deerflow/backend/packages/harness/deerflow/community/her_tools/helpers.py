@@ -1,0 +1,263 @@
+"""
+Her Tools - Helpers Module
+
+Utility functions for Her tools: path resolution, user ID extraction, database access, etc.
+"""
+import logging
+import json
+import asyncio
+import os
+import sys
+import re
+from typing import Optional, Dict, Any
+
+logger = logging.getLogger(__name__)
+
+
+# ==================== Path & Environment ====================
+
+def get_her_root() -> str:
+    """获取 Her 项目根目录"""
+    # 优先使用环境变量
+    her_root = os.environ.get("HER_PROJECT_ROOT")
+    if her_root:
+        return her_root
+
+    # 降级：通过文件路径推断
+    # her_tools 位于 deerflow/backend/packages/harness/deerflow/community/her_tools/
+    # Her 根目录是 deerflow 的父目录
+    current_file = os.path.abspath(__file__)
+    # 向上 5 层到达 Her 根目录
+    # her_tools -> community -> deerflow -> harness -> packages -> backend -> deerflow -> Her
+    her_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))))))
+    return her_root
+
+
+def ensure_her_in_path():
+    """确保 Her 项目在 Python 路径中"""
+    her_root = get_her_root()
+    src_path = os.path.join(her_root, "src")
+    if src_path not in sys.path:
+        sys.path.insert(0, src_path)
+
+
+# ==================== User ID Resolution ====================
+
+def get_current_user_id() -> str:
+    """
+    获取当前用户 ID（支持用户隔离）
+
+    优先级：
+    1. 从 LangGraph configurable 中获取（DeerFlowClient 传入的 user_id）
+    2. 从用户独立的 memory 文件中读取
+    3. 从全局 memory.json 中读取（降级）
+    """
+    try:
+        # 方式1：从 LangGraph configurable 中获取（最高优先级）
+        from langgraph.config import get_config
+        config = get_config()
+        user_id = config.get("configurable", {}).get("user_id")
+        if user_id:
+            logger.info(f"[get_current_user_id] 从 configurable 获取: {user_id}")
+            return user_id
+
+        # 方式2：从用户独立的 memory 文件中读取
+        her_root = get_her_root()
+        users_dir = os.path.join(her_root, "deerflow", "backend", ".deer-flow", "users")
+
+        if os.path.exists(users_dir):
+            # 找到所有用户目录
+            user_dirs = [d for d in os.listdir(users_dir) if os.path.isdir(os.path.join(users_dir, d))]
+            if user_dirs:
+                # 取最近更新的用户目录（假设只有一个活跃用户）
+                latest_user = None
+                latest_mtime = 0
+                for user_dir in user_dirs:
+                    user_memory_path = os.path.join(users_dir, user_dir, "memory.json")
+                    if os.path.exists(user_memory_path):
+                        mtime = os.path.getmtime(user_memory_path)
+                        if mtime > latest_mtime:
+                            latest_mtime = mtime
+                            latest_user = user_dir
+
+                if latest_user:
+                    logger.info(f"[get_current_user_id] 从用户独立文件获取: {latest_user}")
+                    return latest_user
+
+        # 方式3：从全局 memory.json 中读取（降级）
+        memory_path = os.path.join(her_root, "deerflow", "backend", ".deer-flow", "memory.json")
+
+        if os.path.exists(memory_path):
+            with open(memory_path, "r") as f:
+                memory_data = json.load(f)
+
+            facts = memory_data.get("facts", [])
+            for fact in facts:
+                fact_id = fact.get("id", "")
+                if fact_id.startswith("user-id-"):
+                    return fact_id.replace("user-id-", "")
+
+                content = fact.get("content", "")
+                if "用户ID：" in content:
+                    match = re.search(r'用户ID[:\s：]+([a-f0-9-]+)', content)
+                    if match:
+                        return match.group(1)
+
+    except Exception as e:
+        logger.warning(f"[get_current_user_id] 提取失败: {e}")
+
+    return "user-anonymous-dev"
+
+
+# ==================== Async Execution ====================
+
+def run_async(coro):
+    """安全执行异步协程"""
+    try:
+        loop = asyncio.get_running_loop()
+        import concurrent.futures
+        future = asyncio.run_coroutine_threadsafe(coro, loop)
+        return future.result(timeout=30.0)
+    except RuntimeError:
+        new_loop = asyncio.new_event_loop()
+        try:
+            return new_loop.run_until_complete(coro)
+        finally:
+            new_loop.close()
+
+
+# ==================== Database Access ====================
+
+def get_db_user(user_id: str) -> Optional[Dict[str, Any]]:
+    """从数据库获取用户信息（包含偏好字段）"""
+    ensure_her_in_path()
+    from utils.db_session_manager import db_session
+    from db.models import UserDB
+
+    with db_session() as db:
+        user = db.query(UserDB).filter(UserDB.id == user_id).first()
+        if user:
+            interests = []
+            if user.interests:
+                try:
+                    interests = json.loads(user.interests)
+                except:
+                    interests = user.interests.split(",")
+
+            # 基本信息
+            user_data = {
+                "id": user.id,
+                "name": user.name or "",
+                "age": user.age or 0,
+                "gender": user.gender or "",
+                "location": user.location or "",
+                "interests": interests[:5],
+                "bio": user.bio or "",
+                "relationship_goal": getattr(user, 'relationship_goal', None) or "",
+            }
+
+            # ===== 偏好字段（用于匹配筛选）=====
+            user_data["preferred_age_min"] = getattr(user, 'preferred_age_min', None)
+            user_data["preferred_age_max"] = getattr(user, 'preferred_age_max', None)
+            user_data["preferred_location"] = getattr(user, 'preferred_location', None)
+            user_data["accept_remote"] = getattr(user, 'accept_remote', None)  # 是否接受异地
+            user_data["want_children"] = getattr(user, 'want_children', None)
+            user_data["spending_style"] = getattr(user, 'spending_style', None)
+
+            # ===== 扩展偏好 =====
+            user_data["family_importance"] = getattr(user, 'family_importance', None)
+            user_data["work_life_balance"] = getattr(user, 'work_life_balance', None)
+            user_data["migration_willingness"] = getattr(user, 'migration_willingness', None)
+            user_data["sleep_type"] = getattr(user, 'sleep_type', None)
+
+            return user_data
+    return None
+
+
+def get_user_confidence(user_id: str) -> Dict[str, Any]:
+    """
+    获取用户置信度信息
+
+    返回：
+    - confidence_level: 置信度等级 (very_high/high/medium/low)
+    - confidence_score: 置信度分数 (0-100)
+    - confidence_icon: UI 图标 (💎/🌟/✓/⚠️)
+
+    用于匹配结果展示，让用户了解候选人的可信程度
+    """
+    ensure_her_in_path()
+    from utils.db_session_manager import db_session_readonly
+
+    try:
+        with db_session_readonly() as db:
+            # 尝试查询置信度详情表
+            try:
+                from models.profile_confidence_models import ProfileConfidenceDetailDB
+                confidence_detail = db.query(ProfileConfidenceDetailDB).filter(
+                    ProfileConfidenceDetailDB.user_id == user_id
+                ).first()
+
+                if confidence_detail:
+                    level = confidence_detail.confidence_level or "medium"
+                    score = int(confidence_detail.overall_confidence * 100) if confidence_detail.overall_confidence else 30
+
+                    # 根据 level 返回图标
+                    icon_map = {
+                        "very_high": "💎",
+                        "high": "🌟",
+                        "medium": "✓",
+                        "low": "⚠️"
+                    }
+                    icon = icon_map.get(level, "✓")
+
+                    return {
+                        "confidence_level": level,
+                        "confidence_score": score,
+                        "confidence_icon": icon,
+                    }
+            except ImportError:
+                logger.warning("[_get_user_confidence] ProfileConfidenceDetailDB 模型未导入")
+
+            # 降级：查询实名认证状态
+            try:
+                from db.models import IdentityVerificationDB
+                verification = db.query(IdentityVerificationDB).filter(
+                    IdentityVerificationDB.user_id == user_id,
+                    IdentityVerificationDB.verification_status == "verified"
+                ).first()
+
+                if verification:
+                    return {
+                        "confidence_level": "high",
+                        "confidence_score": 70,
+                        "confidence_icon": "🌟",
+                    }
+            except:
+                pass
+
+            # 默认：普通用户
+            return {
+                "confidence_level": "medium",
+                "confidence_score": 40,
+                "confidence_icon": "✓",
+            }
+
+    except Exception as e:
+        logger.warning(f"[_get_user_confidence] 获取置信度失败: {e}")
+        return {
+            "confidence_level": "medium",
+            "confidence_score": 40,
+            "confidence_icon": "✓",
+        }
+
+
+# ==================== Exports ====================
+
+__all__ = [
+    "get_her_root",
+    "ensure_her_in_path",
+    "get_current_user_id",
+    "run_async",
+    "get_db_user",
+    "get_user_confidence",
+]
