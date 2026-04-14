@@ -4,22 +4,74 @@
 
 红娘 Agent 是一个 **AI 驱动的深度婚恋匹配平台**，旨在通过智能算法和数据分析帮助用户找到真正匹配的伴侣或合作伙伴。
 
-**当前版本**: v1.29.0 (AI Native + DeerFlow 集成版)
+**当前版本**: v1.30.0 (AI Native + DeerFlow 集成版 - 架构清理完成)
 
 ## 架构说明（AI Native）
 
 Her 采用 **AI Native 架构**，集成 DeerFlow Agent 运行时：
 
-| 层 | 负责内容 | 实现 |
-|---|---------|------|
-| **DeerFlow Agent** | 意图识别、工具编排、状态管理、记忆系统 | DeerFlow 2.0 (LangGraph) |
-| **Her Tools** | 业务执行（匹配、关系分析、约会策划） | 7 个 LangChain BaseTool |
-| **前端** | 用户交互、Generative UI 渲染 | React + deerflowClient |
+### 核心架构
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     前端 (React + TypeScript)                    │
+│  - 对话式交互（HomePage, ChatInterface）                         │
+│  - 滑动匹配（SwipeMatchPage）                                    │
+│  - 置信度管理（ConfidenceManagementPage）                        │
+└─────────────────────────────────────────────────────────────────┘
+                           ↓ API 调用
+┌─────────────────────────────────────────────────────────────────┐
+│                     Her Backend (FastAPI)                        │
+│  - /api/her/chat → HerAdvisorService                            │
+│  - /api/matching → ConversationMatchService                     │
+│  - /api/deerflow → DeerFlow Agent 路由                          │
+│  - 50 个 API 路由（自动扫描注册）                                 │
+└─────────────────────────────────────────────────────────────────┘
+                           ↓ 调用 DeerFlow
+┌─────────────────────────────────────────────────────────────────┐
+│                     DeerFlow Agent (LangGraph)                   │
+│  - 意图识别、工具编排、状态管理、记忆系统                         │
+│  - 26 个 Skills（通过 registry.py 统一注册）                     │
+│  - 12 个 her_tools（LangChain BaseTool）                         │
+└─────────────────────────────────────────────────────────────────┘
+                           ↓ 数据操作
+┌─────────────────────────────────────────────────────────────────┐
+│                     数据层 (SQLite/PostgreSQL)                   │
+│  - 用户画像、匹配历史、聊天记录                                   │
+│  - 置信度评估、行为追踪                                          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 活跃模块
+
+| 层 | 模块 | 状态 |
+|---|------|------|
+| **前端** | apiClient, deerflowClient, herAdvisorApi | ✅ 活跃 |
+| **前端** | HomePage, LoginPage, SwipeMatchPage, RegistrationConversationPage | ✅ 活跃 |
+| **后端 API** | matching, users, chat, deerflow, her_advisor（50 个路由） | ✅ 活跃（自动注册） |
+| **后端 Service** | her_advisor_service, user_profile_service, conversation_match_service | ✅ 活跃 |
+| **Skills** | 26 个 Skills（registry.py 统一管理） | ✅ 活跃 |
+| **DeerFlow** | her_tools（12 个 LangChain BaseTool） | ✅ 活跃 |
+
+### 已废弃模块（v1.30 清理）
+
+以下模块已迁移到 DeerFlow Skills 或合并到其他服务：
+
+| 废弃模块 | 替代方案 | 状态 |
+|---------|---------|------|
+| `date_assistant_service` | `date_coach_skill` | ❌ 已删除 |
+| `behavior_learning_service` | `pattern_learner_skill` | ❌ 已删除 |
+| `safety_ai_service` | `safety_guardian_skill` | ❌ 已删除 |
+| `deep_icebreaker_service` | `silence_breaker_skill` | ❌ 已删除 |
+| `ai_native_conversation_service` | DeerFlow Agent | ❌ 已删除 |
+| Generative UI 组件 | DeerFlow 动态生成 | ❌ 已删除 |
+| 废弃页面（QuickStart, Games 等） | DeerFlow Skills | ❌ 已删除 |
 
 **核心优势**：
 - Agent 循环思考，多工具协作
 - 记忆系统自动记住用户偏好
 - 主动询问，不是"执行一次就停"
+- 置信度系统（非二元验证，概率评估）
 
 ## 快速开始
 
@@ -87,7 +139,7 @@ cp .env.example .env
 ```bash
 # 应用配置
 APP_NAME=matchmaker-agent
-APP_VERSION=1.29.0
+APP_VERSION=1.30.0
 ENVIRONMENT=development
 DEBUG=True
 
@@ -303,15 +355,15 @@ Her/
 │   │   ├── users.py            # 用户接口
 │   │   ├── matching.py         # 匹配接口
 │   │   ├── chat.py             # 聊天接口
-│   │   ├── deerflow.py         # DeerFlow Agent 路由 (v1.29.0)
-│   │   ├── her_advisor.py      # Her 顾问接口 (v1.29.0)
+│   │   ├── deerflow.py         # DeerFlow Agent 路由 (v1.30.0)
+│   │   ├── her_advisor.py      # Her 顾问接口 (v1.30.0)
 │   │   ├── errors.py           # 统一错误处理
 │   │   └── ...                 # 其他 API 模块
 │   ├── services/               # 业务逻辑层
 │   │   ├── base_service.py     # 服务基类（通用 CRUD 方法）
 │   │   ├── matching_service.py # 匹配服务
 │   │   ├── chat_service.py     # 聊天服务
-│   │   ├── her_advisor_service.py  # Her 顾问服务 (v1.29.0)
+│   │   ├── her_advisor_service.py  # Her 顾问服务 (v1.30.0)
 │   │   └── ...                 # 其他服务
 │   ├── models/                 # 数据模型
 │   │   ├── user.py             # 用户模型
@@ -327,8 +379,8 @@ Her/
 │   ├── matching/               # 匹配算法
 │   │   ├── matcher.py          # 匹配引擎
 │   │   ├── rule_engine.py      # 规则引擎
-│   │   ├── agentic_engine.py   # Agent 引擎 (v1.29.0)
-│   │   └── engine_switch.py    # 引擎切换器 (v1.29.0)
+│   │   ├── agentic_engine.py   # Agent 引擎 (v1.30.0)
+│   │   └── engine_switch.py    # 引擎切换器 (v1.30.0)
 │   ├── agent/                  # AI Agent 模块
 │   │   ├── skills/             # Agent Skills (30+ Skills)
 │   │   ├── tools/              # Agent 工具
@@ -378,7 +430,7 @@ Her/
 │   │   └── styles/             # 全局样式
 │   ├── package.json
 │   └── vite.config.ts
-├── deerflow/                   # DeerFlow Agent 运行时 (v1.29.0)
+├── deerflow/                   # DeerFlow Agent 运行时 (v1.30.0)
 │   └── backend/
 │       └── packages/harness/
 │           └── deerflow/community/her_tools/  # Her Tools

@@ -13,7 +13,9 @@ export interface GenerativeUIProps {
 }
 
 // 通用 Action 类型
+// 使用索引签名允许任意额外属性，适配各种组件场景（match, gift, plan, suggestion 等）
 export type GenerativeAction = {
   type: string
   payload?: any
+  [key: string]: any  // 允许任意额外属性
 }

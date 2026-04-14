@@ -37,10 +37,12 @@ const getSessionStatusText = (status: string, t: (key: string) => string): strin
 
 // 🚀 [性能优化] 懒加载大型组件，减少初始 bundle 大小
 const MatchCard = lazy(() => import('./MatchCard'))
+const MatchCardList = lazy(() => import('./generative-ui/MatchComponents').then(m => ({ default: m.MatchCardList })))
 const FeatureCardRenderer = lazy(() => import('./FeatureCards').then(m => ({ default: m.FeatureCardRenderer })))
 const ProfileQuestionCard = lazy(() => import('./ProfileQuestionCard'))
 const PreCommunicationSessionCard = lazy(() => import('./PreCommunicationSessionCard'))
 const PreCommunicationDialogCard = lazy(() => import('./PreCommunicationDialogCard'))
+const UserProfileCard = lazy(() => import('./UserProfileCard'))
 
 // 🚀 [性能优化] 导入公共骨架屏组件（从 skeletons.tsx 提取）
 import { SkeletonComponents } from './skeletons'
@@ -60,7 +62,7 @@ interface Message {
   suggestions?: string[]
   next_actions?: string[]
   timestamp: Date
-  generativeCard?: 'precommunication' | 'precommunication-dialog' | 'match' | 'analysis' | 'feature' | 'profile_question' | 'quick_start' | 'learning_confirmation'
+  generativeCard?: 'precommunication' | 'precommunication-dialog' | 'match' | 'analysis' | 'feature' | 'profile_question' | 'quick_start' | 'learning_confirmation' | 'user_profile'
   generativeData?: unknown
   featureAction?: string
 }
@@ -1062,13 +1064,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       // 3. 解析 Agent 返回的结构化数据
       const parsedResult = deerflowClient.parseToolResult(result)
 
-      // 4. 添加 AI 消息（Agent 自然语言回复）
+      // 4. 添加 AI 消息（Agent 自然语言回复 + Generative UI）
       const aiMessage: Message = {
         id: `ai-${Date.now()}`,
         type: 'ai',
         content: result.ai_message,
         timestamp: new Date(),
-        // 从 Agent 返回的结构化数据中提取匹配结果
+        // 🎯 [Generative UI] 从 Agent 返回的 generative_ui 映射到前端组件
+        generativeCard: result.generative_ui
+          ? mapComponentTypeToGenerativeCard(result.generative_ui.component_type)
+          : undefined,
+        generativeData: result.generative_ui?.props,
+        // 从 Agent 返回的结构化数据中提取匹配结果（兼容旧逻辑）
         matches: parsedResult?.type === 'matches' ? parsedResult.data.matches : undefined,
         suggestions: result.suggested_actions?.map((s) => s.label),
         next_actions: result.suggested_actions?.map((s) => s.action),
@@ -1330,6 +1337,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           )}
 
+          {/* Generative UI: 匹配卡片列表 */}
+          {message.generativeCard === 'match' && message.generativeData && (
+            <div className="generative-ui-container match-card-container">
+              <Suspense fallback={<div style={{ padding: 24, textAlign: 'center' }}><Spin size="small" /></div>}>
+                <MatchCardList
+                  matches={(message.generativeData as any).matches || []}
+                  onAction={(action) => {
+                    if (action.type === 'view_profile') {
+                      // TODO: 跳转到用户详情页
+                      console.log('View profile:', action.match)
+                    } else if (action.type === 'start_chat') {
+                      // TODO: 开始聊天
+                      console.log('Start chat:', action.match)
+                    }
+                  }}
+                />
+              </Suspense>
+            </div>
+          )}
+
           {/* Generative UI: AI 预沟通对话历史 */}
           {message.generativeCard === 'precommunication-dialog' && message.generativeData && (
             <div className="generative-ui-container">
@@ -1461,6 +1488,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           )}
 
+          {/* 用户详情卡片 - UserProfileCard */}
+          {message.generativeCard === 'user_profile' && message.generativeData && (
+            <div className="generative-ui-container">
+              <Suspense fallback={<div style={{ padding: 24, textAlign: 'center' }}><Spin size="small" /></div>}>
+                <UserProfileCard
+                  {...(message.generativeData as any)}
+                  onStartChat={(userId: string) => {
+                    // 开始对话 - 跳转到聊天室
+                    const userName = (message.generativeData as any)?.name || 'TA'
+                    onOpenChatRoom?.(userId, userName)
+                  }}
+                  onViewProfile={(userId: string) => {
+                    // 查看详情 - 可以跳转到用户详情页
+                    console.log(`[UserProfileCard] 查看用户详情: ${userId}`)
+                    // 可以添加导航逻辑
+                  }}
+                />
+              </Suspense>
+            </div>
+          )}
+
           {/* 匹配结果卡片 */}
           {message.matches && message.matches.length > 0 && (
             <div className="match-cards">
@@ -1515,7 +1563,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       </div>
     )
-  }, [onMatchSelect, handleQuickAction, handleQuickStartAnswer, HerAvatar])
+  }, [onMatchSelect, handleQuickAction, handleQuickStartAnswer, HerAvatar, onOpenChatRoom])
 
   return (
     <div className="chat-interface">

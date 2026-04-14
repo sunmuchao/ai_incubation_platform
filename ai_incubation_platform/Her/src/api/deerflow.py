@@ -782,7 +782,9 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
             if parsed and parsed.get("success") and parsed.get("data"):
                 tool_result = parsed
                 generative_ui = build_generative_ui_from_tool_result(parsed)
-                response_text = parsed.get("summary", response_text)
+                # 🔧 [修复] summary 在 data 里面，不是在顶层
+                data = parsed.get("data", {})
+                response_text = data.get("summary", parsed.get("summary", response_text))
 
                 # 提取学习结果（如果 DeerFlow 有学习洞察）
                 data = parsed.get("data", {})

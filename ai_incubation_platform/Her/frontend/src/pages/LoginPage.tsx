@@ -54,15 +54,14 @@ interface LoginFormData {
 
 interface RegisterFormData {
   username: string
-  password: string
   email: string
+  password: string
   name: string
   age: number
   gender: string
   location: string
-  bio: string
-  interests: string
-  sexual_orientation: string
+  bio?: string
+  interests?: string
 }
 
 interface ForgotPasswordFormData {
@@ -239,15 +238,14 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
 
       const response = await userApi.register({
         username: values.username,
-        password: passwordHash,
         email: values.email,
+        password: passwordHash,
         name: values.name,
         age: values.age,
         gender: values.gender,
         location: values.location,
-        bio: values.bio,
+        bio: values.bio || '',
         interests: interestsArray,
-        sexual_orientation: values.sexual_orientation || 'heterosexual',
       })
 
       if (response.id || response.email) {
@@ -832,17 +830,33 @@ const RegisterForm: React.FC<{
         requiredMark={false}
         scrollToFirstError
       >
+        {/* 1. 用户名 - 唯一标识 */}
         <Form.Item
           label={<Text type="secondary">用户名</Text>}
           name="username"
           rules={[
             { required: true, message: '请输入用户名' },
             { min: 3, message: '用户名至少 3 个字符' },
+            { max: 20, message: '用户名最多 20 个字符' },
+            { pattern: /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/, message: '用户名只能包含字母、数字、下划线或中文' },
           ]}
         >
-          <Input prefix={<UserOutlined />} placeholder="至少 3 个字符" />
+          <Input prefix={<UserOutlined />} placeholder="用于登录的唯一标识" />
         </Form.Item>
 
+        {/* 2. 邮箱 - 用于通知和找回密码 */}
+        <Form.Item
+          label={<Text type="secondary">邮箱</Text>}
+          name="email"
+          rules={[
+            { required: true, message: '请输入邮箱' },
+            { type: 'email', message: '请输入有效的邮箱格式' },
+          ]}
+        >
+          <Input prefix={<MailOutlined />} placeholder="用于接收通知和找回密码" />
+        </Form.Item>
+
+        {/* 3. 密码 */}
         <Form.Item
           label={<Text type="secondary">密码</Text>}
           name="password"
@@ -904,17 +918,7 @@ const RegisterForm: React.FC<{
           </div>
         </Form.Item>
 
-        <Form.Item
-          label={<Text type="secondary">邮箱</Text>}
-          name="email"
-          rules={[
-            { required: true, message: '请输入邮箱' },
-            { type: 'email', message: '请输入有效的邮箱格式' },
-          ]}
-        >
-          <Input prefix={<MailOutlined />} placeholder="用于接收通知" />
-        </Form.Item>
-
+        {/* 4. 昵称 - 显示名称 */}
         <Form.Item
           label={<Text type="secondary">昵称</Text>}
           name="name"
@@ -923,6 +927,7 @@ const RegisterForm: React.FC<{
           <Input prefix={<UserOutlined />} placeholder="显示给其他用户的名称" />
         </Form.Item>
 
+        {/* 5. 年龄 + 性别 */}
         <div className="register-row">
           <Form.Item
             label={<Text type="secondary">年龄</Text>}
@@ -945,19 +950,6 @@ const RegisterForm: React.FC<{
             </Select>
           </Form.Item>
         </div>
-
-        <Form.Item
-          label={<Text type="secondary">性取向</Text>}
-          name="sexual_orientation"
-          rules={[{ required: true, message: '请选择性取向' }]}
-          initialValue="heterosexual"
-        >
-          <Select placeholder="选择偏好">
-            <Option value="heterosexual">异性（默认）</Option>
-            <Option value="homosexual">同性</Option>
-            <Option value="bisexual">双性</Option>
-          </Select>
-        </Form.Item>
 
         <Form.Item
           label={<Text type="secondary">所在地</Text>}

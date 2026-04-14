@@ -150,6 +150,15 @@ class MatchExecutor:
             if location:
                 query = query.filter(UserDB.location.contains(location))
 
+            # 兴趣筛选（新增）
+            # 用户指定兴趣时，优先匹配有相同兴趣的候选人
+            interests = extracted_conditions.get("interests")
+            if interests and isinstance(interests, list):
+                # 使用 LIKE 查询匹配 JSON 数组中的兴趣
+                # interests 存储格式为 ["户外运动", "徒步"]
+                for interest in interests:
+                    query = query.filter(UserDB.interests.contains(interest))
+
             # 按创建时间排序
             query = query.order_by(UserDB.created_at.desc())
 
@@ -162,6 +171,7 @@ class MatchExecutor:
                     "age": u.age,
                     "gender": u.gender,
                     "location": u.location,
+                    "interests": u.interests,  # 新增：返回兴趣字段
                     "relationship_goal": u.relationship_goal,
                     "education": getattr(u, "education", None),
                     "occupation": getattr(u, "occupation", None),

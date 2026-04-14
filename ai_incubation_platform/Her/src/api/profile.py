@@ -395,3 +395,88 @@ async def _update_user_profile(user_id: str, profile: Dict[str, Any]) -> bool:
         logger.error(f"Failed to update user profile: {e}")
 
     return False
+
+
+# ========== QuickStart 批量提交 API ==========
+
+class QuickStartSubmitRequest(BaseModel):
+    """QuickStart 批量提交请求 - 一次性提交所有问卷答案"""
+    user_id: str
+    answers: Dict[str, Any]  # 所有维度的答案，key 为维度名
+
+
+@router.post("/quickstart/submit")
+async def quickstart_submit(
+    request: QuickStartSubmitRequest,
+    authorization: Optional[str] = Header(None)
+):
+    """
+    QuickStart 批量提交 - 一次性保存所有问卷答案
+
+    🔧 [性能优化] 避免逐个维度调用 API，前端一次性提交所有答案
+
+    流程：
+    1. 直接写入数据库（不触发 LLM 分析）
+    2. 评估 profile_confidence
+    3. 返回完成状态
+
+    Args:
+        request: 包含 user_id 和所有维度的答案字典
+
+    Returns:
+        {
+            "success": true,
+            "updated_fields": ["field1", "field2", ...],
+            "profile_completeness": 0.85,
+            "message": "太棒了！可以开始你的配对旅程了 🎉"
+        }
+    """
+    import time
+    start_time = time.time()
+
+    logger.info(f"[QuickStart] Batch submit for user={request.user_id}, fields={list(request.answers.keys())}")
+
+    # 验证 user_id
+    with db_session() as db:
+        user = db.query(UserDB).filter(UserDB.id == request.user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+    # 批量更新用户画像（直接写入数据库，不触发 LLM）
+    success = await _update_user_profile(request.user_id, request.answers)
+
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update profile")
+
+    # 计算画像完整度
+    required_fields = [
+        "age", "gender", "location", "relationship_goal",
+        "education", "occupation", "income",
+        "height", "has_car", "housing",
+        "want_children", "spending_style",
+        "family_importance", "work_life_balance",
+        "migration_willingness", "accept_remote", "sleep_type"
+    ]
+
+    filled_count = sum(1 for f in required_fields if request.answers.get(f))
+    completeness = filled_count / len(required_fields)
+
+    # 异步触发置信度评估（不阻塞响应）
+    try:
+        from api.profile_confidence import evaluate_on_register
+        import asyncio
+        asyncio.create_task(evaluate_on_register(request.user_id))
+        logger.info(f"[QuickStart] Triggered async confidence evaluation")
+    except Exception as e:
+        logger.warning(f"[QuickStart] Failed to trigger confidence evaluation: {e}")
+
+    total_time = time.time() - start_time
+    logger.info(f"[QuickStart] COMPLETE in {total_time:.3f}s for user={request.user_id}")
+
+    return {
+        "success": True,
+        "updated_fields": list(request.answers.keys()),
+        "profile_completeness": completeness,
+        "message": "太棒了！可以开始你的配对旅程了 🎉" if completeness >= 0.7 else "信息已保存，继续完善可以获得更好的匹配~",
+        "response_time_ms": int(total_time * 1000)
+    }

@@ -5,6 +5,7 @@ license: MIT
 category: profile
 allowed-tools:
   - her_collect_profile
+  - her_update_preference
   - her_find_matches
 ---
 
@@ -46,9 +47,14 @@ Agent 会收到一个 `question_card`，包含：
 
 ### Step 3: 用户回答后
 
-再次调用 `her_collect_profile`，传入：
-- `previous_answer`: 用户刚回答的内容
-- `dimension`: 回答的维度
+**关键：用户回答后必须调用 `her_update_preference` 写入数据库！**
+
+1. 先调用 `her_update_preference`，传入：
+   - `user_id`: 用户 ID
+   - `dimension`: 回答的维度（如 relationship_goal, accept_remote, preferred_age_min 等）
+   - `value`: 用户回答的值
+
+2. 然后再次调用 `her_collect_profile` 获取下一个问题
 
 Agent 会收到：
 - 下一个问题的 `question_card`（如果还有信息缺口）

@@ -761,11 +761,6 @@ async def get_recommendations(
 
     return recommendations[:limit]
 
-    # 按匹配度排序
-    recommendations.sort(key=lambda x: x["compatibility_score"], reverse=True)
-
-    return recommendations[:limit]
-
 
 @router.post("/swipe")
 async def swipe(

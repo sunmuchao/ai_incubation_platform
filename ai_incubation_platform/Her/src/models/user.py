@@ -78,28 +78,35 @@ class UserCreate(BaseModel):
     """创建用户请求
 
     安全验证规则：
-    - name: 必填，长度 1-50 字符，禁止纯空格
+    - username: 必填，长度 3-20 字符，字母数字下划线中文
     - email: 必填，EmailStr 类型验证
+    - password: 必填（生产环境），开发环境可选
+    - name: 必填，长度 1-50 字符，显示昵称
     - age: 必填，范围 18-150
     - gender: 必填，枚举值验证
     - location: 必填，长度 1-200 字符
     """
-    name: str = Field(..., min_length=1, max_length=50, description="用户姓名")
+    username: str = Field(..., min_length=3, max_length=20, description="用户名（登录标识）")
     email: EmailStr = Field(..., description="用户邮箱")
+    password: Optional[str] = Field(None, min_length=8, description="密码（生产环境必填）")
+    name: str = Field(..., min_length=1, max_length=50, description="用户昵称/显示名称")
     age: int = Field(..., ge=18, le=150, description="用户年龄（18-150）")
     gender: Gender = Field(..., description="用户性别")
     location: str = Field(..., min_length=1, max_length=200, description="用户位置")
-    # 开发/测试环境允许不传 password，由服务端使用默认测试密码落库。
-    # 生产环境应要求显式传入 password（由路由层校验）。
-    password: Optional[str] = None
     bio: Optional[str] = Field(None, max_length=5000, description="用户简介")
-    preferred_age_min: int = Field(default=18, ge=18, le=150, description="偏好最小年龄")
-    preferred_age_max: int = Field(default=60, ge=18, le=150, description="偏好最大年龄")
-    preferred_gender: Optional[Gender] = None
-    interests: List[str] = Field(default_factory=list, max_length=20, description="兴趣列表（最多20项）")
+    interests: List[str] = Field(default_factory=list, max_length=20, description="兴趣列表")
     values: Dict[str, float] = Field(default_factory=dict, description="价值观评分")
-    goal: RelationshipGoal = Field(default=RelationshipGoal.SERIOUS, description="关系目标")
     sexual_orientation: SexualOrientation = Field(default=SexualOrientation.HETEROSEXUAL, description="性取向")
+
+    @field_validator('username')
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        """验证用户名：只允许字母、数字、下划线、中文"""
+        if not v:
+            raise ValueError('username cannot be empty')
+        if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fa5]+$', v):
+            raise ValueError('username can only contain letters, numbers, underscore and Chinese')
+        return v.strip()
 
     @field_validator('name')
     @classmethod
@@ -125,17 +132,6 @@ class UserCreate(BaseModel):
             if not (0 <= value <= 1):
                 raise ValueError(f'value for {key} must be between 0 and 1')
         return v
-
-    @field_validator('preferred_age_min', 'preferred_age_max')
-    @classmethod
-    def validate_age_range(cls, v: int, info) -> int:
-        """验证年龄范围：min <= max"""
-        return v
-
-    def model_post_init(self, __context) -> None:
-        """后置验证：检查年龄范围"""
-        if self.preferred_age_min > self.preferred_age_max:
-            raise ValueError('preferred_age_min must be less than or equal to preferred_age_max')
 
 
 class MatchResult(BaseModel):

@@ -60,15 +60,21 @@ async def register_user(
 
     # 注册限流保护
     await rate_limit_login(request)
-    logger.info(f"[REGISTER] {user_data.email} - START at {start_time:.3f}")
+    logger.info(f"[REGISTER] {user_data.username} - START at {start_time:.3f}")
 
     # 检查邮箱是否已存在
     check_start = time.time()
     existing = service.get_by_email(user_data.email)
-    logger.info(f"[REGISTER] {user_data.email} - Email check done in {time.time() - check_start:.3f}s")
+    logger.info(f"[REGISTER] {user_data.username} - Email check done in {time.time() - check_start:.3f}s")
     if existing:
         logger.warning(f"Registration failed: email already exists: {user_data.email}")
         raise HTTPException(status_code=400, detail="Email already registered")
+
+    # 检查用户名是否已存在
+    existing_username = service.get_by_username(user_data.username)
+    if existing_username:
+        logger.warning(f"Registration failed: username already exists: {user_data.username}")
+        raise HTTPException(status_code=400, detail="Username already registered")
 
     user_dict = user_data.model_dump()
     user_dict["id"] = str(__import__('uuid').uuid4())

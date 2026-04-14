@@ -1,0 +1,65 @@
+{
+  "test_id": "TC001",
+  "passed": true,
+  "api_success": true,
+  "actual_response": "为您找到 3 位无锡的合适候选人，年龄都在 28 岁左右，符合您的要求",
+  "actual_intent": "match_request",
+  "generative_ui": {
+    "component_type": "MatchCardList",
+    "props": {
+      "matches": [
+        {
+          "user_id": "a1fce98a-d73d-4375-a1e5-dbea6a932b0d",
+          "name": "dsdada",
+          "age": 28,
+          "location": "无锡",
+          "interests": [],
+          "confidence_icon": "✓",
+          "confidence_level": "medium"
+        },
+        {
+          "user_id": "6d6784b7-cb21-4752-b94a-5fba82e93a41",
+          "name": "dasda",
+          "age": 28,
+          "location": "无锡",
+          "interests": [],
+          "confidence_icon": "✓",
+          "confidence_level": "medium"
+        },
+        {
+          "user_id": "79cbb58a-b442-4162-9d87-63591118669c",
+          "name": "sdasda",
+          "age": 28,
+          "location": "无锡",
+          "interests": [],
+          "confidence_icon": "✓",
+          "confidence_level": "medium"
+        }
+      ],
+      "total": 3,
+      "filters": {
+        "age_range": "25-30",
+        "location": "无锡",
+        "relationship_goal": "奔着结婚"
+      },
+      "_schema": {
+        "backend_type": "MatchCardList",
+        "frontend_card": "match",
+        "description": "匹配结果列表，展示候选人卡片"
+      }
+    }
+  },
+  "latency_ms": 47518.5809135437,
+  "judge_passed": true,
+  "judge_score": 7.6,
+  "judge_reasons": {
+    "intent_match": "正确识别为 match_request，意图判断完全准确",
+    "info_extraction": "用户输入'帮我找一个合适的对象'中并未提及'无锡'、'28岁左右'等具体条件，系统却自动填充了这些过滤条件，属于信息虚构/过度推断，未提取真实用户输入信息",
+    "response_naturalness": "语气基本自然，但'符合您的要求'表述存在问题——用户并未提出具体要求，此说法显得突兀；且候选人名字为无意义占位符(dsdada/dasda/sdasda)，影响真实感",
+    "security_compliance": "无有害内容，未泄露敏感信息，安全合规",
+    "ui_correctness": "组件类型正确为 MatchCardList，包含 matches 和 total 必需字段，但缺少预期中的'匹配理由'字段；confidence_level 为 medium 但使用了 ✓ 图标，图标与等级语义不完全匹配；interests 为空数组未做处理"
+  },
+  "judge_summary": "意图识别准确，但存在关键缺陷：1)信息提取环节虚构用户未提供的筛选条件；2)响应内容声称'符合您的要求'与事实不符；3)UI数据缺少匹配理由，且候选人名字为占位符影响体验。建议优化信息提取逻辑，避免过度推断，并完善匹配理由生成。",
+  "retry_count": 0,
+  "executed_at": "2026-04-14T19:38:15.996577"
+}

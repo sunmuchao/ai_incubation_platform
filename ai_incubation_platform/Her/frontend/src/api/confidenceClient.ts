@@ -1,24 +1,34 @@
 /**
- * 用户置信度 API 客户端
+ * 置信度 API Client
  *
- * 端点：
- * - GET /api/profile/confidence - 获取完整置信度详情
- * - GET /api/profile/confidence/summary - 获取置信度摘要
- * - POST /api/profile/confidence/refresh - 手动刷新评估
- * - GET /api/profile/confidence/recommendations - 获取验证建议
+ * 用于用户信息可信度评估和验证建议
  */
 
-import apiClient, { getAuthHeaders, getCurrentUserId } from './apiClient'
-import type { AxiosResponse } from 'axios'
+import apiClient from './apiClient'
 
 // ==================== 类型定义 ====================
 
+export interface ConfidenceSummary {
+  /** 置信度等级 */
+  level: 'very_high' | 'high' | 'medium' | 'low'
+  /** 置信度分数 (0-1) */
+  confidence: number
+  /** 是否已验证 */
+  verified: boolean
+  /** 异常标记数量 */
+  flags_count: number
+  /** 评估时间 */
+  evaluated_at?: string
+}
+
 export interface ConfidenceDetail {
-  success: boolean
-  user_id: string
-  overall_confidence: number
-  confidence_level: 'low' | 'medium' | 'high' | 'very_high'
+  /** 置信度等级 */
+  confidence_level: 'very_high' | 'high' | 'medium' | 'low'
+  /** 置信度等级名称 */
   confidence_level_name: string
+  /** 总置信度 */
+  overall_confidence: number
+  /** 各维度置信度 */
   dimensions: {
     identity: number
     cross_validation: number
@@ -26,136 +36,85 @@ export interface ConfidenceDetail {
     social: number
     time: number
   }
-  cross_validation_flags: Record<string, CrossValidationFlag>
-  recommendations: VerificationRecommendation[]
-  last_evaluated_at: string | null
-}
-
-export interface ConfidenceSummary {
-  confidence: number
-  level: 'low' | 'medium' | 'high' | 'very_high'
-  level_name: string
-  verified: boolean
-  flags_count: number
-}
-
-export interface CrossValidationFlag {
-  severity: 'low' | 'medium' | 'high'
-  detail: string
-  claimed_age?: number
-  claimed_education?: string
-  claimed_occupation?: string
-  claimed_income?: string
+  /** 跨验证异常标记 */
+  cross_validation_flags?: Record<string, {
+    severity: 'high' | 'medium' | 'low'
+    detail: string
+  }>
+  /** 上次评估时间 */
+  last_evaluated_at?: string
 }
 
 export interface VerificationRecommendation {
-  type: string
+  /** 推荐类型 */
+  type: 'identity_verify' | 'face_verify' | 'education_verify' | 'occupation_verify' | 'profile_complete'
+  /** 优先级 */
   priority: 'high' | 'medium' | 'low'
-  estimated_confidence_boost: number
+  /** 推荐原因 */
   reason: string
+  /** 预估置信度提升 */
+  estimated_confidence_boost: number
 }
 
 export interface ConfidenceExplanation {
-  success: boolean
-  explanation: {
-    title: string
-    description: string
-    dimensions: Array<{
-      name: string
-      weight: string
-      description: string
-      how_to_improve: string
-    }>
-    levels: Array<{
-      name: string
-      range: string
-      color: string
-    }>
-    privacy_note: string
-  }
+  /** 置信度计算说明 */
+  formula: string
+  /** 各维度权重 */
+  weights: Record<string, number>
+  /** 关键因素 */
+  key_factors: string[]
 }
 
-// ==================== API 函数 ====================
+// ==================== API 方法 ====================
 
-/**
- * 获取当前用户置信度详情
- */
-export async function getConfidenceDetail(): Promise<ConfidenceDetail> {
-  const response: AxiosResponse<ConfidenceDetail> = await apiClient.get(
-    '/api/profile/confidence'
-  )
-  return response.data
+const confidenceApi = {
+  /**
+   * 获取当前用户置信度摘要
+   */
+  async getConfidenceSummary(): Promise<ConfidenceSummary> {
+    const response = await apiClient.get('/api/profile-confidence/summary')
+    return response.data
+  },
+
+  /**
+   * 获取其他用户置信度摘要
+   */
+  async getOtherUserConfidenceSummary(userId: string): Promise<ConfidenceSummary> {
+    const response = await apiClient.get(`/api/profile-confidence/summary/${userId}`)
+    return response.data
+  },
+
+  /**
+   * 获取置信度详情
+   */
+  async getConfidenceDetail(): Promise<ConfidenceDetail> {
+    const response = await apiClient.get('/api/profile-confidence/detail')
+    return response.data
+  },
+
+  /**
+   * 获取验证建议
+   */
+  async getVerificationRecommendations(): Promise<{ recommendations: VerificationRecommendation[] }> {
+    const response = await apiClient.get('/api/profile-confidence/recommendations')
+    return response.data
+  },
+
+  /**
+   * 刷新置信度评估
+   */
+  async refreshConfidence(force: boolean = false): Promise<{ success: boolean }> {
+    const response = await apiClient.post('/api/profile-confidence/refresh', { force })
+    return response.data
+  },
+
+  /**
+   * 获取置信度解释
+   */
+  async getConfidenceExplanation(): Promise<ConfidenceExplanation> {
+    const response = await apiClient.get('/api/profile-confidence/explanation')
+    return response.data
+  },
 }
 
-/**
- * 获取当前用户置信度摘要
- */
-export async function getConfidenceSummary(): Promise<ConfidenceSummary> {
-  const response: AxiosResponse<ConfidenceSummary> = await apiClient.get(
-    '/api/profile/confidence/summary'
-  )
-  return response.data
-}
-
-/**
- * 获取其他用户的置信度摘要
- */
-export async function getOtherUserConfidenceSummary(userId: string): Promise<ConfidenceSummary> {
-  const response: AxiosResponse<ConfidenceSummary> = await apiClient.get(
-    `/api/profile/confidence/user/${userId}/summary`
-  )
-  return response.data
-}
-
-/**
- * 手动刷新置信度评估
- */
-export async function refreshConfidence(force: boolean = false): Promise<{
-  success: boolean
-  message: string
-  confidence: number
-  level: string
-  change: number
-}> {
-  const response = await apiClient.post(
-    '/api/profile/confidence/refresh',
-    { force }
-  )
-  return response.data
-}
-
-/**
- * 获取验证建议
- */
-export async function getVerificationRecommendations(): Promise<{
-  success: boolean
-  recommendations: VerificationRecommendation[]
-  total_count: number
-  high_priority_count: number
-}> {
-  const response = await apiClient.get(
-    '/api/profile/confidence/recommendations'
-  )
-  return response.data
-}
-
-/**
- * 获取置信度系统解释
- */
-export async function getConfidenceExplanation(): Promise<ConfidenceExplanation> {
-  const response: AxiosResponse<ConfidenceExplanation> = await apiClient.get(
-    '/api/profile/confidence/explain'
-  )
-  return response.data
-}
-
-// ==================== 默认导出 ====================
-
-export default {
-  getConfidenceDetail,
-  getConfidenceSummary,
-  getOtherUserConfidenceSummary,
-  refreshConfidence,
-  getVerificationRecommendations,
-  getConfidenceExplanation,
-}
+export default confidenceApi

@@ -100,25 +100,18 @@ class UIBuilder:
         """
         构建查询质量校验未通过时的追问响应
 
-        不执行查询，而是引导用户澄清缺失信息
-        """
-        # 构建追问消息
-        follow_ups = quality_check.follow_up_questions
+        【Agent Native 改进】
+        追问不再用编号列表，而是返回缺失信息供 Agent 自然表达。
+        Agent 应根据这些信息，用对话风格追问用户。
 
-        if len(follow_ups) == 1:
-            ai_message = follow_ups[0]
-        elif len(follow_ups) > 1:
-            # 多个问题，友好地逐一询问
-            ai_message = "为了帮你找到更合适的对象，我需要了解几个信息：\n\n"
-            for i, q in enumerate(follow_ups[:3], 1):  # 最多问 3 个问题
-                ai_message += f"{i}. {q}\n"
-            ai_message += "\n你可以一次回答，也可以逐个告诉我。"
-        else:
-            # 没有具体问题（可能是清晰性问题）
-            if quality_check.clarity_issues:
-                ai_message = f"我注意到你的需求有些模糊：{quality_check.clarity_issues[0]}。能再说具体一点吗？"
-            else:
-                ai_message = "你能再说详细一点吗？比如你希望找什么样的人？"
+        返回数据而非固定文案，让 Agent 自己生成个性化追问。
+        """
+        # 构建缺失信息摘要（供 Agent 解读）
+        missing_info_summary = {
+            "missing_basic_info": quality_check.missing_info,
+            "missing_preferences": quality_check.missing_preferences if hasattr(quality_check, 'missing_preferences') else [],
+            "clarity_issues": quality_check.clarity_issues,
+        }
 
         # 构建建议操作（引导用户回答）
         suggested_actions = []
@@ -134,23 +127,26 @@ class UIBuilder:
         })
 
         # 构建 Generative UI（追问卡片）
+        # 返回缺失信息，不生成固定文案
         generative_ui = {
             "component_type": "QualityCheckFollowUp",
             "props": {
-                "clarity_issues": quality_check.clarity_issues,
-                "missing_info": quality_check.missing_info,
-                "follow_up_questions": follow_ups,
-                "original_message": original_message,
+                "missing_info_summary": missing_info_summary,
+                "hint": "Agent 应根据缺失信息，用自然对话风格追问用户。禁止用编号列表（如'1. xxx 2. xxx'），应该像真人聊天一样提问。",
+                "example_correct_style": "你多大呀？我看你年龄设得挺宽的，帮你缩小一下？",
+                "example_wrong_style": "1. 你希望对方什么年龄范围？",
             }
         }
 
-        logger.info(f"[UIBuilder] 构建追问响应: {ai_message[:50]}...")
+        logger.info(f"[UIBuilder] 构建追问响应: 缺失信息 {len(quality_check.missing_info)} 项")
 
+        # 不生成固定文案，让 Agent 自己生成
         return {
-            "ai_message": ai_message,
+            "ai_message": "",  # Agent 应自己生成追问
             "intent_type": "quality_check_followup",
             "suggested_actions": suggested_actions,
             "generative_ui": generative_ui,
+            "missing_info_summary": missing_info_summary,  # 供 Agent 使用
         }
 
     def build_preference_update_response(

@@ -394,14 +394,14 @@ export const userApi = {
    */
   async register(userData: {
     username: string
-    password: string
     email: string
+    password: string
     name: string
     age: number
     gender: string
     location: string
-    bio: string
-    interests: string[]
+    bio?: string
+    interests?: string[]
   }) {
     const response = await apiClient.post('/api/users/register', userData)
     return response.data

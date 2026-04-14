@@ -144,9 +144,17 @@ class IntentAnalyzer:
 - feedback: 匹配反馈（用户对某个匹配对象的反馈）
 - conversation: 一般对话
 
+【extracted_conditions 字段说明】
+从用户消息中提取匹配条件：
+- interests: 用户指定的兴趣偏好（如"喜欢户外运动的人" → interests=["户外运动"]）
+- age_range: 年龄范围（如"25-30岁" → age_range=[25, 30]）
+- location: 地点偏好（如"在北京" → location="北京"）
+- gender: 性别偏好（如"女生" → gender="female"）
+- relationship_goal: 关系目标（如"认真谈恋爱" → relationship_goal="serious"）
+
 【输出格式】
 返回 JSON 格式：
-{{"intent_type": "意图类型", "extracted_conditions": {{}}, "preference_mentioned": "", "emotional_state": "", "confidence": 0.5}}
+{{"intent_type": "意图类型", "extracted_conditions": {"interests": [...], "age_range": [...], "location": "..."}, "preference_mentioned": "", "emotional_state": "", "confidence": 0.5}}
 
 只返回 JSON。'''
 
@@ -175,6 +183,7 @@ class IntentAnalyzer:
     def _fallback_intent_analysis(self, message: str) -> UserIntent:
         """降级意图分析（关键词匹配）"""
         message_lower = message.lower()
+        extracted_conditions = {}
 
         # ===== 匹配请求关键词（扩展）=====
         # 包含"找对象"、"帮我找"、"找人"等常见表达
@@ -185,7 +194,21 @@ class IntentAnalyzer:
         ]
         if any(kw in message_lower for kw in match_keywords):
             logger.info(f"[IntentAnalyzer] 降级识别为 match_request: 关键词匹配")
-            return UserIntent(intent_type="match_request", confidence=0.6)
+
+            # 提取兴趣（如"喜欢户外运动的人"）
+            import re
+            # 匹配 "喜欢XX的人" 或 "爱XX的人"
+            interest_match = re.search(r"喜欢(\w+)的人|爱(\w+)的人", message_lower)
+            if interest_match:
+                interest = interest_match.group(1) or interest_match.group(2)
+                if interest:
+                    extracted_conditions["interests"] = [interest]
+
+            return UserIntent(
+                intent_type="match_request",
+                extracted_conditions=extracted_conditions,
+                confidence=0.6
+            )
 
         inquiry_keywords = ["怎么样", "什么是", "如何", "能不能"]
         if any(kw in message_lower for kw in inquiry_keywords):

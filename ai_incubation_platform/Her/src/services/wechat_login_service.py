@@ -338,7 +338,7 @@ class WeChatLoginService:
                 logger.info(f"Created new user from WeChat: {user.id}")
 
             # 生成 JWT token
-            token = create_access_token({"sub": user.id, "username": user.username})
+            token = create_access_token({"sub": user.id, "username": user.username or user.name})
 
             return user, token
 

@@ -513,7 +513,7 @@ class RelationshipCoachSkill:
             from db.models import MatchHistoryDB, ChatConversationDB
             from db.database import SessionLocal
             from utils.db_session_manager import db_session, db_session_readonly, optional_db_session
-            from sqlalchemy.orm import joinedload
+            from sqlalchemy.orm import joinedload  # @deprecated: joinedload import unused, will be removed
 
             db = SessionLocal()
 

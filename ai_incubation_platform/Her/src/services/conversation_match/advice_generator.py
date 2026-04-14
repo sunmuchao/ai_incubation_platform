@@ -11,6 +11,7 @@ AdviceGenerator - 建议生成器
 """
 from typing import Dict, Any, List, Optional
 import asyncio
+import json
 
 from utils.logger import logger
 from services.user_profile_service import get_user_profile_service
@@ -117,30 +118,60 @@ class AdviceGenerator:
         """
         生成 AI 响应消息
 
-        整合匹配结果、认知偏差、主动建议
+        【Agent Native 改进】
+        此方法不再生成模板化响应，而是返回数据摘要。
+        Agent（DeerFlow）应根据这些数据自主生成个性化响应。
+
+        返回数据摘要，让 Agent 自己解读并生成自然对话。
         """
-        # 基础响应
+        # 没有匹配结果
         if not matches:
-            return "目前没有找到符合你条件的匹配对象。要不调整一下条件试试？"
+            # 返回 JSON 格式的数据摘要，让 Agent 自己生成文案
+            return json.dumps({
+                "match_count": 0,
+                "hint": "Agent 应告诉用户没有找到匹配对象，建议调整条件。",
+                "example_style": "目前没有找到符合你条件的匹配对象。要不调整一下条件试试？",
+            }, ensure_ascii=False)
 
-        # 有匹配结果
+        # 有匹配结果，返回数据摘要
         match_count = len(matches)
-        avg_score = sum(m.get("compatibility_score", 0.5) for m in matches) / match_count
 
-        response_parts = [f"为你找到了 {match_count} 个匹配对象，平均匹配度 {avg_score:.0%}。"]
+        # 提取置信度信息
+        confidence_levels = [m.get("confidence_level", "medium") for m in matches]
+        high_confidence_count = sum(1 for c in confidence_levels if c in ["very_high", "high"])
 
-        # 如果有认知偏差，添加提醒
-        if bias_analysis and hasattr(bias_analysis, 'has_bias') and bias_analysis.has_bias:
-            response_parts.append(
-                f"\n\nHer 发现：{bias_analysis.bias_description}\n"
-                f"{bias_analysis.adjustment_suggestion}"
-            )
+        # 提取匹配分数
+        scores = [m.get("compatibility_score", 0.5) for m in matches]
+        avg_score = sum(scores) / match_count if match_count > 0 else 0.5
 
-        # 如果有高置信度匹配
-        if matches[0].get("compatibility_score", 0) > 0.8:
-            response_parts.append("\n\n第一个匹配对象很适合你，建议优先了解！")
+        # 提取置信度最高的匹配
+        best_match = matches[0] if matches else None
 
-        return "".join(response_parts)
+        # 构建数据摘要
+        summary_data = {
+            "match_count": match_count,
+            "avg_score": round(avg_score, 2),
+            "high_confidence_count": high_confidence_count,
+            "best_match": {
+                "name": best_match.get("candidate_name", "TA") if best_match else None,
+                "confidence_level": best_match.get("confidence_level", "medium") if best_match else None,
+                "confidence_icon": best_match.get("confidence_icon", "✓") if best_match else None,
+                "score": best_match.get("compatibility_score", 0.5) if best_match else None,
+            } if best_match else None,
+            "bias_analysis": {
+                "has_bias": bias_analysis.has_bias if bias_analysis and hasattr(bias_analysis, 'has_bias') else False,
+                "bias_description": bias_analysis.bias_description if bias_analysis and hasattr(bias_analysis, 'bias_description') else None,
+            } if bias_analysis else None,
+            "hint": "Agent 应根据数据自主生成个性化响应。要自然对话风格，禁止模板化。每个候选人介绍要因用户而异。",
+            "key_points": [
+                f"找到 {match_count} 个匹配对象",
+                f"其中 {high_confidence_count} 个高置信度用户（可信度高）",
+                f"平均匹配度 {avg_score:.0%}",
+            ],
+        }
+
+        # 返回 JSON 格式的数据摘要
+        return json.dumps(summary_data, ensure_ascii=False)
 
 
 # 全局实例

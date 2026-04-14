@@ -39,10 +39,44 @@
       "Bash(curl -s -X POST http://localhost:8000/api/users/register -H 'Content-Type: application/json' -d '{\"username\":\"test_timeout_user\",\"password\":\"test123\",\"name\":\"测试用户\",\"age\":25,\"city\":\"北京\"}')",
       "Bash(curl -s -X POST http://localhost:8000/api/users/register -H 'Content-Type: application/json' -d '{\"username\":\"test_timeout_fix\",\"password\":\"test123\",\"email\":\"test@test.com\",\"name\":\"测试用户\",\"age\":25,\"gender\":\"male\",\"location\":\"北京\",\"interests\":[\"音乐\",\"阅读\"]}')",
       "Bash(curl -s -X POST http://localhost:8000/api/registration-conversation/start -H 'Content-Type: application/json' -H 'Authorization: Bearer test-token' -d '{\"user_id\":\"2477f820-a146-440f-816b-ece47b40ee6c\",\"user_name\":\"测试用户\"}')",
-      "Bash(du -sh /Users/sunmuchao/Downloads/ai_incubation_platform/Her/:memory*)"
+      "Bash(du -sh /Users/sunmuchao/Downloads/ai_incubation_platform/Her/:memory*)",
+      "Bash(python3 -c ':*)",
+      "Bash(git commit -m ':*)",
+      "Bash(LLM_ENABLED=false python -m pytest tests/test_dual_engine.py -v --tb=short -x)",
+      "Bash(LLM_ENABLED=false python -m pytest tests/test_dual_engine.py -v --tb=line)",
+      "Bash(tail -100 logs/*.log)",
+      "Bash(grep -rn \"APIRouter\" api/*.py)",
+      "Bash(grep -rn \"prefix=\" api/*.py)",
+      "Bash(sort -t'-' -k2 -n)",
+      "Bash(grep -c \"@ant-design/icons\" src/components/*.tsx src/pages/*.tsx)",
+      "Bash(sort -t: -k2 -n -r)",
+      "Bash(rm api/ai_learning.py)",
+      "Bash(rm api/behavior.py)",
+      "Bash(rm api/conflict_handling.py)",
+      "Bash(rm api/credit.py)",
+      "Bash(rm api/perception_layer.py)",
+      "Bash(mv p11_apis.py emotion_analysis_apis.py)",
+      "Bash(mv p12_apis.py behavior_lab_apis.py)",
+      "Bash(mv p13_apis.py love_language_profile_apis.py)",
+      "Bash(mv p14_apis.py date_simulation_apis.py)",
+      "Bash(mv p15_p16_p17_apis.py life_integration_apis.py)",
+      "Bash(mv p11_services.py emotion_analysis_service.py)",
+      "Bash(mv p11_safety_service.py safety_guardian_service.py)",
+      "Bash(mv p12_behavior_lab_service.py behavior_lab_service.py)",
+      "Bash(mv p12_behavior_lab_types.py behavior_lab_types.py)",
+      "Bash(mv p12_emotion_mediation_service.py emotion_mediation_service.py)",
+      "Bash(mv p0_identity_models.py identity_models.py)",
+      "Bash(mv p1_conflict_models.py conflict_models.py)",
+      "Bash(mv p1_values_models.py values_models.py)",
+      "Bash(mv p1_perception_models.py perception_models.py)",
+      "Bash(mv p2_digital_twin_models.py digital_twin_models.py)",
+      "Bash(find . -name '*.py' -exec sed -i '' -e 's/from services\\\\.p11_services/from services.emotion_analysis_service/g' -e 's/from services\\\\.p11_safety_service/from services.safety_guardian_service/g' -e 's/from services\\\\.p12_behavior_lab_service/from services.behavior_lab_service/g' -e 's/from services\\\\.p12_emotion_mediation_service/from services.emotion_mediation_service/g' -e 's/from services\\\\.p12_weather_service/from services.weather_service/g' -e 's/from services\\\\.p12_love_language_service/from services.love_language_translation_service/g' -e 's/from services\\\\.p12_warning_service/from services.warning_response_service/g' -e 's/from services\\\\.p13_enhancement_service/from services.relationship_enhancement_service/g' -e 's/from services\\\\.p14_date_simulation_service/from services.date_simulation_service/g' -e 's/from services\\\\.p14_date_assistant_service/from services.date_assistant_service/g' -e 's/from services\\\\.p15_services/from services.autonomous_dating_service/g' -e 's/from services\\\\.p16_services/from services.social_tribe_service/g' -e 's/from services\\\\.p17_services/from services.stress_test_service/g' '{}' ';')",
+      "Bash(find . -name '*.py' -exec sed -i '' -e 's/from models\\\\.p0_identity_models/from models.identity_models/g' -e 's/from models\\\\.p1_conflict_models/from models.conflict_models/g' -e 's/from models\\\\.p1_values_models/from models.values_models/g' -e 's/from models\\\\.p1_perception_models/from models.perception_models/g' -e 's/from models\\\\.p2_digital_twin_models/from models.digital_twin_models/g' -e 's/from models\\\\.p9_models/from models.notification_models/g' -e 's/from models\\\\.p10_models/from models.milestone_models/g' -e 's/from models\\\\.p11_models/from models.emotion_analysis_models/g' -e 's/from models\\\\.p12_models/from models.behavior_lab_models/g' -e 's/from models\\\\.p13_models/from models.relationship_enhancement_models/g' -e 's/from models\\\\.p14_models/from models.date_simulation_models/g' -e 's/from models\\\\.p15_models/from models.autonomous_dating_models/g' -e 's/from models\\\\.p16_models/from models.social_tribe_models/g' -e 's/from models\\\\.p17_models/from models.stress_test_models/g' -e 's/from models\\\\.p18_models/from models.emotion_weather_models/g' -e 's/from models\\\\.p18_p22_models/from models.advanced_feature_models/g' -e 's/from models\\\\.p20_models/from models.future_models/g' -e 's/from models\\\\.p8_models/from models.verification_models/g' '{}' ';')"
     ],
     "additionalDirectories": [
-      "/Users/sunmuchao/Downloads/ai_incubation_platform/Her"
+      "/Users/sunmuchao/Downloads/ai_incubation_platform/Her",
+      "/Users/sunmuchao/Downloads/.git",
+      "/Users/sunmuchao/Downloads/ai_incubation_platform/Her/src/api"
     ]
   }
 }

@@ -1,0 +1,124 @@
+{
+  "test_id": "TC003",
+  "passed": false,
+  "api_success": true,
+  "actual_response": "为您找到5位对旅行感兴趣的候选人，她们都喜欢探索新地方，和户外运动有一定契合度",
+  "actual_intent": "match_request",
+  "generative_ui": {
+    "component_type": "MatchCardList",
+    "props": {
+      "matches": [
+        {
+          "user_id": "81eb9485-9ed3-4d2a-9b16-adb951f19d16",
+          "name": "佳慧",
+          "age": 29,
+          "gender": "female",
+          "location": "无锡",
+          "interests": [
+            "烹饪",
+            "宠物",
+            "瑜伽",
+            "音乐",
+            "旅行"
+          ],
+          "bio": "医院护士，性格开朗细心。喜欢烹饪、宠物和瑜伽。期待找到一个善良的人，一起走进婚姻。",
+          "relationship_goal": "marriage",
+          "confidence_icon": "✓",
+          "confidence_level": "medium"
+        },
+        {
+          "user_id": "b5a994c1-7348-4baf-a818-04281a917338",
+          "name": "清雅",
+          "age": 30,
+          "gender": "female",
+          "location": "无锡",
+          "interests": [
+            "插花",
+            "茶艺",
+            "古典音乐",
+            "阅读",
+            "瑜伽"
+          ],
+          "bio": "事业单位工作，性格温和。喜欢插花、茶艺和古典音乐。希望能找到一个稳重的人，一起步入婚姻。",
+          "relationship_goal": "marriage",
+          "confidence_icon": "✓",
+          "confidence_level": "medium"
+        },
+        {
+          "user_id": "4f5d74b4-b28c-4e09-a3e3-f3bec0811dd8",
+          "name": "梦瑶",
+          "age": 30,
+          "gender": "female",
+          "location": "无锡",
+          "interests": [
+            "设计",
+            "艺术展",
+            "咖啡",
+            "手工",
+            "旅行"
+          ],
+          "bio": "设计师，喜欢一切美好的事物。平时逛艺术展、喝咖啡、做手工。想找一个懂生活的人，认真交往。",
+          "relationship_goal": "serious",
+          "confidence_icon": "✓",
+          "confidence_level": "medium"
+        },
+        {
+          "user_id": "2b4a3881-caa2-43ac-9296-5e12cdf64b70",
+          "name": "怡萱",
+          "age": 26,
+          "gender": "female",
+          "location": "无锡",
+          "interests": [
+            "摄影",
+            "美食",
+            "音乐",
+            "旅行",
+            "咖啡"
+          ],
+          "bio": "文案策划，性格活泼。喜欢摄影、美食探店和音乐节。期待遇到一个有趣的人，一起探索无锡的美食。",
+          "relationship_goal": "serious",
+          "confidence_icon": "✓",
+          "confidence_level": "medium"
+        },
+        {
+          "user_id": "0a42a876-e421-4c35-812f-01391aff1cf3",
+          "name": "雨婷",
+          "age": 25,
+          "gender": "female",
+          "location": "无锡",
+          "interests": [
+            "烘焙",
+            "旅行",
+            "瑜伽",
+            "阅读",
+            "电影"
+          ],
+          "bio": "无锡本地人，会计工作。喜欢烘焙、旅行和瑜伽。希望能遇到一个真诚的人，一起经营温暖的家。",
+          "relationship_goal": "marriage",
+          "confidence_icon": "✓",
+          "confidence_level": "medium"
+        }
+      ],
+      "total": 5,
+      "notice": "这几位候选人都对「旅行」有兴趣，目前系统中户外运动的详细标签还在完善中。她们都在无锡地区，如果您接受异地匹配，可以进一步了解~",
+      "_schema": {
+        "backend_type": "MatchCardList",
+        "frontend_card": "match",
+        "description": "匹配结果列表，展示候选人卡片"
+      }
+    }
+  },
+  "latency_ms": 27902.496099472046,
+  "judge_passed": false,
+  "judge_score": 6.4,
+  "judge_reasons": {
+    "intent_match": "正确识别为 match_request 意图，但匹配逻辑存在偏差——用户明确要求'户外运动'，系统却用'旅行'作为替代匹配依据，属于意图部分偏离",
+    "info_extraction": "未能准确提取核心需求'户外运动'，系统将其降级为'旅行'并声称'有一定契合度'，关键信息提取不完整且存在自我合理化的问题",
+    "response_naturalness": "语气基本自然，但存在明显的逻辑硬伤：5位候选人中仅3位真正包含'旅行'兴趣，清雅的兴趣列表（插花、茶艺、古典音乐、阅读、瑜伽）完全没有旅行或户外相关标签，却被强行纳入；且notice中'户外运动标签还在完善中'属于系统缺陷的暴露，降低了专业感",
+    "security_compliance": "无敏感信息泄露，无有害内容，合规",
+    "ui_correctness": "MatchCardList 组件类型正确，props结构完整，但存在数据质量问题：confidence_level统一为'medium'缺乏区分度，且清雅的匹配合理性存疑"
+  },
+  "judge_summary": "系统在核心匹配逻辑上出现明显偏差：将'户外运动'偷换为'旅行'概念，并纳入了一位与两者均无关的候选人（清雅）。虽然意图识别正确、UI格式规范，但信息提取和匹配质量不达标，属于'答非所问'的典型案例。建议：①明确拒绝或延迟响应该查询，待户外运动标签完善后再匹配；②或诚实说明当前局限，而非强行用旅行替代并声称'有一定契合度'",
+  "retry_count": 0,
+  "executed_at": "2026-04-14T19:47:30.640248"
+}

@@ -11,7 +11,8 @@ class UserDB(Base):
 
     # ===== 基础字段 =====
     id = Column(String(36), primary_key=True, index=True)
-    name = Column(String(100), nullable=False, index=True)
+    username = Column(String(100), unique=True, nullable=True, index=True)  # 用户名（登录标识）
+    name = Column(String(100), nullable=False, index=True)  # 显示名称/昵称
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     age = Column(Integer, nullable=False, index=True)

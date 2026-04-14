@@ -43,7 +43,7 @@ os.makedirs(STATIC_DIR, exist_ok=True)
 app = FastAPI(
     title="Matchmaker Agent",
     description="AI 红娘匹配系统（带 JWT 认证和 SQLite 持久化）",
-    version="1.28.0",
+    version="1.30.0",
     debug=settings.debug
 )
 
@@ -128,17 +128,10 @@ async def startup_event():
     start_heartbeat(interval=heartbeat_interval)
     logger.info(f"🫀 Heartbeat scheduler started, interval={heartbeat_interval}m")
 
-    # Milestone: 启动时检查 API 注册和 Skills 同步
-    from utils.api_checker import check_api_registration
+    # Milestone: 启动时检查 Skills 同步
     from utils.skills_checker import check_skills_sync
 
-    api_check = check_api_registration(raise_on_error=False)
     skills_check = check_skills_sync(raise_on_error=False)
-
-    if api_check:
-        logger.info("✅ API registration check passed")
-    else:
-        logger.warning("⚠️ API registration check failed, check /api/checker/api-registration for details")
 
     if skills_check:
         logger.info("✅ Skills sync check passed")

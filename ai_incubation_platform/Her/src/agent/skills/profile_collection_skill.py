@@ -340,6 +340,50 @@ class ProfileCollectionSkill:
             depth_score: 0.0 - 1.0，越高越深入
             analysis: 分析详情，包含追问建议
         """
+        # 🔧 [性能优化] 先判断答案类型，勾选类回答直接跳过 LLM
+        # 列表类回答（勾选多个选项）→ 有具体偏好，无需 LLM 分析
+        if isinstance(answer, list):
+            # 选择了具体选项，表示有明确偏好
+            depth_score = 0.7 if len(answer) > 0 else 0.3
+            return depth_score, {
+                "is_specific": True,
+                "has_preferences": True,
+                "follow_up_needed": False,
+                "analysis": f"用户选择了 {len(answer)} 个选项"
+            }
+
+        # 短字符串回答（单选/勾选）→ 直接评估，无需 LLM
+        if isinstance(answer, str) and len(answer) < 20:
+            # 短回答通常是勾选选项，直接给合理评分
+            dimension_info = self.PROFILE_DIMENSIONS.get(dimension, {})
+            options = dimension_info.get("options", [])
+
+            # 如果答案是预设选项之一，说明是勾选，给高分
+            if any(opt.get("value") == answer or opt.get("label") == answer for opt in options):
+                return 0.7, {
+                    "is_specific": True,
+                    "has_preferences": True,
+                    "follow_up_needed": False,
+                    "analysis": "用户勾选了预设选项"
+                }
+
+            # 其他短回答给中等评分
+            return 0.5, {
+                "is_specific": False,
+                "follow_up_needed": False,
+                "analysis": "简短回答"
+            }
+
+        # 数字类回答（年龄、身高等）→ 直接给高分，无需 LLM
+        if isinstance(answer, (int, float)):
+            return 0.8, {
+                "is_specific": True,
+                "has_preferences": True,
+                "follow_up_needed": False,
+                "analysis": "用户提供了具体数值"
+            }
+
+        # 只有长文本回答才需要 LLM 深度分析
         # 尝试 AI 分析
         ai_result = await self._ai_analyze_depth(dimension, answer, context)
         if ai_result:
@@ -397,12 +441,12 @@ class ProfileCollectionSkill:
 
 只返回 JSON。'''
 
-            # 设置较短超时，快速降级到规则分析
+            # 设置合理超时（豆包 Seed reasoning 模型需要更长响应时间）
             import asyncio
             try:
                 response = await asyncio.wait_for(
                     llm_service._call_llm(prompt),
-                    timeout=10.0  # 10秒超时，避免前端等待太久
+                    timeout=60.0  # 60秒超时，适配豆包 Seed reasoning 模型
                 )
             except asyncio.TimeoutError:
                 logger.warning(f"ProfileCollectionSkill: LLM timeout for depth analysis, using fallback")
@@ -565,12 +609,12 @@ class ProfileCollectionSkill:
 3. 保持轻松自然的语气，避免审问式
 4. 只返回 JSON'''
 
-            # 设置较短超时
+            # 设置合理超时（豆包 Seed reasoning 模型需要更长响应时间）
             import asyncio
             try:
                 response = await asyncio.wait_for(
                     llm_service._call_llm(prompt),
-                    timeout=10.0
+                    timeout=60.0  # 60秒超时，适配豆包 Seed reasoning 模型
                 )
             except asyncio.TimeoutError:
                 logger.warning(f"ProfileCollectionSkill: LLM timeout for follow-up, using fallback")
@@ -672,7 +716,7 @@ class ProfileCollectionSkill:
         depth: int = 0
     ) -> Dict:
         """
-        AI 生成问题和选项卡片
+        生成问题和选项卡片
 
         Args:
             dimension: 信息维度
@@ -692,7 +736,17 @@ class ProfileCollectionSkill:
                 "depth": 当前深度
             }
         """
-        # 尝试 AI 生成
+        # 🔧 [性能优化] 预设维度直接使用预定义模板，跳过 AI 生成
+        dimension_info = self.PROFILE_DIMENSIONS.get(dimension, {})
+        predefined_options = dimension_info.get("options", [])
+
+        # 如果有预定义选项，直接使用，不需要 AI
+        if predefined_options:
+            card = self._get_fallback_question_card(dimension)
+            card["depth"] = depth
+            return card
+
+        # 只有没有预定义选项的维度才尝试 AI 生成
         ai_card = await self._generate_question_with_ai(dimension, context, profile, depth)
         if ai_card:
             ai_card["depth"] = depth
@@ -754,12 +808,12 @@ class ProfileCollectionSkill:
 4. question_type 根据维度选择：单选用 single_choice，多选用 multiple_choice
 5. 只返回 JSON，不要其他内容'''
 
-            # 设置较短超时
+            # 设置合理超时（豆包 Seed reasoning 模型需要更长响应时间）
             import asyncio
             try:
                 response = await asyncio.wait_for(
                     llm_service._call_llm(prompt),
-                    timeout=10.0
+                    timeout=60.0  # 60秒超时，适配豆包 Seed reasoning 模型
                 )
             except asyncio.TimeoutError:
                 logger.warning(f"ProfileCollectionSkill: LLM timeout for question generation, using fallback")

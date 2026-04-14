@@ -8,7 +8,7 @@
 - 话题匹配
 """
 from typing import Dict, Any, List, Optional, Tuple
-from collections import defaultdict, Counter
+from collections import defaultdict, Counter  # @deprecated: Counter unused, will be removed
 from dataclasses import dataclass
 import math
 from utils.logger import logger

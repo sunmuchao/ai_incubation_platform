@@ -20,10 +20,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False,
+        extra="ignore",  # 忽略未定义的环境变量（如 DeerFlow 的 OPENAI_API_KEY）
     )
 
     # 服务配置
-    app_version: str = "0.5.0"
+    app_version: str = "1.30.0"
     server_host: str = os.getenv("SERVER_HOST", "0.0.0.0")
     server_port: int = int(os.getenv("SERVER_PORT", os.getenv("PORT", "8007")))
     debug: bool = os.getenv("DEBUG", "false").lower() == "true"
@@ -37,12 +38,15 @@ class Settings(BaseSettings):
 
     # LLM 配置（核心 AI 引擎，默认启用）
     llm_enabled: bool = os.getenv("LLM_ENABLED", "true").lower() == "true"
-    llm_provider: str = os.getenv("LLM_PROVIDER", "qwen")  # qwen, glm, openai
+    llm_provider: str = os.getenv("LLM_PROVIDER", "volces")  # volces, qwen, glm, openai
     llm_api_key: str = os.getenv("LLM_API_KEY", "")
-    llm_api_base: str = os.getenv("LLM_API_BASE", "https://dashscope.aliyun.com/compatible-mode/v1")
-    llm_model: str = os.getenv("LLM_MODEL", "qwen-plus")
+    llm_api_base: str = os.getenv("LLM_API_BASE", "https://ark.cn-beijing.volces.com/api/v3")
+    llm_model: str = os.getenv("LLM_MODEL", "doubao-1-5-pro-32k-250115")
     llm_temperature: float = float(os.getenv("LLM_TEMPERATURE", "0.7"))
     llm_max_tokens: int = int(os.getenv("LLM_MAX_TOKENS", "1000"))
+    # 豆包模型特殊参数
+    llm_max_completion_tokens: int = int(os.getenv("LLM_MAX_COMPLETION_TOKENS", "65535"))
+    llm_reasoning_effort: str = os.getenv("LLM_REASONING_EFFORT", "medium")  # low, medium, high
     llm_request_timeout: int = int(os.getenv("LLM_REQUEST_TIMEOUT", "30"))
     llm_retry_count: int = int(os.getenv("LLM_RETRY_COUNT", "3"))
     llm_confidence_threshold: float = float(os.getenv("LLM_CONFIDENCE_THRESHOLD", "0.6"))  # 置信度阈值

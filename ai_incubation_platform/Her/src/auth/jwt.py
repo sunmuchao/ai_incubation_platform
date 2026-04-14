@@ -166,8 +166,16 @@ def _decode_token(token: str, expected_type: str = "access") -> Optional[str]:
         logger.debug(f"{expected_type} token decoded successfully for user: {user_id}")
         return user_id
     except JWTError as e:
-        # 避免在日志中泄露 token 内容/解析细节
-        logger.warning(f"Failed to decode {expected_type} token")
+        # 🔧 [增强日志] 记录具体的 JWTError 类型，便于排查问题
+        error_str = str(e)
+        if "Signature" in error_str or "signature" in error_str:
+            logger.warning(f"Failed to decode {expected_type} token: SIGNATURE_MISMATCH - SECRET_KEY 可能不一致")
+        elif "Expired" in error_str or "expired" in error_str:
+            logger.warning(f"Failed to decode {expected_type} token: TOKEN_EXPIRED - 需要刷新 token")
+        elif "Invalid" in error_str or "invalid" in error_str:
+            logger.warning(f"Failed to decode {expected_type} token: INVALID_TOKEN_FORMAT")
+        else:
+            logger.warning(f"Failed to decode {expected_type} token: {type(e).__name__}")
         return None
 
 

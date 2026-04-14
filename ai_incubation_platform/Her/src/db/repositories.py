@@ -30,6 +30,7 @@ class UserRepository:
 
         db_user = UserDB(
             id=user_data["id"],
+            username=user_data.get("username"),  # 用户名（登录标识）
             name=user_data["name"],
             email=user_data["email"],
             password_hash=user_data.get("password_hash", ""),
@@ -86,8 +87,8 @@ class UserRepository:
         return {user.email: user for user in users}
 
     def get_by_username(self, username: str) -> Optional[UserDB]:
-        """根据用户名（name）获取用户"""
-        return self.db.query(UserDB).filter(UserDB.name == username).first()
+        """根据用户名（username）获取用户"""
+        return self.db.query(UserDB).filter(UserDB.username == username).first()
 
     def get_by_phone(self, phone: str) -> Optional[UserDB]:
         """根据手机号获取用户"""

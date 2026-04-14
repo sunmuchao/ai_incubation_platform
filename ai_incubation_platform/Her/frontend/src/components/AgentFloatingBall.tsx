@@ -12,7 +12,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Avatar, Button, Typography } from 'antd'
 import { CloseOutlined } from '@ant-design/icons'
 import HerAvatar from '../assets/her-avatar.svg'
-import QuickChatPanel from './QuickChatPanel'
 import './AgentFloatingBall.less'
 
 const { Text } = Typography
@@ -239,8 +238,10 @@ const AgentFloatingBall: React.FC<AgentFloatingBallProps> = ({
             />
           </div>
 
-          {/* 快速对话面板 */}
-          <QuickChatPanel chatContext={chatContext} />
+          {/* 快速对话面板 - TODO: 重新实现或恢复 QuickChatPanel */}
+          <div className="quick-chat-placeholder" style={{ padding: 16, textAlign: 'center' }}>
+            <Text type="secondary">快速对话功能暂未开放</Text>
+          </div>
         </div>
       )}
     </>

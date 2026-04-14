@@ -41,6 +41,12 @@ GENERATIVE_UI_SCHEMA: Dict[str, ComponentSchema] = {
         "required_props": ["matches", "is_daily"],
         "description": "每日推荐卡片",
     },
+    "UserProfileCard": {
+        "backend_type": "UserProfileCard",
+        "frontend_card": "user_profile",
+        "required_props": ["user_id", "name", "age", "location"],
+        "description": "用户详情卡片，用于展示选中候选人信息，包含开始对话按钮",
+    },
 
     # ===== 信息收集 =====
     "ProfileQuestionCard": {

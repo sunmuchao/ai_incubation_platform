@@ -21,24 +21,82 @@ except ImportError:
 
 
 def get_llm_config() -> Dict[str, Any]:
-    """获取 LLM 配置"""
-    # 优先使用 LLM_* 环境变量（项目统一配置）
-    api_key = os.getenv("LLM_API_KEY", "")
-    api_base = os.getenv("LLM_API_BASE", "")
-    model = os.getenv("LLM_MODEL", "kimi-k2.5")
+    """
+    获取 LLM 配置
 
-    # 降级：使用 OPENAI_* 环境变量（兼容旧配置）
-    if not api_key:
-        api_key = os.getenv("OPENAI_API_KEY", "")
-    if not api_base:
-        api_base = os.getenv("OPENAI_API_BASE", "")
-    if not model or model == "kimi-k2.5":
-        model = os.getenv("OPENAI_MODEL", model)
+    🔧 [统一配置] 优先从 DeerFlow config.yaml 读取，实现单一真相来源。
+    这样只需维护 deerflow/.env + deerflow/config.yaml 一处配置。
+    """
+    # 方式1：从 DeerFlow config.yaml 读取（优先）
+    try:
+        import os
+        import yaml
+        her_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        deerflow_config_path = os.path.join(her_root, "deerflow", "config.yaml")
+
+        if os.path.exists(deerflow_config_path):
+            with open(deerflow_config_path, "r") as f:
+                config = yaml.safe_load(f)
+
+            # 获取第一个模型配置（默认模型）
+            models = config.get("models", [])
+            if models:
+                model_config = models[0]
+                # 解析环境变量引用（如 $OPENAI_API_KEY）
+                api_key = model_config.get("api_key", "")
+                if api_key.startswith("$"):
+                    env_var = api_key[1:]
+                    api_key = os.getenv(env_var, "")
+
+                base_url = model_config.get("base_url", "")
+                if base_url.startswith("$"):
+                    env_var = base_url[1:]
+                    base_url = os.getenv(env_var, "")
+
+                return {
+                    "api_key": api_key,
+                    "api_base": base_url,
+                    "model": model_config.get("model", ""),
+                    "provider": "dashscope" if "dashscope" in base_url else "volces" if "volces" in base_url else "openai",
+                    "max_completion_tokens": model_config.get("max_tokens", 4096),
+                    "reasoning_effort": model_config.get("extra_body", {}).get("reasoning_effort", "medium"),
+                    "temperature": model_config.get("temperature", 0.7),
+                    "max_tokens": model_config.get("max_tokens", 4096),
+                }
+    except Exception as e:
+        logger.warning(f"[LLM Config] Failed to read DeerFlow config: {e}")
+
+    # 方式2：从 config.py settings 读取（降级）
+    try:
+        from config import settings
+        return {
+            "api_key": settings.llm_api_key,
+            "api_base": settings.llm_api_base,
+            "model": settings.llm_model,
+            "provider": settings.llm_provider,
+            "max_completion_tokens": settings.llm_max_completion_tokens,
+            "reasoning_effort": settings.llm_reasoning_effort,
+            "temperature": settings.llm_temperature,
+            "max_tokens": settings.llm_max_tokens,
+        }
+    except ImportError:
+        pass
+
+    # 方式3：直接读取环境变量（最终降级）
+    api_key = os.getenv("OPENAI_API_KEY", "") or os.getenv("LLM_API_KEY", "")
+    api_base = os.getenv("OPENAI_API_BASE", "") or os.getenv("LLM_API_BASE", "")
+    model = os.getenv("OPENAI_MODEL", "") or os.getenv("LLM_MODEL", "doubao-1-5-pro-32k-250115")
+    provider = os.getenv("LLM_PROVIDER", "volces")
 
     return {
         "api_key": api_key,
         "api_base": api_base,
         "model": model,
+        "provider": provider,
+        "max_completion_tokens": int(os.getenv("LLM_MAX_COMPLETION_TOKENS", "65535")),
+        "reasoning_effort": os.getenv("LLM_REASONING_EFFORT", "medium"),
+        "temperature": float(os.getenv("LLM_TEMPERATURE", "0.7")),
+        "max_tokens": int(os.getenv("LLM_MAX_TOKENS", "1000")),
     }
 
 
@@ -47,7 +105,7 @@ def call_llm(
     system_prompt: Optional[str] = None,
     temperature: float = 0.7,
     max_tokens: int = 1000,
-    timeout: int = 30,
+    timeout: int = 60,  # 🔧 [修复] 默认超时从 30 秒增加到 60 秒，适配深度推理模型
     **kwargs
 ) -> str:
     """
@@ -58,7 +116,7 @@ def call_llm(
         system_prompt: 系统提示（可选）
         temperature: 温度参数（0-1）
         max_tokens: 最大 token 数
-        timeout: 超时时间（秒）
+        timeout: 超时时间（秒）- 默认 60 秒，推理模型建议 90-120 秒
         **kwargs: 其他参数
 
     Returns:
@@ -69,6 +127,13 @@ def call_llm(
     if not config["api_key"]:
         logger.error("LLM API key not configured")
         return "抱歉，我现在无法思考，请稍后再试～"
+
+    # 🔧 [新增] 根据模型类型调整超时时间
+    # 深度推理模型（doubao-seed、Kimi K2.5）需要更长超时
+    model_name = config.get("model", "")
+    if "seed" in model_name or "kimi" in model_name.lower():
+        timeout = max(timeout, 90)  # 推理模型至少 90 秒
+        logger.debug(f"[LLM] Using extended timeout={timeout}s for reasoning model: {model_name}")
 
     # 构建消息
     messages = []
@@ -81,20 +146,31 @@ def call_llm(
     # 调用 LLM
     try:
         if OPENAI_AVAILABLE and config["api_base"]:
-            # 使用 OpenAI SDK（兼容 DashScope 等）
+            # 使用 OpenAI SDK（兼容 DashScope、火山引擎等）
             client = OpenAI(
                 api_key=config["api_key"],
                 base_url=config["api_base"],
                 timeout=timeout,
             )
 
-            response = client.chat.completions.create(
-                model=config["model"],
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                **kwargs
-            )
+            # 根据 provider 构建不同的参数
+            payload_kwargs = {
+                "model": config["model"],
+                "messages": messages,
+                "temperature": temperature,
+            }
+
+            # 火山引擎豆包模型使用特殊参数
+            if config.get("provider") == "volces" or "doubao" in config["model"]:
+                payload_kwargs["max_completion_tokens"] = config.get("max_completion_tokens", max_tokens)
+                payload_kwargs["reasoning_effort"] = config.get("reasoning_effort", "medium")
+            else:
+                payload_kwargs["max_tokens"] = max_tokens
+
+            # 合并额外参数
+            payload_kwargs.update(kwargs)
+
+            response = client.chat.completions.create(**payload_kwargs)
 
             content = response.choices[0].message.content
             logger.debug(f"LLM response: {content[:100]}...")
@@ -112,14 +188,20 @@ def call_llm(
                 "model": config["model"],
                 "messages": messages,
                 "temperature": temperature,
-                "max_tokens": max_tokens,
             }
+
+            # 火山引擎豆包模型使用特殊参数
+            if config.get("provider") == "volces" or "doubao" in config["model"]:
+                payload["max_completion_tokens"] = config.get("max_completion_tokens", max_tokens)
+                payload["reasoning_effort"] = config.get("reasoning_effort", "medium")
+            else:
+                payload["max_tokens"] = max_tokens
 
             resp = requests.post(
                 f"{config['api_base']}/chat/completions",
                 headers=headers,
                 json=payload,
-                timeout=30,
+                timeout=timeout,  # 🔧 [修复] 使用函数参数中的 timeout（已根据模型类型调整）
             )
             resp.raise_for_status()
             content = resp.json()["choices"][0]["message"]["content"]
@@ -174,14 +256,24 @@ def call_llm_stream(
                 base_url=config["api_base"],
             )
 
-            response = client.chat.completions.create(
-                model=config["model"],
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                stream=True,
-                **kwargs
-            )
+            # 根据 provider 构建不同的参数
+            payload_kwargs = {
+                "model": config["model"],
+                "messages": messages,
+                "temperature": temperature,
+                "stream": True,
+            }
+
+            # 火山引擎豆包模型使用特殊参数
+            if config.get("provider") == "volces" or "doubao" in config["model"]:
+                payload_kwargs["max_completion_tokens"] = config.get("max_completion_tokens", max_tokens)
+                payload_kwargs["reasoning_effort"] = config.get("reasoning_effort", "medium")
+            else:
+                payload_kwargs["max_tokens"] = max_tokens
+
+            payload_kwargs.update(kwargs)
+
+            response = client.chat.completions.create(**payload_kwargs)
 
             for chunk in response:
                 if chunk.choices[0].delta.content:
@@ -200,14 +292,20 @@ def call_llm_stream(
                 "model": config["model"],
                 "messages": messages,
                 "temperature": temperature,
-                "max_tokens": max_tokens,
             }
+
+            # 火山引擎豆包模型使用特殊参数
+            if config.get("provider") == "volces" or "doubao" in config["model"]:
+                payload["max_completion_tokens"] = config.get("max_completion_tokens", max_tokens)
+                payload["reasoning_effort"] = config.get("reasoning_effort", "medium")
+            else:
+                payload["max_tokens"] = max_tokens
 
             resp = requests.post(
                 f"{config['api_base']}/chat/completions",
                 headers=headers,
                 json=payload,
-                timeout=30,
+                timeout=timeout,  # 🔧 [修复] 使用函数参数中的 timeout（已根据模型类型调整）
             )
             resp.raise_for_status()
             content = resp.json()["choices"][0]["message"]["content"]
@@ -264,9 +362,15 @@ async def call_llm_stream_async(
                 "model": config["model"],
                 "messages": messages,
                 "temperature": temperature,
-                "max_tokens": max_tokens,
                 "stream": True,
             }
+
+            # 火山引擎豆包模型使用特殊参数
+            if config.get("provider") == "volces" or "doubao" in config["model"]:
+                payload["max_completion_tokens"] = config.get("max_completion_tokens", max_tokens)
+                payload["reasoning_effort"] = config.get("reasoning_effort", "medium")
+            else:
+                payload["max_tokens"] = max_tokens
 
             async with httpx.AsyncClient(timeout=60.0) as client:
                 async with client.stream(
