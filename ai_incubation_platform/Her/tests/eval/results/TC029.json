@@ -1,0 +1,59 @@
+{
+  "test_id": "TC029",
+  "category": "happy_path",
+  "subcategory": "查询类",
+  "input_message": "我的资料完善了吗？",
+  "expected_intent": "profile_query",
+  "actual_intent": "profile_collection",
+  "actual_response": "您的资料完善进度为 0%，还需要填写 7 项信息",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "progress": {
+        "current": 0,
+        "total": 7,
+        "percentage": 0
+      },
+      "missing_fields": [
+        {
+          "category": "基本信息",
+          "fields": [
+            "姓名",
+            "年龄",
+            "性别",
+            "所在地"
+          ]
+        },
+        {
+          "category": "匹配偏好",
+          "fields": [
+            "对象所在地偏好",
+            "对象年龄范围",
+            "关系目标"
+          ]
+        }
+      ],
+      "current_question": {
+        "question": "请问您的姓名是？",
+        "question_type": "text_input",
+        "dimension": "name",
+        "placeholder": "请输入您的真实姓名"
+      },
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 您的资料完善进度为 0%，还需要填写 7 项信息",
+    "意图: 预期 'profile_query' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 8860ms"
+  ],
+  "latency_ms": 8860.39400100708,
+  "error": null,
+  "executed_at": "2026-04-14T20:43:43.558225"
+}

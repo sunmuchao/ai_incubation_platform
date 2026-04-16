@@ -1813,6 +1813,152 @@ class TestABExperimentDBCRUD:
         assert deleted is None
 
 
+# ============= 第十六部分：UserDB 可选字段测试（新增） =============
+
+class TestUserDBOptionalFields:
+    """用户模型可选字段测试 - 验证 email/location nullable 修复"""
+
+    def test_create_user_without_email(self, db_session):
+        """测试创建用户时不提供 email（nullable）"""
+        user = make_user(
+            id="user_no_email_1",
+            email=None,  # email 可选
+            name="无邮箱用户",
+        )
+        db_session.add(user)
+        db_session.commit()
+
+        # 验证创建成功，email 为 NULL
+        saved = db_session.query(UserDB).filter(UserDB.id == "user_no_email_1").first()
+        assert saved is not None
+        assert saved.name == "无邮箱用户"
+        assert saved.email is None  # email 可为 NULL
+
+    def test_create_user_without_location(self, db_session):
+        """测试创建用户时不提供 location（nullable）"""
+        user = make_user(
+            id="user_no_location_1",
+            location=None,  # location 可选
+            name="无地址用户",
+        )
+        db_session.add(user)
+        db_session.commit()
+
+        # 验证创建成功，location 为 NULL
+        saved = db_session.query(UserDB).filter(UserDB.id == "user_no_location_1").first()
+        assert saved is not None
+        assert saved.name == "无地址用户"
+        assert saved.location is None  # location 可为 NULL
+
+    def test_create_minimal_user(self, db_session):
+        """测试最小化用户创建（仅必填字段）"""
+        # 只提供数据库必填字段：id, name, password_hash, age, gender
+        minimal_user = UserDB(
+            id="minimal_user_1",
+            name="最小用户",
+            password_hash="hashed_password_min",
+            age=25,
+            gender="female",
+            # email 和 location 不提供（nullable）
+            interests="[]",
+            values="{}",
+            bio="",
+        )
+        db_session.add(minimal_user)
+        db_session.commit()
+
+        # 验证最小化用户创建成功
+        saved = db_session.query(UserDB).filter(UserDB.id == "minimal_user_1").first()
+        assert saved is not None
+        assert saved.name == "最小用户"
+        assert saved.age == 25
+        assert saved.gender == "female"
+        assert saved.email is None  # 可选字段为 NULL
+        assert saved.location is None  # 可选字段为 NULL
+        assert saved.username is None  # username 也为 NULL（未提供）
+        assert saved.is_active is True  # 默认值
+        assert saved.preferred_age_min == 18  # 默认值
+        assert saved.preferred_age_max == 60  # 默认值
+
+    def test_create_user_with_both_optional_null(self, db_session):
+        """测试同时不提供 email 和 location"""
+        user = make_user(
+            id="user_both_null_1",
+            email=None,
+            location=None,
+            username=None,  # username 也可选
+            name="双重可选用户",
+        )
+        db_session.add(user)
+        db_session.commit()
+
+        # 验证所有可选字段都为 NULL
+        saved = db_session.query(UserDB).filter(UserDB.id == "user_both_null_1").first()
+        assert saved is not None
+        assert saved.email is None
+        assert saved.location is None
+        assert saved.username is None
+
+    def test_update_user_email_to_null(self, db_session):
+        """测试将用户 email 更新为 NULL"""
+        user = make_user(
+            id="user_update_email_null_1",
+            email="original@example.com",
+        )
+        db_session.add(user)
+        db_session.commit()
+
+        # 更新 email 为 NULL
+        user.email = None
+        db_session.commit()
+
+        # 验证更新成功
+        updated = db_session.query(UserDB).filter(
+            UserDB.id == "user_update_email_null_1"
+        ).first()
+        assert updated.email is None
+
+    def test_update_user_location_to_null(self, db_session):
+        """测试将用户 location 更新为 NULL"""
+        user = make_user(
+            id="user_update_location_null_1",
+            location="北京市",
+        )
+        db_session.add(user)
+        db_session.commit()
+
+        # 更新 location 为 NULL
+        user.location = None
+        db_session.commit()
+
+        # 验证更新成功
+        updated = db_session.query(UserDB).filter(
+            UserDB.id == "user_update_location_null_1"
+        ).first()
+        assert updated.location is None
+
+    def test_query_users_with_null_email(self, db_session):
+        """测试查询 email 为 NULL 的用户"""
+        # 创建有邮箱和无邮箱的用户
+        user_with_email = make_user(id="user_with_email", email="has@example.com")
+        user_without_email = make_user(id="user_without_email", email=None)
+        db_session.add_all([user_with_email, user_without_email])
+        db_session.commit()
+
+        # 查询 email 为 NULL 的用户
+        null_email_users = db_session.query(UserDB).filter(
+            UserDB.email.is_(None)
+        ).all()
+        assert len(null_email_users) >= 1
+        assert any(u.id == "user_without_email" for u in null_email_users)
+
+        # 查询有 email 的用户
+        has_email_users = db_session.query(UserDB).filter(
+            UserDB.email.isnot(None)
+        ).all()
+        assert any(u.id == "user_with_email" for u in has_email_users)
+
+
 # ============= 运行测试 =============
 
 if __name__ == "__main__":

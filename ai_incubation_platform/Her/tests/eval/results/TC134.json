@@ -1,0 +1,20 @@
+{
+  "test_id": "TC134",
+  "category": "happy_path",
+  "subcategory": "置信度系统",
+  "input_message": "对比这几个人的置信度",
+  "expected_intent": "confidence_comparison",
+  "actual_intent": "conversation",
+  "actual_response": "",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: ",
+    "意图: 预期 'confidence_comparison' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 4158ms"
+  ],
+  "latency_ms": 4158.40482711792,
+  "error": null,
+  "executed_at": "2026-04-14T21:06:33.404040"
+}

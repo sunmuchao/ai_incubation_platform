@@ -1,0 +1,65 @@
+{
+  "test_id": "TC094",
+  "category": "edge_cases",
+  "subcategory": "表情符号密集",
+  "input_message": "帮我找对象啊啊啊啊啊啊啊啊啊！！！！！！！！！！",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "请先完善基础信息，马上给你匹配对象！",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "先告诉我你的基本情况吧～",
+      "question_type": "multi_field",
+      "fields": [
+        {
+          "field": "name",
+          "label": "你的昵称/名字",
+          "type": "text",
+          "required": true
+        },
+        {
+          "field": "gender",
+          "label": "你的性别",
+          "type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ],
+          "required": true
+        },
+        {
+          "field": "age",
+          "label": "你的年龄",
+          "type": "number",
+          "min": 18,
+          "max": 99,
+          "required": true
+        },
+        {
+          "field": "location",
+          "label": "你所在的城市",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "step": 1,
+      "total_steps": 2,
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请先完善基础信息，马上给你匹配对象！",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 14980ms"
+  ],
+  "latency_ms": 14979.596614837646,
+  "error": null,
+  "executed_at": "2026-04-14T20:55:39.560179"
+}

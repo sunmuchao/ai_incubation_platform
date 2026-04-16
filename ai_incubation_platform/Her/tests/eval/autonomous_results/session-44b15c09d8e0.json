@@ -1,0 +1,251 @@
+{
+  "session_id": "session-44b15c09d8e0",
+  "scenario": {
+    "scenario_type": "profile_completion",
+    "user_profile": {
+      "user_id": "test-user-b8c5de04",
+      "name": "李明",
+      "age": 30,
+      "gender": "male",
+      "location": "",
+      "occupation": "",
+      "education": "",
+      "interests": [],
+      "relationship_goal": "",
+      "bio": "",
+      "accept_remote": "",
+      "preferred_age_min": 0,
+      "preferred_age_max": 0,
+      "personality_traits": [
+        "认真",
+        "稳重"
+      ]
+    },
+    "goal": "完成基本画像填写，获得匹配推荐",
+    "initial_message": "你好，我想注册使用这个平台",
+    "expected_flow": [
+      "发起请求",
+      "获得响应"
+    ],
+    "difficulty": "easy"
+  },
+  "user_profile": {
+    "id": "e8710530-1d9c-43d4-8b12-e54142043794",
+    "name": "李明",
+    "age": 30,
+    "gender": "male",
+    "location": "",
+    "occupation": "",
+    "education": "",
+    "interests": [],
+    "relationship_goal": "",
+    "bio": "",
+    "accept_remote": "",
+    "preferred_age_min": 0,
+    "preferred_age_max": 0,
+    "preferred_location": "",
+    "deal_breakers": "",
+    "personality_traits": []
+  },
+  "goal": "完成基本画像填写，获得匹配推荐",
+  "goal_achieved": false,
+  "rounds": [
+    {
+      "round_id": 1,
+      "user_input": "你好，我想注册使用这个平台",
+      "agent_response": "太好了，李明！我看到你的基本信息已经有了：\n- ✅ 姓名：李明\n- ✅ 年龄：30岁\n- ✅ 性别：男\n\n为了帮你找到更合适的对象，我还需要了解一些信息：\n\n**【必填信息】**\n1. **你目前在哪个城市？**（用于匹配同城对象）\n\n**【择偶偏好】**\n2. **你想找什么样的关系？**（如：认真交往、结婚、先了解看看）\n3. **对另一半的年龄有要求吗？**（目前设置是18-60岁，需要调整吗？）\n4. **接受异地恋吗？**（同城/异地都可以/只找同城）\n\n**【个人介绍】（可选，但能提高匹配率）**\n- 职业、学历\n- 兴趣爱好\n- 自我介绍\n\n你可以一次性告诉我，或者我们一项一项来聊～ 你想先说哪个？😊",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 26942.917108535767,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-15T20:12:57.159942"
+    },
+    {
+      "round_id": 2,
+      "user_input": "我想找一个合适的对象",
+      "agent_response": "【匹配结果】为你找到 5 位合适的候选人：\n\n---\n\n**1. 赵敏，29岁，杭州** ✓\n- 兴趣：阅读、瑜伽、烹饪\n- 简介：性格温和，重视家庭\n- 匹配度：中等（57分）\n\n---\n\n**2. 孙娜，32岁，南京** ✓\n- 兴趣：阅读、咖啡、瑜伽\n- 简介：对感情认真，希望找到合适的人\n- 匹配度：中等（57分）\n\n---\n\n**💡 温馨提示**\n目前匹配到的都是异地对象。如果你告诉我**你在哪个城市**，我可以帮你优先匹配同城对象，成功率更高哦！\n\n---\n\n**接下来你可以：**\n- 📋 **查看详情**：想了解某位候选人的更多信息\n- 💬 **怎么开场**：我帮你生成破冰开场白\n- 🔍 **分析匹配度**：深入分析你和TA的匹配程度\n- ⚙️ **调整偏好**：告诉我你的择偶要求（年龄、城市、是否接受异地等）\n\n你想怎么做？😊",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 21571.6290473938,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-15T20:13:18.750450"
+    },
+    {
+      "round_id": 3,
+      "user_input": "我想找一个合适的对象",
+      "agent_response": "好的！为了帮你找到**更合适**的对象，我想了解一下你的偏好：\n\n**请告诉我：**\n\n1. **年龄范围**：你希望对方多大？（目前设置是18-60岁）\n\n2. **城市要求**：\n   - 你现在在哪个城市？\n   - 接受异地恋吗？（同城优先 / 异地也可以 / 只找同城）\n\n3. **关系目标**：你想找什么样的关系？\n   - 认真交往，奔着结婚去\n   - 先了解看看，合适再发展\n   - 其他\n\n告诉我这些，我就能帮你精准匹配啦！😊",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 16310.423851013184,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-15T20:13:35.080030"
+    },
+    {
+      "round_id": 4,
+      "user_input": "我想找一个合适的对象",
+      "agent_response": "【匹配结果】为你找到以下候选人：\n\n| 姓名 | 年龄 | 城市 | 兴趣 | 简介 |\n|-----|-----|-----|------|------|\n| 赵敏 | 29岁 | 杭州 | 阅读、瑜伽、烹饪 | 性格温和，重视家庭 |\n| 孙娜 | 32岁 | 南京 | 阅读、咖啡、瑜伽 | 对感情认真 |\n\n---\n\n**⚠️ 注意**：目前匹配到的都是异地对象。\n\n**告诉我你的城市**，我可以帮你找同城的，或者你告诉我**接受异地**，我就按这个继续推荐！\n\n---\n\n**下一步你可以：**\n- 💬 说\"**怎么开场**\" → 我帮你生成破冰话术\n- 🔍 说\"**分析一下赵敏**\" → 我帮你分析匹配度\n- 📍 告诉我你的城市 → 优先匹配同城\n\n你想怎么做？",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 20314.901113510132,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-15T20:13:55.413970"
+    },
+    {
+      "round_id": 5,
+      "user_input": "我想找一个合适的对象",
+      "agent_response": "好的！我直接帮你推荐最合适的一位：\n\n---\n\n**🌟 今日推荐：赵敏**\n\n| 项目 | 信息 |\n|-----|------|\n| 年龄 | 29岁 |\n| 城市 | 杭州 |\n| 兴趣 | 阅读、瑜伽、烹饪 |\n| 简介 | 性格温和，重视家庭 |\n| 匹配度 | ⭐⭐⭐ 中等 |\n\n---\n\n**你想：**\n1. **了解她更多** → 说\"介绍一下赵敏\"\n2. **看看怎么聊** → 说\"帮我开场\"\n3. **分析匹配度** → 说\"我们合适吗\"\n\n选一个，我来帮你！😊",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 10606.703042984009,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-15T20:14:06.039925"
+    },
+    {
+      "round_id": 6,
+      "user_input": "我想找一个合适的对象",
+      "agent_response": "【今日精选推荐】\n\n---\n\n**1. 吴磊，26岁，成都**\n- 兴趣：运动、游戏、旅行\n\n**2. 周杰，27岁，广州**\n- 兴趣：音乐、美食、户外\n\n---\n\n**💡 想要更精准的推荐？**\n\n告诉我你的偏好，我帮你筛选：\n- 📍 **你在哪个城市？**（优先推荐同城）\n- 🎯 **年龄范围？**（比如25-30岁）\n- 💑 **关系目标？**（认真交往/结婚/先了解）\n\n或者直接说：\n- **\"帮我开场\"** → 生成破冰话术\n- **\"分析匹配度\"** → 深入分析合适程度\n\n你想怎么做？😊",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 20957.404851913452,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-15T20:14:27.016129"
+    },
+    {
+      "round_id": 7,
+      "user_input": "我想找一个合适的对象",
+      "agent_response": "我注意到你一直在说\"找合适的对象\"，我已经给你推荐了几位候选人了。\n\n**请告诉我你的具体需求，我才能帮你找到真正合适的：**\n\n1. **年龄要求**：比如\"25-30岁\"\n2. **城市要求**：比如\"北京\"或\"接受异地\"\n3. **关系目标**：比如\"奔着结婚去\"\n\n**或者直接告诉我：**\n- \"我对之前的推荐不满意，想要...\"\n- \"我想找XX城市的\"\n- \"我想找XX岁到XX岁的\"\n\n你具体想要什么样的对象？😊",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 9842.144012451172,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-15T20:14:36.877218"
+    },
+    {
+      "round_id": 8,
+      "user_input": "我想找一个合适的对象",
+      "agent_response": "明白了！让我直接帮你：\n\n**请回答这一个问题：**\n\n📍 **你在哪个城市？**\n\n告诉我城市，我马上帮你找同城对象！",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 12998.298168182373,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-15T20:14:49.893936"
+    },
+    {
+      "round_id": 9,
+      "user_input": "我想找一个合适的对象",
+      "agent_response": "**【为你推荐】**\n\n---\n\n**赵敏，29岁，杭州** ✓\n- 兴趣：阅读、瑜伽、烹饪\n- 简介：性格温和，重视家庭\n\n**孙娜，32岁，南京** ✓\n- 兴趣：阅读、咖啡、瑜伽\n- 简介：对感情认真\n\n---\n\n**现在你可以：**\n\n👉 说 **\"帮我开场\"** → 我教你如何开始聊天\n\n👉 说 **\"分析一下赵敏\"** → 我帮你分析匹配度\n\n选一个吧！",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 12983.934879302979,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-15T20:15:02.897666"
+    },
+    {
+      "round_id": 10,
+      "user_input": "我想找一个合适的对象",
+      "agent_response": "我理解你想找对象，我已经给你推荐了候选人。\n\n**现在请选择下一步：**\n\n| 选项 | 你说 |\n|-----|------|\n| 想知道怎么聊 | \"帮我开场\" |\n| 想了解匹配度 | \"分析一下赵敏\" |\n| 想调整条件 | \"我要找25-30岁同城的\" |\n\n**你想选哪个？**",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 7470.665216445923,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-15T20:15:10.385405"
+    }
+  ],
+  "total_latency_ms": 159999.0212917328,
+  "evaluation": {
+    "goal_achieved": false,
+    "total_rounds": 10,
+    "avg_latency_ms": 15999.902129173279,
+    "errors_count": 0,
+    "ui_components_used": [],
+    "intent_types_seen": [
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation"
+    ],
+    "flow_quality": "unknown",
+    "naturalness": "unknown",
+    "tool_usage_correct": "unknown",
+    "overall_score": 0
+  },
+  "started_at": "2026-04-15T20:12:29.957572",
+  "ended_at": "2026-04-15T20:15:10.385435",
+  "total_rounds": 10
+}

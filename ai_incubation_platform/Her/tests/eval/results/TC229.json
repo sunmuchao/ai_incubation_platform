@@ -1,0 +1,65 @@
+{
+  "test_id": "TC229",
+  "category": "happy_path",
+  "subcategory": "追问匹配理由",
+  "input_message": "为什么推荐TA给我？",
+  "expected_intent": "match_explanation",
+  "actual_intent": "profile_collection",
+  "actual_response": "请完善您的个人资料，以便获得精准匹配",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "让我们先完善您的资料，这样我才能为您推荐最合适的人选！",
+      "question_type": "multi_step",
+      "steps": [
+        {
+          "dimension": "gender",
+          "question": "您的性别是？",
+          "type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ]
+        },
+        {
+          "dimension": "age",
+          "question": "您的年龄是？",
+          "type": "number_input",
+          "min": 18,
+          "max": 80
+        },
+        {
+          "dimension": "location",
+          "question": "您目前在哪个城市？",
+          "type": "text_input"
+        },
+        {
+          "dimension": "relationship_goal",
+          "question": "您希望寻找什么样的关系？",
+          "type": "single_choice",
+          "options": [
+            "长期稳定关系",
+            "婚姻",
+            "短期约会",
+            "先做朋友"
+          ]
+        }
+      ],
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请完善您的个人资料，以便获得精准匹配",
+    "意图: 预期 'match_explanation' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 21491ms"
+  ],
+  "latency_ms": 21491.213083267212,
+  "error": null,
+  "executed_at": "2026-04-14T21:32:08.984173"
+}

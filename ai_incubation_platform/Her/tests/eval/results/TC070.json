@@ -1,0 +1,20 @@
+{
+  "test_id": "TC070",
+  "category": "happy_path",
+  "subcategory": "约会提醒",
+  "input_message": "我明天有什么安排？",
+  "expected_intent": "schedule_query",
+  "actual_intent": "conversation",
+  "actual_response": "",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: ",
+    "意图: 预期 'schedule_query' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 6403ms"
+  ],
+  "latency_ms": 6402.629137039185,
+  "error": null,
+  "executed_at": "2026-04-14T20:51:04.919980"
+}

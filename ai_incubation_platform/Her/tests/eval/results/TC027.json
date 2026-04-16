@@ -1,0 +1,20 @@
+{
+  "test_id": "TC027",
+  "category": "happy_path",
+  "subcategory": "查询类",
+  "input_message": "看看有没有新的匹配",
+  "expected_intent": "match_request",
+  "actual_intent": "conversation",
+  "actual_response": "让我先获取您的用户信息，看看是否需要完善资料：",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 让我先获取您的用户信息，看看是否需要完善资料：",
+    "意图: 预期 'match_request' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 19156ms"
+  ],
+  "latency_ms": 19156.206130981445,
+  "error": null,
+  "executed_at": "2026-04-14T20:43:19.368910"
+}

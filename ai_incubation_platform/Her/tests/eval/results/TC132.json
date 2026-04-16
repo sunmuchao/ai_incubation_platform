@@ -1,0 +1,88 @@
+{
+  "test_id": "TC132",
+  "category": "happy_path",
+  "subcategory": "置信度系统",
+  "input_message": "帮我找对象",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "请先完善基本信息，我就能为你推荐合适的人选啦！",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "欢迎来到 Her！为了帮你找到合适的另一半，让我先了解一下你的基本信息吧～",
+      "question_type": "profile_collection",
+      "steps": [
+        {
+          "field": "name",
+          "label": "怎么称呼你？",
+          "type": "text"
+        },
+        {
+          "field": "age",
+          "label": "你的年龄？",
+          "type": "number",
+          "min": 18,
+          "max": 80
+        },
+        {
+          "field": "gender",
+          "label": "你的性别？",
+          "type": "single_choice",
+          "options": [
+            {
+              "value": "male",
+              "label": "男"
+            },
+            {
+              "value": "female",
+              "label": "女"
+            }
+          ]
+        },
+        {
+          "field": "location",
+          "label": "你在哪个城市？",
+          "type": "text"
+        },
+        {
+          "field": "relationship_goal",
+          "label": "你想找什么样的关系？",
+          "type": "single_choice",
+          "options": [
+            {
+              "value": "serious",
+              "label": "认真恋爱，寻找长期伴侣"
+            },
+            {
+              "value": "marriage",
+              "label": "以结婚为目的"
+            },
+            {
+              "value": "casual",
+              "label": "先交朋友，顺其自然"
+            },
+            {
+              "value": "unsure",
+              "label": "还没想好"
+            }
+          ]
+        }
+      ],
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请先完善基本信息，我就能为你推荐合适的人选啦！",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 30771ms"
+  ],
+  "latency_ms": 30770.799160003662,
+  "error": null,
+  "executed_at": "2026-04-14T21:06:10.956299"
+}

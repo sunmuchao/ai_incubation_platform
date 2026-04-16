@@ -1,0 +1,50 @@
+{
+  "test_id": "TC063",
+  "category": "happy_path",
+  "subcategory": "照片管理",
+  "input_message": "我的照片应该选几张？",
+  "expected_intent": "photo_guidance",
+  "actual_intent": "profile_collection",
+  "actual_response": "请选择您的关系目标",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "你想找什么样的关系？",
+      "question_type": "single_choice",
+      "options": [
+        {
+          "label": "认真恋爱，寻找长期伴侣",
+          "value": "serious_relationship"
+        },
+        {
+          "label": "先交朋友，顺其自然发展",
+          "value": "friends_first"
+        },
+        {
+          "label": "约会体验，享受当下",
+          "value": "casual_dating"
+        },
+        {
+          "label": "结婚对象，奔着婚姻去",
+          "value": "marriage"
+        }
+      ],
+      "dimension": "relationship_goal",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请选择您的关系目标",
+    "意图: 预期 'photo_guidance' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 14862ms"
+  ],
+  "latency_ms": 14861.814737319946,
+  "error": null,
+  "executed_at": "2026-04-14T20:50:03.823643"
+}

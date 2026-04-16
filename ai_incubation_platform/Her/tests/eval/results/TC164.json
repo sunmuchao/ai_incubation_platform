@@ -1,0 +1,20 @@
+{
+  "test_id": "TC164",
+  "category": "happy_path",
+  "subcategory": "意图识别",
+  "input_message": "我最近很无聊",
+  "expected_intent": "implicit_match_request",
+  "actual_intent": "conversation",
+  "actual_response": "你好呀！我是 Her，你的婚恋助手~ 😊\n\n既然最近无聊，要不要我帮你找些有趣的人认识一下？说不定能遇到让你心动的那个TA！\n\n或者你也可以告诉我：\n- 想找什么样的对象？我可以帮你推荐合适的人选\n- 已经匹配了但不知道怎么聊？我来帮你破冰\n- 想约会但不知道去哪？我帮你策划完美约会\n\n你想先从哪开始呢？",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 你好呀！我是 Her，你的婚恋助手~ 😊\n\n既然最近无聊，要不要我帮你找些有趣的人认识一下？说不定能遇到让你心动的那个TA！\n\n或者你也可以告诉我：\n- 想找什么样的对象？我可以帮你推荐合适的人选\n- 已经匹配了但不知道怎么聊？我来帮你破冰\n- 想约会但不知道去哪？我帮你策划完美约会\n\n你想先从哪开始呢？",
+    "意图: 预期 'implicit_match_request' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 5412ms"
+  ],
+  "latency_ms": 5411.863803863525,
+  "error": null,
+  "executed_at": "2026-04-14T21:17:02.273735"
+}

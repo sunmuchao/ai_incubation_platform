@@ -1,0 +1,20 @@
+{
+  "test_id": "TC215",
+  "category": "happy_path",
+  "subcategory": "GenerativeUI验证",
+  "input_message": "怎么开场和她聊？",
+  "expected_intent": null,
+  "actual_intent": "conversation",
+  "actual_response": "",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: ",
+    "意图: 无预期，实际 'conversation'",
+    "UI组件: 预期 'IcebreakerCard'，实际未返回",
+    "延迟: 8427ms"
+  ],
+  "latency_ms": 8427.472114562988,
+  "error": null,
+  "executed_at": "2026-04-14T21:26:55.548978"
+}

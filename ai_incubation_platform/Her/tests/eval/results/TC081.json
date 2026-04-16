@@ -1,0 +1,20 @@
+{
+  "test_id": "TC081",
+  "category": "happy_path",
+  "subcategory": "场景检测_尴尬沉默",
+  "input_message": "我们聊天总是没话题，怎么办？",
+  "expected_intent": "silence_breaker",
+  "actual_intent": "conversation",
+  "actual_response": "",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: ",
+    "意图: 预期 'silence_breaker' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 13999ms"
+  ],
+  "latency_ms": 13998.908281326294,
+  "error": null,
+  "executed_at": "2026-04-14T20:52:43.477676"
+}

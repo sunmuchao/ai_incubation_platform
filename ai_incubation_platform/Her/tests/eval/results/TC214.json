@@ -1,0 +1,82 @@
+{
+  "test_id": "TC214",
+  "category": "happy_path",
+  "subcategory": "GenerativeUI验证",
+  "input_message": "第一次约会去哪？",
+  "expected_intent": null,
+  "actual_intent": "date_planning",
+  "actual_response": "为您准备了4种第一次约会方案，从经典咖啡厅到创意体验",
+  "generative_ui": {
+    "component_type": "DatePlanCard",
+    "props": {
+      "scenarios": [
+        {
+          "title": "经典咖啡厅约会",
+          "description": "轻松惬意的环境，适合初次见面。选择一家环境优雅的精品咖啡馆，点一杯拿铁或手冲咖啡，边喝边聊。建议选择有独立座位区的咖啡馆，既能保证私密性，又不会太尴尬。",
+          "duration": "1.5-2小时",
+          "budget": "100-150元",
+          "tips": [
+            "选择安静但不太偏僻的位置",
+            "提前到达熟悉环境",
+            "准备几个轻松话题"
+          ]
+        },
+        {
+          "title": "文艺书店约会",
+          "description": "如果对方喜欢阅读或文艺，书店是个绝佳选择。可以一起逛书架，分享喜欢的书籍，然后在书店的咖啡区坐下来聊天。话题自然流畅，氛围也很舒适。",
+          "duration": "2-3小时",
+          "budget": "50-100元",
+          "tips": [
+            "观察对方感兴趣的书籍类型",
+            "可以送一本小书作为见面礼",
+            "避免过于学术的深聊"
+          ]
+        },
+        {
+          "title": "创意手工体验",
+          "description": "陶艺、烘焙、手作等体验活动，既能动手互动，又有共同话题。过程中自然产生交流，还能带走一份纪念品，给约会留下美好回忆。",
+          "duration": "2-3小时",
+          "budget": "150-300元",
+          "tips": [
+            "选择难度适中的项目",
+            "互相帮助完成作品",
+            "拍照留念"
+          ]
+        },
+        {
+          "title": "城市漫步+下午茶",
+          "description": "选择一条有特色的街道或创意园区，边走边聊，累了找家甜品店或茶馆休息。轻松自然的氛围，没有正式约会的压力。",
+          "duration": "2-4小时",
+          "budget": "100-200元",
+          "tips": [
+            "提前规划好路线",
+            "准备舒适的鞋子",
+            "关注天气"
+          ]
+        }
+      ],
+      "first_date_tips": [
+        "选择公共、安全的场所",
+        "控制约会时长，留有余地",
+        "提前告知朋友去向",
+        "准备轻松的话题，避免敏感问题",
+        "保持真诚，做真实的自己"
+      ],
+      "_schema": {
+        "backend_type": "DatePlanCard",
+        "frontend_card": "feature",
+        "description": "约会方案卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 为您准备了4种第一次约会方案，从经典咖啡厅到创意体验",
+    "意图: 无预期，实际 'date_planning'",
+    "UI组件: DatePlanCard",
+    "延迟: 17921ms"
+  ],
+  "latency_ms": 17921.11301422119,
+  "error": null,
+  "executed_at": "2026-04-14T21:26:47.093066"
+}

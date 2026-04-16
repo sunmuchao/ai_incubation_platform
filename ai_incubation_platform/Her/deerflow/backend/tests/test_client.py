@@ -17,7 +17,7 @@ from app.gateway.routers.memory import MemoryConfigResponse, MemoryStatusRespons
 from app.gateway.routers.models import ModelResponse, ModelsListResponse
 from app.gateway.routers.skills import SkillInstallResponse, SkillResponse, SkillsListResponse
 from app.gateway.routers.uploads import UploadResponse
-from deerflow.client import DeerFlowClient
+from deerflow.client import DeerFlowClient, StreamEvent
 from deerflow.config.paths import Paths
 from deerflow.uploads.manager import PathTraversalError
 
@@ -3084,3 +3084,180 @@ class TestBugAgentInvalidationInconsistency:
 
         assert client._agent is None
         assert client._agent_config_key is None
+
+
+# ---------------------------------------------------------------------------
+# History Message Filtering Tests
+# ---------------------------------------------------------------------------
+
+
+class TestHistoryMessageFiltering:
+    """Tests for filtering historical messages in multi-turn conversations.
+
+    When using a checkpointer, LangGraph's messages stream mode may replay
+    historical messages. DeerFlowClient should filter these out and only
+    yield NEW messages generated in the current turn.
+    """
+
+    def test_get_existing_message_ids_empty_thread(self, mock_app_config):
+        """When thread has no history, _get_existing_message_ids returns empty set."""
+        from langgraph.checkpoint.memory import InMemorySaver
+
+        checkpointer = InMemorySaver()
+
+        with patch("deerflow.client.get_app_config", return_value=mock_app_config):
+            client = DeerFlowClient(checkpointer=checkpointer)
+
+        existing_ids = client._get_existing_message_ids("test-thread-123")
+        assert existing_ids == set()
+
+    def test_get_existing_message_ids_with_history_mock(self, mock_app_config):
+        """When thread has history, _get_existing_message_ids extracts message IDs (using mock)."""
+        # Create mock messages with IDs
+        ai_msg = AIMessage(content="Hello", id="ai-msg-001")
+        human_msg = HumanMessage(content="Hi", id="human-msg-001")
+
+        # Mock checkpoint with messages
+        mock_checkpoint = MagicMock()
+        mock_checkpoint.checkpoint = {
+            "channel_values": {"messages": [human_msg, ai_msg]}
+        }
+        mock_checkpoint.config = {"configurable": {"thread_id": "test-thread-123"}}
+        mock_checkpoint.parent_config = None
+        mock_checkpoint.metadata = {}
+
+        # Mock checkpointer.list to return our checkpoint
+        mock_checkpointer = MagicMock()
+        mock_checkpointer.list.return_value = [mock_checkpoint]
+
+        with patch("deerflow.client.get_app_config", return_value=mock_app_config):
+            client = DeerFlowClient(checkpointer=None)
+            # Inject mock checkpointer
+            client._checkpointer = mock_checkpointer
+
+        existing_ids = client._get_existing_message_ids("test-thread-123")
+
+        assert "ai-msg-001" in existing_ids
+        assert "human-msg-001" in existing_ids
+
+    def test_get_existing_message_ids_no_checkpointer(self, mock_app_config):
+        """When no checkpointer is provided, returns empty set."""
+        with patch("deerflow.client.get_app_config", return_value=mock_app_config):
+            client = DeerFlowClient(checkpointer=None)
+
+        existing_ids = client._get_existing_message_ids("test-thread-123")
+        assert existing_ids == set()
+
+    def test_stream_filters_historical_ai_messages_mock(self, mock_app_config):
+        """Stream should NOT yield AI messages that already exist in history (using mock)."""
+        from langgraph.checkpoint.memory import InMemorySaver
+
+        checkpointer = InMemorySaver()
+
+        old_ai_msg = AIMessage(content="old-response", id="old-ai-id")
+        old_human_msg = HumanMessage(content="old-request", id="old-human-id")
+
+        mock_checkpoint = MagicMock()
+        mock_checkpoint.checkpoint = {"channel_values": {"messages": [old_human_msg, old_ai_msg]}}
+        mock_checkpoint.config = {"configurable": {"thread_id": "test-thread-123"}}
+        mock_checkpoint.parent_config = None
+        mock_checkpoint.metadata = {}
+
+        new_ai_chunk = AIMessageChunk(content="new-response", id="new-ai-id")
+        old_ai_chunk = AIMessageChunk(content="old-response", id="old-ai-id")
+
+        mock_agent = MagicMock()
+        # Return (mode, chunk) tuples - don't include StreamEvent
+        mock_agent.stream.return_value = [
+            ("messages", (old_ai_chunk, {})),  # Historical - should be filtered
+            ("messages", (new_ai_chunk, {})),  # New - should be yielded
+        ]
+
+        with (
+            patch("deerflow.client.get_app_config", return_value=mock_app_config),
+            patch.object(checkpointer, "list", return_value=[mock_checkpoint]),
+        ):
+            client = DeerFlowClient(checkpointer=checkpointer)
+            client._agent = mock_agent
+            client._agent_config_key = None
+
+            with patch.object(client, "_ensure_agent"):
+                events = list(client.stream("test message", thread_id="test-thread-123"))
+
+        ai_events = [e for e in events if e.type == "messages-tuple" and e.data.get("type") == "ai"]
+        assert len(ai_events) == 1
+        assert ai_events[0].data.get("content") == "new-response"
+
+    def test_stream_filters_historical_tool_messages_mock(self, mock_app_config):
+        """Stream should NOT yield Tool messages that already exist in history (using mock)."""
+        from langgraph.checkpoint.memory import InMemorySaver
+
+        checkpointer = InMemorySaver()
+
+        old_tool_msg = ToolMessage(content="old-tool-result", tool_call_id="old-tc-id", id="old-tool-id")
+        old_human_msg = HumanMessage(content="old-request", id="old-human-id")
+
+        mock_checkpoint = MagicMock()
+        mock_checkpoint.checkpoint = {"channel_values": {"messages": [old_human_msg, old_tool_msg]}}
+        mock_checkpoint.config = {"configurable": {"thread_id": "test-thread-123"}}
+        mock_checkpoint.parent_config = None
+        mock_checkpoint.metadata = {}
+
+        new_tool_msg = ToolMessage(content="new-tool-result", tool_call_id="new-tc-id", id="new-tool-id")
+        old_tool_chunk = ToolMessage(content="old-tool-result", tool_call_id="old-tc-id", id="old-tool-id")
+
+        mock_agent = MagicMock()
+        mock_agent.stream.return_value = [
+            ("messages", (old_tool_chunk, {})),
+            ("messages", (new_tool_msg, {})),
+        ]
+
+        with (
+            patch("deerflow.client.get_app_config", return_value=mock_app_config),
+            patch.object(checkpointer, "list", return_value=[mock_checkpoint]),
+        ):
+            client = DeerFlowClient(checkpointer=checkpointer)
+            client._agent = mock_agent
+            client._agent_config_key = None
+
+            with patch.object(client, "_ensure_agent"):
+                events = list(client.stream("test message", thread_id="test-thread-123"))
+
+        tool_events = [e for e in events if e.type == "messages-tuple" and e.data.get("type") == "tool"]
+        assert len(tool_events) == 1
+        assert tool_events[0].data.get("tool_call_id") == "new-tc-id"
+
+    def test_chat_only_new_messages_mock(self, mock_app_config):
+        """chat() should only return text from NEW messages (using mock)."""
+        from langgraph.checkpoint.memory import InMemorySaver
+
+        checkpointer = InMemorySaver()
+
+        old_ai_msg = AIMessage(content="历史回复内容", id="old-ai-id")
+        old_human_msg = HumanMessage(content="历史用户输入", id="old-human-id")
+
+        mock_checkpoint = MagicMock()
+        mock_checkpoint.checkpoint = {"channel_values": {"messages": [old_human_msg, old_ai_msg]}}
+        mock_checkpoint.config = {"configurable": {"thread_id": "test-thread-123"}}
+        mock_checkpoint.parent_config = None
+        mock_checkpoint.metadata = {}
+
+        mock_agent = MagicMock()
+        mock_agent.stream.return_value = [
+            ("messages", (AIMessageChunk(content="历史回复内容", id="old-ai-id"), {})),
+            ("messages", (AIMessageChunk(content="本次新回复", id="new-ai-id"), {})),
+        ]
+
+        with (
+            patch("deerflow.client.get_app_config", return_value=mock_app_config),
+            patch.object(checkpointer, "list", return_value=[mock_checkpoint]),
+        ):
+            client = DeerFlowClient(checkpointer=checkpointer)
+            client._agent = mock_agent
+            client._agent_config_key = None
+
+            with patch.object(client, "_ensure_agent"):
+                result = client.chat("新消息", thread_id="test-thread-123")
+
+        assert result == "本次新回复"
+        assert "历史回复" not in result

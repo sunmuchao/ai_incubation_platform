@@ -1,0 +1,20 @@
+{
+  "test_id": "TC007",
+  "category": "happy_path",
+  "subcategory": "画像信息收集",
+  "input_message": "我刚注册，不知道怎么开始",
+  "expected_intent": "profile_collection",
+  "actual_intent": "conversation",
+  "actual_response": "你好呀！我是 Her，你的婚恋助手~ 欢迎来到 Her 婚恋平台！🌸\n\n让我先了解一下你的基础信息，这样我就能为你推荐合适的对象啦。只需要简单三步：\n\n**第一步：基本信息**\n请告诉我：\n1. 你的姓名或昵称\n2. 年龄\n3. 所在城市\n\n填完这些，我就能为你开启匹配之旅啦 ✨\n\n你可以直接回复，比如：\"我叫小明，26岁，在北京\"",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 你好呀！我是 Her，你的婚恋助手~ 欢迎来到 Her 婚恋平台！🌸\n\n让我先了解一下你的基础信息，这样我就能为你推荐合适的对象啦。只需要简单三步：\n\n**第一步：基本信息**\n请告诉我：\n1. 你的姓名或昵称\n2. 年龄\n3. 所在城市\n\n填完这些，我就能为你开启匹配之旅啦 ✨\n\n你可以直接回复，比如：\"我叫小明，26岁，在北京\"",
+    "意图: 预期 'profile_collection' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 10060ms"
+  ],
+  "latency_ms": 10060.342073440552,
+  "error": null,
+  "executed_at": "2026-04-14T20:38:33.018789"
+}

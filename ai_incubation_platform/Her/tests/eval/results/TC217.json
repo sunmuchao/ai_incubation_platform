@@ -1,0 +1,20 @@
+{
+  "test_id": "TC217",
+  "category": "happy_path",
+  "subcategory": "特殊场景",
+  "input_message": "上次推荐的质量太差了",
+  "expected_intent": null,
+  "actual_intent": "conversation",
+  "actual_response": "",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: ",
+    "意图: 无预期，实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 11735ms"
+  ],
+  "latency_ms": 11735.205888748169,
+  "error": null,
+  "executed_at": "2026-04-14T21:27:35.081184"
+}

@@ -1,0 +1,20 @@
+{
+  "test_id": "TC162",
+  "category": "edge_cases",
+  "subcategory": "意图识别",
+  "input_message": "那个...",
+  "expected_intent": "ambiguous",
+  "actual_intent": "conversation",
+  "actual_response": "你好呀！我是 Her，你的婚恋助手~ 😊\n\n有什么我可以帮你的吗？比如：\n- 帮你找合适的对象\n- 给你聊天开场白的建议\n- 推荐约会地点\n- 分析你和某人的匹配度\n\n或者你想聊什么都可以，随时告诉我~",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 你好呀！我是 Her，你的婚恋助手~ 😊\n\n有什么我可以帮你的吗？比如：\n- 帮你找合适的对象\n- 给你聊天开场白的建议\n- 推荐约会地点\n- 分析你和某人的匹配度\n\n或者你想聊什么都可以，随时告诉我~",
+    "意图: 预期 'ambiguous' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 3759ms"
+  ],
+  "latency_ms": 3759.1500282287598,
+  "error": null,
+  "executed_at": "2026-04-14T21:16:43.643231"
+}

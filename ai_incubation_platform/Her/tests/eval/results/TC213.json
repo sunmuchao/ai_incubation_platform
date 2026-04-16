@@ -1,0 +1,33 @@
+{
+  "test_id": "TC213",
+  "category": "happy_path",
+  "subcategory": "GenerativeUI验证",
+  "input_message": "我们聊什么好？",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "开始收集用户基本信息",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "首先，告诉我你的名字吧？",
+      "question_type": "text_input",
+      "dimension": "name",
+      "placeholder": "输入你的昵称或真实姓名",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 开始收集用户基本信息",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 14696ms"
+  ],
+  "latency_ms": 14695.793867111206,
+  "error": null,
+  "executed_at": "2026-04-14T21:26:29.143632"
+}

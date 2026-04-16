@@ -91,9 +91,15 @@ export const GENERATIVE_UI_SCHEMA: Record<string, ComponentSchema> = {
   // ===== 分析相关 =====
   CompatibilityChart: {
     backend_type: 'CompatibilityChart',
-    frontend_card: 'analysis',
+    frontend_card: 'compatibility',
     required_props: ['overall_score', 'dimensions'],
     description: '兼容性分析图表',
+  },
+  ChatInitiationCard: {
+    backend_type: 'ChatInitiationCard',
+    frontend_card: 'chat_initiation',
+    required_props: ['target_user_id', 'target_user_name'],
+    description: '聊天发起卡片，提供发起聊天按钮（用于"联系他"/"发起聊天"意图）',
   },
   RelationshipHealthCard: {
     backend_type: 'RelationshipHealthCard',

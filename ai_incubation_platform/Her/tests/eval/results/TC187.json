@@ -1,0 +1,33 @@
+{
+  "test_id": "TC187",
+  "category": "happy_path",
+  "subcategory": "工具调用链路",
+  "input_message": "第一个人的详细资料是什么，我们合适吗？",
+  "expected_intent": "multi_tool_chain",
+  "actual_intent": "profile_collection",
+  "actual_response": "欢迎新用户，开始收集基本信息",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "让我们开始吧！请问你的昵称是？",
+      "question_type": "text_input",
+      "dimension": "name",
+      "placeholder": "输入你的昵称",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 欢迎新用户，开始收集基本信息",
+    "意图: 预期 'multi_tool_chain' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 13554ms"
+  ],
+  "latency_ms": 13554.351091384888,
+  "error": null,
+  "executed_at": "2026-04-14T21:19:41.331862"
+}

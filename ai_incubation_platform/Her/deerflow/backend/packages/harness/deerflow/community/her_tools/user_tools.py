@@ -16,6 +16,7 @@ from .schemas import (
     HerGetUserInput,
     HerGetTargetUserInput,
     HerGetConversationHistoryInput,
+    HerInitiateChatInput,
 )
 from .helpers import (
     ensure_her_in_path,
@@ -96,18 +97,15 @@ class HerGetTargetUserTool(BaseTool):
 
     name: str = "her_get_target_user"
     description: str = """
-获取目标用户画像数据。返回目标用户的完整资料信息。
+【触发条件】用户说"介绍一下TA"、"TA是谁"、"TA的详情"、"TA怎么样"、"看看王芳的详情"时调用。
 
-此工具只返回原始数据，不做解读。Agent 需要根据数据自主分析目标用户特点。
+【禁止场景】
+- 用户说"聊什么"、"怎么开场"时 → 调用 her_get_icebreaker（不是本工具）
+- 用户说"找对象"时 → 调用 her_find_matches（不是本工具）
 
-参数：
-- target_user_id: 目标用户 ID
+【参数】target_user_id: 目标用户 ID（如果只有名字，先调用 her_find_user_by_name 获取 ID）
 
-返回：{ target_profile: {...} }
-
-Agent 应该：
-- 分析目标用户的兴趣、性格等数据
-- 找到和用户的共同点，用于开场白、话题推荐等
+【返回】目标用户完整画像 JSON（年龄、职业、兴趣等）。
 """
     args_schema: Type[BaseModel] = HerGetTargetUserInput
 
@@ -119,7 +117,7 @@ Agent 应该：
         return json.dumps(result.model_dump(), ensure_ascii=False)
 
     async def _arun(self, target_user_id: str) -> ToolResult:
-        """返回目标用户画像数据"""
+        """返回目标用户画像数据 + 自动构建 UserProfileCard"""
         target_user = get_db_user(target_user_id)
 
         if not target_user:
@@ -129,9 +127,16 @@ Agent 应该：
                 summary="无法获取目标用户信息"
             )
 
+        # 🔧 [修复] 使用 selected_user 字段名，触发 UserProfileCard 自动构建
+        # build_generative_ui_from_tool_result 会检测 selected_user 并生成可点击的卡片
+        user_id = target_user.get("user_id") or target_user.get("id") or target_user_id
+
         return ToolResult(
             success=True,
-            data={"target_profile": target_user},
+            data={
+                "selected_user": target_user,  # 🔧 [关键] 使用 selected_user 触发 UserProfileCard
+                "user_profile": target_user,   # 同时设置 user_profile 作为备用
+            },
             summary=f"获取目标用户 {target_user.get('name', target_user_id)} 的画像"
         )
 
@@ -233,15 +238,78 @@ Agent 应该：
             )
 
 
+# ==================== Her Initiate Chat Tool ====================
+
+class HerInitiateChatTool(BaseTool):
+    """
+    Her 发起聊天工具 - 纯数据查询
+
+    【Agent Native 设计】
+    返回目标用户的基本信息，用于生成 ChatInitiationCard。
+    Agent 根据上下文（如匹配度分析结果）组织回复。
+
+    触发场景：
+    - 用户说 "联系他"、"怎么联系他"、"发起聊天"、"能帮我发起聊天吗"
+    - 注意：不要触发 her_get_icebreaker（那是推荐开场白话题）
+    """
+
+    name: str = "her_initiate_chat"
+    description: str = """
+【触发条件】用户说"联系他"、"怎么联系他"、"发起聊天"、"能帮我发起聊天吗"时调用。
+
+【禁止场景】用户说"聊什么"、"怎么开场"、"破冰"时 → 调用 her_get_icebreaker（不是本工具）。
+
+【参数】
+- target_user_id: 目标用户 ID
+- context: 上下文（可选）
+
+【返回】目标用户基本信息，用于显示"发起聊天"按钮。
+"""
+    args_schema: Type[BaseModel] = HerInitiateChatInput
+
+    def _run(self, target_user_id: str, context: str = "", compatibility_score: int = 0) -> str:
+        try:
+            result = run_async(self._arun(target_user_id, context, compatibility_score))
+        except Exception as e:
+            return json.dumps(ToolResult(success=False, error=str(e)).model_dump(), ensure_ascii=False)
+        return json.dumps(result.model_dump(), ensure_ascii=False)
+
+    async def _arun(self, target_user_id: str, context: str = "", compatibility_score: int = 0) -> ToolResult:
+        """返回目标用户信息，用于发起聊天卡片"""
+        target_user = get_db_user(target_user_id)
+
+        if not target_user:
+            return ToolResult(
+                success=False,
+                error="目标用户不存在",
+                summary="无法获取目标用户信息"
+            )
+
+        # 返回精简的用户信息，用于 ChatInitiationCard
+        return ToolResult(
+            success=True,
+            data={
+                "target_user_id": target_user_id,
+                "target_user_name": target_user.get("name", "TA"),
+                "target_user_avatar": target_user.get("avatar_url", ""),
+                "context": context,
+                "compatibility_score": compatibility_score,
+            },
+            summary=f"准备发起聊天：{target_user.get('name', target_user_id)}"
+        )
+
+
 # ==================== Exports ====================
 
 __all__ = [
     "HerGetUserTool",
     "HerGetTargetUserTool",
     "HerGetConversationHistoryTool",
+    "HerInitiateChatTool",
 ]
 
 # Tool instances for registration
 her_get_user_tool = HerGetUserTool()
 her_get_target_user_tool = HerGetTargetUserTool()
 her_get_conversation_history_tool = HerGetConversationHistoryTool()
+her_initiate_chat_tool = HerInitiateChatTool()

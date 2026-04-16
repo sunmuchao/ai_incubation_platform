@@ -1,0 +1,20 @@
+{
+  "test_id": "TC084",
+  "category": "happy_path",
+  "subcategory": "数字分身",
+  "input_message": "帮我创建一个数字分身帮我聊天",
+  "expected_intent": "digital_twin_request",
+  "actual_intent": "conversation",
+  "actual_response": "我来帮你创建数字分身！这是一个很有趣的项目。让我先了解一下创建流程。",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 我来帮你创建数字分身！这是一个很有趣的项目。让我先了解一下创建流程。",
+    "意图: 预期 'digital_twin_request' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 14505ms"
+  ],
+  "latency_ms": 14505.198955535889,
+  "error": null,
+  "executed_at": "2026-04-14T20:53:12.970152"
+}

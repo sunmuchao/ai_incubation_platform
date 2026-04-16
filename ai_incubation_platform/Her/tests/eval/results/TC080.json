@@ -1,0 +1,20 @@
+{
+  "test_id": "TC080",
+  "category": "happy_path",
+  "subcategory": "场景检测_吵架预警",
+  "input_message": "分析一下我们的聊天，有没有什么问题？",
+  "expected_intent": "conflict_detection",
+  "actual_intent": "conversation",
+  "actual_response": "我来帮你分析聊天情况。不过我需要先了解一些信息才能进行分析：\n\n1. **你和谁聊天？** 请告诉我对方的昵称或ID\n2. **这是匹配的对象吗？** 还是你想分析一般性的聊天问题？\n\n如果你已经有匹配的对象，我可以调用关系分析工具来帮你看看互动情况。请提供一下对方的信息，我马上为你分析！",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 我来帮你分析聊天情况。不过我需要先了解一些信息才能进行分析：\n\n1. **你和谁聊天？** 请告诉我对方的昵称或ID\n2. **这是匹配的对象吗？** 还是你想分析一般性的聊天问题？\n\n如果你已经有匹配的对象，我可以调用关系分析工具来帮你看看互动情况。请提供一下对方的信息，我马上为你分析！",
+    "意图: 预期 'conflict_detection' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 10319ms"
+  ],
+  "latency_ms": 10318.978071212769,
+  "error": null,
+  "executed_at": "2026-04-14T20:52:29.465558"
+}

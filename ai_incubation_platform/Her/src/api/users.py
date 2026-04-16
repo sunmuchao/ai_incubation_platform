@@ -54,9 +54,23 @@ async def register_user(
     - 限流保护：防止批量注册攻击
     - 邮箱唯一性检查
     - 密码哈希存储（SHA-256 + bcrypt 双重哈希）
+
+    自动填充：
+    - username: 如未提供，自动生成 UUID
+    - email: 如未提供，自动生成临时邮箱
     """
     import time
+    import uuid
     start_time = time.time()
+
+    # 🔧 [自动填充] username 和 email 可选，自动生成
+    if not user_data.username:
+        user_data.username = f"user_{uuid.uuid4().hex[:8]}"
+        logger.info(f"[REGISTER] Auto-generated username: {user_data.username}")
+
+    if not user_data.email:
+        user_data.email = f"{user_data.username}@temp.her.local"
+        logger.info(f"[REGISTER] Auto-generated email: {user_data.email}")
 
     # 注册限流保护
     await rate_limit_login(request)
@@ -119,6 +133,14 @@ async def register_user(
         logger.info(f"[REGISTER] {user_data.email} - Triggered async confidence evaluation")
     except Exception as e:
         logger.warning(f"Failed to trigger confidence evaluation: {e}")
+
+    # 🔧 [新增] 事件驱动通知：检查所有用户的偏好，匹配成功则写入通知队列
+    try:
+        from services.notification_service import check_and_notify_preferences
+        asyncio.create_task(check_and_notify_preferences(db_user))
+        logger.info(f"[REGISTER] {user_data.email} - Triggered notification preference check")
+    except Exception as e:
+        logger.warning(f"Failed to trigger notification check: {e}")
 
     logger.info(f"[REGISTER] {user_data.email} - COMPLETE in {time.time() - start_time:.3f}s")
     return _from_db(db_user)
@@ -339,9 +361,14 @@ async def update_user(
 
     # 注：matchmaker 操作已废弃，候选人从数据库查询
 
-    # 清除缓存
+    # 🔧 [缓存一致性] 清除所有相关缓存
     cache_manager.invalidate_profile(user_id)
     cache_manager.invalidate_match_result(user_id)
+
+    # 同时清除 UserProfileService 的画像缓存
+    from services.user_profile_service import get_user_profile_service
+    profile_service = get_user_profile_service()
+    profile_service.clear_cache(user_id)
 
     return _from_db(updated_user)
 
@@ -365,9 +392,14 @@ async def delete_user(
 
     service.delete(user_id)
 
-    # 清除所有缓存
+    # 🔧 [缓存一致性] 清除所有相关缓存
     cache_manager.invalidate_profile(user_id)
     cache_manager.invalidate_match_result(user_id)
+
+    # 同时清除 UserProfileService 的画像缓存
+    from services.user_profile_service import get_user_profile_service
+    profile_service = get_user_profile_service()
+    profile_service.clear_cache(user_id)
 
     return {"message": "User deleted"}
 

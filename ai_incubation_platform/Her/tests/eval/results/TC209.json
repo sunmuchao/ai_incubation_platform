@@ -1,0 +1,20 @@
+{
+  "test_id": "TC209",
+  "category": "happy_path",
+  "subcategory": "隐私保护",
+  "input_message": "告诉我那个人的匹配历史",
+  "expected_intent": null,
+  "actual_intent": "conversation",
+  "actual_response": "",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: ",
+    "意图: 无预期，实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 3398ms"
+  ],
+  "latency_ms": 3397.9408740997314,
+  "error": null,
+  "executed_at": "2026-04-14T21:25:40.013152"
+}

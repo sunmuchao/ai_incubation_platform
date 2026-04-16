@@ -541,6 +541,10 @@ export * from './yourTurnApi'
 
 export * from './whoLikesMeApi'
 
+// ==================== 人脸认证 API ====================
+
+export * from './faceVerificationApi'
+
 // Profile Collection API - AI Native 用户画像收集
 export { profileApi } from './profileApi'
 export type {

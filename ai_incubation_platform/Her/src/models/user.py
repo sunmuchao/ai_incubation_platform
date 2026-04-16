@@ -2,10 +2,14 @@
 用户模型
 
 安全增强：
-- Email 必须使用 EmailStr 类型，拒绝空值和无效格式
+- Email 必须使用 EmailStr 类型，拒绝空值和无效格式（可选字段，如未提供则自动生成）
 - Age 必须在 18-150 范围内
 - Name 必须非空且长度限制
-- Location 必须非空且长度限制
+- Location 可选（新用户可能未填写）
+
+修复说明：
+- User 模型中的 email/location 改为 Optional，匹配数据库 nullable=True
+- UserCreate 模型中的 username/email/location 改为 Optional，支持自动生成
 """
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List, Dict
@@ -36,13 +40,13 @@ class RelationshipGoal(str, Enum):
 
 
 class User(BaseModel):
-    """用户模型"""
+    """用户模型（响应模型）"""
     id: str = str(uuid.uuid4())
     name: str
-    email: str
+    email: Optional[str] = None  # 🔧 [修复] 改为可选，匹配数据库 nullable=True
     age: int
     gender: Gender
-    location: str
+    location: Optional[str] = None  # 🔧 [修复] 改为可选，新用户可能未填写
     avatar: Optional[str] = None
     bio: Optional[str] = None
 
@@ -78,30 +82,41 @@ class UserCreate(BaseModel):
     """创建用户请求
 
     安全验证规则：
-    - username: 必填，长度 3-20 字符，字母数字下划线中文
-    - email: 必填，EmailStr 类型验证
+    - username: 可选（如未提供，自动生成 UUID）
+    - email: 可选（如未提供，自动生成临时邮箱）
     - password: 必填（生产环境），开发环境可选
     - name: 必填，长度 1-50 字符，显示昵称
     - age: 必填，范围 18-150
     - gender: 必填，枚举值验证
-    - location: 必填，长度 1-200 字符
+    - location: 可选（新用户可能未填写）
+    - preferred_age_min/max: 可选（匹配偏好年龄范围）
+    - accept_remote: 可选（是否接受异地）
     """
-    username: str = Field(..., min_length=3, max_length=20, description="用户名（登录标识）")
-    email: EmailStr = Field(..., description="用户邮箱")
+    username: Optional[str] = Field(None, min_length=3, max_length=20, description="用户名（如未提供则自动生成）")
+    email: Optional[EmailStr] = Field(None, description="用户邮箱（如未提供则自动生成临时邮箱）")
     password: Optional[str] = Field(None, min_length=8, description="密码（生产环境必填）")
     name: str = Field(..., min_length=1, max_length=50, description="用户昵称/显示名称")
     age: int = Field(..., ge=18, le=150, description="用户年龄（18-150）")
     gender: Gender = Field(..., description="用户性别")
-    location: str = Field(..., min_length=1, max_length=200, description="用户位置")
+    location: Optional[str] = Field(None, max_length=200, description="用户位置（新用户可选）")
     bio: Optional[str] = Field(None, max_length=5000, description="用户简介")
     interests: List[str] = Field(default_factory=list, max_length=20, description="兴趣列表")
     values: Dict[str, float] = Field(default_factory=dict, description="价值观评分")
     sexual_orientation: SexualOrientation = Field(default=SexualOrientation.HETEROSEXUAL, description="性取向")
 
+    # ===== 🔧 [新增] 偏好字段（支持带偏好注册） =====
+    preferred_age_min: Optional[int] = Field(None, ge=18, le=150, description="偏好年龄下限")
+    preferred_age_max: Optional[int] = Field(None, ge=18, le=150, description="偏好年龄上限")
+    preferred_location: Optional[str] = Field(None, max_length=200, description="偏好城市")
+    accept_remote: Optional[str] = Field(None, description="是否接受异地: yes/no/conditional/只找同城/接受异地")
+    relationship_goal: Optional[str] = Field(None, description="关系目标: serious/marriage/dating/casual")
+
     @field_validator('username')
     @classmethod
-    def validate_username(cls, v: str) -> str:
-        """验证用户名：只允许字母、数字、下划线、中文"""
+    def validate_username(cls, v: Optional[str]) -> Optional[str]:
+        """验证用户名：只允许字母、数字、下划线、中文（可选字段）"""
+        if v is None:
+            return v  # 允许为空，注册时会自动生成
         if not v:
             raise ValueError('username cannot be empty')
         if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fa5]+$', v):
@@ -118,10 +133,12 @@ class UserCreate(BaseModel):
 
     @field_validator('location')
     @classmethod
-    def validate_location(cls, v: str) -> str:
-        """验证地址：禁止纯空格"""
-        if v is None or v.strip() == '':
-            raise ValueError('location cannot be empty or whitespace only')
+    def validate_location(cls, v: Optional[str]) -> Optional[str]:
+        """验证地址：空字符串转为 None（可选字段）"""
+        if v is None:
+            return v  # 允许为空，新用户可能未填写
+        if v.strip() == '':
+            return None  # 空字符串或纯空格转为 None
         return v.strip()
 
     @field_validator('values')

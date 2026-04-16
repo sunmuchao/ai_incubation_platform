@@ -1,0 +1,92 @@
+{
+  "test_id": "TC005",
+  "category": "happy_path",
+  "subcategory": "匹配推荐",
+  "input_message": "给我推荐3个人",
+  "expected_intent": "match_request",
+  "actual_intent": "profile_collection",
+  "actual_response": "请填写您的基本信息，我会为您推荐3位合适的候选人",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "为了给您推荐合适的对象，请告诉我一些基本信息",
+      "question_type": "multi_step",
+      "steps": [
+        {
+          "field": "name",
+          "label": "您的姓名",
+          "type": "text",
+          "placeholder": "请输入您的姓名"
+        },
+        {
+          "field": "age",
+          "label": "您的年龄",
+          "type": "number",
+          "placeholder": "请输入您的年龄"
+        },
+        {
+          "field": "gender",
+          "label": "您的性别",
+          "type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ]
+        },
+        {
+          "field": "location",
+          "label": "您所在的城市",
+          "type": "text",
+          "placeholder": "例如：北京"
+        },
+        {
+          "field": "preferred_location",
+          "label": "希望对方在哪个城市？",
+          "type": "single_choice",
+          "options": [
+            "只找同城",
+            "接受异地",
+            "指定城市"
+          ]
+        },
+        {
+          "field": "preferred_age_min",
+          "label": "对方年龄范围（最小）",
+          "type": "number",
+          "placeholder": "例如：25"
+        },
+        {
+          "field": "preferred_age_max",
+          "label": "对方年龄范围（最大）",
+          "type": "number",
+          "placeholder": "例如：35"
+        },
+        {
+          "field": "relationship_goal",
+          "label": "您想找什么样的关系？",
+          "type": "single_choice",
+          "options": [
+            "恋爱",
+            "结婚",
+            "先了解看看"
+          ]
+        }
+      ],
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请填写您的基本信息，我会为您推荐3位合适的候选人",
+    "意图: 预期 'match_request' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 24236ms"
+  ],
+  "latency_ms": 24235.899209976196,
+  "error": null,
+  "executed_at": "2026-04-14T20:38:13.948305"
+}

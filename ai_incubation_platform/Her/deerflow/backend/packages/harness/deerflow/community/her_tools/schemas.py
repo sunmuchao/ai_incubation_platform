@@ -107,6 +107,25 @@ class HerGetConversationHistoryInput(BaseModel):
     limit: int = Field(default=20, description="返回消息数量")
 
 
+class HerInitiateChatInput(BaseModel):
+    """发起聊天的输入参数"""
+    target_user_id: str = Field(description="目标用户 ID")
+    context: str = Field(default="", description="上下文信息，如 '你们刚完成了92%匹配度分析'")
+    compatibility_score: int = Field(default=0, description="匹配度分数")
+
+
+class HerSafeQueryInput(BaseModel):
+    """安全 SQL 查询的输入参数"""
+    sql: str = Field(description="SQL 查询语句（必须是 SELECT，只允许查询白名单表）")
+
+
+class HerFindUserByNameInput(BaseModel):
+    """按名字查找用户的输入参数"""
+    name: str = Field(description="用户名字（支持模糊匹配）")
+    location: str = Field(default="", description="城市（可选，用于缩小范围）")
+    limit: int = Field(default=5, description="返回数量")
+
+
 # ==================== Exports ====================
 
 __all__ = [
@@ -124,4 +143,7 @@ __all__ = [
     "HerGetUserInput",
     "HerGetTargetUserInput",
     "HerGetConversationHistoryInput",
+    "HerInitiateChatInput",
+    "HerSafeQueryInput",
+    "HerFindUserByNameInput",
 ]

@@ -1,0 +1,20 @@
+{
+  "test_id": "TC093",
+  "category": "edge_cases",
+  "subcategory": "方言输入",
+  "input_message": "我想找个对象，要靠谱的，别给我整那些虚头巴脑的",
+  "expected_intent": "match_request",
+  "actual_intent": "profile_collection",
+  "actual_response": "好，我先了解一下你的基本情况，这样给你推荐才靠谱。\n\n**几个问题：**\n\n1. **年龄** — 你多大？想找多大年龄的？\n2. **所在地** — 你在无锡吗？还是周边城市？\n3. **找对象的目的** — 是想认真谈恋爱，还是以结婚为目标？\n\n你放心，我这儿不搞那些虚的，推荐的都是信息真实、态度认真的。",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 好，我先了解一下你的基本情况，这样给你推荐才靠谱。\n\n**几个问题：**\n\n1. **年龄** — 你多大？想找多大年龄的？\n2. **所在地** — 你在无锡吗？还是周边城市？\n3. **找对象的目的** — 是想认真谈恋爱，还是以结婚为目标？\n\n你放心，我这儿不搞那些虚的，推荐的都是信息真实、态度认真的。",
+    "意图: 预期 'match_request' vs 实际 'profile_collection'",
+    "UI组件: 无",
+    "延迟: 13209ms"
+  ],
+  "latency_ms": 13209.215879440308,
+  "error": null,
+  "executed_at": "2026-04-14T20:55:24.566376"
+}

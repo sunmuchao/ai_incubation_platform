@@ -1,163 +1,83 @@
 # ============================================================
-# Her 意图路由配置
+# Her 意图路由配置 - 简化版 v2.0
 # ============================================================
 #
-# 说明：
-# - 意图类型：用户可能的对话意图分类
-# - 关键词：用于快速识别意图的关键词列表
-# - 优先级：匹配顺序，具体意图优先，通用意图最后
-# - Skill 映射：意图对应的处理 Skill
+# 核心改动：
+# - 减少意图类型（从 15 个减到 7 个核心意图）
+# - 直接映射到 DeerFlow 工具（砍掉中间 Skill 层）
+# - 简化关键词匹配
 #
-# 修改此文件后无需重启服务，支持热加载。
-#
-# 版本历史：
-# - v1.0.0: 从 intent_router_skill.py 硬编码迁移
 # ============================================================
-
-# ============= 意图定义 =============
 
 intents:
-  # -------------------- 匹配相关 --------------------
-  - name: daily_recommend
-    description: "每日推荐"
-    keywords:
-      - "今日推荐"
-      - "每日推荐"
-      - "今天推荐"
-      - "每天推荐"
-      - "今天的推荐"
-    priority: 1
-    skill: conversation_matchmaker
-    is_local: false
-    response_template: "好的，让我看看今天有什么好推荐~"
+  # -------------------- 核心意图（直接调用 DeerFlow 工具）--------------------
 
   - name: matching
     description: "找对象/匹配"
     keywords:
       - "找人"
       - "匹配"
-      - "介绍对象"
       - "找对象"
-      - "看看有没有"
-      - "帮我找"
       - "推荐"
-      - "推荐几个"
-      - "推荐人"
-    priority: 14  # 最低优先级，避免"推荐"被其他意图抢走
-    skill: conversation_matchmaker
+      - "相亲"
+      - "介绍对象"
+    priority: 1
+    deerflow_tool: her_find_matches  # 直接调用 DeerFlow 工具
     is_local: false
     response_template: "好的，我来帮你找合适的对象~"
 
-  # -------------------- 画像相关 --------------------
+  - name: icebreaker
+    description: "破冰/开场白"
+    keywords:
+      - "破冰"
+      - "开场"
+      - "怎么开场"
+      - "聊什么"
+      - "怎么聊"
+      - "第一句话"
+    priority: 2
+    deerflow_tool: her_get_icebreaker
+    is_local: false
+    response_template: "好的，我来帮你想一个好的开场方式~"
+
+  - name: compatibility_analysis
+    description: "匹配度分析"
+    keywords:
+      - "合适吗"
+      - "匹配度"
+      - "我们配吗"
+      - "分析一下"
+      - "合不合适"
+    priority: 3
+    deerflow_tool: her_analyze_compatibility
+    is_local: false
+    response_template: "好的，我来分析你们的匹配度~"
+
+  - name: date_planning
+    description: "约会策划"
+    keywords:
+      - "约会去哪"
+      - "约会地点"
+      - "约会方案"
+      - "见面地点"
+    priority: 4
+    deerflow_tool: her_plan_date
+    is_local: false
+    response_template: "好的，我来帮你策划约会~"
+
   - name: profile_collection
     description: "完善资料"
     keywords:
       - "完善资料"
       - "填信息"
       - "补充信息"
-      - "完善画像"
-      - "完善个人信息"
-    priority: 9
-    skill: profile_collection
-    is_local: false
-    response_template: "好的，我来帮你完善资料，这样可以匹配更精准~"
-
-  # -------------------- 关系分析 --------------------
-  - name: relationship_analysis
-    description: "关系健康度分析"
-    keywords:
-      - "关系分析"
-      - "关系怎么样"
-      - "健康度"
-      - "关系健康"
-    priority: 8
-    skill: relationship_analysis
-    is_local: false
-    response_template: ""
-
-  # -------------------- 对话辅助 --------------------
-  - name: topic_suggestion
-    description: "话题推荐"
-    keywords:
-      - "话题"
-      - "聊什么"
-      - "推荐话题"
-      - "不知道聊什么"
-      - "有什么话题"
-    priority: 7
-    skill: silence_breaker
-    is_local: false
-    response_template: "好的，我来推荐一些话题帮你打开对话~"
-
-  - name: icebreaker
-    description: "破冰建议"
-    keywords:
-      - "破冰"
-      - "开场"
-      - "第一句话"
-      - "怎么开场"
-      - "破冰建议"
-    priority: 6
-    skill: icebreaker
-    is_local: false
-    response_template: "好的，我来帮你想一个好的开场方式~"
-
-  # -------------------- 约会相关 --------------------
-  - name: date_planning
-    description: "约会策划"
-    keywords:
-      - "约会策划"
-      - "策划约会"
-      - "约会计划"
-      - "安排约会"
-    priority: 4
-    skill: date_planning
-    is_local: false
-    response_template: ""
-
-  - name: dating_suggestion
-    description: "约会建议"
-    keywords:
-      - "约会建议"
-      - "约会去哪"
-      - "约会地点"
-      - "约会方案"
-      - "约会去哪里"
-      - "约会"
     priority: 5
-    skill: date_planning
+    deerflow_tool: her_collect_profile
     is_local: false
-    response_template: ""
+    response_template: "好的，我来帮你完善资料~"
 
-  # -------------------- 预沟通 --------------------
-  - name: pre_comm_start
-    description: "启动预沟通"
-    keywords:
-      - "开始预沟通"
-      - "启动预沟通"
-      - "AI 开始聊"
-      - "ai替身"
-      - "AI替身"
-      - "代聊"
-      - "帮我聊"
-    priority: 2
-    skill: pre_communication
-    is_local: false
-    response_template: ""
+  # -------------------- 本地意图（不调用工具）--------------------
 
-  - name: pre_communication
-    description: "AI 预沟通"
-    keywords:
-      - "预沟通"
-      - "AI 谈"
-      - "替我聊"
-      - "AI 替身"
-    priority: 3
-    skill: pre_communication
-    is_local: false
-    response_template: ""
-
-  # -------------------- 本地处理（不调用 Skill）--------------------
   - name: greeting
     description: "问候"
     keywords:
@@ -165,116 +85,34 @@ intents:
       - "hi"
       - "hello"
       - "嗨"
-      - "哈喽"
-      - "hey"
-      - "早上好"
-      - "晚上好"
-    priority: 12
-    skill: null
-    is_local: true
-    response_template: "你好呀！有什么可以帮你的吗？"
-
-  - name: gratitude
-    description: "感谢"
-    keywords:
-      - "谢谢"
-      - "感谢"
-      - "thank"
-      - "thx"
-      - "谢谢你"
-    priority: 11
-    skill: null
-    is_local: true
-    response_template: "不客气，很开心能帮到你！"
-
-  - name: goodbye
-    description: "告别"
-    keywords:
-      - "再见"
-      - "bye"
-      - "拜拜"
-      - "下次见"
-      - "88"
-      - "回见"
     priority: 10
-    skill: null
     is_local: true
-    response_template: "好的，下次见！有需要随时找我~"
+    response_template: "你好呀！我是 Her，你的婚恋助手。有什么可以帮你的吗？"
 
-  - name: capability_inquiry
-    description: "能力询问"
-    keywords:
-      - "你能做什么"
-      - "你有什么功能"
-      - "你会什么"
-      - "你能帮我什么"
-      - "你能干嘛"
-      - "你能干啥"
-      - "你是谁"
-      - "介绍你自己"
-    priority: 13
-    skill: null
-    is_local: true
-    response_template: "我是 Her，我可以帮你找对象、推荐话题、策划约会、分析关系等等，你想了解哪个？"
-
-  # -------------------- 兜底 --------------------
   - name: general
-    description: "通用对话"
-    keywords: []  # 兜底意图，无关键词
-    priority: 15
-    skill: null
+    description: "通用对话（兜底）"
+    keywords: []
+    priority: 99
     is_local: true
-    response_template: "我在这里，有什么需要帮忙的吗？"
+    response_template: "我在这里，有什么需要帮忙的吗？你可以问我：找对象、聊什么、约会去哪..."
 
-# ============= 建议操作配置 =============
+# ============= 能力介绍 =============
 
-suggested_actions:
-  greeting:
-    - label: "帮我找对象"
-      action: "matching"
-    - label: "今日推荐"
-      action: "daily_recommend"
-    - label: "看看我能做什么"
-      action: "capability"
-
-  capability_inquiry:
-    - label: "智能匹配"
-      action: "matching"
-    - label: "AI 预沟通"
-      action: "pre_communication"
-    - label: "话题推荐"
-      action: "topic_suggestion"
-
-  general:
-    - label: "帮我找对象"
-      action: "matching"
-    - label: "今日推荐"
-      action: "daily_recommend"
-    - label: "完善资料"
-      action: "profile_collection"
-
-# ============= 能力介绍配置 =============
-
-capability_intro: "我是 Her，你的智能社交助手。我可以帮你：匹配对象、每日推荐、AI 预沟通、话题推荐、关系分析、约会策划等。"
+capability_intro: "我是 Her，你的智能婚恋助手。我可以帮你找对象、推荐开场白、分析匹配度、策划约会。"
 
 feature_list:
   - name: "智能匹配"
-    description: "基于你的偏好和画像，智能推荐合适的对象"
-  - name: "每日推荐"
-    description: "每天精选几位高匹配度对象推荐给你"
-  - name: "AI 预沟通"
-    description: "AI 替身先聊 50 句，帮你判断是否合适"
-  - name: "话题推荐"
-    description: "不知道聊什么？我来推荐话题"
-  - name: "关系分析"
-    description: "分析你的关系健康度，给出建议"
+    description: "基于你的偏好，智能推荐合适的对象"
+  - name: "破冰建议"
+    description: "不知道怎么开场？我来帮你想开场白"
+  - name: "匹配度分析"
+    description: "分析你和TA的匹配度，给你建议"
   - name: "约会策划"
     description: "帮你策划约会方案，选地点选活动"
 
 # ============= 元数据 =============
 
 metadata:
-  version: "1.0.0"
-  last_updated: "2024-04-13"
-  author: "Her Team"
-  description: "意图路由配置，从硬编码迁移至 YAML"
+  version: "2.0.0"
+  last_updated: "2025-04-15"
+  description: "简化版意图配置，直接映射到 DeerFlow 工具"

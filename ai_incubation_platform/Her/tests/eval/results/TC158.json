@@ -1,0 +1,20 @@
+{
+  "test_id": "TC158",
+  "category": "happy_path",
+  "subcategory": "场景检测",
+  "input_message": "情人节送什么礼物好？",
+  "expected_intent": "gift_recommendation",
+  "actual_intent": "conversation",
+  "actual_response": "我来帮你想想情人节礼物的建议！不过为了给你更贴心的推荐，我需要先了解一下情况。\n\n你是要送给**男朋友/老公**还是**女朋友/老婆**呢？以及你们大概交往多久了？\n\n这样我可以根据你们的关系阶段和对方的喜好，给出更精准的礼物建议~ 💝",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 我来帮你想想情人节礼物的建议！不过为了给你更贴心的推荐，我需要先了解一下情况。\n\n你是要送给**男朋友/老公**还是**女朋友/老婆**呢？以及你们大概交往多久了？\n\n这样我可以根据你们的关系阶段和对方的喜好，给出更精准的礼物建议~ 💝",
+    "意图: 预期 'gift_recommendation' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 9970ms"
+  ],
+  "latency_ms": 9969.882011413574,
+  "error": null,
+  "executed_at": "2026-04-14T21:15:49.094158"
+}

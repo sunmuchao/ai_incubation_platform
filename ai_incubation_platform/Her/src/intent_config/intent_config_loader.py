@@ -41,6 +41,7 @@ class IntentConfig:
     keywords: List[str] = field(default_factory=list)
     priority: int = 10
     skill: Optional[str] = None
+    deerflow_tool: Optional[str] = None  # 新架构：直接调用 DeerFlow 工具
     is_local: bool = False
     response_template: str = ""
 
@@ -51,6 +52,7 @@ class IntentConfig:
             "keywords": self.keywords,
             "priority": self.priority,
             "skill": self.skill,
+            "deerflow_tool": self.deerflow_tool,
             "is_local": self.is_local,
             "response_template": self.response_template,
         }
@@ -175,6 +177,7 @@ class IntentConfigLoader:
                 keywords=intent_raw.get("keywords", []),
                 priority=intent_raw.get("priority", 10),
                 skill=intent_raw.get("skill"),
+                deerflow_tool=intent_raw.get("deerflow_tool"),  # 新架构：DeerFlow 工具
                 is_local=intent_raw.get("is_local", False),
                 response_template=intent_raw.get("response_template", ""),
             )

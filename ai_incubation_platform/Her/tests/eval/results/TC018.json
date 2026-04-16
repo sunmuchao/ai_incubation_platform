@@ -1,0 +1,182 @@
+{
+  "test_id": "TC018",
+  "category": "happy_path",
+  "subcategory": "约会建议",
+  "input_message": "北京有什么适合约会的地方？",
+  "expected_intent": "date_planning",
+  "actual_intent": "date_planning",
+  "actual_response": "为您推荐北京不同阶段的约会地点，从轻松破冰到深度浪漫",
+  "generative_ui": {
+    "component_type": "DatePlanCard",
+    "props": {
+      "location": "北京",
+      "date_plans": [
+        {
+          "stage": "初次约会",
+          "description": "轻松、可随时结束，适合破冰",
+          "places": [
+            {
+              "name": "单向空间 / Page One书店",
+              "location": "朝阳大悦城 / 三里屯",
+              "features": [
+                "文艺氛围",
+                "安静舒适",
+                "可随时结束"
+              ],
+              "tips": "一起挑本书，聊聊阅读喜好，氛围轻松不尴尬"
+            },
+            {
+              "name": "798艺术区",
+              "location": "朝阳区酒仙桥",
+              "features": [
+                "艺术展览",
+                "漫步聊天",
+                "拍照打卡"
+              ],
+              "tips": "边逛边聊，看展时有话题，累了就找家咖啡厅坐坐"
+            },
+            {
+              "name": "三里屯太古里",
+              "location": "朝阳区三里屯",
+              "features": [
+                "时尚商圈",
+                "餐厅选择多",
+                "氛围活跃"
+              ],
+              "tips": "晚餐+漫步，轻松自然，适合观察对方品味"
+            }
+          ]
+        },
+        {
+          "stage": "熟悉期约会",
+          "description": "有一定了解，可以安排半天活动",
+          "places": [
+            {
+              "name": "什刹海 + 南锣鼓巷",
+              "location": "西城区",
+              "features": [
+                "老北京风情",
+                "胡同漫步",
+                "小吃美食"
+              ],
+              "tips": "下午逛胡同，傍晚在什刹海看日落，晚上找家小酒馆"
+            },
+            {
+              "name": "故宫角楼咖啡 + 景山公园",
+              "location": "东城区",
+              "features": [
+                "故宫文化",
+                "俯瞰紫禁城",
+                "浪漫日落"
+              ],
+              "tips": "先去角楼咖啡打卡，然后登景山看故宫全景日落"
+            },
+            {
+              "name": "国家大剧院",
+              "location": "西城区",
+              "features": [
+                "高雅艺术",
+                "建筑美学",
+                "音乐会/歌剧"
+              ],
+              "tips": "提前订票，穿正式一点，看完演出后聊聊感受"
+            }
+          ]
+        },
+        {
+          "stage": "亲密期约会",
+          "description": "关系稳定，可以安排整天或特别体验",
+          "places": [
+            {
+              "name": "环球影城",
+              "location": "通州区",
+              "features": [
+                "主题乐园",
+                "刺激项目",
+                "童话氛围"
+              ],
+              "tips": "一整天畅玩，看对方童心一面，拍照留念"
+            },
+            {
+              "name": "古北水镇 + 司马台长城",
+              "location": "密云区",
+              "features": [
+                "夜景灯光",
+                "温泉",
+                "长城日落"
+              ],
+              "tips": "建议住一晚，夜游水镇，第二天登长城看日出"
+            },
+            {
+              "name": "红砖美术馆",
+              "location": "朝阳区崔各庄",
+              "features": [
+                "建筑艺术",
+                "园林设计",
+                "静谧氛围"
+              ],
+              "tips": "建筑本身就是艺术品，适合深度交流和拍照"
+            }
+          ]
+        },
+        {
+          "stage": "特别推荐",
+          "description": "浪漫氛围型",
+          "places": [
+            {
+              "name": "北京植物园 / 香山",
+              "location": "海淀区",
+              "features": [
+                "自然风光",
+                "四季景色",
+                "安静私密"
+              ],
+              "tips": "春天赏花、秋天看红叶，带点小零食野餐"
+            },
+            {
+              "name": "奥森公园",
+              "location": "朝阳区",
+              "features": [
+                "城市绿肺",
+                "跑步骑行",
+                "向日葵花海"
+              ],
+              "tips": "租辆双人自行车，或一起跑步，健康又浪漫"
+            },
+            {
+              "name": "北京坊",
+              "location": "西城区前门",
+              "features": [
+                "复古建筑",
+                "文艺书店",
+                "屋顶露台"
+              ],
+              "tips": "Page One书店+星巴克臻选+屋顶看前门夜景"
+            }
+          ]
+        }
+      ],
+      "tips": [
+        "初次约会选择可以轻松结束的地方，避免尴尬",
+        "提前了解对方兴趣，选择TA会喜欢的类型",
+        "约会前查好天气和营业时间，做好Plan B",
+        "记得带充电宝，以备拍照或导航需要"
+      ],
+      "_schema": {
+        "backend_type": "DatePlanCard",
+        "frontend_card": "feature",
+        "description": "约会方案卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 为您推荐北京不同阶段的约会地点，从轻松破冰到深度浪漫",
+    "意图: 预期 'date_planning' = 实际 'date_planning'",
+    "UI组件: DatePlanCard",
+    "延迟: 35170ms"
+  ],
+  "latency_ms": 35170.02487182617,
+  "error": null,
+  "executed_at": "2026-04-14T20:41:08.726259"
+}

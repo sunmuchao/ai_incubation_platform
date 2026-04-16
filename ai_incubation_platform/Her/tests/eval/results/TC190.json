@@ -1,0 +1,20 @@
+{
+  "test_id": "TC190",
+  "category": "happy_path",
+  "subcategory": "工具调用链路",
+  "input_message": "我们合适吗？有什么话题可以聊？",
+  "expected_intent": "multi_tool_chain",
+  "actual_intent": "conversation",
+  "actual_response": "我来帮你分析匹配度和推荐聊天话题。不过我需要先知道你想了解哪位匹配对象的信息。\n\n你能告诉我TA的用户ID或昵称吗？这样我可以：\n1. 分析你们的匹配度\n2. 为你推荐合适的聊天话题\n\n或者，如果你想先看看有哪些匹配对象，我也可以帮你查找。",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 我来帮你分析匹配度和推荐聊天话题。不过我需要先知道你想了解哪位匹配对象的信息。\n\n你能告诉我TA的用户ID或昵称吗？这样我可以：\n1. 分析你们的匹配度\n2. 为你推荐合适的聊天话题\n\n或者，如果你想先看看有哪些匹配对象，我也可以帮你查找。",
+    "意图: 预期 'multi_tool_chain' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 4213ms"
+  ],
+  "latency_ms": 4213.265895843506,
+  "error": null,
+  "executed_at": "2026-04-14T21:20:19.875944"
+}

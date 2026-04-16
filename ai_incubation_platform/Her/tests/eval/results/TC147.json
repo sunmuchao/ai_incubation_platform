@@ -1,0 +1,20 @@
+{
+  "test_id": "TC147",
+  "category": "happy_path",
+  "subcategory": "画像收集流程",
+  "input_message": "我想完善我的资料",
+  "expected_intent": "profile_completion",
+  "actual_intent": "conversation",
+  "actual_response": "",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: ",
+    "意图: 预期 'profile_completion' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 10496ms"
+  ],
+  "latency_ms": 10496.341943740845,
+  "error": null,
+  "executed_at": "2026-04-14T21:11:54.079998"
+}

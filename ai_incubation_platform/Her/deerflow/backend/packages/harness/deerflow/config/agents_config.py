@@ -88,9 +88,26 @@ def load_agent_soul(agent_name: str | None) -> str | None:
     """
     agent_dir = get_paths().agent_dir(agent_name) if agent_name else get_paths().base_dir
     soul_path = agent_dir / SOUL_FILENAME
+
+    # 🔧 [诊断日志]
+    logger.info(f"[SOUL.md] 加载路径: {soul_path}, agent_name={agent_name}")
+    logger.info(f"[SOUL.md] 文件存在: {soul_path.exists()}")
+
     if not soul_path.exists():
+        logger.warning(f"[SOUL.md] 文件不存在: {soul_path}")
         return None
     content = soul_path.read_text(encoding="utf-8").strip()
+
+    # 🔧 [诊断日志] 检查内容是否包含关键规则
+    if content:
+        has_generative_ui_rule = "GENERATIVE_UI" in content
+        logger.info(f"[SOUL.md] 内容长度: {len(content)} 字")
+        logger.info(f"[SOUL.md] 包含 GENERATIVE_UI 规则: {has_generative_ui_rule}")
+        # 打印前300字用于调试
+        logger.info(f"[SOUL.md] 内容预览: {content[:300]}...")
+    else:
+        logger.warning(f"[SOUL.md] 文件内容为空")
+
     return content or None
 
 

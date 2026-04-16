@@ -1,0 +1,75 @@
+{
+  "test_id": "TC019",
+  "category": "happy_path",
+  "subcategory": "约会建议",
+  "input_message": "她喜欢户外，我们约会去哪？",
+  "expected_intent": "date_planning",
+  "actual_intent": "date_planning",
+  "actual_response": "为您准备了3个户外约会方案，初次约会建议选择公园野餐，轻松无压力",
+  "generative_ui": {
+    "component_type": "DatePlanCard",
+    "props": {
+      "scenarios": [
+        {
+          "title": "城市公园野餐漫步",
+          "difficulty": "轻松",
+          "pressure": "低",
+          "duration": "2-3小时",
+          "activities": [
+            "下午2-3点：在公园草坪野餐（自带或外卖轻食）",
+            "边吃边聊：聊聊各自喜欢的户外活动、周末习惯",
+            "饭后漫步：沿着公园小路散步，看看风景",
+            "话题自然点：看到什么聊什么，狗狗、花草、跑步的人"
+          ],
+          "why_good": "轻松自然，随时可结束，压力最小",
+          "tips": "选一个有树荫的草坪，带个野餐垫和小零食就够了"
+        },
+        {
+          "title": "轻度徒步 + 山顶咖啡",
+          "difficulty": "中等",
+          "pressure": "中",
+          "duration": "3-4小时",
+          "activities": [
+            "上午9点：在登山口集合，开始轻松徒步",
+            "路上互动：互相拍照、聊运动习惯、分享趣事",
+            "山顶休息：在山顶或半山腰的咖啡馆/茶室休息",
+            "俯瞰风景：一起看看风景，聊聊对未来的想法"
+          ],
+          "why_good": "共同完成一件事，有成就感，话题自然",
+          "tips": "选坡度缓、1小时内能登顶的路线，提前确认她体力情况"
+        },
+        {
+          "title": "户外市集 + 下午茶",
+          "difficulty": "轻松",
+          "pressure": "低",
+          "duration": "2-3小时",
+          "activities": [
+            "下午逛逛：去户外市集/创意集市/农场市集",
+            "边走边看：手工艺品、小吃摊、植物花卉",
+            "互动体验：一起尝试小游戏或手工体验",
+            "市集咖啡馆：找个露天座位喝杯东西聊聊"
+          ],
+          "why_good": "环境热闹不尴尬，话题源源不断",
+          "tips": "提前查好市集开放时间，准备现金和小零钱"
+        }
+      ],
+      "recommendation": "初次约会推荐方案1「城市公园野餐漫步」——压力最小、最自然、随时可以结束或延长",
+      "follow_up_suggestion": "约会过程中如果想延续，可以提议：'附近有个不错的咖啡馆，要不要去坐坐？'",
+      "_schema": {
+        "backend_type": "DatePlanCard",
+        "frontend_card": "feature",
+        "description": "约会方案卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 为您准备了3个户外约会方案，初次约会建议选择公园野餐，轻松无压力",
+    "意图: 预期 'date_planning' = 实际 'date_planning'",
+    "UI组件: DatePlanCard",
+    "延迟: 28323ms"
+  ],
+  "latency_ms": 28323.07505607605,
+  "error": null,
+  "executed_at": "2026-04-14T20:41:37.054688"
+}

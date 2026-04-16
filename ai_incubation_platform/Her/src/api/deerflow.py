@@ -13,6 +13,10 @@ DeerFlow API Routes - Her 项目 DeerFlow 集成接口
 - DeerFlow 是 Agent 运行时，负责意图识别、工具编排、状态管理
 - Her 只提供业务 Tools（匹配、关系分析、约会策划等）
 - Memory 系统打通：用户画像注入 DeerFlow，Agent 知道用户背景
+
+性能优化（延迟问题修复）：
+- Memory 同步缓存：避免每次请求重复同步
+- 用户画像缓存：减少数据库查询次数
 """
 
 from fastapi import APIRouter
@@ -24,10 +28,22 @@ import sys
 import json
 import time
 import asyncio  # 🔧 [修复] 添加 asyncio 导入，用于超时保护
+import hashlib
+import re
 
 from utils.logger import logger
 
 router = APIRouter(prefix="/api/deerflow", tags=["deerflow"])
+
+# 🔧 [性能优化] Memory 同步缓存
+# 避免每次请求都重复同步用户画像
+_memory_sync_cache: Dict[str, Dict[str, Any]] = {}  # user_id -> {last_sync_time, profile_hash}
+MEMORY_SYNC_CACHE_TTL = 300  # 缓存有效期：5分钟
+
+# 🔧 [性能优化] 用户画像缓存
+# 减少数据库查询次数
+_user_profile_cache: Dict[str, Dict[str, Any]] = {}  # user_id -> {profile, last_fetch_time}
+USER_PROFILE_CACHE_TTL = 60  # 缓存有效期：1分钟
 
 # DeerFlow 集成
 try:
@@ -43,7 +59,7 @@ try:
     if deerflow_path not in sys.path:
         sys.path.insert(0, deerflow_path)
 
-    from deerflow.client import DeerFlowClient
+    from deerflow.client import DeerFlowClient, StreamEvent
     from deerflow.config.app_config import reload_app_config
     # 🔧 [新增] 导入 checkpointer，用于对话历史持久化
     from deerflow.agents.checkpointer.provider import get_checkpointer
@@ -64,6 +80,22 @@ try:
             return _deerflow_client_cache
 
         if os.path.exists(config_path):
+            # 🔧 [关键修复] 先加载 DeerFlow 的 .env 文件，确保环境变量可用
+            deerflow_env_path = os.path.join(HER_PROJECT_ROOT, "deerflow", "backend", ".env")
+            if os.path.exists(deerflow_env_path):
+                # 读取 .env 文件并设置环境变量
+                try:
+                    with open(deerflow_env_path, "r") as f:
+                        for line in f:
+                            line = line.strip()
+                            if line and not line.startswith("#") and "=" in line:
+                                key, value = line.split("=", 1)
+                                if key and not os.environ.get(key):
+                                    os.environ[key] = value
+                                    logger.info(f"[DeerFlow] 加载环境变量: {key}={value[:10]}...")
+                except Exception as e:
+                    logger.warning(f"[DeerFlow] 加载 .env 文件失败: {e}")
+
             reload_app_config(config_path)
 
             # 🔧 [关键修复] 获取 checkpointer，让对话历史能持久化
@@ -71,10 +103,24 @@ try:
             checkpointer = get_checkpointer()
             logger.info(f"[DeerFlow] Checkpointer 已启用: {type(checkpointer).__name__}")
 
+            # 🔧 [诊断] 检查 SOUL.md 是否存在
+            from deerflow.config.paths import Paths
+            paths = Paths()
+            soul_path = paths.base_dir / "SOUL.md"
+            logger.info(f"[DeerFlow] SOUL.md 路径: {soul_path}")
+            logger.info(f"[DeerFlow] SOUL.md 存在: {soul_path.exists()}")
+            if soul_path.exists():
+                soul_content = soul_path.read_text(encoding="utf-8")
+                # 检查是否包含 "GENERATIVE_UI" 禁止规则
+                has_prohibition = "不需要" in soul_content or "禁止输出" in soul_content or "GENERATIVE_UI" in soul_content
+                logger.info(f"[DeerFlow] SOUL.md 内容前500字: {soul_content[:500]}")
+                logger.info(f"[DeerFlow] SOUL.md 包含 GENERATIVE_UI 禁止规则: {has_prohibition}")
+
             _deerflow_client_cache = DeerFlowClient(
                 config_path=config_path,
                 checkpointer=checkpointer  # 🔧 [关键] 传入 checkpointer
             )
+            logger.info(f"[DeerFlow] DeerFlowClient 已创建，agent_name: {_deerflow_client_cache._agent_name}")
             return _deerflow_client_cache
         return None
 
@@ -159,12 +205,22 @@ class MemorySyncResponse(BaseModel):
 
 def get_user_profile(user_id: str) -> Dict[str, Any]:
     """
-    获取 Her 用户画像
+    获取 Her 用户画像（带缓存优化）
 
     从 Her 的数据库获取用户基本信息和偏好
 
-    🔧 [修复] 使用原生 SQL 查询，绕过 ORM schema 不一致问题
+    🔧 [性能优化] 添加内存缓存，避免每次请求都查询数据库
     """
+    global _user_profile_cache
+
+    # 🔧 [性能优化] 检查缓存
+    cache_entry = _user_profile_cache.get(user_id)
+    if cache_entry:
+        elapsed = time.time() - cache_entry.get("last_fetch_time", 0)
+        if elapsed < USER_PROFILE_CACHE_TTL:
+            logger.debug(f"[缓存命中] 用户画像缓存有效，跳过数据库查询: {user_id}")
+            return cache_entry.get("profile", {})
+
     try:
         import sqlite3
         from config import settings
@@ -179,8 +235,9 @@ def get_user_profile(user_id: str) -> Dict[str, Any]:
             her_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))  # Her/
             db_path = os.path.join(her_root, db_name)
         else:
-            # 默认路径
-            db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "matchmaker.db")
+            # 默认路径：使用项目根目录下的 matchmaker_agent.db
+            her_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))  # Her/
+            db_path = os.path.join(her_root, "matchmaker_agent.db")
 
         logger.debug(f"Database path: {db_path}")
 
@@ -209,7 +266,7 @@ def get_user_profile(user_id: str) -> Dict[str, Any]:
             except json.JSONDecodeError:
                 interests = row[6].split(",") if row[6] else []
 
-        return {
+        profile = {
             "id": row[0],
             "name": row[1],
             "age": row[2],
@@ -227,6 +284,15 @@ def get_user_profile(user_id: str) -> Dict[str, Any]:
             "preferred_location": row[13],
             "deal_breakers": row[14],  # 一票否决项
         }
+
+        # 🔧 [性能优化] 保存到缓存
+        _user_profile_cache[user_id] = {
+            "profile": profile,
+            "last_fetch_time": time.time()
+        }
+        logger.debug(f"[缓存更新] 用户画像已缓存: {user_id}")
+
+        return profile
 
     except Exception as e:
         logger.error(f"Failed to get user profile: {e}")
@@ -430,9 +496,9 @@ def build_memory_facts(user_profile: Dict[str, Any]) -> List[Dict[str, Any]]:
     return facts
 
 
-def sync_user_memory_to_deerflow(user_id: str) -> int:
+def sync_user_memory_to_deerflow(user_id: str, force: bool = False) -> int:
     """
-    同步用户画像到用户独立的 Memory 文件
+    同步用户画像到用户独立的 Memory 文件（带缓存优化）
 
     【用户隔离架构】
 
@@ -440,6 +506,11 @@ def sync_user_memory_to_deerflow(user_id: str) -> int:
     - 路径：{base_dir}/users/{user_id}/memory.json
     - 只包含当前用户的基本信息和偏好
     - DeerFlow Agent 仍然使用全局 memory（对话历史等）
+
+    🔧 [性能优化] 添加缓存机制：
+    - 检查缓存是否有效（5分钟内已同步且画像未变化）
+    - 如果有效，跳过同步，减少数据库查询和文件写入
+    - force 参数可强制同步（用户画像更新后调用）
 
     目录结构：
         {base_dir}/
@@ -449,12 +520,26 @@ def sync_user_memory_to_deerflow(user_id: str) -> int:
                 └── memory.json  ← 用户独立 memory（基本信息 + 偏好）
 
     同步时机：
-    - 用户发起对话时（/api/deerflow/chat）
-    - 用户在 Her 中更新画像后
+    - 用户发起对话时（/api/deerflow/chat）- 有缓存检查
+    - 用户在 Her 中更新画像后 - 强制同步
 
     Returns:
-        同步的 facts 数量
+        同步的 facts 数量（如果缓存命中返回缓存的数量）
     """
+    global _memory_sync_cache
+
+    # 🔧 [性能优化] 检查缓存是否有效
+    if not force:
+        cache_entry = _memory_sync_cache.get(user_id)
+        if cache_entry:
+            elapsed = time.time() - cache_entry.get("last_sync_time", 0)
+            if elapsed < MEMORY_SYNC_CACHE_TTL:
+                # 缓存有效，检查画像是否变化
+                current_hash = hashlib.md5(json.dumps(get_user_profile(user_id), sort_keys=True).encode()).hexdigest()
+                if current_hash == cache_entry.get("profile_hash"):
+                    logger.info(f"[缓存命中] Memory 同步缓存有效，跳过同步: {user_id}")
+                    return cache_entry.get("facts_count", 0)
+
     try:
         # Step 1: 从 Her 数据库获取用户画像（真相来源）
         user_profile = get_user_profile(user_id)
@@ -467,6 +552,9 @@ def sync_user_memory_to_deerflow(user_id: str) -> int:
         if not facts:
             logger.warning(f"No facts to sync for {user_id}")
             return 0
+
+        # 🔧 [性能优化] 计算画像 hash 用于缓存比较
+        profile_hash = hashlib.md5(json.dumps(user_profile, sort_keys=True).encode()).hexdigest()
 
         # Step 3: 写入用户独立的 memory 文件
         user_memory_dir = os.path.join(HER_PROJECT_ROOT, "deerflow", "backend", ".deer-flow", "users", user_id)
@@ -502,6 +590,13 @@ def sync_user_memory_to_deerflow(user_id: str) -> int:
             json.dump(user_memory_data, f, ensure_ascii=False, indent=2)
         os.rename(temp_path, user_memory_path)
 
+        # 🔧 [性能优化] 保存同步缓存信息
+        _memory_sync_cache[user_id] = {
+            "last_sync_time": time.time(),
+            "profile_hash": profile_hash,
+            "facts_count": len(facts)
+        }
+
         logger.info(f"[Memory同步] Her → 用户独立文件: {len(facts)} facts for user {user_id}")
 
         return len(facts)
@@ -509,6 +604,34 @@ def sync_user_memory_to_deerflow(user_id: str) -> int:
     except Exception as e:
         logger.error(f"Failed to sync user memory: {e}")
         return 0
+
+
+def invalidate_user_cache(user_id: str) -> None:
+    """
+    清除用户缓存（当用户画像更新后调用）
+
+    当用户在 Her 中更新了个人信息或偏好后，需要调用此函数：
+    1. 清除用户画像缓存
+    2. 清除 Memory 同步缓存
+    3. 强制重新同步到 DeerFlow
+
+    Args:
+        user_id: 用户 ID
+    """
+    global _user_profile_cache, _memory_sync_cache
+
+    # 清除用户画像缓存
+    if user_id in _user_profile_cache:
+        del _user_profile_cache[user_id]
+        logger.info(f"[缓存清除] 用户画像缓存已清除: {user_id}")
+
+    # 清除 Memory 同步缓存
+    if user_id in _memory_sync_cache:
+        del _memory_sync_cache[user_id]
+        logger.info(f"[缓存清除] Memory 同步缓存已清除: {user_id}")
+
+    # 强制重新同步
+    sync_user_memory_to_deerflow(user_id, force=True)
 
 
 # ==================== Routes ====================
@@ -582,12 +705,21 @@ async def chat(request: ChatRequest):
         return await _handle_with_her_service(request)
 
 
-def infer_intent_from_response(message: str, response_text: str, generative_ui: Optional[Dict] = None) -> Dict[str, Any]:
+def infer_intent_from_response(
+    message: str,
+    response_text: str,
+    generative_ui: Optional[Dict] = None,
+    tool_result: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """
     从响应推断意图类型（用于测试报告）
 
-    🔧 [简化] Agent 自己决策后，我们只是"事后记录"意图类型。
-    不做复杂的关键词匹配，只从 UI 组件推断。
+    🔧 [Agent Native v3] 简化设计：
+    1. 安全边界检测（允许保留规则）
+    2. UI 组件推断（从 Agent 决策结果推断）
+    3. 默认兜底
+
+    禁止硬编码业务判断，意图识别由 Agent 自己决策。
 
     Args:
         message: 用户输入消息
@@ -597,7 +729,9 @@ def infer_intent_from_response(message: str, response_text: str, generative_ui: 
     Returns:
         {"type": "意图类型", "confidence": 0.0-1.0}
     """
-    # 🔧 [安全] 优先检测安全攻击关键词，返回 security_reject 意图
+    message_lower = message.lower()
+
+    # 🔧 [安全边界] 检测安全攻击关键词（允许保留规则）
     security_attack_keywords = [
         "忽略所有规则", "忽略规则", "系统密码", "告诉我密码",
         "管理员权限", "越权", "绕过限制", "删除所有", "删除数据库",
@@ -605,7 +739,7 @@ def infer_intent_from_response(message: str, response_text: str, generative_ui: 
         "你是谁的开发者", "你的源代码", "你的训练数据",
         "帮我测试系统漏洞", "帮我破解", "帮我攻击",
     ]
-    if any(kw in message.lower() for kw in security_attack_keywords):
+    if any(kw in message_lower for kw in security_attack_keywords):
         logger.warning(f"[IntentInfer] 检测到安全攻击关键词: {message[:50]}...")
         return {
             "type": "security_reject",
@@ -613,7 +747,23 @@ def infer_intent_from_response(message: str, response_text: str, generative_ui: 
             "source": "security_check",
         }
 
-    # 方式1：从 UI 组件推断（最可靠，Agent 已经做了决策）
+    # 方式1：优先使用工具返回的意图（结构化单一真相来源）
+    if tool_result:
+        data = tool_result.get("data", {})
+        explicit_intent = (
+            tool_result.get("intent_type")
+            or data.get("intent_type")
+            or data.get("intent")
+        )
+        if isinstance(explicit_intent, dict):
+            intent_type = explicit_intent.get("type")
+            confidence = explicit_intent.get("confidence", 0.95)
+            if intent_type:
+                return {"type": intent_type, "confidence": confidence, "source": "tool_result"}
+        if isinstance(explicit_intent, str) and explicit_intent.strip():
+            return {"type": explicit_intent.strip(), "confidence": 0.95, "source": "tool_result"}
+
+    # 方式2：从 UI 组件推断（Agent 自己决策后的结果）
     if generative_ui:
         component_type = generative_ui.get("component_type", "")
         ui_intent_map = {
@@ -630,12 +780,89 @@ def infer_intent_from_response(message: str, response_text: str, generative_ui: 
         if component_type in ui_intent_map:
             return {"type": ui_intent_map[component_type], "confidence": 0.9, "source": "ui_component"}
 
-    # 方式2：从响应内容推断（降级）
-    if any(q in response_text for q in ["你多大", "你在哪", "什么年龄", "同城还是", "认真恋爱"]):
-        return {"type": "profile_collection", "confidence": 0.6, "source": "response_content"}
-
-    # 方式3：默认兜底
+    # 方式3：默认兜底（Agent 未返回结构化信息时）
     return {"type": "conversation", "confidence": 0.5, "source": "default"}
+
+
+def _normalize_generative_ui(generative_ui: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """对 Generative UI 做最小一致性校验，避免文案和结构化数据漂移。"""
+    if not generative_ui:
+        return generative_ui
+
+    component_type = generative_ui.get("component_type")
+    props = generative_ui.get("props")
+    if component_type == "MatchCardList" and isinstance(props, dict):
+        matches = props.get("matches", [])
+        if isinstance(matches, list):
+            props["total"] = len(matches)
+    return generative_ui
+
+
+def _align_ai_message_with_structured_result(
+    ai_message: str,
+    generative_ui: Optional[Dict[str, Any]],
+) -> str:
+    """
+    让文案与结构化结果保持一致，避免“说 N 位但列表不是 N 位”。
+    """
+    if not generative_ui:
+        return ai_message
+
+    component_type = generative_ui.get("component_type")
+    props = generative_ui.get("props", {}) if isinstance(generative_ui.get("props"), dict) else {}
+    if component_type != "MatchCardList":
+        return ai_message
+
+    matches = props.get("matches", [])
+    if not isinstance(matches, list):
+        return ai_message
+
+    total = len(matches)
+    canonical_prefix = f"【匹配结果】\n\n为你找到 {total} 位候选人（以下结构化列表为准）。\n\n"
+    # 若文本里已经有“X位”但与结构化数量不一致，强制替换为标准前缀。
+    stated_counts = [int(item) for item in re.findall(r"(\d+)\s*位", ai_message or "")]
+    if stated_counts and any(count != total for count in stated_counts):
+        logger.warning(f"[DEERFLOW] 文案人数与结构化结果不一致: text={stated_counts}, structured={total}")
+        return canonical_prefix + (ai_message or "")
+
+    # 即使未显式写人数，也给匹配场景加一个标准前缀，减少歧义。
+    if ai_message and "匹配结果" not in ai_message:
+        return canonical_prefix + ai_message
+    return ai_message
+
+
+def _build_observability_trace(
+    request: ChatRequest,
+    intent: Dict[str, Any],
+    generative_ui: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """构建用于定位问题的最小可观测证据链。"""
+    trace: Dict[str, Any] = {
+        "thread_id": request.thread_id,
+        "user_id": request.user_id,
+        "message_preview": (request.message or "")[:80],
+        "intent_type": intent.get("type"),
+        "intent_source": intent.get("source"),
+        "intent_confidence": intent.get("confidence"),
+        "ui_component_type": None,
+        "ui_matches_count": None,
+    }
+    if generative_ui:
+        trace["ui_component_type"] = generative_ui.get("component_type")
+        props = generative_ui.get("props", {})
+        if isinstance(props, dict) and isinstance(props.get("matches"), list):
+            trace["ui_matches_count"] = len(props.get("matches"))
+    return trace
+
+
+def _enrich_tool_result_with_observability(
+    tool_result: Optional[Dict[str, Any]],
+    trace: Dict[str, Any],
+) -> Dict[str, Any]:
+    """把关键可观测信息挂到 tool_result，方便测试与排障统一读取。"""
+    base: Dict[str, Any] = dict(tool_result) if isinstance(tool_result, dict) else {}
+    base["observability"] = trace
+    return base
 
 
 async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
@@ -685,27 +912,48 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
 
         chat_start = time.time()
 
-        # 🔧 [修复] 添加超时保护（约会建议等复杂场景可能超时）
-        MAX_TIMEOUT = 60.0  # 🔧 [调试] 从30秒增加到60秒，给复杂请求更多时间
+        # 🔧 [关键修复] 使用 stream 方法获取工具调用的原始结果
+        # DeerFlow client.chat() 只返回文本，不返回工具 JSON
+        # 使用 stream 可以获取 ToolMessage，其中包含工具返回的 JSON
+        MAX_TIMEOUT = 60.0
+        response_text = ""
+        tool_results_list = []  # 收集所有工具调用结果
+
         try:
-            # 使用 asyncio.wait_for 添加超时保护
-            # 注意：thread_id 是 keyword-only 参数，必须用 keyword 方式传递
-            # 🔧 [调试] 记录调用前状态
-            logger.info(f"[DEERFLOW_TRACE] 开始 asyncio.to_thread 调用，超时={MAX_TIMEOUT}s")
+            logger.info(f"[DEERFLOW_TRACE] 开始 stream 调用，超时={MAX_TIMEOUT}s")
 
-            response_text = await asyncio.wait_for(
-                asyncio.to_thread(client.chat, request.message, thread_id=thread_id, user_id=request.user_id),
-                timeout=MAX_TIMEOUT
-            )
+            # 使用 asyncio.wait_for 包装整个 stream 处理
+            async def process_stream():
+                nonlocal response_text, tool_results_list
+                # stream 是同步生成器，需要在线程中运行
+                stream_gen = client.stream(request.message, thread_id=thread_id, user_id=request.user_id)
 
-            # 🔧 [调试] 记录返回结果
-            logger.info(f"[DEERFLOW_TRACE] client.chat 返回成功")
-            logger.info(f"[DEERFLOW_TRACE] response_text 前500字: {response_text[:500] if response_text else 'EMPTY'}...")
+                for event in stream_gen:
+                    if event.type == "messages-tuple":
+                        data = event.data
+                        # AI 文本回复
+                        if data.get("type") == "ai" and data.get("content"):
+                            response_text += data["content"]
+                        # 工具返回结果（ToolMessage）
+                        elif data.get("type") == "tool" and data.get("content"):
+                            # 尝试解析工具返回的 JSON
+                            try:
+                                tool_json = json.loads(data["content"])
+                                if tool_json.get("success") and tool_json.get("data"):
+                                    tool_results_list.append(tool_json)
+                                    logger.info(f"[DEERFLOW_TRACE] 提取工具结果: {tool_json.get('data', {}).get('component_type', 'unknown')}")
+                            except json.JSONDecodeError:
+                                pass
+                    elif event.type == "end":
+                        break
+
+            await asyncio.wait_for(process_stream(), timeout=MAX_TIMEOUT)
+            logger.info(f"[DEERFLOW_TRACE] stream 处理完成")
 
         except asyncio.TimeoutError:
             logger.warning(f"[DEERFLOW_TRACE] ⏱️ Timeout after {MAX_TIMEOUT}s for message: {request.message[:50]}...")
             # 🔧 [安全兜底] 返回友好提示，不暴露系统内部状态
-            intent = infer_intent_from_response(request.message, "", None)
+            intent = infer_intent_from_response(request.message, "", None, None)
             logger.info(f"[DEERFLOW_TRACE] 返回 timeout_fallback 响应")
             return DeerFlowResponse(
                 success=True,
@@ -733,28 +981,46 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
         learning_result = None
 
         parse_start = time.time()
+        # 🔧 [关键] 在 try 块开始时初始化 parsed
+        parsed = None
         try:
-            # 🔧 [改进] 更灵活的 JSON 解析：支持从文本中提取嵌入的 JSON
-            parsed = None
+            # 🔧 [关键] 优先使用从 stream 中提取的工具结果
+            if tool_results_list:
+                # 选择最后一个有效工具结果，避免中间工具覆盖最终意图
+                valid_tool_results = [
+                    item for item in tool_results_list if item.get("success") and item.get("data")
+                ]
+                if valid_tool_results:
+                    tool_result = valid_tool_results[-1]
+                    ui = build_generative_ui_from_tool_result(tool_result)
+                    if ui:
+                        generative_ui = ui
+                        logger.info(f"[DEERFLOW] 从最终工具结果构建 generative_ui: {ui.get('component_type')}")
+                    data = tool_result.get("data", {})
+                    response_text = data.get("summary", tool_result.get("summary", response_text))
 
-            # 方式 1：直接 JSON（完整响应是 JSON）
-            if response_text.strip().startswith("{") and response_text.strip().endswith("}"):
-                try:
-                    parsed = json.loads(response_text.strip())
-                except json.JSONDecodeError:
-                    pass
+            # 如果没有从 stream 获取工具结果，尝试从文本中提取
+            if not generative_ui and response_text:
+                # parsed 已在外层初始化
 
-            # 方式 2：从 Markdown 代码块中提取 JSON
-            if not parsed and "```json" in response_text:
-                try:
-                    json_start = response_text.find("```json") + 7
-                    json_end = response_text.find("```", json_start)
-                    if json_end > json_start:
-                        json_str = response_text[json_start:json_end].strip()
-                        parsed = json.loads(json_str)
-                        logger.info(f"[DEERFLOW] 从 Markdown 代码块提取 JSON 成功")
-                except json.JSONDecodeError:
-                    pass
+                # 方式 1：直接 JSON（完整响应是 JSON）
+                if response_text and response_text.strip().startswith("{") and response_text.strip().endswith("}"):
+                    try:
+                        parsed = json.loads(response_text.strip())
+                    except json.JSONDecodeError:
+                        pass
+
+                # 方式 2：从 Markdown 代码块中提取 JSON
+                if not parsed and response_text and "```json" in response_text:
+                    try:
+                        json_start = response_text.find("```json") + 7
+                        json_end = response_text.find("```", json_start)
+                        if json_end > json_start:
+                            json_str = response_text[json_start:json_end].strip()
+                            parsed = json.loads(json_str)
+                            logger.info(f"[DEERFLOW] 从 Markdown 代码块提取 JSON 成功")
+                    except json.JSONDecodeError:
+                        pass
 
             # 方式 3：从文本中查找第一个完整的 JSON 对象
             if not parsed and "{" in response_text:
@@ -778,10 +1044,64 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
                 except json.JSONDecodeError:
                     pass
 
-            # 如果成功解析 JSON，构建 Generative UI
+            # 🔧 [新增] 方式 4：从 [GENERATIVE_UI]...[/GENERATIVE_UI] 文本块提取
+            # 支持两种格式：GENERATIVE_UI 和 GENERATIVE_UI
+            # 支持提取多个卡片（匹配结果可能有多个 UserProfileCard）
+            if not generative_ui:
+                all_ui_cards = []
+                # 尝试匹配 GENERATIVE_UI 格式
+                for tag_format in ["GENERATIVE_UI", "GENERATIVE_UI"]:
+                    open_tag = f"[{tag_format}]"
+                    close_tag = f"[/{tag_format}]"
+
+                    # 提取所有 GENERATIVE_UI 块（不只是第一个）
+                    search_start = 0
+                    while open_tag in response_text[search_start:]:
+                        tag_pos = response_text.find(open_tag, search_start)
+                        if tag_pos == -1:
+                            break
+                        ui_start = tag_pos + len(open_tag)
+                        ui_end = response_text.find(close_tag, ui_start)
+                        if ui_end > ui_start:
+                            ui_json_str = response_text[ui_start:ui_end].strip()
+                            try:
+                                ui_parsed = json.loads(ui_json_str)
+                                if ui_parsed.get("component_type") and ui_parsed.get("props"):
+                                    all_ui_cards.append(ui_parsed)
+                                    logger.info(f"[DEERFLOW] 从 {tag_format} 提取卡片: {ui_parsed.get('component_type')}")
+                            except json.JSONDecodeError as e:
+                                logger.warning(f"[DEERFLOW] {tag_format} JSON 解析失败: {e}")
+                            search_start = ui_end + len(close_tag)
+                        else:
+                            break
+
+                # 处理提取到的卡片
+                if all_ui_cards:
+                    # 如果是多个 UserProfileCard → 合并为 MatchCardList
+                    user_profile_cards = [c for c in all_ui_cards if c.get("component_type") == "UserProfileCard"]
+                    if len(user_profile_cards) > 1:
+                        # 多个用户卡片 → 构建匹配列表
+                        generative_ui = {
+                            "component_type": "MatchCardList",
+                            "props": {
+                                "matches": [c["props"] for c in user_profile_cards],
+                                "total": len(user_profile_cards)
+                            }
+                        }
+                        logger.info(f"[DEERFLOW] 合并 {len(user_profile_cards)} 个 UserProfileCard 为 MatchCardList")
+                    elif len(all_ui_cards) == 1:
+                        # 单个卡片 → 直接使用
+                        generative_ui = all_ui_cards[0]
+                    else:
+                        # 其他情况（混合卡片）→ 取第一个
+                        generative_ui = all_ui_cards[0] if all_ui_cards else None
+
+            # 如果成功解析 JSON（ToolResult），构建 Generative UI
             if parsed and parsed.get("success") and parsed.get("data"):
                 tool_result = parsed
-                generative_ui = build_generative_ui_from_tool_result(parsed)
+                # 🔧 [修复] 如果已经从 GENERATIVE_UI 文本提取，不要覆盖
+                if not generative_ui:
+                    generative_ui = build_generative_ui_from_tool_result(parsed)
                 # 🔧 [修复] summary 在 data 里面，不是在顶层
                 data = parsed.get("data", {})
                 response_text = data.get("summary", parsed.get("summary", response_text))
@@ -805,7 +1125,7 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
             # 🔧 [新增] 如果没有解析到 JSON，但意图明确需要 UI，尝试构建基本 UI
             elif not parsed:
                 # 根据意图推断结果，尝试构建对应的 UI
-                intent_type = infer_intent_from_response(request.message, response_text, None).get("type")
+                intent_type = infer_intent_from_response(request.message, response_text, None, tool_result).get("type")
 
                 # 意图需要 UI 但响应是纯文本 → 射击提示
                 if intent_type in ["match_request", "topic_request", "icebreaker_request", "date_planning", "compatibility_analysis"]:
@@ -816,9 +1136,14 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
         logger.info(f"[DEERFLOW] Response parsing done in {time.time() - parse_start:.3f}s")
 
         # 🔧 [修复] 推断意图类型（测试框架需要）
-        intent = infer_intent_from_response(request.message, response_text, generative_ui)
+        generative_ui = _normalize_generative_ui(generative_ui)
+        intent = infer_intent_from_response(request.message, response_text, generative_ui, tool_result)
         logger.info(f"[DEERFLOW] Intent inferred: {intent['type']} (confidence={intent['confidence']})")
 
+        response_text = _align_ai_message_with_structured_result(response_text, generative_ui)
+        observability_trace = _build_observability_trace(request, intent, generative_ui)
+        tool_result = _enrich_tool_result_with_observability(tool_result, observability_trace)
+        logger.info(f"[DEERFLOW_TRACE] Final trace: {json.dumps(observability_trace, ensure_ascii=False)}")
         logger.info(f"[DEERFLOW] COMPLETE in {time.time() - start_time:.3f}s for user {request.user_id}")
         return DeerFlowResponse(
             success=True,
@@ -880,6 +1205,9 @@ async def _handle_with_her_service(request: ChatRequest) -> DeerFlowResponse:
         logger.info(f"[HER_SERVICE_TRACE] intent={intent}")
         logger.info(f"[HER_SERVICE_TRACE] ===== Her Service 降级处理完成 =====")
 
+        observability_trace = _build_observability_trace(request, intent, generative_ui)
+        logger.info(f"[HER_SERVICE_TRACE] Final trace: {json.dumps(observability_trace, ensure_ascii=False)}")
+
         return DeerFlowResponse(
             success=True,
             ai_message=response.ai_message,
@@ -890,7 +1218,8 @@ async def _handle_with_her_service(request: ChatRequest) -> DeerFlowResponse:
                 "intent_type": response.intent_type,
                 "matches_count": len(response.matches),
                 "has_bias_analysis": response.bias_analysis is not None,
-            }
+                "observability": observability_trace,
+            },
         )
 
     except Exception as e:
@@ -931,9 +1260,10 @@ def build_generative_ui_from_tool_result(tool_result: Dict[str, Any]) -> Dict[st
     if data.get("component_type"):
         # Agent 已经决定了 UI 类型，直接使用
         component_type = data.get("component_type")
-        props = data.get("props", data)  # props 可能直接在 data 里
+        # 🔧 [修复] props 应该从 data 中提取，不要包含 component_type
+        props = {k: v for k, v in data.items() if k != "component_type"}
 
-        logger.info(f"[GenerativeUI] Agent 决定的 UI: {component_type}")
+        logger.info(f"[GenerativeUI] Agent 决定的 UI: {component_type}, props keys: {list(props.keys())}")
         return _build_ui_response(component_type, props)
 
     # ===== 降级：最小化判断（仅用于 Agent 未指定的情况）=====
@@ -959,6 +1289,30 @@ def build_generative_ui_from_tool_result(tool_result: Dict[str, Any]) -> Dict[st
             "matches": matches,
             "total": data.get("total", len(matches))
         }
+        return _build_ui_response("MatchCardList", props)
+
+    # 🔧 [新增] 用户搜索结果 → MatchCardList（数据中有 users，来自 her_find_user_by_name）
+    if data.get("users"):
+        users = data.get("users")
+        # 将 users 转换为 matches 格式
+        matches = [
+            {
+                "user_id": u.get("user_id") or u.get("id"),
+                "name": u.get("name", "匿名"),
+                "age": u.get("age", 0),
+                "location": u.get("location", ""),
+                "interests": u.get("interests", []),
+                "bio": u.get("bio", ""),
+                "confidence_level": u.get("confidence_level", "medium"),
+                "actions": [{"label": "开始聊天", "action": "start_chat", "target_user_id": u.get("user_id") or u.get("id")}]
+            }
+            for u in users
+        ]
+        props = {
+            "matches": matches,
+            "total": data.get("total", len(users))
+        }
+        logger.info(f"[GenerativeUI] 将 users 转换为 MatchCardList: {len(users)} 个用户")
         return _build_ui_response("MatchCardList", props)
 
     # 用户详情卡片 → UserProfileCard（数据中有 selected_user 或 user_profile）

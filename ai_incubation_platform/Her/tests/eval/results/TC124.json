@@ -1,0 +1,33 @@
+{
+  "test_id": "TC124",
+  "category": "edge_cases",
+  "subcategory": "工具调用失败",
+  "input_message": "帮我找对象",
+  "expected_intent": "match_request",
+  "actual_intent": "profile_collection",
+  "actual_response": "请填写你的昵称，开始你的寻缘之旅",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "你的昵称是什么？",
+      "question_type": "text_input",
+      "dimension": "name",
+      "placeholder": "请输入你的昵称",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请填写你的昵称，开始你的寻缘之旅",
+    "意图: 预期 'match_request' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 33585ms"
+  ],
+  "latency_ms": 33585.381269454956,
+  "error": null,
+  "executed_at": "2026-04-14T21:03:15.410062"
+}

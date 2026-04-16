@@ -163,7 +163,6 @@ async def get_mutual_matches(
         logger.warning(f"Get mutual matches failed: user not found: {user_id}")
         raise HTTPException(status_code=404, detail="User not found")
 
-    # 注：matchmaker.get_mutual_matches 已废弃
     # 从数据库查询双向匹配记录
     from sqlalchemy import text
     db = next(get_db())
@@ -177,16 +176,26 @@ async def get_mutual_matches(
         {"user_id": user_id}
     ).fetchall()
 
-    results = []
+    # 🔧 [性能优化] 批量查询：先收集所有 matched_id，再一次性查询所有用户
+    matched_ids = []
+    score_map = {}  # user_id -> compatibility_score
     for record in mutual_records:
         matched_id = record[0] if record[0] != user_id else record[1]
-        matched_db_user = service.get_by_id(matched_id)
+        matched_ids.append(matched_id)
+        score_map[matched_id] = record[2] or 0.5
+
+    # 批量查询所有匹配用户（消除 N+1 问题）
+    matched_users_map = service.get_by_ids(matched_ids) if matched_ids else {}
+
+    results = []
+    from api.users import _from_db
+    for matched_id in matched_ids:
+        matched_db_user = matched_users_map.get(matched_id)
         if matched_db_user:
-            from api.users import _from_db
             matched_user = _from_db(matched_db_user)
             results.append({
                 'user': matched_user,
-                'compatibility_score': record[2] or 0.5,
+                'compatibility_score': score_map.get(matched_id, 0.5),
             })
 
     # 写入缓存
@@ -703,57 +712,79 @@ async def get_recommendations(
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # 使用 ConversationMatchService 执行匹配（AI Native）
-    from services.conversation_match_service import get_conversation_match_service
-    match_service = get_conversation_match_service()
+    # 使用 MatchExecutor 执行匹配（AI Native）
+    from services.conversation_match.match_executor import get_match_executor
+    from services.user_profile_service import get_user_profile_service
 
-    # 构建额外的过滤条件
-    extra_filters = {}
-    if age_min:
-        extra_filters["age_min"] = age_min
-    if age_max:
-        extra_filters["age_max"] = age_max
+    match_executor = get_match_executor()
+    profile_service = get_user_profile_service()
+
+    # 获取用户画像
+    self_profile, desire_profile = await profile_service.get_or_create_profile(user_id)
+
+    # 构建提取条件
+    extracted_conditions = {}
+    if age_min or age_max:
+        extracted_conditions["age_range"] = [age_min or 18, age_max or 100]
     if distance:
-        extra_filters["max_distance_km"] = distance
+        extracted_conditions["max_distance_km"] = distance
 
-    result = await match_service.execute_matching(
+    # 执行匹配
+    candidates = await match_executor.execute_matching(
         user_id,
-        limit=limit,
-        extra_filters=extra_filters
+        self_profile,
+        desire_profile,
+        extracted_conditions,
+        limit=limit
     )
 
-    if not result.get("success"):
-        logger.warning(f"Recommendation failed: {result.get('error')}")
+    if not candidates:
+        logger.warning(f"No candidates found for user {user_id}")
         return []
-
-    candidates = result.get("candidates", [])
 
     # 批量查询认证状态（优化 N+1 查询）
     candidate_ids = [c.get("user_id") for c in candidates]
     from sqlalchemy import text
-    verified_users = db.execute(
-        text("SELECT user_id FROM identity_verifications WHERE user_id IN :user_ids AND verification_status = 'verified'"),
-        {"user_ids": tuple(candidate_ids) if candidate_ids else ('')}
-    ).fetchall()
+    # 🔧 [修复] SQL 参数绑定：单元素 tuple 需要特殊处理
+    if len(candidate_ids) == 1:
+        verified_users = db.execute(
+            text("SELECT user_id FROM identity_verifications WHERE user_id = :user_id AND verification_status = 'verified'"),
+            {"user_id": candidate_ids[0]}
+        ).fetchall()
+    else:
+        verified_users = db.execute(
+            text("SELECT user_id FROM identity_verifications WHERE user_id IN :user_ids AND verification_status = 'verified'"),
+            {"user_ids": tuple(candidate_ids)}
+        ).fetchall()
     verified_user_ids = {row[0] for row in verified_users}
 
     recommendations = []
     for candidate in candidates:
+        profile = candidate.get("candidate_profile", {})
+        advice = candidate.get("her_advice")
+
+        # 从 her_advice 获取 reasoning
+        reasoning = "AI 综合评估推荐"
+        if advice and hasattr(advice, 'reasoning'):
+            reasoning = advice.reasoning
+        elif advice and isinstance(advice, dict):
+            reasoning = advice.get("reasoning", reasoning)
+
         recommendations.append({
             "id": candidate.get("user_id"),
-            "name": candidate.get("name"),
-            "username": candidate.get("name"),
-            "age": candidate.get("age"),
-            "gender": candidate.get("gender"),
-            "location": candidate.get("location"),
-            "avatar_url": candidate.get("avatar_url"),
-            "bio": candidate.get("bio"),
-            "interests": candidate.get("interests", []),
-            "goal": candidate.get("goal", "serious"),
+            "name": profile.get("name"),
+            "username": profile.get("name"),
+            "age": profile.get("age"),
+            "gender": profile.get("gender"),
+            "location": profile.get("location"),
+            "avatar_url": profile.get("avatar_url"),
+            "bio": profile.get("bio"),
+            "interests": profile.get("interests", []),
+            "goal": profile.get("relationship_goal", "serious"),
             "verified": candidate.get("user_id") in verified_user_ids,
-            "compatibility_score": round(candidate.get("compatibility_score", 0.5), 2),
-            "match_reason": candidate.get("reasoning", "AI 综合评估推荐"),
-            "compatibility_reason": candidate.get("reasoning", "AI 综合评估推荐"),
+            "compatibility_score": round(candidate.get("score", 0.5), 2),
+            "match_reason": reasoning,
+            "compatibility_reason": reasoning,
         })
 
     # 按匹配度排序

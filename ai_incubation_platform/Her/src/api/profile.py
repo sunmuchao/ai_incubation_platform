@@ -14,6 +14,15 @@ import json
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
+# 🔧 [缓存同步] 导入缓存清除函数，确保画像更新后 AI 能获取最新数据
+try:
+    from api.deerflow import invalidate_user_cache
+    CACHE_INVALIDATION_AVAILABLE = True
+except ImportError:
+    logger.warning("deerflow cache invalidation not available")
+    CACHE_INVALIDATION_AVAILABLE = False
+    invalidate_user_cache = None
+
 
 # ========== 请求/响应模型 ==========
 
@@ -390,6 +399,13 @@ async def _update_user_profile(user_id: str, profile: Dict[str, Any]) -> bool:
 
                 db.commit()
                 logger.info(f"Profile updated for user={user_id}: {list(profile.keys())}")
+
+                # 🔧 [缓存同步] 清除缓存，确保 AI 下次对话能获取最新画像
+                # 如果不清除缓存，AI 可能会用旧画像做推荐，导致不准确
+                if CACHE_INVALIDATION_AVAILABLE and invalidate_user_cache:
+                    invalidate_user_cache(user_id)
+                    logger.info(f"[缓存同步] 用户画像更新后缓存已清除: {user_id}")
+
                 return True
     except Exception as e:
         logger.error(f"Failed to update user profile: {e}")

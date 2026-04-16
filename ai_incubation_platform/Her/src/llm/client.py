@@ -3,11 +3,18 @@ LLM 客户端模块
 
 封装大模型调用，支持多种 LLM 后端（OpenAI、DashScope、DeepSeek 等）
 支持流式响应和同步调用
+
+性能优化（v2.0）：
+- 全局单例客户端：避免每次调用重新创建连接
+- 配置缓存 + mtime 检测：避免每次调用重新读取 YAML
+- 连接复用：HTTP 连接池自动复用
 """
 import os
 import json
 import asyncio
+import time
 from typing import Optional, Dict, Any, Generator, AsyncGenerator
+from functools import lru_cache
 
 from utils.logger import logger
 
@@ -20,29 +27,88 @@ except ImportError:
     logger.warning("OpenAI SDK not available")
 
 
-def get_llm_config() -> Dict[str, Any]:
+# 🔧 [性能优化] 全局单例客户端 + 配置缓存
+class LLMClientManager:
     """
-    获取 LLM 配置
+    LLM 客户端管理器（单例）
 
-    🔧 [统一配置] 优先从 DeerFlow config.yaml 读取，实现单一真相来源。
-    这样只需维护 deerflow/.env + deerflow/config.yaml 一处配置。
+    性能优化：
+    - 全局单例 OpenAI 客户端：连接复用，避免重复初始化
+    - 配置缓存 + mtime 检测：配置变更自动刷新
     """
-    # 方式1：从 DeerFlow config.yaml 读取（优先）
-    try:
-        import os
-        import yaml
-        her_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-        deerflow_config_path = os.path.join(her_root, "deerflow", "config.yaml")
 
-        if os.path.exists(deerflow_config_path):
-            with open(deerflow_config_path, "r") as f:
+    _instance: Optional["LLMClientManager"] = None
+
+    def __new__(cls) -> "LLMClientManager":
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+            cls._instance._client: Optional[OpenAI] = None
+            cls._instance._config: Optional[Dict[str, Any]] = None
+            cls._instance._config_mtime: float = 0.0
+            cls._instance._config_path: Optional[str] = None
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+        self._initialized = True
+        logger.info("[LLMClientManager] 初始化 LLM 客户端管理器")
+
+    def get_client(self) -> Optional[OpenAI]:
+        """
+        获取 OpenAI 客户端（单例）
+
+        懒加载：首次调用时初始化
+        """
+        if self._client is None:
+            config = self.get_config()
+            if config and config.get("api_key") and config.get("api_base"):
+                self._client = OpenAI(
+                    api_key=config["api_key"],
+                    base_url=config["api_base"],
+                    timeout=60,  # 默认超时
+                )
+                logger.info("[LLMClientManager] OpenAI 客户端初始化完成")
+        return self._client
+
+    def get_config(self) -> Dict[str, Any]:
+        """
+        获取 LLM 配置（带缓存）
+
+        单一真相来源：优先从 DeerFlow config.yaml 读取
+        配置缓存 + mtime 检测：文件变更自动刷新
+        """
+        # 检查配置文件路径
+        if self._config_path is None:
+            her_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            deerflow_config_path = os.path.join(her_root, "deerflow", "config.yaml")
+            self._config_path = deerflow_config_path
+
+        # 检查配置是否需要刷新（mtime 检测）
+        if os.path.exists(self._config_path):
+            current_mtime = os.path.getmtime(self._config_path)
+            if current_mtime != self._config_mtime:
+                self._config = self._load_config_from_yaml(self._config_path)
+                self._config_mtime = current_mtime
+                logger.debug(f"[LLMClientManager] 配置已刷新: mtime={current_mtime}")
+        elif self._config is None:
+            # 配置文件不存在，从 settings 或环境变量读取
+            self._config = self._load_config_from_settings()
+
+        return self._config or {}
+
+    def _load_config_from_yaml(self, config_path: str) -> Dict[str, Any]:
+        """从 DeerFlow config.yaml 读取配置"""
+        try:
+            import yaml
+            with open(config_path, "r") as f:
                 config = yaml.safe_load(f)
 
-            # 获取第一个模型配置（默认模型）
             models = config.get("models", [])
             if models:
                 model_config = models[0]
-                # 解析环境变量引用（如 $OPENAI_API_KEY）
+                # 解析环境变量引用
                 api_key = model_config.get("api_key", "")
                 if api_key.startswith("$"):
                     env_var = api_key[1:]
@@ -63,41 +129,71 @@ def get_llm_config() -> Dict[str, Any]:
                     "temperature": model_config.get("temperature", 0.7),
                     "max_tokens": model_config.get("max_tokens", 4096),
                 }
-    except Exception as e:
-        logger.warning(f"[LLM Config] Failed to read DeerFlow config: {e}")
+        except Exception as e:
+            logger.warning(f"[LLMClientManager] YAML 配置读取失败: {e}")
+            return {}
 
-    # 方式2：从 config.py settings 读取（降级）
-    try:
-        from config import settings
+    def _load_config_from_settings(self) -> Dict[str, Any]:
+        """从 config.py settings 读取配置（降级）"""
+        try:
+            from config import settings
+            return {
+                "api_key": settings.llm_api_key,
+                "api_base": settings.llm_api_base,
+                "model": settings.llm_model,
+                "provider": settings.llm_provider,
+                "max_completion_tokens": settings.llm_max_completion_tokens,
+                "reasoning_effort": settings.llm_reasoning_effort,
+                "temperature": settings.llm_temperature,
+                "max_tokens": settings.llm_max_tokens,
+            }
+        except ImportError:
+            pass
+
+        # 最终降级：从环境变量读取
         return {
-            "api_key": settings.llm_api_key,
-            "api_base": settings.llm_api_base,
-            "model": settings.llm_model,
-            "provider": settings.llm_provider,
-            "max_completion_tokens": settings.llm_max_completion_tokens,
-            "reasoning_effort": settings.llm_reasoning_effort,
-            "temperature": settings.llm_temperature,
-            "max_tokens": settings.llm_max_tokens,
+            "api_key": os.getenv("OPENAI_API_KEY", "") or os.getenv("LLM_API_KEY", ""),
+            "api_base": os.getenv("OPENAI_API_BASE", "") or os.getenv("LLM_API_BASE", ""),
+            "model": os.getenv("OPENAI_MODEL", "") or os.getenv("LLM_MODEL", "doubao-1-5-pro-32k-250115"),
+            "provider": os.getenv("LLM_PROVIDER", "volces"),
+            "max_completion_tokens": int(os.getenv("LLM_MAX_COMPLETION_TOKENS", "65535")),
+            "reasoning_effort": os.getenv("LLM_REASONING_EFFORT", "medium"),
+            "temperature": float(os.getenv("LLM_TEMPERATURE", "0.7")),
+            "max_tokens": int(os.getenv("LLM_MAX_TOKENS", "1000")),
         }
-    except ImportError:
-        pass
 
-    # 方式3：直接读取环境变量（最终降级）
-    api_key = os.getenv("OPENAI_API_KEY", "") or os.getenv("LLM_API_KEY", "")
-    api_base = os.getenv("OPENAI_API_BASE", "") or os.getenv("LLM_API_BASE", "")
-    model = os.getenv("OPENAI_MODEL", "") or os.getenv("LLM_MODEL", "doubao-1-5-pro-32k-250115")
-    provider = os.getenv("LLM_PROVIDER", "volces")
+    def invalidate_cache(self) -> None:
+        """
+        强制刷新配置缓存
 
-    return {
-        "api_key": api_key,
-        "api_base": api_base,
-        "model": model,
-        "provider": provider,
-        "max_completion_tokens": int(os.getenv("LLM_MAX_COMPLETION_TOKENS", "65535")),
-        "reasoning_effort": os.getenv("LLM_REASONING_EFFORT", "medium"),
-        "temperature": float(os.getenv("LLM_TEMPERATURE", "0.7")),
-        "max_tokens": int(os.getenv("LLM_MAX_TOKENS", "1000")),
-    }
+        场景：配置文件更新后主动刷新
+        """
+        self._config_mtime = 0.0
+        self._config = None
+        self._client = None
+        logger.info("[LLMClientManager] 配置缓存已清除")
+
+
+# 全局单例管理器
+_llm_client_manager: Optional[LLMClientManager] = None
+
+
+def get_llm_client_manager() -> LLMClientManager:
+    """获取 LLM 客户端管理器单例"""
+    global _llm_client_manager
+    if _llm_client_manager is None:
+        _llm_client_manager = LLMClientManager()
+    return _llm_client_manager
+
+
+def get_llm_config() -> Dict[str, Any]:
+    """
+    获取 LLM 配置（兼容旧接口）
+
+    🔧 [统一配置] 优先从 DeerFlow config.yaml 读取，实现单一真相来源。
+    这样只需维护 deerflow/.env + deerflow/config.yaml 一处配置。
+    """
+    return get_llm_client_manager().get_config()
 
 
 def call_llm(
@@ -121,8 +217,13 @@ def call_llm(
 
     Returns:
         LLM 生成的文本回复
+
+    性能优化（v2.0）：
+    - 使用全局单例客户端，避免重复初始化
+    - 配置缓存，避免重复读取配置文件
     """
-    config = get_llm_config()
+    manager = get_llm_client_manager()
+    config = manager.get_config()
 
     if not config["api_key"]:
         logger.error("LLM API key not configured")
@@ -143,16 +244,12 @@ def call_llm(
 
     messages.append({"role": "user", "content": prompt})
 
-    # 调用 LLM
+    # 调用 LLM（使用单例客户端）
     try:
-        if OPENAI_AVAILABLE and config["api_base"]:
-            # 使用 OpenAI SDK（兼容 DashScope、火山引擎等）
-            client = OpenAI(
-                api_key=config["api_key"],
-                base_url=config["api_base"],
-                timeout=timeout,
-            )
+        client = manager.get_client()
 
+        if client and OPENAI_AVAILABLE:
+            # 🔧 [性能优化] 使用单例客户端
             # 根据 provider 构建不同的参数
             payload_kwargs = {
                 "model": config["model"],
@@ -201,7 +298,7 @@ def call_llm(
                 f"{config['api_base']}/chat/completions",
                 headers=headers,
                 json=payload,
-                timeout=timeout,  # 🔧 [修复] 使用函数参数中的 timeout（已根据模型类型调整）
+                timeout=timeout,
             )
             resp.raise_for_status()
             content = resp.json()["choices"][0]["message"]["content"]
@@ -232,8 +329,12 @@ def call_llm_stream(
 
     Yields:
         LLM 生成的文本片段（逐字输出）
+
+    性能优化（v2.0）：
+    - 使用全局单例客户端
     """
-    config = get_llm_config()
+    manager = get_llm_client_manager()
+    config = manager.get_config()
 
     if not config["api_key"]:
         logger.error("LLM API key not configured")
@@ -250,12 +351,10 @@ def call_llm_stream(
 
     # 调用 LLM（流式）
     try:
-        if OPENAI_AVAILABLE and config["api_base"]:
-            client = OpenAI(
-                api_key=config["api_key"],
-                base_url=config["api_base"],
-            )
+        client = manager.get_client()
 
+        if client and OPENAI_AVAILABLE:
+            # 🔧 [性能优化] 使用单例客户端
             # 根据 provider 构建不同的参数
             payload_kwargs = {
                 "model": config["model"],
@@ -305,7 +404,7 @@ def call_llm_stream(
                 f"{config['api_base']}/chat/completions",
                 headers=headers,
                 json=payload,
-                timeout=timeout,  # 🔧 [修复] 使用函数参数中的 timeout（已根据模型类型调整）
+                timeout=60,
             )
             resp.raise_for_status()
             content = resp.json()["choices"][0]["message"]["content"]

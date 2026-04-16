@@ -35,6 +35,11 @@ from api.deerflow import (
     build_memory_facts,
     sync_user_memory_to_deerflow,
     build_generative_ui_from_tool_result,
+    infer_intent_from_response,
+    _normalize_generative_ui,
+    _align_ai_message_with_structured_result,
+    _build_observability_trace,
+    _enrich_tool_result_with_observability,
     _build_ui_response,
     _handle_with_her_service,
 )
@@ -571,6 +576,90 @@ class TestGenerativeUIBuilder:
         assert "_schema" in ui["props"]
         assert ui["props"]["_schema"]["backend_type"] == "MatchCardList"
 
+    def test_normalize_match_card_total(self):
+        """测试 MatchCardList total 自动校准"""
+        ui = {
+            "component_type": "MatchCardList",
+            "props": {
+                "matches": [{"name": "A"}, {"name": "B"}, {"name": "C"}],
+                "total": 99,
+            },
+        }
+        normalized = _normalize_generative_ui(ui)
+        assert normalized["props"]["total"] == 3
+
+
+class TestIntentInference:
+    """意图推断优先级测试"""
+
+    def test_intent_prefers_tool_result(self):
+        """工具结果意图应优先于默认兜底"""
+        intent = infer_intent_from_response(
+            message="帮我找对象",
+            response_text="一些文本",
+            generative_ui=None,
+            tool_result={"success": True, "data": {"intent_type": "match_request"}},
+        )
+        assert intent["type"] == "match_request"
+        assert intent["source"] == "tool_result"
+
+    def test_intent_falls_back_to_ui_component(self):
+        """工具缺失时应回退到 UI 组件意图"""
+        intent = infer_intent_from_response(
+            message="分析一下",
+            response_text="",
+            generative_ui={"component_type": "CompatibilityChart", "props": {}},
+            tool_result=None,
+        )
+        assert intent["type"] == "compatibility_analysis"
+        assert intent["source"] == "ui_component"
+
+
+class TestMessageAlignment:
+    """文案与结构化结果一致性测试"""
+
+    def test_align_message_when_count_mismatch(self):
+        ui = {
+            "component_type": "MatchCardList",
+            "props": {"matches": [{"name": "A"}, {"name": "B"}], "total": 2},
+        }
+        aligned = _align_ai_message_with_structured_result("为你找到 5 位候选人：A、B", ui)
+        assert "为你找到 2 位候选人" in aligned
+
+    def test_align_message_add_prefix_when_missing(self):
+        ui = {
+            "component_type": "MatchCardList",
+            "props": {"matches": [{"name": "A"}], "total": 1},
+        }
+        aligned = _align_ai_message_with_structured_result("这里是推荐名单", ui)
+        assert aligned.startswith("【匹配结果】")
+
+
+class TestObservabilityTrace:
+    """可观测证据链测试"""
+
+    def test_build_observability_trace_with_match_card(self):
+        request = ChatRequest(message="帮我找对象", user_id="u-1", thread_id="t-1")
+        intent = {"type": "match_request", "confidence": 0.95, "source": "tool_result"}
+        ui = {
+            "component_type": "MatchCardList",
+            "props": {"matches": [{"name": "A"}, {"name": "B"}]},
+        }
+        trace = _build_observability_trace(request, intent, ui)
+        assert trace["intent_type"] == "match_request"
+        assert trace["intent_source"] == "tool_result"
+        assert trace["ui_component_type"] == "MatchCardList"
+        assert trace["ui_matches_count"] == 2
+
+    def test_enrich_tool_result_with_observability(self):
+        trace = {
+            "intent_type": "match_request",
+            "intent_source": "tool_result",
+        }
+        enriched = _enrich_tool_result_with_observability({"success": True}, trace)
+        assert enriched["success"] is True
+        assert enriched["observability"]["intent_type"] == "match_request"
+
 
 # ============= 第五部分：降级处理测试 =============
 
@@ -598,8 +687,10 @@ class TestFallbackHandling:
             request = ChatRequest(message="测试消息", user_id=str(uuid.uuid4()))
             response = await _handle_with_her_service(request)
 
-            assert response.success == False
-            assert "异常" in response.ai_message or "出错" in response.ai_message
+            # 新架构：异常时返回错误fallback响应，但success=True（降级成功）
+            assert response.success == True  # 降级处理成功
+            assert "繁忙" in response.ai_message or "稍后" in response.ai_message or "换个方式" in response.ai_message
+            assert response.intent.get("type") == "error_fallback"
 
     @pytest.mark.asyncio
     async def test_handle_with_her_service_null_user(self, mock_her_service):
@@ -620,27 +711,30 @@ class TestExceptionHandling:
 
     @patch('api.deerflow.DEERFLOW_AVAILABLE', True)
     def test_chat_endpoint_deerflow_exception(self, client):
-        """测试聊天端点 - DeerFlow 异常"""
+        """测试聊天端点 - DeerFlow 异常
+
+        注：当 DeerFlow client.stream 抛出异常时，代码内部捕获异常并返回
+        deerflow_used=True 的 fallback 响应（不调用 _handle_with_her_service）
+        """
         mock_client = MagicMock()
-        mock_client.chat.side_effect = Exception("DeerFlow 服务异常")
+        # 实际代码调用 client.stream() 而不是 client.chat()
+        mock_client.stream.side_effect = Exception("DeerFlow 服务异常")
 
         with patch('api.deerflow.get_deerflow_client') as mock_get_client:
             mock_get_client.return_value = mock_client
 
-            # 应降级到 Her 服务
-            with patch('api.deerflow._handle_with_her_service') as mock_her:
-                mock_her.return_value = DeerFlowResponse(
-                    success=True,
-                    ai_message="降级响应",
-                    deerflow_used=False
-                )
-                response = client.post(
-                    "/api/deerflow/chat",
-                    json={"message": "测试"}
-                )
-                assert response.status_code == 200
-                data = response.json()
-                assert data["deerflow_used"] == False
+            # DeerFlow 异常被内部捕获，返回 fallback 响应（deerflow_used=True）
+            response = client.post(
+                "/api/deerflow/chat",
+                json={"message": "测试"}
+            )
+            assert response.status_code == 200
+            data = response.json()
+            # 内部捕获异常后返回 deerflow_used=True 的 fallback
+            assert data["deerflow_used"] == True
+            assert data["success"] == True
+            # intent 类型应为 error_fallback（当 stream 抛出异常时）
+            assert data["intent"]["type"] == "error_fallback"
 
     @patch('api.deerflow.DEERFLOW_AVAILABLE', True)
     def test_chat_endpoint_llm_timeout(self, client):

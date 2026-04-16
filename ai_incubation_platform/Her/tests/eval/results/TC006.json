@@ -1,0 +1,20 @@
+{
+  "test_id": "TC006",
+  "category": "happy_path",
+  "subcategory": "画像信息收集",
+  "input_message": "你好",
+  "expected_intent": "profile_collection",
+  "actual_intent": "conversation",
+  "actual_response": "你好呀！我是 Her，你的婚恋助手~ 💕\n\n我可以帮你：\n\n🎯 **找对象** - 根据你的偏好推荐合适的匹配对象\n💬 **聊天破冰** - 提供开场白和话题建议，帮你开启对话\n📅 **约会策划** - 推荐约会地点和活动安排\n📊 **匹配度分析** - 分析你和心仪对象的兼容性\n❤️ **关系指导** - 关系健康度分析和改善建议\n🎁 **礼物推荐** - 根据对方喜好推荐贴心礼物\n\n有什么我可以帮你的吗？😊",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 你好呀！我是 Her，你的婚恋助手~ 💕\n\n我可以帮你：\n\n🎯 **找对象** - 根据你的偏好推荐合适的匹配对象\n💬 **聊天破冰** - 提供开场白和话题建议，帮你开启对话\n📅 **约会策划** - 推荐约会地点和活动安排\n📊 **匹配度分析** - 分析你和心仪对象的兼容性\n❤️ **关系指导** - 关系健康度分析和改善建议\n🎁 **礼物推荐** - 根据对方喜好推荐贴心礼物\n\n有什么我可...",
+    "意图: 预期 'profile_collection' vs 实际 'conversation'",
+    "UI组件: 预期 'ProfileQuestionCard'，实际未返回",
+    "延迟: 9003ms"
+  ],
+  "latency_ms": 9003.427982330322,
+  "error": null,
+  "executed_at": "2026-04-14T20:38:22.955076"
+}

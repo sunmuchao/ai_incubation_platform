@@ -1,0 +1,20 @@
+{
+  "test_id": "TC011",
+  "category": "happy_path",
+  "subcategory": "破冰建议",
+  "input_message": "我和刚匹配的对象聊什么？",
+  "expected_intent": "icebreaker_request",
+  "actual_intent": "conversation",
+  "actual_response": "我来帮你获取破冰开场建议！",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 我来帮你获取破冰开场建议！",
+    "意图: 预期 'icebreaker_request' vs 实际 'conversation'",
+    "UI组件: 预期 'IcebreakerCard'，实际未返回",
+    "延迟: 6269ms"
+  ],
+  "latency_ms": 6268.869876861572,
+  "error": null,
+  "executed_at": "2026-04-14T20:39:26.605215"
+}

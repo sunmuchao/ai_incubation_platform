@@ -1,0 +1,20 @@
+{
+  "test_id": "TC015",
+  "category": "happy_path",
+  "subcategory": "关系分析",
+  "input_message": "我们俩价值观一致吗？",
+  "expected_intent": "compatibility_analysis",
+  "actual_intent": "conversation",
+  "actual_response": "我来帮你分析你和TA的价值观匹配度。不过我需要知道你想了解的是哪位朋友呢？\n\n请告诉我TA的名字或用户ID，我就能为你进行详细的兼容性分析了。",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 我来帮你分析你和TA的价值观匹配度。不过我需要知道你想了解的是哪位朋友呢？\n\n请告诉我TA的名字或用户ID，我就能为你进行详细的兼容性分析了。",
+    "意图: 预期 'compatibility_analysis' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 3358ms"
+  ],
+  "latency_ms": 3357.9330444335938,
+  "error": null,
+  "executed_at": "2026-04-14T20:40:14.481017"
+}

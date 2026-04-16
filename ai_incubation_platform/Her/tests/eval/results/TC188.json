@@ -1,0 +1,61 @@
+{
+  "test_id": "TC188",
+  "category": "happy_path",
+  "subcategory": "工具调用链路",
+  "input_message": "帮我找对象，然后告诉我怎么和第一个聊",
+  "expected_intent": "multi_tool_chain",
+  "actual_intent": "profile_collection",
+  "actual_response": "请先填写你的基本信息",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "你的基本信息是什么？",
+      "question_type": "multi_input",
+      "fields": [
+        {
+          "id": "name",
+          "label": "称呼",
+          "type": "text",
+          "placeholder": "怎么称呼你？"
+        },
+        {
+          "id": "age",
+          "label": "年龄",
+          "type": "number",
+          "placeholder": "你的年龄"
+        },
+        {
+          "id": "gender",
+          "label": "性别",
+          "type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ]
+        },
+        {
+          "id": "location",
+          "label": "所在城市",
+          "type": "text",
+          "placeholder": "比如：北京、上海、深圳"
+        }
+      ],
+      "dimension": "basic_info",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请先填写你的基本信息",
+    "意图: 预期 'multi_tool_chain' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 16130ms"
+  ],
+  "latency_ms": 16129.57215309143,
+  "error": null,
+  "executed_at": "2026-04-14T21:19:57.485703"
+}

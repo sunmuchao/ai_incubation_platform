@@ -1,0 +1,58 @@
+{
+  "test_id": "TC200",
+  "category": "happy_path",
+  "subcategory": "匹配算法",
+  "input_message": "找25-30岁、无锡、奔着结婚的女生",
+  "expected_intent": "match_request",
+  "actual_intent": "profile_collection",
+  "actual_response": "已记录您的择偶偏好：25-30岁、无锡、奔着结婚。请先完善您的基本信息，马上为您匹配！",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "title": "欢迎开启匹配之旅",
+      "description": "为了给您推荐最合适的对象，请先完善您的基本信息",
+      "questions": [
+        {
+          "question": "您的性别是？",
+          "question_type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ],
+          "dimension": "gender"
+        },
+        {
+          "question": "您的年龄是？",
+          "question_type": "number_input",
+          "dimension": "age"
+        },
+        {
+          "question": "您所在的城市是？",
+          "question_type": "text_input",
+          "dimension": "location",
+          "placeholder": "例如：无锡"
+        }
+      ],
+      "saved_preferences": {
+        "preferred_age": "25-30岁",
+        "preferred_location": "无锡",
+        "relationship_goal": "奔着结婚"
+      },
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 已记录您的择偶偏好：25-30岁、无锡、奔着结婚。请先完善您的基本信息，马上为您匹配！",
+    "意图: 预期 'match_request' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 30174ms"
+  ],
+  "latency_ms": 30174.201011657715,
+  "error": null,
+  "executed_at": "2026-04-14T21:23:07.015548"
+}

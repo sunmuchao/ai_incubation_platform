@@ -1,0 +1,20 @@
+{
+  "test_id": "TC057",
+  "category": "happy_path",
+  "subcategory": "视频约会",
+  "input_message": "我想和她视频约会，有什么建议吗？",
+  "expected_intent": "video_date_planning",
+  "actual_intent": "conversation",
+  "actual_response": "",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: ",
+    "意图: 预期 'video_date_planning' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 10690ms"
+  ],
+  "latency_ms": 10689.939022064209,
+  "error": null,
+  "executed_at": "2026-04-14T20:48:53.079582"
+}

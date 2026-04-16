@@ -1,0 +1,43 @@
+{
+  "test_id": "TC203",
+  "category": "happy_path",
+  "subcategory": "匹配算法",
+  "input_message": "只找同城的",
+  "expected_intent": "match_request",
+  "actual_intent": "profile_collection",
+  "actual_response": "请先完成基础信息设置，然后为您推荐同城对象",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "您的性别是？",
+      "question_type": "single_choice",
+      "options": [
+        {
+          "label": "男生",
+          "value": "male"
+        },
+        {
+          "label": "女生",
+          "value": "female"
+        }
+      ],
+      "dimension": "gender",
+      "next_question": "您的年龄是？",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请先完成基础信息设置，然后为您推荐同城对象",
+    "意图: 预期 'match_request' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 10425ms"
+  ],
+  "latency_ms": 10424.625873565674,
+  "error": null,
+  "executed_at": "2026-04-14T21:24:18.681867"
+}

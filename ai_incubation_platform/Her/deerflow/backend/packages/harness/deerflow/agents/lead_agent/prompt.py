@@ -605,9 +605,17 @@ def get_skills_prompt_section(available_skills: set[str] | None = None) -> str:
 def get_agent_soul(agent_name: str | None) -> str:
     # Append SOUL.md (agent personality) if present
     soul = load_agent_soul(agent_name)
+
+    # 🔧 [诊断日志]
     if soul:
-        return f"<soul>\n{soul}\n</soul>\n" if soul else ""
-    return ""
+        logger.info(f"[SOUL.md] 成功加载，长度: {len(soul)} 字")
+        logger.info(f"[SOUL.md] 内容预览: {soul[:200]}...")
+        wrapped_soul = f"<soul>\n{soul}\n</soul>\n"
+        logger.info(f"[SOUL.md] 最终注入长度: {len(wrapped_soul)} 字")
+        return wrapped_soul
+    else:
+        logger.warning(f"[SOUL.md] 未加载任何内容，agent_name={agent_name}")
+        return ""
 
 
 def get_deferred_tools_prompt_section() -> str:

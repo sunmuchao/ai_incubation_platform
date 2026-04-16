@@ -1,0 +1,32 @@
+# Claude Code 忽略规则
+# 这些文件/目录已废弃或不应被参考
+
+# ==================== 前端废弃代码 ====================
+# Generative UI 组件库 - 设计了但前端实际只使用部分组件
+# 注：MatchComponents.tsx 和 ChatComponents.tsx 被 ChatInterface.tsx 懒加载使用
+# 其余组件可能未被动态渲染，需谨慎参考
+frontend/src/components/generative-ui/
+
+# ==================== 测试文件（保留但不参考）====================
+# 测试文件是必要的，但不应作为实现参考
+frontend/src/test/__tests__/
+frontend/src/tests/
+tests/
+
+# ==================== 临时/缓存文件 ====================
+# SQLite 内存数据库缓存
+*:memory:*
+*.db
+__pycache__/
+node_modules/
+htmlcov/
+.coverage
+.pytest_cache/
+dist/
+build/
+
+# ==================== 文档（仅供参考）====================
+# 设计文档不应作为实现参考
+docs/DATING_APP_COMPETITIVE_ANALYSIS.md
+docs/VECTOR_MATCH_SYSTEM_DESIGN.md
+docs/PROGRESSIVE_SMART_MATCHING_SYSTEM.md

@@ -1,0 +1,20 @@
+{
+  "test_id": "TC035",
+  "category": "edge_cases",
+  "subcategory": "无效用户ID",
+  "input_message": "帮我找对象",
+  "expected_intent": null,
+  "actual_intent": "conversation",
+  "actual_response": "",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: ",
+    "意图: 无预期，实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 16517ms"
+  ],
+  "latency_ms": 16516.541957855225,
+  "error": null,
+  "executed_at": "2026-04-14T20:44:53.544761"
+}

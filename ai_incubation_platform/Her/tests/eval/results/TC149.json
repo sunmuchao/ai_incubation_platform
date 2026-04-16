@@ -1,0 +1,55 @@
+{
+  "test_id": "TC149",
+  "category": "happy_path",
+  "subcategory": "个性化学习",
+  "input_message": "我喜欢温柔类型的",
+  "expected_intent": "preference_learning",
+  "actual_intent": "profile_collection",
+  "actual_response": "请先完善基本信息，我会为您推荐温柔类型的对象",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "为了给您推荐合适的温柔类型对象，请先告诉我：",
+      "question_type": "multi_step",
+      "steps": [
+        {
+          "step": 1,
+          "question": "你的性别是？",
+          "options": [
+            "男",
+            "女"
+          ],
+          "dimension": "gender"
+        },
+        {
+          "step": 2,
+          "question": "你的年龄是？",
+          "input_type": "number",
+          "dimension": "age"
+        },
+        {
+          "step": 3,
+          "question": "你所在的城市是？",
+          "input_type": "text",
+          "dimension": "location"
+        }
+      ],
+      "preference_note": "已记录您的偏好：喜欢温柔类型的对象",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请先完善基本信息，我会为您推荐温柔类型的对象",
+    "意图: 预期 'preference_learning' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 41211ms"
+  ],
+  "latency_ms": 41211.14182472229,
+  "error": null,
+  "executed_at": "2026-04-14T21:12:58.683869"
+}

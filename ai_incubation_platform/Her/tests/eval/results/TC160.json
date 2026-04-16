@@ -1,0 +1,20 @@
+{
+  "test_id": "TC160",
+  "category": "happy_path",
+  "subcategory": "输出格式",
+  "input_message": "帮我找对象",
+  "expected_intent": null,
+  "actual_intent": "conversation",
+  "actual_response": "你好呀！我是 Her，你的婚恋助手~ 💕\n\n为了给你找到最合适的人选，我需要先了解一些你的基本信息。让我们从简单的开始：\n\n**请问你的昵称是？**\n\n你可以告诉我任何你喜欢的称呼，比如小名、英文名，或者直接用你的名字都可以~",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 你好呀！我是 Her，你的婚恋助手~ 💕\n\n为了给你找到最合适的人选，我需要先了解一些你的基本信息。让我们从简单的开始：\n\n**请问你的昵称是？**\n\n你可以告诉我任何你喜欢的称呼，比如小名、英文名，或者直接用你的名字都可以~",
+    "意图: 无预期，实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 10781ms"
+  ],
+  "latency_ms": 10780.921936035156,
+  "error": null,
+  "executed_at": "2026-04-14T21:16:27.456658"
+}

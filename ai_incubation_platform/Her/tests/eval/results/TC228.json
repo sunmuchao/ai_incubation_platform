@@ -1,0 +1,60 @@
+{
+  "test_id": "TC228",
+  "category": "edge_cases",
+  "subcategory": "极端地理位置",
+  "input_message": "帮我找南极的对象",
+  "expected_intent": "match_request",
+  "actual_intent": "profile_collection",
+  "actual_response": "请先完善您的基本信息，然后为您推荐合适的对象",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "欢迎来到 Her！为了帮您找到合适的对象，请告诉我您的基本信息",
+      "question_type": "profile_collection",
+      "steps": [
+        {
+          "field": "name",
+          "label": "您的昵称",
+          "required": true
+        },
+        {
+          "field": "age",
+          "label": "您的年龄",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "field": "gender",
+          "label": "您的性别",
+          "required": true,
+          "type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ]
+        },
+        {
+          "field": "location",
+          "label": "您所在的城市",
+          "required": true
+        }
+      ],
+      "next_action": "收集完成后为您匹配",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请先完善您的基本信息，然后为您推荐合适的对象",
+    "意图: 预期 'match_request' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 19250ms"
+  ],
+  "latency_ms": 19250.13279914856,
+  "error": null,
+  "executed_at": "2026-04-14T21:31:47.461927"
+}

@@ -25,6 +25,7 @@ const AgentFloatingBall = lazy(() => import('../components/AgentFloatingBall'))
 const SwipeMatchPage = lazy(() => import('./SwipeMatchPage'))
 const WhoLikesMePage = lazy(() => import('./WhoLikesMePage'))
 const ConfidenceManagementPage = lazy(() => import('./ConfidenceManagementPage'))
+const FaceVerificationPage = lazy(() => import('./FaceVerificationPage'))
 const YourTurnReminder = lazy(() => import('../components/YourTurnReminder'))
 // 🚀 [性能优化] FeaturesButton 需要立即渲染，直接导入
 import { FeaturesButton } from '../components/FeaturesDrawer'
@@ -57,6 +58,7 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
   const [showSwipeMatch, setShowSwipeMatch] = useState(false) // 滑动匹配页面状态
   const [showWhoLikesMe, setShowWhoLikesMe] = useState(false) // Who Likes Me 页面状态
   const [showConfidence, setShowConfidence] = useState(false) // 置信度管理页面状态
+  const [showFaceVerification, setShowFaceVerification] = useState(false) // 人脸认证页面状态
   const [herSleeping, setHerSleeping] = useState(herStorage.isSleepingInChat()) // Her 休眠状态
   const userId = userInfo?.username || 'user-anonymous-dev'
 
@@ -245,6 +247,12 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
       return
     }
 
+    // 人脸认证功能 - 直接显示页面
+    if (feature.action === 'face_verification') {
+      setShowFaceVerification(true)
+      return
+    }
+
     // Your Turn 功能 - 触发 ChatInterface 显示 YourTurnReminder
     if (feature.action === 'your_turn') {
       window.dispatchEvent(new CustomEvent('trigger-feature', {
@@ -276,12 +284,36 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
     setShowConfidence(false)
   }
 
+  // 从人脸认证页面返回
+  const handleBackFromFaceVerification = () => {
+    setShowFaceVerification(false)
+  }
+
+  // 监听来自 ChatInterface 的事件
+  useEffect(() => {
+    const handleGoMatch = () => {
+      setShowSwipeMatch(true)
+    }
+
+    const handleFaceVerification = () => {
+      setShowFaceVerification(true)
+    }
+
+    window.addEventListener('trigger-go-match', handleGoMatch)
+    window.addEventListener('trigger-face-verification', handleFaceVerification)
+
+    return () => {
+      window.removeEventListener('trigger-go-match', handleGoMatch)
+      window.removeEventListener('trigger-face-verification', handleFaceVerification)
+    }
+  }, [])
+
   const renderView = () => {
     // 滑动匹配页面
     if (showSwipeMatch) {
       return (
         <div className="swipe-match-view">
-          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip={t('home.loadingSwipeMatch')} /></div>}>
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip={t('home.loadingSwipeMatch')}><div style={{ padding: 50 }} /></Spin></div>}>
             <SwipeMatchPage onBack={handleBackFromSwipe} />
           </Suspense>
         </div>
@@ -292,7 +324,7 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
     if (showWhoLikesMe) {
       return (
         <div className="who-likes-me-view">
-          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip={t('home.loadingWhoLikesMe')} /></div>}>
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip={t('home.loadingWhoLikesMe')}><div style={{ padding: 50 }} /></Spin></div>}>
             <WhoLikesMePage
               userId={userId}
               onMatch={(_matchId, matchData) => {
@@ -312,8 +344,25 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
     if (showConfidence) {
       return (
         <div className="confidence-view">
-          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip="加载置信度数据..." /></div>}>
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip="加载置信度数据..."><div style={{ padding: 50 }} /></Spin></div>}>
             <ConfidenceManagementPage onBack={handleBackFromConfidence} />
+          </Suspense>
+        </div>
+      )
+    }
+
+    // 人脸认证页面
+    if (showFaceVerification) {
+      return (
+        <div className="face-verification-view">
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip="加载认证数据..."><div style={{ padding: 50 }} /></Spin></div>}>
+            <FaceVerificationPage
+              onBack={handleBackFromFaceVerification}
+              onComplete={(badge) => {
+                message.success('人脸认证成功！')
+                setShowFaceVerification(false)
+              }}
+            />
           </Suspense>
         </div>
       )
@@ -323,7 +372,7 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
       return (
         <div className="chat-room-view">
           {/* 🚀 [性能优化] Suspense 包裹懒加载的 ChatRoom */}
-          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip={t('home.loadingChatRoom')} /></div>}>
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Spin size="large" tip={t('home.loadingChatRoom')}><div style={{ padding: 50 }} /></Spin></div>}>
             <ChatRoom
               match={chatRoomMatch}
               onBack={handleBackToChat}
@@ -376,7 +425,7 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
               />
             </Suspense>
             {/* 聊天室或滑动匹配模式下隐藏功能按钮，专注当前体验 */}
-              {!chatRoomMatch && !showSwipeMatch && !showWhoLikesMe && !showConfidence && <FeaturesButton onClick={() => setFeaturesDrawerOpen(true)} />}
+              {!chatRoomMatch && !showSwipeMatch && !showWhoLikesMe && !showConfidence && !showFaceVerification && <FeaturesButton onClick={() => setFeaturesDrawerOpen(true)} />}
             <Space>
               {userInfo && (
                 <Text type="secondary" style={{ fontSize: 14 }}>

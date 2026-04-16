@@ -1,0 +1,21 @@
+{
+  "test_id": "TC004",
+  "category": "happy_path",
+  "subcategory": "匹配推荐",
+  "input_message": "我想找个认真谈恋爱的对象",
+  "expected_intent": "match_request",
+  "actual_intent": null,
+  "actual_response": "API 调用失败: HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=60)",
+  "generative_ui": null,
+  "passed": false,
+  "details": [
+    "API 错误: HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=60)",
+    "实际响应: API 调用失败: HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=60)",
+    "意图: 预期 'match_request'，API 未返回意图字段",
+    "UI组件: 无",
+    "延迟: 60014ms"
+  ],
+  "latency_ms": 60014.00589942932,
+  "error": "API 返回失败",
+  "executed_at": "2026-04-14T20:37:49.708679"
+}

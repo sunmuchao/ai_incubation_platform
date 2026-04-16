@@ -6,13 +6,19 @@ MatchExecutor - 匹配执行器
 - 让 AI 判断每个候选人的匹配度
 - 返回排序后的匹配结果
 
+性能优化（v2.0）：
+- 批量获取候选人画像（消除 N+1 查询）
+- 并行化 LLM 调用（asyncio.gather）
+- 结果缓存复用
+
 从 ConversationMatchService 提取的方法：
 - _execute_matching
 - _query_candidate_pool
 - _get_compatible_goals
 """
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
+import asyncio
 
 from utils.logger import logger
 from utils.db_session_manager import db_session
@@ -35,6 +41,10 @@ class MatchExecutor:
     匹配执行器
 
     负责从数据库查询候选人并让 AI 判断匹配度
+
+    性能优化：
+    - 批量画像获取：避免 N+1 查询
+    - 并行 LLM 调用：使用 asyncio.gather
     """
 
     def __init__(
@@ -56,9 +66,9 @@ class MatchExecutor:
         """
         执行匹配 - AI 直接判断匹配度
 
-        不再使用 matcher.py 算分数，而是：
-        1. 从数据库查询候选人池
-        2. 让 HerAdvisorService（AI）判断每个候选人的匹配度
+        性能优化版本：
+        1. 批量获取候选人画像（消除 N+1）
+        2. 并行化 LLM 判断（asyncio.gather）
         """
         logger.info(f"[MatchExecutor] 执行匹配 for user {user_id}")
 
@@ -75,25 +85,50 @@ class MatchExecutor:
             logger.info(f"[MatchExecutor] 没有找到候选人")
             return []
 
-        # 让 AI 判断每个候选人的匹配度
-        matches = []
+        # 🔧 [性能优化] 批量获取所有候选人画像
+        candidate_ids = [c.get("id") for c in candidates]
+        profiles_map = await self._profile_service.get_profiles_batch(candidate_ids)
+
+        # 🔧 [性能优化] 并行化 LLM 判断
+        llm_tasks = []
         for candidate in candidates:
             candidate_id = candidate.get("id")
+            candidate_profiles = profiles_map.get(candidate_id)
 
-            # 获取候选人画像
-            candidate_self, candidate_desire = await self._profile_service.get_or_create_profile(candidate_id)
+            if candidate_profiles:
+                candidate_self, candidate_desire = candidate_profiles
+            else:
+                # 降级：使用默认画像
+                candidate_self, candidate_desire = SelfProfile(), DesireProfile()
 
-            # 让 Her 顾问判断匹配度
-            advice = await self._her_advisor.generate_match_advice(
+            # 创建 LLM 判断任务
+            task = self._her_advisor.generate_match_advice(
                 user_id_a=user_id,
                 user_id_b=candidate_id,
                 user_a_profile=(self_profile, desire_profile),
                 user_b_profile=(candidate_self, candidate_desire),
-                compatibility_score=0.5  # 基础分数，AI 会重新判断
+                compatibility_score=0.5
             )
+            llm_tasks.append((candidate_id, candidate_self, task))
 
-            # AI 判断的匹配度
-            score = advice.compatibility_score if advice else 0.5
+        # 并行执行所有 LLM 调用
+        advice_results = await asyncio.gather(
+            *[t[2] for t in llm_tasks],
+            return_exceptions=True
+        )
+
+        # 组装结果
+        matches = []
+        for i, (candidate_id, candidate_self, _) in enumerate(llm_tasks):
+            advice = advice_results[i]
+
+            # 处理异常情况
+            if isinstance(advice, Exception):
+                logger.warning(f"[MatchExecutor] LLM 判断失败: {candidate_id}, error: {advice}")
+                score = 0.5
+                advice = None
+            else:
+                score = advice.compatibility_score if advice else 0.5
 
             matches.append({
                 "user_id": candidate_id,
@@ -105,7 +140,7 @@ class MatchExecutor:
         # 按匹配度排序
         matches.sort(key=lambda x: x["score"], reverse=True)
 
-        logger.info(f"[MatchExecutor] AI 判断了 {len(matches)} 个候选人")
+        logger.info(f"[MatchExecutor] AI 并行判断了 {len(matches)} 个候选人")
         return matches[:5]  # 返回前 5 个
 
     def _query_candidate_pool(

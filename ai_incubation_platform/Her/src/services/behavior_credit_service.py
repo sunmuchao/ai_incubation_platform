@@ -91,7 +91,7 @@ class BehaviorCreditService(BaseService):
 
     def get_or_create_credit(self, user_id: str) -> BehaviorCreditDB:
         """获取或创建用户信用记录"""
-        db = self._get_db()
+        db = self.db
         credit = db.query(BehaviorCreditDB).filter(
             BehaviorCreditDB.user_id == user_id
         ).first()
@@ -139,7 +139,7 @@ class BehaviorCreditService(BaseService):
         Returns:
             (success, message, score_change)
         """
-        db = self._get_db()
+        db = self.db
 
         # 确定分数变化
         score_change = 0
@@ -269,7 +269,7 @@ class BehaviorCreditService(BaseService):
         Returns:
             事件历史列表
         """
-        db = self._get_db()
+        db = self.db
         events = db.query(BehaviorCreditEventDB).filter(
             BehaviorCreditEventDB.user_id == user_id
         ).order_by(
@@ -309,7 +309,7 @@ class BehaviorCreditService(BaseService):
         Returns:
             (success, message)
         """
-        db = self._get_db()
+        db = self.db
 
         event = db.query(BehaviorCreditEventDB).filter(
             BehaviorCreditEventDB.id == event_id,
@@ -351,7 +351,7 @@ class BehaviorCreditService(BaseService):
         Returns:
             (success, message)
         """
-        db = self._get_db()
+        db = self.db
 
         event = db.query(BehaviorCreditEventDB).filter(
             BehaviorCreditEventDB.id == event_id
@@ -414,7 +414,7 @@ class BehaviorCreditService(BaseService):
 
     def get_credit_stats(self) -> Dict:
         """获取信用统计"""
-        db = self._get_db()
+        db = self.db
 
         total_users = db.query(BehaviorCreditDB).count()
         level_distribution = db.query(

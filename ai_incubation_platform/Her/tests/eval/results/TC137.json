@@ -1,0 +1,21 @@
+{
+  "test_id": "TC137",
+  "category": "edge_cases",
+  "subcategory": "年龄边界",
+  "input_message": "我想找30-20岁的对象",
+  "expected_intent": null,
+  "actual_intent": null,
+  "actual_response": "API 调用失败: HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=60)",
+  "generative_ui": null,
+  "passed": false,
+  "details": [
+    "API 错误: HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=60)",
+    "实际响应: API 调用失败: HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=60)",
+    "意图: 无预期，实际 '未返回'",
+    "UI组件: 无",
+    "延迟: 60022ms"
+  ],
+  "latency_ms": 60022.40991592407,
+  "error": "API 返回失败",
+  "executed_at": "2026-04-14T21:08:56.004378"
+}

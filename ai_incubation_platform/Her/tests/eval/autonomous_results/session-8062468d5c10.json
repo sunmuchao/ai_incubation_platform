@@ -1,0 +1,221 @@
+{
+  "session_id": "session-8062468d5c10",
+  "scenario": {
+    "scenario_type": "preference_update",
+    "user_profile": {
+      "user_id": "test-user-c9687843",
+      "name": "孙娜",
+      "age": 32,
+      "gender": "female",
+      "location": "南京",
+      "occupation": "HR",
+      "education": "bachelor",
+      "interests": [
+        "阅读",
+        "咖啡",
+        "瑜伽"
+      ],
+      "relationship_goal": "serious",
+      "bio": "对感情认真，希望找到合适的人",
+      "accept_remote": "no",
+      "preferred_age_min": 30,
+      "preferred_age_max": 38,
+      "preferred_location": "南京",
+      "personality_traits": [
+        "谨慎",
+        "认真"
+      ]
+    },
+    "goal": "更新年龄范围、异地接受度等偏好",
+    "initial_message": "我想调整一下我的匹配偏好",
+    "expected_flow": [
+      "发起请求",
+      "获得响应"
+    ],
+    "difficulty": "easy"
+  },
+  "user_profile": {
+    "id": "bfad4f22-e140-472c-8632-a56ba3d72920",
+    "name": "孙娜",
+    "age": 32,
+    "gender": "female",
+    "location": "南京",
+    "occupation": "HR",
+    "education": "bachelor",
+    "interests": [
+      "阅读",
+      "咖啡",
+      "瑜伽"
+    ],
+    "relationship_goal": "serious",
+    "bio": "对感情认真，希望找到合适的人",
+    "accept_remote": "no",
+    "preferred_age_min": 30,
+    "preferred_age_max": 38,
+    "preferred_location": "南京",
+    "deal_breakers": "",
+    "personality_traits": []
+  },
+  "goal": "更新年龄范围、异地接受度等偏好",
+  "goal_achieved": true,
+  "rounds": [
+    {
+      "round_id": 1,
+      "user_input": "我想调整一下我的匹配偏好",
+      "agent_response": "好的，让我先查看一下您当前的偏好设置，然后帮您调整。好的，孙娜！我看了您当前的偏好设置，以下是可以调整的选项：\n\n**您当前的偏好：**\n- 年龄范围：18-60岁\n- 地点偏好：未设置\n- 是否接受异地：未设置\n- 关系目标：未设置\n\n**您可以调整以下偏好：**\n\n1. **年龄范围** - 比如缩小到更合适的年龄段\n2. **地点偏好** - 是否只找南京本地的，或者接受其他城市\n3. **是否接受异地恋** - 只找同城 / 可以接受异地\n4. **关系目标** - 认真交往 / 以结婚为目的 / 先了解看看\n\n您想调整哪一项呢？或者直接告诉我您的具体要求，比如\"我只找30-40岁的同城男生\"。",
+      "intent": {
+        "type": "profile_collection",
+        "confidence": 0.9,
+        "source": "ui_component"
+      },
+      "generative_ui": {
+        "component_type": "ProfileQuestionCard",
+        "props": {
+          "question": "请告诉我更多信息",
+          "subtitle": "",
+          "question_type": "single_choice",
+          "options": [],
+          "dimension": "",
+          "depth": 0,
+          "need_follow_up": false,
+          "_schema": {
+            "backend_type": "ProfileQuestionCard",
+            "frontend_card": "profile_question",
+            "description": "用户画像问题卡片"
+          }
+        }
+      },
+      "tool_calls": [],
+      "latency_ms": 25914.196014404297,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-16T02:34:31.701413"
+    },
+    {
+      "round_id": 2,
+      "user_input": "我想把年龄范围改成30-38岁，不接受异地恋，关系目标是认真交往那种。麻烦帮我一起更新一下~",
+      "agent_response": "好的，让我先查看一下您当前的偏好设置，然后帮您调整。好的，孙娜！我看了您当前的偏好设置，以下是可以调整的选项：\n\n**您当前的偏好：**\n- 年龄范围：18-60岁\n- 地点偏好：未设置\n- 是否接受异地：未设置\n- 关系目标：未设置\n\n**您可以调整以下偏好：**\n\n1. **年龄范围** - 比如缩小到更合适的年龄段\n2. **地点偏好** - 是否只找南京本地的，或者接受其他城市\n3. **是否接受异地恋** - 只找同城 / 可以接受异地\n4. **关系目标** - 认真交往 / 以结婚为目的 / 先了解看看\n\n您想调整哪一项呢？或者直接告诉我您的具体要求，比如\"我只找30-40岁的同城男生\"。好的，我帮您一起更新这三项偏好！好的，您的偏好已全部更新成功！✅\n\n**您的匹配偏好现在设置为：**\n\n| 偏好项 | 设置 |\n|-------|------|\n| 年龄范围 | 30-38岁 |\n| 地点要求 | 只找同城（南京） |\n| 关系目标 | 认真交往 |\n\n这样系统会为您推荐更精准的匹配对象啦！需要我现在帮您找找看吗？😊",
+      "intent": {
+        "type": "profile_collection",
+        "confidence": 0.9,
+        "source": "ui_component"
+      },
+      "generative_ui": {
+        "component_type": "ProfileQuestionCard",
+        "props": {
+          "question": "请告诉我更多信息",
+          "subtitle": "",
+          "question_type": "single_choice",
+          "options": [],
+          "dimension": "",
+          "depth": 0,
+          "need_follow_up": false,
+          "_schema": {
+            "backend_type": "ProfileQuestionCard",
+            "frontend_card": "profile_question",
+            "description": "用户画像问题卡片"
+          }
+        }
+      },
+      "tool_calls": [],
+      "latency_ms": 14559.824228286743,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-16T02:34:52.570232"
+    },
+    {
+      "round_id": 3,
+      "user_input": "好的，谢谢帮我更新！那麻烦帮我看看有什么合适的推荐吧~",
+      "agent_response": "好的，让我先查看一下您当前的偏好设置，然后帮您调整。好的，孙娜！我看了您当前的偏好设置，以下是可以调整的选项：\n\n**您当前的偏好：**\n- 年龄范围：18-60岁\n- 地点偏好：未设置\n- 是否接受异地：未设置\n- 关系目标：未设置\n\n**您可以调整以下偏好：**\n\n1. **年龄范围** - 比如缩小到更合适的年龄段\n2. **地点偏好** - 是否只找南京本地的，或者接受其他城市\n3. **是否接受异地恋** - 只找同城 / 可以接受异地\n4. **关系目标** - 认真交往 / 以结婚为目的 / 先了解看看\n\n您想调整哪一项呢？或者直接告诉我您的具体要求，比如\"我只找30-40岁的同城男生\"。好的，我帮您一起更新这三项偏好！好的，您的偏好已全部更新成功！✅\n\n**您的匹配偏好现在设置为：**\n\n| 偏好项 | 设置 |\n|-------|------|\n| 年龄范围 | 30-38岁 |\n| 地点要求 | 只找同城（南京） |\n| 关系目标 | 认真交往 |\n\n这样系统会为您推荐更精准的匹配对象啦！需要我现在帮您找找看吗？😊根据您的偏好筛选后，我发现了一个情况：\n\n**筛选结果：**\n- 南京同城符合条件的：0 位 😔\n- 其他城市符合条件的：5 位\n\n目前南京本地暂时没有符合您条件（30-38岁、认真交往）的候选人。\n\n**您可以考虑：**\n1. **放宽地点限制** - 看看其他城市的候选人，也许能遇到很合适的人\n2. **稍后再试** - 平台会有新用户加入\n\n要不要我帮您看看那 5 位异地候选人的资料？说不定有很合适的呢~ 或者您也可以调整一下偏好设置？",
+      "intent": {
+        "type": "profile_collection",
+        "confidence": 0.9,
+        "source": "ui_component"
+      },
+      "generative_ui": {
+        "component_type": "ProfileQuestionCard",
+        "props": {
+          "question": "请告诉我更多信息",
+          "subtitle": "",
+          "question_type": "single_choice",
+          "options": [],
+          "dimension": "",
+          "depth": 0,
+          "need_follow_up": false,
+          "_schema": {
+            "backend_type": "ProfileQuestionCard",
+            "frontend_card": "profile_question",
+            "description": "用户画像问题卡片"
+          }
+        }
+      },
+      "tool_calls": [],
+      "latency_ms": 13879.58574295044,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-16T02:35:16.157984"
+    },
+    {
+      "round_id": 4,
+      "user_input": "好的，谢谢帮我更新偏好！不过异地恋确实不太适合我，我还是想找南京本地的。要不先帮我留意着，有新的合适人选再通知我吧~",
+      "agent_response": "好的，让我先查看一下您当前的偏好设置，然后帮您调整。好的，孙娜！我看了您当前的偏好设置，以下是可以调整的选项：\n\n**您当前的偏好：**\n- 年龄范围：18-60岁\n- 地点偏好：未设置\n- 是否接受异地：未设置\n- 关系目标：未设置\n\n**您可以调整以下偏好：**\n\n1. **年龄范围** - 比如缩小到更合适的年龄段\n2. **地点偏好** - 是否只找南京本地的，或者接受其他城市\n3. **是否接受异地恋** - 只找同城 / 可以接受异地\n4. **关系目标** - 认真交往 / 以结婚为目的 / 先了解看看\n\n您想调整哪一项呢？或者直接告诉我您的具体要求，比如\"我只找30-40岁的同城男生\"。好的，我帮您一起更新这三项偏好！好的，您的偏好已全部更新成功！✅\n\n**您的匹配偏好现在设置为：**\n\n| 偏好项 | 设置 |\n|-------|------|\n| 年龄范围 | 30-38岁 |\n| 地点要求 | 只找同城（南京） |\n| 关系目标 | 认真交往 |\n\n这样系统会为您推荐更精准的匹配对象啦！需要我现在帮您找找看吗？😊根据您的偏好筛选后，我发现了一个情况：\n\n**筛选结果：**\n- 南京同城符合条件的：0 位 😔\n- 其他城市符合条件的：5 位\n\n目前南京本地暂时没有符合您条件（30-38岁、认真交往）的候选人。\n\n**您可以考虑：**\n1. **放宽地点限制** - 看看其他城市的候选人，也许能遇到很合适的人\n2. **稍后再试** - 平台会有新用户加入\n\n要不要我帮您看看那 5 位异地候选人的资料？说不定有很合适的呢~ 或者您也可以调整一下偏好设置？完全理解！同城确实更方便相处，感情也更容易培养~ 💕\n\n**我会帮您记住这些偏好：**\n- 年龄：30-38岁\n- 地点：南京本地\n- 目标：认真交往\n\n**温馨提示：**\n- 平台会有新用户陆续加入，建议您过段时间再来查看\n- 您也可以随时回来问我\"有没有新的推荐\"，我会帮您重新筛选\n\n祝您早日遇到那个对的人！有其他需要帮忙的随时找我~ 😊",
+      "intent": {
+        "type": "profile_collection",
+        "confidence": 0.9,
+        "source": "ui_component"
+      },
+      "generative_ui": {
+        "component_type": "ProfileQuestionCard",
+        "props": {
+          "question": "请告诉我更多信息",
+          "subtitle": "",
+          "question_type": "single_choice",
+          "options": [],
+          "dimension": "",
+          "depth": 0,
+          "need_follow_up": false,
+          "_schema": {
+            "backend_type": "ProfileQuestionCard",
+            "frontend_card": "profile_question",
+            "description": "用户画像问题卡片"
+          }
+        }
+      },
+      "tool_calls": [],
+      "latency_ms": 7542.365312576294,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-16T02:35:37.243697"
+    }
+  ],
+  "total_latency_ms": 61895.97129821777,
+  "evaluation": {
+    "goal_achieved": true,
+    "total_rounds": 4,
+    "avg_latency_ms": 15473.992824554443,
+    "errors_count": 0,
+    "ui_components_used": [
+      "ProfileQuestionCard",
+      "ProfileQuestionCard",
+      "ProfileQuestionCard",
+      "ProfileQuestionCard"
+    ],
+    "intent_types_seen": [
+      "profile_collection",
+      "profile_collection",
+      "profile_collection",
+      "profile_collection"
+    ],
+    "flow_quality": "unknown",
+    "naturalness": "unknown",
+    "tool_usage_correct": "unknown",
+    "overall_score": 0
+  },
+  "started_at": "2026-04-16T02:34:05.522885",
+  "ended_at": "2026-04-16T02:35:45.006521",
+  "total_rounds": 4
+}

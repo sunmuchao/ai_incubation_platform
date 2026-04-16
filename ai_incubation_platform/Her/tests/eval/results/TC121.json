@@ -1,0 +1,21 @@
+{
+  "test_id": "TC121",
+  "category": "happy_path",
+  "subcategory": "工具调用验证",
+  "input_message": "帮我找对象",
+  "expected_intent": "match_request",
+  "actual_intent": null,
+  "actual_response": "API 调用失败: HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=60)",
+  "generative_ui": null,
+  "passed": false,
+  "details": [
+    "API 错误: HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=60)",
+    "实际响应: API 调用失败: HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=60)",
+    "意图: 预期 'match_request'，API 未返回意图字段",
+    "UI组件: 预期 'MatchCardList'，实际未返回",
+    "延迟: 60005ms"
+  ],
+  "latency_ms": 60005.11813163757,
+  "error": "API 返回失败",
+  "executed_at": "2026-04-14T21:01:09.835509"
+}

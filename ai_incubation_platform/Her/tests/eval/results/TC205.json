@@ -1,0 +1,64 @@
+{
+  "test_id": "TC205",
+  "category": "happy_path",
+  "subcategory": "匹配算法",
+  "input_message": "找奔着结婚的人",
+  "expected_intent": "match_request",
+  "actual_intent": "profile_collection",
+  "actual_response": "需要收集用户基本信息以开始匹配",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "首先，请告诉我你的基本信息",
+      "question_type": "form",
+      "fields": [
+        {
+          "name": "name",
+          "label": "昵称",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "gender",
+          "label": "性别",
+          "type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ],
+          "required": true
+        },
+        {
+          "name": "age",
+          "label": "年龄",
+          "type": "number",
+          "min": 18,
+          "max": 99,
+          "required": true
+        },
+        {
+          "name": "location",
+          "label": "所在城市",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "note": "我已记录你的关系目标是：奔着结婚。完成基本信息后，我会为你推荐同样以结婚为目的的候选人。",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 需要收集用户基本信息以开始匹配",
+    "意图: 预期 'match_request' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 29753ms"
+  ],
+  "latency_ms": 29752.99310684204,
+  "error": null,
+  "executed_at": "2026-04-14T21:25:03.817435"
+}

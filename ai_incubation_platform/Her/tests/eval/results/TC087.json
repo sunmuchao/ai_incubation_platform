@@ -1,0 +1,20 @@
+{
+  "test_id": "TC087",
+  "category": "edge_cases",
+  "subcategory": "冲突条件组合",
+  "input_message": "我想找既内向又外向的人",
+  "expected_intent": null,
+  "actual_intent": "conversation",
+  "actual_response": "好的！你想找**中向型人格（Ambivert）**的人——这种性格特质非常迷人，既能在社交场合如鱼得水，又懂得享受独处的时光。我理解这种平衡感对你很重要。\n\n不过，为了给你推荐合适的人选，我需要先了解一些基本信息：",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 好的！你想找**中向型人格（Ambivert）**的人——这种性格特质非常迷人，既能在社交场合如鱼得水，又懂得享受独处的时光。我理解这种平衡感对你很重要。\n\n不过，为了给你推荐合适的人选，我需要先了解一些基本信息：",
+    "意图: 无预期，实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 20885ms"
+  ],
+  "latency_ms": 20884.750843048096,
+  "error": null,
+  "executed_at": "2026-04-14T20:54:13.968905"
+}

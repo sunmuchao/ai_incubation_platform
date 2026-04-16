@@ -1,0 +1,60 @@
+{
+  "test_id": "TC153",
+  "category": "happy_path",
+  "subcategory": "DeerFlow集成",
+  "input_message": "我喜欢喜欢运动的女生",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "请完善你的基本信息，我会记住你喜欢运动型女生这个偏好",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "请告诉我你的名字和基本信息",
+      "question_type": "form",
+      "fields": [
+        {
+          "name": "name",
+          "label": "你的名字",
+          "required": true
+        },
+        {
+          "name": "age",
+          "label": "你的年龄",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "gender",
+          "label": "你的性别",
+          "type": "select",
+          "options": [
+            "男",
+            "女"
+          ],
+          "required": true
+        },
+        {
+          "name": "location",
+          "label": "你所在的城市",
+          "required": true
+        }
+      ],
+      "context": "为了帮你找到喜欢运动的女生，我需要先了解你的基本情况~",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请完善你的基本信息，我会记住你喜欢运动型女生这个偏好",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 28376ms"
+  ],
+  "latency_ms": 28375.723123550415,
+  "error": null,
+  "executed_at": "2026-04-14T21:14:38.947549"
+}

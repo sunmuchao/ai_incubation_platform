@@ -1,0 +1,60 @@
+{
+  "test_id": "TC026",
+  "category": "happy_path",
+  "subcategory": "查询类",
+  "input_message": "查看我今天的推荐",
+  "expected_intent": "match_request",
+  "actual_intent": "match_request",
+  "actual_response": "今日为您精选 3 位无锡本地用户，均为 28 岁同龄人",
+  "generative_ui": {
+    "component_type": "MatchCardList",
+    "props": {
+      "matches": [
+        {
+          "user_id": "a1fce98a-d73d-4375-a1e5-dbea6a932b0d",
+          "name": "dsdada",
+          "age": 28,
+          "location": "无锡",
+          "confidence_level": "medium",
+          "confidence_icon": "✓",
+          "interests": []
+        },
+        {
+          "user_id": "6d6784b7-cb21-4752-b94a-5fba82e93a41",
+          "name": "dasda",
+          "age": 28,
+          "location": "无锡",
+          "confidence_level": "medium",
+          "confidence_icon": "✓",
+          "interests": []
+        },
+        {
+          "user_id": "79cbb58a-b442-4162-9d87-63591118669c",
+          "name": "sdasda",
+          "age": 28,
+          "location": "无锡",
+          "confidence_level": "medium",
+          "confidence_icon": "✓",
+          "interests": []
+        }
+      ],
+      "total": 3,
+      "filter": "同城匹配",
+      "_schema": {
+        "backend_type": "MatchCardList",
+        "frontend_card": "match",
+        "description": "匹配结果列表，展示候选人卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 今日为您精选 3 位无锡本地用户，均为 28 岁同龄人",
+    "意图: 预期 'match_request' = 实际 'match_request'",
+    "UI组件: MatchCardList",
+    "延迟: 16878ms"
+  ],
+  "latency_ms": 16877.994060516357,
+  "error": null,
+  "executed_at": "2026-04-14T20:43:00.206431"
+}

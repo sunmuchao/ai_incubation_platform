@@ -1,0 +1,20 @@
+{
+  "test_id": "TC074",
+  "category": "happy_path",
+  "subcategory": "关系管理",
+  "input_message": "我感觉她最近对我冷淡了",
+  "expected_intent": "relationship_analysis",
+  "actual_intent": "conversation",
+  "actual_response": "我理解你的感受，感情中的不确定感确实让人焦虑。让我帮你分析一下你们的关系状况。\n\n为了给你更准确的分析，我需要了解一些细节：",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 我理解你的感受，感情中的不确定感确实让人焦虑。让我帮你分析一下你们的关系状况。\n\n为了给你更准确的分析，我需要了解一些细节：",
+    "意图: 预期 'relationship_analysis' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 6887ms"
+  ],
+  "latency_ms": 6887.49098777771,
+  "error": null,
+  "executed_at": "2026-04-14T20:51:39.643093"
+}

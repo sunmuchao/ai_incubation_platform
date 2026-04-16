@@ -261,6 +261,15 @@ def _build_middlewares(config: RunnableConfig, model_name: str | None, agent_nam
     # LoopDetectionMiddleware — detect and break repetitive tool call loops
     middlewares.append(LoopDetectionMiddleware())
 
+    # 🔧 [Her 特有] NotificationMiddleware — 事件驱动主动通知
+    # 检查通知队列，有待推送通知时注入提示，让 Agent 主动告知用户
+    try:
+        from deerflow.agents.middlewares.notification_middleware import NotificationMiddleware
+        middlewares.append(NotificationMiddleware())
+        logger.info("[Middleware] NotificationMiddleware 已注册")
+    except ImportError:
+        logger.debug("[Middleware] NotificationMiddleware 未找到，跳过")
+
     # Inject custom middlewares before ClarificationMiddleware
     if custom_middlewares:
         middlewares.extend(custom_middlewares)

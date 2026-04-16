@@ -1,0 +1,58 @@
+{
+  "test_id": "TC223",
+  "category": "edge_cases",
+  "subcategory": "数据验证",
+  "input_message": "找玩玩的对象",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "新用户需要完善个人资料",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "请先完善您的基本信息",
+      "question_type": "profile_collection",
+      "missing_fields": [
+        {
+          "field": "name",
+          "label": "昵称",
+          "type": "text"
+        },
+        {
+          "field": "age",
+          "label": "年龄",
+          "type": "number"
+        },
+        {
+          "field": "gender",
+          "label": "性别",
+          "type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ]
+        },
+        {
+          "field": "location",
+          "label": "所在城市",
+          "type": "text"
+        }
+      ],
+      "relationship_goal": "轻松约会/短期关系",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 新用户需要完善个人资料",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 23230ms"
+  ],
+  "latency_ms": 23230.151176452637,
+  "error": null,
+  "executed_at": "2026-04-14T21:29:36.650245"
+}

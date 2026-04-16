@@ -1,0 +1,20 @@
+{
+  "test_id": "TC138",
+  "category": "edge_cases",
+  "subcategory": "单一结果",
+  "input_message": "帮我找对象",
+  "expected_intent": "match_request",
+  "actual_intent": "conversation",
+  "actual_response": "你好呀！我是 Her，你的婚恋助手~ 💕\n\n为了给你推荐最合适的人选，我需要先了解一些你的基本情况。让我们从简单的开始：\n\n**请问你的性别是？**\n- 男生\n- 女生\n- 其他\n\n告诉我之后，我会继续收集其他信息，然后为你精准匹配！",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 你好呀！我是 Her，你的婚恋助手~ 💕\n\n为了给你推荐最合适的人选，我需要先了解一些你的基本情况。让我们从简单的开始：\n\n**请问你的性别是？**\n- 男生\n- 女生\n- 其他\n\n告诉我之后，我会继续收集其他信息，然后为你精准匹配！",
+    "意图: 预期 'match_request' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 17142ms"
+  ],
+  "latency_ms": 17141.544103622437,
+  "error": null,
+  "executed_at": "2026-04-14T21:09:13.166360"
+}

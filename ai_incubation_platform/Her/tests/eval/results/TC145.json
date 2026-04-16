@@ -1,0 +1,74 @@
+{
+  "test_id": "TC145",
+  "category": "edge_cases",
+  "subcategory": "并发请求",
+  "input_message": "帮我找对象",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "请选择您的关系目标",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "你想找什么关系？",
+      "question_type": "single_choice",
+      "options": [
+        {
+          "value": "serious_relationship",
+          "label": "认真恋爱",
+          "description": "以长期关系为目标"
+        },
+        {
+          "value": "marriage",
+          "label": "结婚对象",
+          "description": "寻找人生伴侣"
+        },
+        {
+          "value": "casual_dating",
+          "label": "轻松约会",
+          "description": "先了解，不急于确定"
+        },
+        {
+          "value": "friendship",
+          "label": "先做朋友",
+          "description": "从朋友开始慢慢了解"
+        }
+      ],
+      "dimension": "relationship_goal",
+      "next_questions": [
+        {
+          "dimension": "gender",
+          "question": "你的性别是？",
+          "type": "single_choice",
+          "options": [
+            "男生",
+            "女生"
+          ]
+        },
+        {
+          "dimension": "preferred_gender",
+          "question": "你想找什么性别的对象？",
+          "type": "single_choice",
+          "options": [
+            "男生",
+            "女生"
+          ]
+        }
+      ],
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请选择您的关系目标",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 18467ms"
+  ],
+  "latency_ms": 18466.959714889526,
+  "error": null,
+  "executed_at": "2026-04-14T21:11:29.546678"
+}

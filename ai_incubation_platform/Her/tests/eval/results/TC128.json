@@ -1,0 +1,20 @@
+{
+  "test_id": "TC128",
+  "category": "happy_path",
+  "subcategory": "多轮对话",
+  "input_message": "你刚才说的那个咖啡厅在哪？",
+  "expected_intent": "recall_detail",
+  "actual_intent": "conversation",
+  "actual_response": "",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: ",
+    "意图: 预期 'recall_detail' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 9375ms"
+  ],
+  "latency_ms": 9375.046014785767,
+  "error": null,
+  "executed_at": "2026-04-14T21:04:52.837733"
+}

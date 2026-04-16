@@ -1,0 +1,62 @@
+{
+  "test_id": "TC038",
+  "category": "edge_cases",
+  "subcategory": "无匹配结果",
+  "input_message": "找对象",
+  "expected_intent": "match_request",
+  "actual_intent": "profile_collection",
+  "actual_response": "请先完善你的基本信息",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "请告诉我你的基本信息",
+      "question_type": "form",
+      "fields": [
+        {
+          "field": "name",
+          "label": "昵称/姓名",
+          "type": "text",
+          "required": true
+        },
+        {
+          "field": "age",
+          "label": "年龄",
+          "type": "number",
+          "required": true
+        },
+        {
+          "field": "gender",
+          "label": "性别",
+          "type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ],
+          "required": true
+        },
+        {
+          "field": "location",
+          "label": "所在城市",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "next_step": "preferences",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请先完善你的基本信息",
+    "意图: 预期 'match_request' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 19207ms"
+  ],
+  "latency_ms": 19207.467079162598,
+  "error": null,
+  "executed_at": "2026-04-14T20:45:39.365903"
+}

@@ -1,0 +1,20 @@
+{
+  "test_id": "TC165",
+  "category": "happy_path",
+  "subcategory": "关系阶段",
+  "input_message": "我们刚认识，应该怎么聊？",
+  "expected_intent": "icebreaker_request",
+  "actual_intent": "conversation",
+  "actual_response": "我看到您想获取破冰开场白的建议，但系统需要先知道您想和谁开启对话。\n\n请告诉我：\n- 您刚匹配的是哪位用户？（可以提供对方的昵称或ID）\n- 或者您是想获取一个通用的破冰开场白模板？\n\n这样我就能为您生成个性化的开场白建议了！",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 我看到您想获取破冰开场白的建议，但系统需要先知道您想和谁开启对话。\n\n请告诉我：\n- 您刚匹配的是哪位用户？（可以提供对方的昵称或ID）\n- 或者您是想获取一个通用的破冰开场白模板？\n\n这样我就能为您生成个性化的开场白建议了！",
+    "意图: 预期 'icebreaker_request' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 7220ms"
+  ],
+  "latency_ms": 7220.274925231934,
+  "error": null,
+  "executed_at": "2026-04-14T21:17:09.517496"
+}

@@ -19,6 +19,15 @@ from utils.logger import logger
 
 router = APIRouter(prefix="/api/matching-preferences", tags=["Matching Preferences"])
 
+# 🔧 [缓存同步] 导入缓存清除函数，确保偏好更新后 AI 能获取最新数据
+try:
+    from api.deerflow import invalidate_user_cache
+    CACHE_INVALIDATION_AVAILABLE = True
+except ImportError:
+    logger.warning("deerflow cache invalidation not available")
+    CACHE_INVALIDATION_AVAILABLE = False
+    invalidate_user_cache = None
+
 
 class PreferenceRequest(BaseModel):
     """偏好设置请求"""
@@ -89,6 +98,12 @@ async def save_preferences(
     try:
         service = get_advanced_matching_preference_service(db)
         result = service.save_preferences(user_id, request.dict())
+
+        # 🔧 [缓存同步] 清除缓存，确保 AI 下次对话能获取最新偏好
+        # 用户更新年龄偏好、异地接受度等设置后，AI 需要用新偏好做推荐
+        if CACHE_INVALIDATION_AVAILABLE and invalidate_user_cache:
+            invalidate_user_cache(user_id)
+            logger.info(f"[缓存同步] 匹配偏好更新后缓存已清除: {user_id}")
 
         logger.info(f"Saved matching preferences for user {user_id}")
         return result

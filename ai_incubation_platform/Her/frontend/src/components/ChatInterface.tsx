@@ -1,7 +1,7 @@
 // AI Native Chat 组件 - 对话式交互核心
 
 import React, { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
-import { Input, Button, Card, Avatar, Spin, Tag, Space, Typography } from 'antd'
+import { Input, Button, Card, Avatar, Spin, Tag, Space, Typography, message } from 'antd'
 import { UserOutlined, ThunderboltOutlined, HeartFilled, SendOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import type { MatchCandidate, AIPreCommunicationSession } from '../types'
@@ -43,6 +43,8 @@ const ProfileQuestionCard = lazy(() => import('./ProfileQuestionCard'))
 const PreCommunicationSessionCard = lazy(() => import('./PreCommunicationSessionCard'))
 const PreCommunicationDialogCard = lazy(() => import('./PreCommunicationDialogCard'))
 const UserProfileCard = lazy(() => import('./UserProfileCard'))
+const MembershipSubscribeModal = lazy(() => import('./MembershipSubscribeModal'))
+const ChatInitiationCard = lazy(() => import('./generative-ui/ChatComponents').then(m => ({ default: m.ChatInitiationCard })))
 
 // 🚀 [性能优化] 导入公共骨架屏组件（从 skeletons.tsx 提取）
 import { SkeletonComponents } from './skeletons'
@@ -62,7 +64,7 @@ interface Message {
   suggestions?: string[]
   next_actions?: string[]
   timestamp: Date
-  generativeCard?: 'precommunication' | 'precommunication-dialog' | 'match' | 'analysis' | 'feature' | 'profile_question' | 'quick_start' | 'learning_confirmation' | 'user_profile'
+  generativeCard?: 'precommunication' | 'precommunication-dialog' | 'match' | 'analysis' | 'feature' | 'profile_question' | 'quick_start' | 'learning_confirmation' | 'user_profile' | 'chat_initiation' | 'compatibility'
   generativeData?: unknown
   featureAction?: string
 }
@@ -236,6 +238,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const missing = getMissingInfoFields()
     return missing.length > 0 ? 0 : -1  // 0 表示开始收集
   })
+
+  // 会员订阅 Modal 状态
+  const [membershipModalOpen, setMembershipModalOpen] = useState(false)
 
   // 获取动态快捷标签
   useEffect(() => {
@@ -1378,8 +1383,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   featureAction={message.featureAction}
                   data={message.generativeData}
                   onAction={(action, data) => {
-                    // 功能卡片动作处理（具体 API 调用根据 action 类型分发）
-                  }}
+                      // 功能卡片动作处理
+                      if (action === 'upgrade_membership') {
+                        setMembershipModalOpen(true)
+                      } else if (action === 'start_face_verification') {
+                        // 触发人脸认证页面
+                        window.dispatchEvent(new CustomEvent('trigger-face-verification'))
+                      } else if (action === 'start_verify') {
+                        // TODO: 身份认证流程
+                        message.info('身份认证功能开发中')
+                      } else if (action === 'go_match') {
+                        // 触发滑动匹配页面
+                        window.dispatchEvent(new CustomEvent('trigger-go-match'))
+                      } else {
+                        console.log('Feature card action:', action, data)
+                      }
+                    }}
                 />
               </Suspense>
             </div>
@@ -1509,6 +1528,32 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           )}
 
+          {/* 聊天发起卡片 - ChatInitiationCard */}
+          {message.generativeCard === 'chat_initiation' && message.generativeData && (
+            <div className="generative-ui-container">
+              <Suspense fallback={<div style={{ padding: 24, textAlign: 'center' }}><Spin size="small" /></div>}>
+                <ChatInitiationCard
+                  target_user_id={(message.generativeData as any)?.target_user_id}
+                  target_user_name={(message.generativeData as any)?.target_user_name}
+                  target_user_avatar={(message.generativeData as any)?.target_user_avatar}
+                  context={(message.generativeData as any)?.context}
+                  compatibility_score={(message.generativeData as any)?.compatibility_score}
+                  onAction={(action) => {
+                    if (action.type === 'start_chat') {
+                      // 发起聊天 - 跳转到聊天室
+                      const userId = (action as any).target_user_id
+                      const userName = (action as any).target_user_name || 'TA'
+                      onOpenChatRoom?.(userId, userName)
+                    } else if (action.type === 'view_profile') {
+                      // 查看详情 - 可以跳转到用户详情页
+                      console.log(`[ChatInitiationCard] 查看用户详情: ${(action as any).target_user_id}`)
+                    }
+                  }}
+                />
+              </Suspense>
+            </div>
+          )}
+
           {/* 匹配结果卡片 */}
           {message.matches && message.matches.length > 0 && (
             <div className="match-cards">
@@ -1620,6 +1665,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           size="large"
         />
       </div>
+
+      {/* 会员订阅 Modal */}
+      <Suspense fallback={null}>
+        <MembershipSubscribeModal
+          open={membershipModalOpen}
+          onClose={() => setMembershipModalOpen(false)}
+          onSuccess={() => {
+            setMembershipModalOpen(false)
+            message.success('会员订阅成功！')
+          }}
+        />
+      </Suspense>
     </div>
   )
 }

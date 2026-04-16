@@ -13,11 +13,11 @@ class UserDB(Base):
     id = Column(String(36), primary_key=True, index=True)
     username = Column(String(100), unique=True, nullable=True, index=True)  # 用户名（登录标识）
     name = Column(String(100), nullable=False, index=True)  # 显示名称/昵称
-    email = Column(String(255), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=True, index=True)  # 🔧 [修复] 改为可选，新用户可能未填写
     password_hash = Column(String(255), nullable=False)
     age = Column(Integer, nullable=False, index=True)
     gender = Column(String(20), nullable=False, index=True)
-    location = Column(String(200), nullable=False, index=True)
+    location = Column(String(200), nullable=True, index=True)  # 🔧 [修复] 改为可选，新用户可能未填写
     interests = Column(Text, default="")
     values = Column(Text, default="")
     bio = Column(Text, default="")

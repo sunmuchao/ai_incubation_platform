@@ -400,7 +400,9 @@ const SwipeMatchContainer: React.FC = () => {
   const renderLoadingState = () => {
     return (
       <div className="swipe-loading-state">
-        <Spin size="large" tip="正在加载推荐..." />
+        <Spin size="large" tip="正在加载推荐...">
+          <div style={{ padding: 50 }} />
+        </Spin>
       </div>
     )
   }

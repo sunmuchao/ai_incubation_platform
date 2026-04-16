@@ -1,0 +1,34 @@
+{
+  "test_id": "TC133",
+  "category": "happy_path",
+  "subcategory": "置信度系统",
+  "input_message": "帮我找对象",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "新用户引导 - 收集基本信息",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "你好！我是 Her，很高兴认识你。首先请告诉我，你怎么称呼？",
+      "question_type": "text_input",
+      "dimension": "name",
+      "placeholder": "输入你的昵称或姓名",
+      "next_step": "接下来我会了解你的基本信息和择偶偏好，为你推荐最合适的对象~",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 新用户引导 - 收集基本信息",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 18253ms"
+  ],
+  "latency_ms": 18252.913236618042,
+  "error": null,
+  "executed_at": "2026-04-14T21:06:29.227888"
+}

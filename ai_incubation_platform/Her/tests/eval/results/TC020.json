@@ -1,0 +1,20 @@
+{
+  "test_id": "TC020",
+  "category": "happy_path",
+  "subcategory": "偏好更新",
+  "input_message": "我不喜欢抽烟的人",
+  "expected_intent": "preference_update",
+  "actual_intent": "conversation",
+  "actual_response": "好的，我记下了，您希望找不抽烟的对象。我会把这个偏好纳入匹配考虑中。\n\n您现在想开始寻找合适的对象吗？我可以为您推荐符合要求的候选人。",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 好的，我记下了，您希望找不抽烟的对象。我会把这个偏好纳入匹配考虑中。\n\n您现在想开始寻找合适的对象吗？我可以为您推荐符合要求的候选人。",
+    "意图: 预期 'preference_update' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 5723ms"
+  ],
+  "latency_ms": 5722.846984863281,
+  "error": null,
+  "executed_at": "2026-04-14T20:41:42.783061"
+}

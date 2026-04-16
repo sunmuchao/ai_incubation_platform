@@ -1,0 +1,20 @@
+{
+  "test_id": "TC062",
+  "category": "happy_path",
+  "subcategory": "照片管理",
+  "input_message": "帮我看看这张照片怎么样？",
+  "expected_intent": "photo_feedback",
+  "actual_intent": "conversation",
+  "actual_response": "",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: ",
+    "意图: 预期 'photo_feedback' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 9625ms"
+  ],
+  "latency_ms": 9625.409126281738,
+  "error": null,
+  "executed_at": "2026-04-14T20:49:48.952626"
+}

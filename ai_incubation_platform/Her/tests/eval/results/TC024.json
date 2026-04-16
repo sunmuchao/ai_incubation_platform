@@ -1,0 +1,20 @@
+{
+  "test_id": "TC024",
+  "category": "happy_path",
+  "subcategory": "一般对话",
+  "input_message": "你是什么？",
+  "expected_intent": "conversation",
+  "actual_intent": "conversation",
+  "actual_response": "你好呀！我是 **Her**，你的专属婚恋匹配助手 💕\n\n我可以帮你：\n\n🎯 **找对象** — 根据你的偏好推荐合适的人选\n💬 **聊天助攻** — 提供破冰话题和聊天建议\n💝 **关系指导** — 分析匹配度、约会策划、情感建议\n\n无论是想认识新朋友、学习怎么聊天，还是约会不知道去哪，都可以找我帮忙～\n\n有什么我可以帮你的吗？",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 你好呀！我是 **Her**，你的专属婚恋匹配助手 💕\n\n我可以帮你：\n\n🎯 **找对象** — 根据你的偏好推荐合适的人选\n💬 **聊天助攻** — 提供破冰话题和聊天建议\n💝 **关系指导** — 分析匹配度、约会策划、情感建议\n\n无论是想认识新朋友、学习怎么聊天，还是约会不知道去哪，都可以找我帮忙～\n\n有什么我可以帮你的吗？",
+    "意图: 预期 'conversation' = 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 12558ms"
+  ],
+  "latency_ms": 12558.403968811035,
+  "error": null,
+  "executed_at": "2026-04-14T20:42:33.600208"
+}

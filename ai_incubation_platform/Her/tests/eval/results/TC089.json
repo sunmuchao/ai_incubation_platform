@@ -1,0 +1,78 @@
+{
+  "test_id": "TC089",
+  "category": "edge_cases",
+  "subcategory": "超出范围的条件",
+  "input_message": "我想找100岁以上的人",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "需要收集用户基本信息和特殊偏好原因",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "questions": [
+        {
+          "question": "请告诉我您的姓名？",
+          "question_type": "text_input",
+          "dimension": "name"
+        },
+        {
+          "question": "您的性别是？",
+          "question_type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ],
+          "dimension": "gender"
+        },
+        {
+          "question": "您的年龄是？",
+          "question_type": "number_input",
+          "dimension": "age",
+          "min": 18,
+          "max": 120
+        },
+        {
+          "question": "您所在的城市是？",
+          "question_type": "text_input",
+          "dimension": "location"
+        },
+        {
+          "question": "您想找什么样的关系？",
+          "question_type": "single_choice",
+          "options": [
+            "恋爱",
+            "婚姻",
+            "交友"
+          ],
+          "dimension": "relationship_goal"
+        },
+        {
+          "question": "地域偏好？",
+          "question_type": "single_choice",
+          "options": [
+            "只找同城",
+            "接受异地",
+            "不限"
+          ],
+          "dimension": "accept_remote"
+        }
+      ],
+      "special_note": "您提到想找100岁以上的对象，这是一个非常特别的偏好。方便分享一下原因吗？这样我能更好地理解您的需求~",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 需要收集用户基本信息和特殊偏好原因",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 13428ms"
+  ],
+  "latency_ms": 13427.807092666626,
+  "error": null,
+  "executed_at": "2026-04-14T20:54:33.040737"
+}

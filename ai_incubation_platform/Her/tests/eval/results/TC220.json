@@ -1,0 +1,75 @@
+{
+  "test_id": "TC220",
+  "category": "happy_path",
+  "subcategory": "特殊场景",
+  "input_message": "我急需找对象结婚，家里催得很紧",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "请先完善基本信息，我立即为您推荐合适的结婚对象",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "为了帮您找到合适的结婚对象，请先完善您的基本信息",
+      "question_type": "form",
+      "fields": [
+        {
+          "field": "name",
+          "label": "您的称呼",
+          "required": true
+        },
+        {
+          "field": "age",
+          "label": "您的年龄",
+          "required": true,
+          "type": "number"
+        },
+        {
+          "field": "gender",
+          "label": "您的性别",
+          "required": true,
+          "type": "select",
+          "options": [
+            "男",
+            "女"
+          ]
+        },
+        {
+          "field": "location",
+          "label": "您的城市",
+          "required": true
+        },
+        {
+          "field": "preferred_age_min",
+          "label": "期望对方年龄最小",
+          "type": "number"
+        },
+        {
+          "field": "preferred_age_max",
+          "label": "期望对方年龄最大",
+          "type": "number"
+        },
+        {
+          "field": "preferred_location",
+          "label": "期望对方所在城市",
+          "type": "text"
+        }
+      ],
+      "message": "您的目标是结婚，我会优先为您推荐同样以结婚为目的、条件匹配的用户",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请先完善基本信息，我立即为您推荐合适的结婚对象",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 35524ms"
+  ],
+  "latency_ms": 35524.2600440979,
+  "error": null,
+  "executed_at": "2026-04-14T21:28:35.649154"
+}

@@ -1,0 +1,62 @@
+{
+  "test_id": "TC066",
+  "category": "happy_path",
+  "subcategory": "会员功能",
+  "input_message": "我想看看我的会员状态",
+  "expected_intent": "membership_status",
+  "actual_intent": "conversation",
+  "actual_response": "您是新用户，需要完善资料才能解锁全部功能",
+  "generative_ui": {
+    "component_type": "MembershipStatusCard",
+    "props": {
+      "status": "新用户",
+      "profile_completion": 0,
+      "profile_items": [
+        {
+          "name": "基本信息",
+          "completed": false,
+          "items": [
+            "姓名",
+            "年龄",
+            "性别",
+            "所在地"
+          ]
+        },
+        {
+          "name": "匹配偏好",
+          "completed": false,
+          "items": [
+            "对象年龄范围",
+            "地点偏好",
+            "关系目标"
+          ]
+        }
+      ],
+      "features_locked": [
+        "🔒 智能匹配推荐",
+        "🔒 专属聊天助手",
+        "🔒 约会策划建议"
+      ],
+      "features_available": [
+        "✓ 完善个人资料"
+      ],
+      "next_step": "完善资料",
+      "estimated_time": "约2分钟",
+      "_schema": {
+        "backend_type": "MembershipStatusCard",
+        "frontend_card": null,
+        "description": null
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 您是新用户，需要完善资料才能解锁全部功能",
+    "意图: 预期 'membership_status' vs 实际 'conversation'",
+    "UI组件: MembershipStatusCard",
+    "延迟: 9922ms"
+  ],
+  "latency_ms": 9921.501159667969,
+  "error": null,
+  "executed_at": "2026-04-14T20:50:27.153924"
+}

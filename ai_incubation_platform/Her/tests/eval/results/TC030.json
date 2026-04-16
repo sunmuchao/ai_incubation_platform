@@ -1,0 +1,105 @@
+{
+  "test_id": "TC030",
+  "category": "happy_path",
+  "subcategory": "查询类",
+  "input_message": "我的匹配偏好是什么？",
+  "expected_intent": "preference_query",
+  "actual_intent": "profile_collection",
+  "actual_response": "请填写基本信息和匹配偏好，帮您找到合适的对象",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "让我们开始建立您的匹配偏好档案吧！",
+      "question_type": "multi_step",
+      "steps": [
+        {
+          "step": 1,
+          "title": "基本信息",
+          "fields": [
+            {
+              "name": "name",
+              "label": "昵称/姓名",
+              "type": "text",
+              "required": true
+            },
+            {
+              "name": "age",
+              "label": "年龄",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "gender",
+              "label": "性别",
+              "type": "select",
+              "options": [
+                "男",
+                "女"
+              ],
+              "required": true
+            },
+            {
+              "name": "location",
+              "label": "所在城市",
+              "type": "text",
+              "required": true
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "title": "匹配偏好",
+          "fields": [
+            {
+              "name": "preferred_age_min",
+              "label": "对方年龄最小值",
+              "type": "number",
+              "default": 22
+            },
+            {
+              "name": "preferred_age_max",
+              "label": "对方年龄最大值",
+              "type": "number",
+              "default": 35
+            },
+            {
+              "name": "accept_remote",
+              "label": "是否接受异地",
+              "type": "select",
+              "options": [
+                "只找同城",
+                "接受异地"
+              ],
+              "default": "只找同城"
+            },
+            {
+              "name": "relationship_goal",
+              "label": "关系目标",
+              "type": "select",
+              "options": [
+                "恋爱",
+                "结婚"
+              ],
+              "required": true
+            }
+          ]
+        }
+      ],
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请填写基本信息和匹配偏好，帮您找到合适的对象",
+    "意图: 预期 'preference_query' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 21702ms"
+  ],
+  "latency_ms": 21702.3286819458,
+  "error": null,
+  "executed_at": "2026-04-14T20:44:05.267356"
+}

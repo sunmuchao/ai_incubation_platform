@@ -1,0 +1,20 @@
+{
+  "test_id": "TC016",
+  "category": "happy_path",
+  "subcategory": "关系分析",
+  "input_message": "我和她在一起有什么需要注意的？",
+  "expected_intent": "compatibility_analysis",
+  "actual_intent": "conversation",
+  "actual_response": "",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: ",
+    "意图: 预期 'compatibility_analysis' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 6002ms"
+  ],
+  "latency_ms": 6002.16007232666,
+  "error": null,
+  "executed_at": "2026-04-14T20:40:20.487262"
+}

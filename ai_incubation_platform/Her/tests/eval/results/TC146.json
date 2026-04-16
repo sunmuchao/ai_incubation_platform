@@ -1,0 +1,33 @@
+{
+  "test_id": "TC146",
+  "category": "happy_path",
+  "subcategory": "画像收集流程",
+  "input_message": "我刚注册",
+  "expected_intent": "profile_collection",
+  "actual_intent": "profile_collection",
+  "actual_response": "欢迎新用户，开始收集基础信息",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "你好呀！欢迎来到 Her 💕 我是你的专属婚恋助手。让我们从基础信息开始吧～请问你叫什么名字？",
+      "question_type": "text_input",
+      "dimension": "name",
+      "placeholder": "请输入你的名字",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 欢迎新用户，开始收集基础信息",
+    "意图: 预期 'profile_collection' = 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 13996ms"
+  ],
+  "latency_ms": 13995.965957641602,
+  "error": null,
+  "executed_at": "2026-04-14T21:11:43.562963"
+}

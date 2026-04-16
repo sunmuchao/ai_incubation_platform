@@ -1,0 +1,62 @@
+{
+  "test_id": "TC040",
+  "category": "edge_cases",
+  "subcategory": "特殊字符",
+  "input_message": "找个对象 🎉🎉🎉 \n\n\n<script>alert('test')</script>",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "请填写基本信息开始匹配之旅",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "让我们开始认识一下吧！请告诉我你的基本信息",
+      "question_type": "form",
+      "fields": [
+        {
+          "field": "name",
+          "label": "你的称呼",
+          "type": "text",
+          "required": true
+        },
+        {
+          "field": "age",
+          "label": "年龄",
+          "type": "number",
+          "required": true
+        },
+        {
+          "field": "gender",
+          "label": "性别",
+          "type": "select",
+          "options": [
+            "男",
+            "女"
+          ],
+          "required": true
+        },
+        {
+          "field": "location",
+          "label": "所在城市",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "dimension": "basic_info",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请填写基本信息开始匹配之旅",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 19329ms"
+  ],
+  "latency_ms": 19328.572988510132,
+  "error": null,
+  "executed_at": "2026-04-14T20:46:12.593478"
+}

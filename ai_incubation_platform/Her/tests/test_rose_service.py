@@ -348,9 +348,19 @@ class TestRoseServiceSendRose:
                 mock_user_repo.get_by_id.side_effect = [mock_target_user, mock_sender_user]
                 MockUserRepository.return_value = mock_user_repo
 
-                # Mock matchmaker
-                with patch('matching.matcher.matchmaker') as mock_matchmaker:
-                    mock_matchmaker._calculate_compatibility.return_value = (0.85, {})
+                # Mock HerAdvisorService (新架构替代 matchmaker)
+                with patch('services.her_advisor_service.get_her_advisor_service') as mock_her_advisor:
+                    mock_advisor = MagicMock()
+                    mock_advice = MagicMock()
+                    mock_advice.compatibility_score = 0.85
+                    mock_advisor.generate_match_advice.return_value = mock_advice
+                    mock_her_advisor.return_value = mock_advisor
+
+                    # Mock get_user_profile_service
+                    with patch('services.user_profile_service.get_user_profile_service') as mock_profile:
+                        mock_profile_svc = MagicMock()
+                        mock_profile_svc.get_or_create_profile.return_value = (MagicMock(), MagicMock())
+                        mock_profile.return_value = mock_profile_svc
 
                     # Mock _from_db
                     def mock_from_db(user):
@@ -434,8 +444,19 @@ class TestRoseServiceSendRose:
                 mock_user_repo.get_by_id.side_effect = [mock_target_user, mock_sender_user]
                 MockUserRepository.return_value = mock_user_repo
 
-                with patch('matching.matcher.matchmaker') as mock_matchmaker:
-                    mock_matchmaker._calculate_compatibility.return_value = (0.7, {})
+                # Mock HerAdvisorService (新架构替代 matchmaker)
+                with patch('services.her_advisor_service.get_her_advisor_service') as mock_her_advisor:
+                    mock_advisor = MagicMock()
+                    mock_advice = MagicMock()
+                    mock_advice.compatibility_score = 0.7
+                    mock_advisor.generate_match_advice.return_value = mock_advice
+                    mock_her_advisor.return_value = mock_advisor
+
+                    # Mock get_user_profile_service
+                    with patch('services.user_profile_service.get_user_profile_service') as mock_profile:
+                        mock_profile_svc = MagicMock()
+                        mock_profile_svc.get_or_create_profile.return_value = (MagicMock(), MagicMock())
+                        mock_profile.return_value = mock_profile_svc
 
                     def mock_from_db(user):
                         mock_obj = MagicMock()
@@ -1199,8 +1220,19 @@ class TestRoseServiceEdgeCases:
                 mock_user_repo.get_by_id.side_effect = [mock_target_user, mock_sender_user]
                 MockUserRepository.return_value = mock_user_repo
 
-                with patch('matching.matcher.matchmaker') as mock_matchmaker:
-                    mock_matchmaker._calculate_compatibility.return_value = (0.7, {})
+                # Mock HerAdvisorService (新架构替代 matchmaker)
+                with patch('services.her_advisor_service.get_her_advisor_service') as mock_her_advisor:
+                    mock_advisor = MagicMock()
+                    mock_advice = MagicMock()
+                    mock_advice.compatibility_score = 0.7
+                    mock_advisor.generate_match_advice.return_value = mock_advice
+                    mock_her_advisor.return_value = mock_advisor
+
+                    # Mock get_user_profile_service
+                    with patch('services.user_profile_service.get_user_profile_service') as mock_profile:
+                        mock_profile_svc = MagicMock()
+                        mock_profile_svc.get_or_create_profile.return_value = (MagicMock(), MagicMock())
+                        mock_profile.return_value = mock_profile_svc
 
                     def mock_from_db(user):
                         mock_obj = MagicMock()
@@ -1288,9 +1320,17 @@ class TestRoseServiceEdgeCases:
                 mock_user_repo.get_by_id.side_effect = [mock_target_user, mock_sender_user]
                 MockUserRepository.return_value = mock_user_repo
 
-                # Mock matchmaker to raise exception
-                with patch('matching.matcher.matchmaker') as mock_matchmaker:
-                    mock_matchmaker._calculate_compatibility.side_effect = Exception("Calculation error")
+                # Mock HerAdvisorService to raise exception (测试异常处理)
+                with patch('services.her_advisor_service.get_her_advisor_service') as mock_her_advisor:
+                    mock_advisor = MagicMock()
+                    mock_advisor.generate_match_advice.side_effect = Exception("Calculation error")
+                    mock_her_advisor.return_value = mock_advisor
+
+                    # Mock get_user_profile_service
+                    with patch('services.user_profile_service.get_user_profile_service') as mock_profile:
+                        mock_profile_svc = MagicMock()
+                        mock_profile_svc.get_or_create_profile.return_value = (MagicMock(), MagicMock())
+                        mock_profile.return_value = mock_profile_svc
 
                     def mock_from_db(user):
                         mock_obj = MagicMock()

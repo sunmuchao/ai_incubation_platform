@@ -1,0 +1,55 @@
+{
+  "test_id": "TC010",
+  "category": "happy_path",
+  "subcategory": "画像信息收集",
+  "input_message": "我想找认真谈恋爱的，最好是能结婚的那种",
+  "expected_intent": "profile_update",
+  "actual_intent": "profile_collection",
+  "actual_response": "请提供基本信息以开始匹配",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "请先完善您的基本信息",
+      "question_type": "form",
+      "fields": [
+        {
+          "dimension": "gender",
+          "label": "您的性别",
+          "type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ]
+        },
+        {
+          "dimension": "age",
+          "label": "您的年龄",
+          "type": "number",
+          "min": 18,
+          "max": 80
+        },
+        {
+          "dimension": "location",
+          "label": "您所在的城市",
+          "type": "text",
+          "placeholder": "例如：北京、上海、深圳"
+        }
+      ],
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请提供基本信息以开始匹配",
+    "意图: 预期 'profile_update' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 22521ms"
+  ],
+  "latency_ms": 22521.2140083313,
+  "error": null,
+  "executed_at": "2026-04-14T20:39:20.332573"
+}

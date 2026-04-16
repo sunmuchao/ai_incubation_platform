@@ -1,0 +1,61 @@
+{
+  "test_id": "TC067",
+  "category": "happy_path",
+  "subcategory": "置信度反馈",
+  "input_message": "这个推荐不太准确，我其实不太喜欢户外",
+  "expected_intent": "confidence_feedback",
+  "actual_intent": "profile_collection",
+  "actual_response": "正在收集基本信息以优化室内活动偏好匹配",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "为了更精准地为你推荐同样喜欢室内活动的对象，请告诉我：",
+      "question_type": "multi_field",
+      "fields": [
+        {
+          "name": "name",
+          "label": "昵称",
+          "type": "text",
+          "placeholder": "怎么称呼你？"
+        },
+        {
+          "name": "age",
+          "label": "年龄",
+          "type": "number",
+          "placeholder": "你的年龄"
+        },
+        {
+          "name": "gender",
+          "label": "性别",
+          "type": "select",
+          "options": [
+            "男",
+            "女"
+          ]
+        },
+        {
+          "name": "location",
+          "label": "所在城市",
+          "type": "text",
+          "placeholder": "例如：北京、上海"
+        }
+      ],
+      "dimension": "basic_info",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 正在收集基本信息以优化室内活动偏好匹配",
+    "意图: 预期 'confidence_feedback' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 11201ms"
+  ],
+  "latency_ms": 11200.644969940186,
+  "error": null,
+  "executed_at": "2026-04-14T20:50:38.366118"
+}

@@ -1,0 +1,63 @@
+{
+  "test_id": "TC053",
+  "category": "happy_path",
+  "subcategory": "关系里程碑",
+  "input_message": "记录一下我们第一次约会",
+  "expected_intent": "milestone_record",
+  "actual_intent": "profile_collection",
+  "actual_response": "新用户引导 - 基本信息收集",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "让我们先认识一下吧！请告诉我您的基本信息",
+      "question_type": "profile_collection",
+      "fields": [
+        {
+          "name": "nickname",
+          "label": "昵称",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "age",
+          "label": "年龄",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "gender",
+          "label": "性别",
+          "type": "select",
+          "options": [
+            "男",
+            "女"
+          ],
+          "required": true
+        },
+        {
+          "name": "location",
+          "label": "所在城市",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "step": 1,
+      "total_steps": 3,
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 新用户引导 - 基本信息收集",
+    "意图: 预期 'milestone_record' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 15071ms"
+  ],
+  "latency_ms": 15070.554971694946,
+  "error": null,
+  "executed_at": "2026-04-14T20:48:11.370944"
+}

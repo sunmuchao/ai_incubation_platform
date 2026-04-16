@@ -1,0 +1,93 @@
+{
+  "test_id": "TC131",
+  "category": "happy_path",
+  "subcategory": "置信度系统",
+  "input_message": "帮我找对象",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "请完善个人资料，以便为您推荐合适的对象",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "欢迎来到 Her！为了帮你找到合适的另一半，我们先来完善一下你的资料吧~",
+      "question_type": "multi_step",
+      "steps": [
+        {
+          "step": 1,
+          "question": "请问你的名字是？",
+          "field": "name",
+          "type": "text"
+        },
+        {
+          "step": 2,
+          "question": "你的年龄是？",
+          "field": "age",
+          "type": "number"
+        },
+        {
+          "step": 3,
+          "question": "你的性别是？",
+          "field": "gender",
+          "type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ]
+        },
+        {
+          "step": 4,
+          "question": "你目前在哪个城市？",
+          "field": "location",
+          "type": "text"
+        },
+        {
+          "step": 5,
+          "question": "你想找什么类型的关系？",
+          "field": "relationship_goal",
+          "type": "single_choice",
+          "options": [
+            "长期恋爱",
+            "结婚",
+            "短期约会",
+            "先做朋友"
+          ]
+        },
+        {
+          "step": 6,
+          "question": "你希望对方在哪个城市？",
+          "field": "preferred_location",
+          "type": "single_choice",
+          "options": [
+            "同城",
+            "同省",
+            "不限"
+          ]
+        },
+        {
+          "step": 7,
+          "question": "你希望对方的年龄范围是？",
+          "field": "preferred_age",
+          "type": "range",
+          "min": 18,
+          "max": 60
+        }
+      ],
+      "current_step": 1,
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请完善个人资料，以便为您推荐合适的对象",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 16178ms"
+  ],
+  "latency_ms": 16178.01308631897,
+  "error": null,
+  "executed_at": "2026-04-14T21:05:40.167609"
+}

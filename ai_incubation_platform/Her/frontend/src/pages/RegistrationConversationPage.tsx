@@ -357,7 +357,9 @@ const RegistrationConversationPage: React.FC<{
     return (
       <div className="registration-conversation-page">
         <div className="loading-container">
-          <Spin size="large" tip="Her 正在准备..." />
+          <Spin size="large" tip="Her 正在准备...">
+            <div style={{ padding: 50 }} />
+          </Spin>
           <Text type="secondary" style={{ marginTop: 16 }}>
             让我先了解一下你吧～
           </Text>

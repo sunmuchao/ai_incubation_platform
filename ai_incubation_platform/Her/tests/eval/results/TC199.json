@@ -1,0 +1,68 @@
+{
+  "test_id": "TC199",
+  "category": "happy_path",
+  "subcategory": "匹配算法",
+  "input_message": "找28岁的对象",
+  "expected_intent": "match_request",
+  "actual_intent": "profile_collection",
+  "actual_response": "请先完善您的个人资料，我会为您推荐28岁的匹配对象",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "欢迎来到 Her！为了帮您找到合适的28岁对象，请先完善您的基本信息",
+      "question_type": "profile_collection",
+      "steps": [
+        {
+          "field": "name",
+          "label": "您的昵称",
+          "required": true
+        },
+        {
+          "field": "age",
+          "label": "您的年龄",
+          "required": true
+        },
+        {
+          "field": "gender",
+          "label": "您的性别",
+          "options": [
+            "男",
+            "女"
+          ],
+          "required": true
+        },
+        {
+          "field": "location",
+          "label": "您所在的城市",
+          "required": true
+        },
+        {
+          "field": "preferred_age_min",
+          "label": "期望对象的最小年龄",
+          "value": "28"
+        },
+        {
+          "field": "preferred_age_max",
+          "label": "期望对象的最大年龄",
+          "value": "28"
+        }
+      ],
+      "current_step": 0,
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请先完善您的个人资料，我会为您推荐28岁的匹配对象",
+    "意图: 预期 'match_request' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 14674ms"
+  ],
+  "latency_ms": 14673.641920089722,
+  "error": null,
+  "executed_at": "2026-04-14T21:22:36.814771"
+}

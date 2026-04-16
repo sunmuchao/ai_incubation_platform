@@ -1,0 +1,20 @@
+{
+  "test_id": "TC212",
+  "category": "happy_path",
+  "subcategory": "GenerativeUI验证",
+  "input_message": "分析我们的匹配度",
+  "expected_intent": null,
+  "actual_intent": "conversation",
+  "actual_response": "我来帮你分析匹配度。",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 我来帮你分析匹配度。",
+    "意图: 无预期，实际 'conversation'",
+    "UI组件: 预期 'CompatibilityChart'，实际未返回",
+    "延迟: 7168ms"
+  ],
+  "latency_ms": 7168.404817581177,
+  "error": null,
+  "executed_at": "2026-04-14T21:26:14.418587"
+}

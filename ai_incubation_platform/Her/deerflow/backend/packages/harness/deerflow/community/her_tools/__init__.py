@@ -27,6 +27,8 @@ her_tools 只做数据查询，不包含任何业务逻辑或模板！
 - her_get_user: 获取用户画像
 - her_get_target_user: 获取目标用户画像
 - her_get_conversation_history: 获取对话历史
+- her_safe_query: 安全 SQL 查询（Agent 可以自己生成查询，补齐缺失信息）【新增】
+- her_find_user_by_name: 按名字查找用户（便捷封装）【新增】
 
 设计原则（Agent Native）：
 - 所有工具只返回原始数据（JSON）
@@ -34,10 +36,17 @@ her_tools 只做数据查询，不包含任何业务逻辑或模板！
 - Agent 根据返回的数据自主思考、解读、生成个性化建议
 - 模板和硬编码逻辑已全部移除，Agent 应根据具体情况创造建议
 
+【v3.1 新增】自主信息获取能力：
+- Agent 不再只能调用预定义工具
+- Agent 可以通过 her_safe_query 自己生成 SQL 查询
+- 用于补齐缺失的信息（如根据名字查询 user_id）
+- 但必须在安全边界内：只允许 SELECT，只允许白名单表
+
 版本历史：
 - v1.0: 硬编码模板（如 interest_topics 字典）
 - v2.0: Agent Native 重构，工具只返回数据，Agent 自己生成建议
 - v3.0: 模块化拆分，单一职责，便于维护
+- v3.1: 新增安全 SQL 查询工具，Agent 可自主补齐信息
 
 模块化结构：
 - schemas.py: 输入/输出数据模型
@@ -47,6 +56,7 @@ her_tools 只做数据查询，不包含任何业务逻辑或模板！
 - conversation_tools.py: 对话相关工具
 - profile_tools.py: 资料相关工具
 - user_tools.py: 用户数据相关工具
+- query_tools.py: 安全查询工具【新增】
 """
 
 # ==================== 从模块导入 ====================
@@ -66,6 +76,9 @@ from .schemas import (
     HerGetUserInput,
     HerGetTargetUserInput,
     HerGetConversationHistoryInput,
+    HerInitiateChatInput,
+    HerSafeQueryInput,
+    HerFindUserByNameInput,
 )
 
 from .helpers import (
@@ -111,9 +124,18 @@ from .user_tools import (
     HerGetUserTool,
     HerGetTargetUserTool,
     HerGetConversationHistoryTool,
+    HerInitiateChatTool,
     her_get_user_tool,
     her_get_target_user_tool,
     her_get_conversation_history_tool,
+    her_initiate_chat_tool,
+)
+
+from .query_tools import (
+    HerSafeQueryTool,
+    HerFindUserByNameTool,
+    her_safe_query_tool,
+    her_find_user_by_name_tool,
 )
 
 
@@ -135,6 +157,9 @@ __all__ = [
     "HerGetUserInput",
     "HerGetTargetUserInput",
     "HerGetConversationHistoryInput",
+    "HerInitiateChatInput",
+    "HerSafeQueryInput",
+    "HerFindUserByNameInput",
     # Helpers
     "get_her_root",
     "ensure_her_in_path",
@@ -168,9 +193,16 @@ __all__ = [
     "HerGetUserTool",
     "HerGetTargetUserTool",
     "HerGetConversationHistoryTool",
+    "HerInitiateChatTool",
     "her_get_user_tool",
     "her_get_target_user_tool",
     "her_get_conversation_history_tool",
+    "her_initiate_chat_tool",
+    # Query Tools (新增)
+    "HerSafeQueryTool",
+    "HerFindUserByNameTool",
+    "her_safe_query_tool",
+    "her_find_user_by_name_tool",
 ]
 
 
@@ -189,4 +221,8 @@ HER_TOOLS = [
     her_get_user_tool,
     her_get_target_user_tool,
     her_get_conversation_history_tool,
+    her_initiate_chat_tool,
+    # 新增：安全查询工具
+    her_safe_query_tool,
+    her_find_user_by_name_tool,
 ]

@@ -1,0 +1,151 @@
+{
+  "session_id": "session-c702edd2611a",
+  "scenario": {
+    "scenario_type": "date_planning",
+    "user_profile": {
+      "user_id": "test-user-ea439dff",
+      "name": "周杰",
+      "age": 27,
+      "gender": "male",
+      "location": "广州",
+      "occupation": "工程师",
+      "education": "bachelor",
+      "interests": [
+        "音乐",
+        "美食",
+        "户外"
+      ],
+      "relationship_goal": "dating",
+      "bio": "喜欢尝试新鲜事物",
+      "accept_remote": "conditional",
+      "preferred_age_min": 24,
+      "preferred_age_max": 28,
+      "personality_traits": [
+        "活泼",
+        "浪漫"
+      ]
+    },
+    "goal": "获得约会地点和活动建议",
+    "initial_message": "我最近认识了一个不错的女生，想约她出来，有什么建议吗？",
+    "expected_flow": [
+      "发起请求",
+      "获得响应"
+    ],
+    "difficulty": "medium"
+  },
+  "user_profile": {
+    "id": "test-user-ea439dff",
+    "name": "周杰",
+    "age": 27,
+    "gender": "male",
+    "location": "广州",
+    "occupation": "工程师",
+    "education": "bachelor",
+    "interests": [
+      "音乐",
+      "美食",
+      "户外"
+    ],
+    "relationship_goal": "dating",
+    "bio": "喜欢尝试新鲜事物",
+    "accept_remote": "conditional",
+    "preferred_age_min": 24,
+    "preferred_age_max": 28,
+    "preferred_location": "",
+    "deal_breakers": "",
+    "personality_traits": []
+  },
+  "goal": "获得约会地点和活动建议",
+  "goal_achieved": false,
+  "rounds": [
+    {
+      "round_id": 1,
+      "user_input": "我最近认识了一个不错的女生，想约她出来，有什么建议吗？",
+      "agent_response": "我来帮你策划一个完美的约会方案！让我先了解一下你的情况。",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 36302.00505256653,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-15T18:54:17.026529"
+    },
+    {
+      "round_id": 2,
+      "user_input": "好的，我叫周杰，今年27岁，在广州做工程师。平时喜欢听音乐、探店吃美食，周末也会去户外活动。想找个24-28岁的女生约会，看看有没有合适的地点和活动推荐？",
+      "agent_response": "The configured LLM provider is temporarily unavailable after multiple retries. Please wait a moment and continue the conversation.",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 31229.67290878296,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-15T18:54:56.497957"
+    },
+    {
+      "round_id": 3,
+      "user_input": "看来系统有点繁忙，没关系，你可以稍后再试一下。我主要是想找一些适合在广州和女生约会的地方，最好能结合音乐或美食这些元素，你有什么好的建议吗？",
+      "agent_response": "The configured LLM provider is temporarily unavailable after multiple retries. Please wait a moment and continue the conversation.",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 12488.584995269775,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-15T18:55:17.215033"
+    },
+    {
+      "round_id": 4,
+      "user_input": "看来系统还是不太稳定啊，连续几次都连不上。要不你先帮我记录一下需求？我就是想要广州这边适合约会的地点推荐，最好能结合音乐或美食元素，适合和24-28岁的女生一起去的。等系统恢复了再告诉我也行。",
+      "agent_response": "The configured LLM provider is temporarily unavailable after multiple retries. Please wait a moment and continue the conversation.",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 12543.057203292847,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-15T18:55:39.169152"
+    }
+  ],
+  "total_latency_ms": 92563.32015991211,
+  "evaluation": {
+    "goal_achieved": false,
+    "total_rounds": 4,
+    "avg_latency_ms": 23140.830039978027,
+    "errors_count": 0,
+    "ui_components_used": [],
+    "intent_types_seen": [
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation"
+    ],
+    "flow_quality": "unknown",
+    "naturalness": "unknown",
+    "tool_usage_correct": "unknown",
+    "overall_score": 0
+  },
+  "started_at": "2026-04-15T18:53:40.435628",
+  "ended_at": "2026-04-15T18:55:49.122532",
+  "total_rounds": 4
+}

@@ -1,0 +1,20 @@
+{
+  "test_id": "TC100",
+  "category": "edge_cases",
+  "subcategory": "用户已取消匹配",
+  "input_message": "我们分手了，帮我找新对象",
+  "expected_intent": "match_request",
+  "actual_intent": "conversation",
+  "actual_response": "让我先帮你完善资料，这样我能为你推荐更合适的对象。请告诉我：\n\n1. **基本信息**：\n   - 你的名字\n   - 年龄\n   - 性别\n   - 所在城市\n\n2. **择偶偏好**：\n   - 想找哪个年龄段的对象？\n   - 接受异地恋吗？\n   - 想找什么类型的关系（恋爱/结婚/随缘）？\n\n填写完这些信息后，我就能为你推荐合适的匹配对象了！",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 让我先帮你完善资料，这样我能为你推荐更合适的对象。请告诉我：\n\n1. **基本信息**：\n   - 你的名字\n   - 年龄\n   - 性别\n   - 所在城市\n\n2. **择偶偏好**：\n   - 想找哪个年龄段的对象？\n   - 接受异地恋吗？\n   - 想找什么类型的关系（恋爱/结婚/随缘）？\n\n填写完这些信息后，我就能为你推荐合适的匹配对象了！",
+    "意图: 预期 'match_request' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 19233ms"
+  ],
+  "latency_ms": 19233.099937438965,
+  "error": null,
+  "executed_at": "2026-04-14T20:57:31.810119"
+}

@@ -682,3 +682,311 @@ class ShareService(BaseService):
             "total_rewards": result[2],
             "invite_codes": invite_codes
         }
+
+
+# ============= 事件驱动主动通知服务 =============
+
+async def check_and_notify_preferences(new_user) -> None:
+    """
+    检查所有用户的偏好，匹配成功则写入通知队列
+
+    【事件驱动】新用户注册时触发，不消耗 Token
+
+    Args:
+        new_user: 新注册的用户对象（UserDB）
+
+    流程：
+    1. 查询所有活跃的偏好订阅
+    2. 逐个检查是否匹配（纯逻辑，不用 AI）
+    3. 匹配成功 → 写入通知队列
+    """
+    from db.database import get_db
+    from db.models import (
+        UserNotificationPreferenceDB,
+        PendingNotificationDB,
+        UserDB,
+    )
+    from datetime import datetime
+    import json
+
+    logger.info(f"[NOTIFICATION_EVENT] 新用户注册触发检查: {new_user.id} ({new_user.name}, {new_user.location})")
+
+    db = next(get_db())
+    try:
+        # 查询所有活跃的偏好订阅（新用户匹配类型）
+        preferences = db.query(UserNotificationPreferenceDB).filter(
+            UserNotificationPreferenceDB.is_active == True,
+            UserNotificationPreferenceDB.trigger_type == "new_user_match"
+        ).all()
+
+        if not preferences:
+            logger.info(f"[NOTIFICATION_EVENT] 无活跃偏好订阅，跳过")
+            return
+
+        logger.info(f"[NOTIFICATION_EVENT] 检查 {len(preferences)} 个偏好订阅")
+
+        for pref in preferences:
+            # 不通知自己
+            if pref.user_id == new_user.id:
+                continue
+
+            conditions = json.loads(pref.conditions_json or "{}")
+
+            # 纯逻辑匹配（不用 AI，节省 Token）
+            if match_conditions(new_user, conditions):
+                # 计算匹配度（可选，用于排序）
+                match_score = calculate_match_score(pref.user_id, new_user.id, db)
+
+                # 写入通知队列
+                notification = PendingNotificationDB(
+                    target_user_id=pref.user_id,
+                    trigger_user_id=new_user.id,
+                    trigger_type="new_user_match",
+                    payload_json=json.dumps({
+                        "name": new_user.name or "匿名",
+                        "age": new_user.age or 0,
+                        "location": new_user.location or "",
+                        "gender": new_user.gender or "",
+                        "match_score": match_score,
+                        "interests": new_user.interests.split(",")[:3] if new_user.interests else [],
+                    }),
+                    status="pending",
+                )
+                db.add(notification)
+                logger.info(f"[NOTIFICATION_EVENT] 匹配成功！通知用户 {pref.user_id}: {new_user.name} ({new_user.location})")
+
+        db.commit()
+        logger.info(f"[NOTIFICATION_EVENT] 通知队列写入完成")
+    finally:
+        db.close()
+
+
+def match_conditions(new_user, conditions: dict) -> bool:
+    """
+    纯逻辑匹配（不用 AI）
+
+    Args:
+        new_user: 新注册的用户
+        conditions: 偏好条件（JSON）
+
+    Returns:
+        是否匹配
+    """
+    # 地点匹配
+    if conditions.get("location"):
+        pref_location = conditions["location"]
+        user_location = new_user.location or ""
+
+        # 空地点不匹配任何条件
+        if not user_location:
+            return False
+
+        # 宽松匹配：包含关系即可
+        if pref_location not in user_location and user_location not in pref_location:
+            return False
+
+    # 性别匹配
+    if conditions.get("gender"):
+        if new_user.gender != conditions["gender"]:
+            return False
+
+    # 年龄范围匹配
+    if conditions.get("age_range"):
+        age_range = conditions["age_range"]
+        if "-" in age_range:
+            min_age, max_age = age_range.split("-")
+            try:
+                min_age = int(min_age)
+                max_age = int(max_age)
+                # 无年龄信息不匹配
+                if new_user.age is None:
+                    return False
+                if not (min_age <= new_user.age <= max_age):
+                    return False
+            except ValueError:
+                pass
+
+    # 关系目标匹配
+    if conditions.get("relationship_goal"):
+        if new_user.relationship_goal != conditions["relationship_goal"]:
+            return False
+
+    return True
+
+
+def calculate_match_score(user_id: str, new_user_id: str, db) -> int:
+    """
+    计算匹配度（简化版，不用 AI）
+
+    Args:
+        user_id: 订阅用户
+        new_user_id: 新注册用户
+        db: 数据库会话
+
+    Returns:
+        匹配度分数（0-100）
+    """
+    try:
+        user = db.query(UserDB).filter(UserDB.id == user_id).first()
+        new_user = db.query(UserDB).filter(UserDB.id == new_user_id).first()
+
+        if not user or not new_user:
+            return 50
+
+        score = 50  # 基础分
+
+        # 地点匹配加分
+        if user.location and new_user.location:
+            if user.location == new_user.location:
+                score += 20  # 同城
+            elif user.location in new_user.location or new_user.location in user.location:
+                score += 10  # 附近
+
+        # 年龄匹配加分
+        if user.preferred_age_min and user.preferred_age_max:
+            if user.preferred_age_min <= new_user.age <= user.preferred_age_max:
+                score += 15
+
+        # 关系目标匹配加分
+        if user.relationship_goal and new_user.relationship_goal:
+            if user.relationship_goal == new_user.relationship_goal:
+                score += 10
+
+        return min(score, 100)
+
+    except Exception as e:
+        logger.warning(f"[NOTIFICATION_EVENT] 计算匹配度失败: {e}")
+        return 50
+
+
+def get_pending_notifications(user_id: str) -> dict:
+    """
+    获取用户待推送通知
+
+    Args:
+        user_id: 用户 ID
+
+    Returns:
+        {"notifications": [...], "total": N, "has_unread": bool}
+    """
+    from db.database import get_db
+    from db.models import PendingNotificationDB
+    import json
+
+    db = next(get_db())
+    try:
+        notifications = db.query(PendingNotificationDB).filter(
+            PendingNotificationDB.target_user_id == user_id,
+            PendingNotificationDB.status == "pending"
+        ).order_by(PendingNotificationDB.created_at.desc()).limit(10).all()
+
+        result = []
+        for n in notifications:
+            payload = json.loads(n.payload_json or "{}")
+            result.append({
+                "id": n.id,
+                "type": n.trigger_type,
+                "trigger_user_id": n.trigger_user_id,
+                "payload": payload,
+                "created_at": n.created_at.isoformat() if n.created_at else None,
+            })
+
+        return {
+            "notifications": result,
+            "total": len(result),
+            "has_unread": len(result) > 0,
+        }
+    finally:
+        db.close()
+
+
+def mark_notification_delivered(notification_id: int) -> bool:
+    """标记通知已推送"""
+    from db.database import get_db
+    from db.models import PendingNotificationDB
+    from datetime import datetime
+
+    db = next(get_db())
+    try:
+        notification = db.query(PendingNotificationDB).filter(
+            PendingNotificationDB.id == notification_id
+        ).first()
+
+        if notification:
+            notification.status = "delivered"
+            notification.delivered_at = datetime.now()
+            db.commit()
+            return True
+        return False
+    finally:
+        db.close()
+
+
+def mark_notification_read(notification_id: int) -> bool:
+    """标记通知已读"""
+    from db.database import get_db
+    from db.models import PendingNotificationDB
+
+    db = next(get_db())
+    try:
+        notification = db.query(PendingNotificationDB).filter(
+            PendingNotificationDB.id == notification_id
+        ).first()
+
+        if notification:
+            notification.status = "read"
+            db.commit()
+            return True
+        return False
+    finally:
+        db.close()
+
+
+def create_notification_preference(
+    user_id: str,
+    trigger_type: str,
+    conditions: dict
+) -> dict:
+    """
+    创建通知偏好订阅
+
+    Args:
+        user_id: 用户 ID
+        trigger_type: 触发类型（new_user_match, mutual_like, etc.）
+        conditions: 匹配条件
+
+    Returns:
+        创建结果
+    """
+    from db.database import get_db
+    from db.models import UserNotificationPreferenceDB
+    import json
+
+    db = next(get_db())
+    try:
+        # 检查是否已存在
+        existing = db.query(UserNotificationPreferenceDB).filter(
+            UserNotificationPreferenceDB.user_id == user_id,
+            UserNotificationPreferenceDB.trigger_type == trigger_type
+        ).first()
+
+        if existing:
+            # 更新条件
+            existing.conditions_json = json.dumps(conditions)
+            existing.is_active = True
+            db.commit()
+            return {"success": True, "action": "updated", "id": existing.id}
+
+        # 创建新订阅
+        preference = UserNotificationPreferenceDB(
+            user_id=user_id,
+            trigger_type=trigger_type,
+            conditions_json=json.dumps(conditions),
+            is_active=True,
+        )
+        db.add(preference)
+        db.commit()
+
+        return {"success": True, "action": "created", "id": preference.id}
+    finally:
+        db.close()

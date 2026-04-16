@@ -1,0 +1,20 @@
+{
+  "test_id": "TC192",
+  "category": "edge_cases",
+  "subcategory": "错误恢复",
+  "input_message": "那个candidate-999的详细资料",
+  "expected_intent": null,
+  "actual_intent": "conversation",
+  "actual_response": "抱歉，candidate-999 的资料不完整，无法显示详细信息。这个用户还需要完善以下资料：\n\n**缺失的基本信息：**\n- 姓名\n- 年龄\n- 性别\n- 所在城市\n\n**缺失的偏好设置：**\n- 期望地点\n- 期望年龄范围\n- 关系目标\n\n如果您想了解其他用户的详细资料，或者想查看为您推荐的匹配对象，请告诉我！",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 抱歉，candidate-999 的资料不完整，无法显示详细信息。这个用户还需要完善以下资料：\n\n**缺失的基本信息：**\n- 姓名\n- 年龄\n- 性别\n- 所在城市\n\n**缺失的偏好设置：**\n- 期望地点\n- 期望年龄范围\n- 关系目标\n\n如果您想了解其他用户的详细资料，或者想查看为您推荐的匹配对象，请告诉我！",
+    "意图: 无预期，实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 7848ms"
+  ],
+  "latency_ms": 7848.114252090454,
+  "error": null,
+  "executed_at": "2026-04-14T21:20:55.872622"
+}

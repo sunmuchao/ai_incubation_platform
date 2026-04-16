@@ -10,6 +10,8 @@
 
 Her 采用 **AI Native 架构**，集成 DeerFlow Agent 运行时：
 
+> **重要**: v1.30.0 完成了大规模架构清理，删除了 48 个废弃文件，明确了 AI Native 架构边界。
+
 ### 核心架构
 
 ```
@@ -18,6 +20,7 @@ Her 采用 **AI Native 架构**，集成 DeerFlow Agent 运行时：
 │  - 对话式交互（HomePage, ChatInterface）                         │
 │  - 滑动匹配（SwipeMatchPage）                                    │
 │  - 置信度管理（ConfidenceManagementPage）                        │
+│  - API: deerflowClient, herAdvisorApi, confidenceClient          │
 └─────────────────────────────────────────────────────────────────┘
                            ↓ API 调用
 ┌─────────────────────────────────────────────────────────────────┐
@@ -33,6 +36,7 @@ Her 采用 **AI Native 架构**，集成 DeerFlow Agent 运行时：
 │  - 意图识别、工具编排、状态管理、记忆系统                         │
 │  - 26 个 Skills（通过 registry.py 统一注册）                     │
 │  - 12 个 her_tools（LangChain BaseTool）                         │
+│  - SOUL.md 定义 Agent 角色和行为规范                             │
 └─────────────────────────────────────────────────────────────────┘
                            ↓ 数据操作
 ┌─────────────────────────────────────────────────────────────────┐
@@ -55,6 +59,9 @@ Her 采用 **AI Native 架构**，集成 DeerFlow Agent 运行时：
 
 ### 已废弃模块（v1.30 清理）
 
+> **清理日期**: 2026-04-15
+> **清理数量**: 48 个废弃文件 + 逻辑孤岛
+
 以下模块已迁移到 DeerFlow Skills 或合并到其他服务：
 
 | 废弃模块 | 替代方案 | 状态 |
@@ -64,14 +71,16 @@ Her 采用 **AI Native 架构**，集成 DeerFlow Agent 运行时：
 | `safety_ai_service` | `safety_guardian_skill` | ❌ 已删除 |
 | `deep_icebreaker_service` | `silence_breaker_skill` | ❌ 已删除 |
 | `ai_native_conversation_service` | DeerFlow Agent | ❌ 已删除 |
-| Generative UI 组件 | DeerFlow 动态生成 | ❌ 已删除 |
+| `intent_router_skill` | DeerFlow SOUL.md 直接处理意图 | ❌ 已删除 |
+| `dynamic_profile_service` | DeerFlow her_tools 动态画像 | ❌ 已删除 |
+| `quick_start_service` | `/api/profile/quickstart` 直接操作数据库 | ❌ 已删除 |
+| `vector_adjustment_service` | DeerFlow her_feedback_learning_tool | ❌ 已删除 |
+| `behavior_lab_types` | 概念设计，从未落地 | ❌ 已删除 |
+| Generative UI 组件 | DeerFlow 动态生成 | ❌ 部分保留 |
 | 废弃页面（QuickStart, Games 等） | DeerFlow Skills | ❌ 已删除 |
+| 废弃测试目录 `tests/_deprecated` | 功能已迁移 | ❌ 已删除 |
 
-**核心优势**：
-- Agent 循环思考，多工具协作
-- 记忆系统自动记住用户偏好
-- 主动询问，不是"执行一次就停"
-- 置信度系统（非二元验证，概率评估）
+**架构清理原因**: AI Native 转型，从"硬编码规则 + AI 调用"转向"AI 作为决策引擎 + 工具执行"。
 
 ## 快速开始
 

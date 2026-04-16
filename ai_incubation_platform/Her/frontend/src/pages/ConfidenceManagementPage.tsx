@@ -115,7 +115,9 @@ const ConfidenceManagementPage: React.FC<ConfidenceManagementPageProps> = ({ onB
   if (loading) {
     return (
       <div className="confidence-management-page loading-state">
-        <Spin size="large" tip="正在加载置信度数据..." />
+        <Spin size="large" tip="正在加载置信度数据...">
+          <div style={{ padding: 50 }} />
+        </Spin>
       </div>
     )
   }

@@ -322,6 +322,8 @@ class UserProfileService:
 
         注意：基础信息（age, gender, location 等）应直接更新 UserDB 字段，
         此方法仅更新动态画像维度（存储在 self_profile_json）
+
+        🔧 [缓存一致性] 更新后同时失效 cache_manager 缓存
         """
         try:
             self_profile, desire_profile = await self.get_or_create_profile(user_id)
@@ -339,10 +341,16 @@ class UserProfileService:
             # 持久化到 UserDB
             await self._save_profile_to_db(user_id, self_profile, desire_profile)
 
-            # 更新缓存
+            # 🔧 [缓存一致性] 更新本地缓存 + 失效外部缓存
             self._profile_cache[user_id] = (self_profile, desire_profile)
 
-            logger.info(f"[UserProfileService] 更新用户 {user_id} SelfProfile.{dimension}")
+            # 失效 cache_manager 的用户画像缓存（确保其他模块读取最新数据）
+            from cache import cache_manager
+            cache_manager.invalidate_profile(user_id)
+            # 同时失效匹配结果缓存（画像变更可能导致匹配结果变化）
+            cache_manager.invalidate_match_result(user_id)
+
+            logger.info(f"[UserProfileService] 更新用户 {user_id} SelfProfile.{dimension}，缓存已失效")
             return True
 
         except Exception as e:
@@ -372,6 +380,8 @@ class UserProfileService:
 
         注意：表面偏好（surface_preference, deal_breakers）应直接更新 UserDB 字段，
         此方法仅更新动态偏好维度（存储在 desire_profile_json）
+
+        🔧 [缓存一致性] 更新后同时失效 cache_manager 缓存
         """
         try:
             self_profile, desire_profile = await self.get_or_create_profile(user_id)
@@ -385,10 +395,16 @@ class UserProfileService:
             # 持久化到 UserDB
             await self._save_profile_to_db(user_id, self_profile, desire_profile)
 
-            # 更新缓存
+            # 🔧 [缓存一致性] 更新本地缓存 + 失效外部缓存
             self._profile_cache[user_id] = (self_profile, desire_profile)
 
-            logger.info(f"[UserProfileService] 更新用户 {user_id} DesireProfile.{dimension}")
+            # 失效 cache_manager 的用户画像缓存
+            from cache import cache_manager
+            cache_manager.invalidate_profile(user_id)
+            # 同时失效匹配结果缓存（偏好变更可能导致匹配结果变化）
+            cache_manager.invalidate_match_result(user_id)
+
+            logger.info(f"[UserProfileService] 更新用户 {user_id} DesireProfile.{dimension}，缓存已失效")
             return True
 
         except Exception as e:
@@ -592,12 +608,29 @@ class UserProfileService:
         return self_score + desire_score
 
     def clear_cache(self, user_id: Optional[str] = None) -> None:
-        """清除缓存"""
+        """
+        清除缓存
+
+        🔧 [缓存一致性] 同时清除本地缓存和外部 cache_manager 缓存
+
+        Args:
+            user_id: 指定用户ID则只清除该用户缓存，否则清除全部
+        """
+        from cache import cache_manager
+
         if user_id:
+            # 清除本地缓存
             if user_id in self._profile_cache:
                 del self._profile_cache[user_id]
+            # 清除外部缓存
+            cache_manager.invalidate_profile(user_id)
+            cache_manager.invalidate_match_result(user_id)
+            logger.info(f"[UserProfileService] 清除用户 {user_id} 缓存")
         else:
+            # 清除全部本地缓存
             self._profile_cache.clear()
+            # 清除全部外部缓存（谨慎操作）
+            logger.info("[UserProfileService] 清除全部本地画像缓存（外部缓存由 cache_manager 管理）")
 
 
 # ============= ProfileUpdateEngine =============

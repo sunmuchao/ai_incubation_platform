@@ -13,17 +13,102 @@ import {
   Divider,
   Empty,
   Result,
-  Badge
+  Badge,
+  message
 } from 'antd'
 import {
   MessageOutlined,
   ClockCircleOutlined,
   HeartFilled,
-  CheckCircleOutlined
+  CheckCircleOutlined,
+  UserOutlined
 } from '@ant-design/icons'
 import type { GenerativeAction } from './types'
 
 const { Title, Text, Paragraph } = Typography
+
+/**
+ * 聊天发起卡片
+ *
+ * 当用户说 "联系他"、"发起聊天"、"怎么联系他" 时显示此卡片
+ * 提供一个醒目的按钮，直接跳转到聊天页面
+ */
+export const ChatInitiationCard: React.FC<{
+  target_user_id?: string
+  target_user_name?: string
+  target_user_avatar?: string
+  context?: string  // 上下文信息，如 "你们刚完成了92%匹配度分析"
+  compatibility_score?: number  // 可选：匹配度分数
+  onAction?: (action: GenerativeAction) => void
+}> = ({
+  target_user_id,
+  target_user_name = 'TA',
+  target_user_avatar,
+  context,
+  compatibility_score,
+  onAction
+}) => {
+  return (
+    <Card className="chat-initiation-card" style={{ borderRadius: 12 }}>
+      {/* 用户信息 */}
+      <div style={{ textAlign: 'center', marginBottom: 16 }}>
+        <Avatar
+          size={64}
+          src={target_user_avatar}
+          icon={<UserOutlined />}
+          style={{ marginBottom: 8 }}
+        />
+        <Title level={4} style={{ margin: 0 }}>{target_user_name}</Title>
+        {compatibility_score && (
+          <Tag color="pink" style={{ marginTop: 8 }}>
+            <HeartFilled /> {compatibility_score}% 匹配度
+          </Tag>
+        )}
+      </div>
+
+      {/* 上下文提示 */}
+      {context && (
+        <Card size="small" style={{ marginBottom: 16, background: '#f6ffed' }}>
+          <Text type="secondary">{context}</Text>
+        </Card>
+      )}
+
+      <Divider />
+
+      {/* 发起聊天按钮 */}
+      <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <Button
+          type="primary"
+          block
+          size="large"
+          icon={<MessageOutlined />}
+          onClick={() => {
+            if (target_user_id) {
+              onAction?.({ type: 'start_chat', target_user_id, target_user_name })
+            } else {
+              message.warning('无法获取对方信息，请稍后再试')
+            }
+          }}
+          style={{
+            borderRadius: 8,
+            background: 'linear-gradient(135deg, #FF8FAB 0%, #C88B8B 100%)',
+            border: 'none'
+          }}
+        >
+          发起聊天
+        </Button>
+
+        <Button
+          block
+          onClick={() => onAction?.({ type: 'view_profile', target_user_id })}
+          style={{ borderRadius: 8 }}
+        >
+          查看TA的详情
+        </Button>
+      </Space>
+    </Card>
+  )
+}
 
 /**
  * 消息发送状态

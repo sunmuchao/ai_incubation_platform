@@ -1,0 +1,73 @@
+{
+  "test_id": "TC028",
+  "category": "happy_path",
+  "subcategory": "查询类",
+  "input_message": "附近有什么人？",
+  "expected_intent": "nearby_request",
+  "actual_intent": "profile_collection",
+  "actual_response": "欢迎新用户，收集基本信息",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "欢迎来到 Her！为了帮您找到附近合适的人，请先告诉我您的基本信息",
+      "question_type": "multi_step_form",
+      "steps": [
+        {
+          "field": "name",
+          "label": "您的名字",
+          "type": "text",
+          "placeholder": "请输入您的名字"
+        },
+        {
+          "field": "age",
+          "label": "您的年龄",
+          "type": "number",
+          "min": 18,
+          "max": 99
+        },
+        {
+          "field": "gender",
+          "label": "您的性别",
+          "type": "single_choice",
+          "options": [
+            {
+              "value": "male",
+              "label": "男"
+            },
+            {
+              "value": "female",
+              "label": "女"
+            },
+            {
+              "value": "other",
+              "label": "其他"
+            }
+          ]
+        },
+        {
+          "field": "location",
+          "label": "您所在的城市",
+          "type": "text",
+          "placeholder": "例如：北京、上海、深圳"
+        }
+      ],
+      "progress": 0,
+      "total_steps": 4,
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 欢迎新用户，收集基本信息",
+    "意图: 预期 'nearby_request' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 15316ms"
+  ],
+  "latency_ms": 15316.119909286499,
+  "error": null,
+  "executed_at": "2026-04-14T20:43:34.691337"
+}

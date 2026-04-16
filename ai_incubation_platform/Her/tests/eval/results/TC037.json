@@ -1,0 +1,67 @@
+{
+  "test_id": "TC037",
+  "category": "edge_cases",
+  "subcategory": "不存在用户",
+  "input_message": "帮我找对象",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "请填写你的基本信息，以便为你推荐合适的对象",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "欢迎来到 Her！为了帮你找到合适的人，先让我了解一下你的基本情况吧～",
+      "question_type": "profile_collection",
+      "fields": [
+        {
+          "field": "name",
+          "label": "昵称",
+          "type": "text",
+          "placeholder": "你希望怎么被称呼？"
+        },
+        {
+          "field": "age",
+          "label": "年龄",
+          "type": "number",
+          "placeholder": "你的年龄是？"
+        },
+        {
+          "field": "gender",
+          "label": "性别",
+          "type": "single_choice",
+          "options": [
+            {
+              "value": "male",
+              "label": "男"
+            },
+            {
+              "value": "female",
+              "label": "女"
+            }
+          ]
+        },
+        {
+          "field": "location",
+          "label": "所在城市",
+          "type": "text",
+          "placeholder": "你目前在哪个城市？"
+        }
+      ],
+      "next_step": "完善择偶偏好",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请填写你的基本信息，以便为你推荐合适的对象",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 14436ms"
+  ],
+  "latency_ms": 14436.105966567993,
+  "error": null,
+  "executed_at": "2026-04-14T20:45:20.150377"
+}

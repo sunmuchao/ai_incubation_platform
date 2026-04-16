@@ -1,0 +1,20 @@
+{
+  "test_id": "TC078",
+  "category": "happy_path",
+  "subcategory": "玫瑰赠送",
+  "input_message": "怎么送玫瑰给她？",
+  "expected_intent": "rose_send_guidance",
+  "actual_intent": "conversation",
+  "actual_response": "",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: ",
+    "意图: 预期 'rose_send_guidance' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 9041ms"
+  ],
+  "latency_ms": 9041.262865066528,
+  "error": null,
+  "executed_at": "2026-04-14T20:52:13.726845"
+}

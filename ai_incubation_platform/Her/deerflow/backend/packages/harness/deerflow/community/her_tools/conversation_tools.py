@@ -39,22 +39,15 @@ class HerSuggestTopicsTool(BaseTool):
 
     name: str = "her_suggest_topics"
     description: str = """
-获取话题推荐所需的数据。返回用户画像和目标用户画像。
+【触发条件】用户说"话题"、"说什么"、"有什么可以聊"、"聊天内容"时调用。
 
-此工具只返回原始数据，不生成话题。Agent 需要根据数据自主创造话题。
+【禁止场景】用户说"介绍某人的详情"时 → 调用 her_get_target_user（不是本工具）。
 
-参数：
-- user_id: 用户 ID（可选，默认使用当前用户）
+【参数】
+- user_id: 用户 ID（可选）
 - match_id: 匹配对象 ID（可选）
-- context: 对话上下文（可选）
 
-返回：{ user_profile: {...}, target_profile: {...}, conversation_history: [...] }
-
-Agent 应该：
-1. 分析双方画像，找出共同点
-2. 考虑关系阶段（初识/熟悉/亲密）
-3. 避免已聊过的话题
-4. 根据具体情况创造个性化话题
+【返回】双方画像和已聊话题 JSON，Agent 根据此生成新话题。
 """
     args_schema: Type[BaseModel] = HerSuggestTopicsInput
 
@@ -150,22 +143,17 @@ class HerGetIcebreakerTool(BaseTool):
 
     name: str = "her_get_icebreaker"
     description: str = """
-获取破冰开场所需的数据。返回用户和目标用户画像。
+【触发条件】用户说"聊什么"、"怎么开场"、"破冰"、"怎么开口"、"我和匹配的对象聊什么"时调用。
 
-此工具只返回原始数据，不生成开场白。Agent 需要根据数据自主创造开场白。
+【禁止场景】
+- 用户说"介绍某人的详情"时 → 调用 her_get_target_user（不是本工具）
+- 用户说"联系他"时 → 调用 her_initiate_chat（不是本工具）
 
-参数：
-- user_id: 用户 ID（可选，默认使用当前用户）
-- match_id: 目标用户 ID（可选）
-- target_name: 目标用户姓名（可选，用于显示）
+【参数】
+- user_id: 用户 ID（可选）
+- match_id: 目标用户 ID（可选，如果缺失，Agent 应先调用 her_find_matches 获取最近匹配）
 
-返回：{ user_profile: {...}, target_profile: {...}, match_points: [...] }
-
-Agent 应该：
-1. 分析目标用户的兴趣、简介、照片
-2. 找到可以切入的匹配点（共同兴趣等）
-3. 考虑目标用户性格选择开场风格
-4. 创造个性化开场白（避免"Hi你好"等通用模板）
+【返回】双方画像和匹配点 JSON，Agent 根据此生成个性化开场白。
 """
     args_schema: Type[BaseModel] = HerGetIcebreakerInput
 
@@ -265,24 +253,14 @@ class HerPlanDateTool(BaseTool):
 
     name: str = "her_plan_date"
     description: str = """
-获取约会策划所需的数据。返回用户画像和地点信息。
+【触发条件】用户说"约会去哪"、"见面地点"、"约会方案"、"约会推荐"时调用。
 
-此工具只返回原始数据，不生成约会方案。Agent 需要根据数据自主创造约会方案。
-
-参数：
-- user_id: 用户 ID（可选，默认使用当前用户）
+【参数】
+- user_id: 用户 ID（可选）
 - match_id: 约会对象 ID（可选）
-- target_name: 约会对象姓名（可选）
 - location: 约会地点范围（可选）
-- preferences: 偏好设置（可选）
 
-返回：{ user_profile: {...}, target_profile: {...}, activity_options: [...] }
-
-Agent 应该：
-1. 分析双方共同兴趣
-2. 考虑关系阶段选择约会类型（初次约会 vs 熟悉约会）
-3. 考虑地点和预算
-4. 创造具体的约会方案（避免"附近咖啡厅"等模糊建议）
+【返回】双方画像和活动选项 JSON，Agent 根据此生成具体约会方案。
 """
     args_schema: Type[BaseModel] = HerPlanDateInput
 

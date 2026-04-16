@@ -58,12 +58,15 @@ import {
   ExperimentOutlined,
   CompassOutlined,
   CommentOutlined,
+  SettingOutlined,
+  VideoCameraOutlined,
 } from '@ant-design/icons'
 
 import photosApi from '../api/photosApi'
 import { SkeletonCard, SkeletonText } from './Skeleton'
 import { deerflowClient } from '../api/deerflowClient'
 import { authStorage } from '../utils/storage'
+import faceVerificationApi, { VerificationStatusResponse } from '../api/faceVerificationApi'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -482,6 +485,137 @@ export const IdentityVerifyCard: React.FC<IdentityVerifyCardProps> = memo(({
   )
 })
 
+// ========== 人脸认证卡片 ==========
+
+interface FaceVerificationCardProps {
+  verifyStatus?: VerificationStatusResponse | null
+  onStartVerify?: () => void
+  onComplete?: (badge: any) => void
+}
+
+// 🚀 [性能优化] 使用 memo 防止不必要的重渲染
+export const FaceVerificationCard: React.FC<FaceVerificationCardProps> = memo(({
+  verifyStatus,
+  onStartVerify,
+  onComplete
+}) => {
+  const [loading, setLoading] = useState(false)
+  const [status, setStatus] = useState<VerificationStatusResponse | null>(verifyStatus)
+
+  // 加载认证状态
+  useEffect(() => {
+    if (!verifyStatus) {
+      loadStatus()
+    }
+  }, [verifyStatus])
+
+  const loadStatus = async () => {
+    setLoading(true)
+    try {
+      const data = await faceVerificationApi.getVerificationStatus()
+      setStatus(data)
+    } catch (error) {
+      console.error('Failed to load verification status:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 徽章配置
+  const badgeConfig = {
+    blue_star: { icon: '⭐', color: '#1890ff', name: '蓝星认证' },
+    gold_star: { icon: '🌟', color: '#faad14', name: '金星认证' },
+    platinum_star: { icon: '✨', color: '#95de64', name: '铂金星认证' },
+    diamond_star: { icon: '💎', color: '#D4A59A', name: '钻石星认证' },
+  }
+
+  // 🚀 [性能优化] 骨架屏立即显示
+  if (loading && !status) {
+    return <FeatureCardSkeleton title="人脸认证" />
+  }
+
+  const isVerified = status?.face_verified
+  const currentBadge = status?.current_badge || 'blue_star'
+  const badge = badgeConfig[currentBadge as keyof typeof badgeConfig] || badgeConfig.blue_star
+
+  return (
+    <Card className="feature-card face-verify-card">
+      <div className="card-header">
+        <SafetyCertificateOutlined style={{ fontSize: 24, color: isVerified ? '#52c41a' : '#1890ff' }} />
+        <Title level={4} style={{ margin: '0 0 0 8px' }}>人脸认证</Title>
+        {isVerified && <Tag color="green">已认证</Tag>}
+      </div>
+
+      <Divider />
+
+      {/* 认证状态 */}
+      <div className="verify-status" style={{ textAlign: 'center', marginBottom: 16 }}>
+        {isVerified ? (
+          <div>
+            <Tag
+              color={badge.color}
+              style={{ fontSize: 18, padding: '8px 20px', borderRadius: 12 }}
+            >
+              <span style={{ fontSize: 20 }}>{badge.icon}</span>
+              <span style={{ marginLeft: 6 }}>{badge.name}</span>
+            </Tag>
+            <Text type="secondary" style={{ marginTop: 8, display: 'block' }}>
+              信任分 +{status?.trust_score || 0}
+            </Text>
+          </div>
+        ) : (
+          <Tag color="orange" style={{ fontSize: 14, padding: '4px 16px' }}>
+            未认证
+          </Tag>
+        )}
+      </div>
+
+      {/* 未认证时的说明 */}
+      {!isVerified && (
+        <>
+          <Paragraph type="secondary">
+            完成人脸认证可以：
+          </Paragraph>
+          <List
+            size="small"
+            dataSource={[
+              '获得认证徽章标识',
+              '匹配成功率提升 30%',
+              '建立信任，获得更多关注',
+              '解锁更多高级功能',
+            ]}
+            renderItem={(item) => (
+              <List.Item>
+                <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} />
+                {item}
+              </List.Item>
+            )}
+          />
+          <Button
+            type="primary"
+            block
+            icon={<CameraOutlined />}
+            onClick={onStartVerify}
+            style={{ marginTop: 16 }}
+          >
+            开始认证
+          </Button>
+        </>
+      )}
+
+      {/* 已认证时的信息 */}
+      {isVerified && (
+        <Card size="small" style={{ background: '#f6ffed' }}>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Text>认证时间：{status?.face_verification_date ? new Date(status.face_verification_date).toLocaleDateString() : '未知'}</Text>
+            <Text type="secondary">认证徽章有效期一年</Text>
+          </Space>
+        </Card>
+      )}
+    </Card>
+  )
+})
+
 // ========== 会员订阅卡片 ==========
 
 interface MembershipCardProps {
@@ -788,6 +922,7 @@ interface MilestoneFeatureCardProps {
   partnerName?: string
   onAddMilestone?: () => void
   onViewAll?: () => void
+  onGoMatch?: () => void
 }
 
 // 🚀 [性能优化] 使用 memo 防止不必要的重渲染
@@ -796,7 +931,8 @@ export const MilestoneFeatureCard: React.FC<MilestoneFeatureCardProps> = memo(({
   partnerId,
   partnerName,
   onAddMilestone,
-  onViewAll
+  onViewAll,
+  onGoMatch
 }) => {
   const [loading, setLoading] = useState(false)
 
@@ -855,7 +991,7 @@ export const MilestoneFeatureCard: React.FC<MilestoneFeatureCardProps> = memo(({
           }
         />
 
-        <Button block type="primary" style={{ marginTop: 16, background: 'linear-gradient(135deg, #D4A59A 0%, #C88B8B 100%)', border: 'none' }}>
+        <Button block type="primary" onClick={onGoMatch} style={{ marginTop: 16, background: 'linear-gradient(135deg, #D4A59A 0%, #C88B8B 100%)', border: 'none' }}>
           去匹配
         </Button>
       </Card>
@@ -875,7 +1011,9 @@ export const MilestoneFeatureCard: React.FC<MilestoneFeatureCardProps> = memo(({
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
-          <Spin tip="加载中..." />
+          <Spin tip="加载中...">
+            <div style={{ padding: 20 }} />
+          </Spin>
         </div>
       ) : milestones.length === 0 ? (
         <Empty
@@ -1423,6 +1561,15 @@ export const FeatureCardRenderer: React.FC<FeatureCardRendererProps> = memo(({
           />
         )
 
+      case 'face_verification':
+        return (
+          <FaceVerificationCard
+            verifyStatus={data?.verifyStatus}
+            onStartVerify={() => onAction?.('start_face_verification')}
+            onComplete={(badge) => onAction?.('face_verification_complete', badge)}
+          />
+        )
+
       case 'membership':
         return (
           <MembershipCard
@@ -1467,6 +1614,7 @@ export const FeatureCardRenderer: React.FC<FeatureCardRendererProps> = memo(({
             partnerName={data?.partnerName}
             onAddMilestone={() => onAction?.('add_milestone')}
             onViewAll={() => onAction?.('view_all_milestones')}
+            onGoMatch={() => onAction?.('go_match')}
           />
         )
 

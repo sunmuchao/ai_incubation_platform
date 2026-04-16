@@ -1,0 +1,20 @@
+{
+  "test_id": "TC021",
+  "category": "happy_path",
+  "subcategory": "偏好更新",
+  "input_message": "我喜欢年龄比我小一点的",
+  "expected_intent": "preference_update",
+  "actual_intent": "conversation",
+  "actual_response": "收到！你喜欢找年龄比你小一点的伴侣，这个偏好我记下了～\n\n为了给你找到最合适的对象，我还需要了解一些基本信息：",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 收到！你喜欢找年龄比你小一点的伴侣，这个偏好我记下了～\n\n为了给你找到最合适的对象，我还需要了解一些基本信息：",
+    "意图: 预期 'preference_update' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 16007ms"
+  ],
+  "latency_ms": 16006.738901138306,
+  "error": null,
+  "executed_at": "2026-04-14T20:41:58.795299"
+}

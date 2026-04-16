@@ -1,0 +1,43 @@
+{
+  "test_id": "TC126",
+  "category": "happy_path",
+  "subcategory": "多轮对话",
+  "input_message": "还有其他推荐吗？",
+  "expected_intent": "more_matches",
+  "actual_intent": "profile_collection",
+  "actual_response": "开始收集用户基本信息",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "你好！我是 Her，很高兴认识你。为了给你推荐最合适的对象，先简单了解一下你吧~ 请问你的性别是？",
+      "question_type": "single_choice",
+      "options": [
+        {
+          "label": "男生",
+          "value": "male"
+        },
+        {
+          "label": "女生",
+          "value": "female"
+        }
+      ],
+      "dimension": "gender",
+      "progress": "1/5",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 开始收集用户基本信息",
+    "意图: 预期 'more_matches' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 42634ms"
+  ],
+  "latency_ms": 42633.99314880371,
+  "error": null,
+  "executed_at": "2026-04-14T21:04:20.946264"
+}

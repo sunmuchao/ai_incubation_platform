@@ -1,0 +1,95 @@
+{
+  "test_id": "TC150",
+  "category": "happy_path",
+  "subcategory": "个性化学习",
+  "input_message": "上次推荐的那个不太合适，太内向了",
+  "expected_intent": "feedback_learning",
+  "actual_intent": "match_request",
+  "actual_response": "为您找到3位性格外向开朗的候选人",
+  "generative_ui": {
+    "component_type": "MatchCardList",
+    "props": {
+      "matches": [
+        {
+          "user_id": "m_001",
+          "name": "小雨",
+          "age": 26,
+          "gender": "女",
+          "location": "上海",
+          "avatar": "https://example.com/avatar1.jpg",
+          "personality": "外向开朗，喜欢社交，热情阳光",
+          "interests": [
+            "旅行",
+            "户外运动",
+            "聚会",
+            "音乐"
+          ],
+          "occupation": "市场经理",
+          "education": "本科",
+          "confidence_icon": "🌟",
+          "confidence_level": "high",
+          "match_score": 85,
+          "match_reason": "性格外向活泼，善于沟通，与内向型形成互补"
+        },
+        {
+          "user_id": "m_002",
+          "name": "晓琳",
+          "age": 27,
+          "gender": "女",
+          "location": "上海",
+          "avatar": "https://example.com/avatar2.jpg",
+          "personality": "活泼开朗，爱笑健谈，正能量满满",
+          "interests": [
+            "摄影",
+            "探店",
+            "瑜伽",
+            "看电影"
+          ],
+          "occupation": "产品经理",
+          "education": "硕士",
+          "confidence_icon": "💎",
+          "confidence_level": "very_high",
+          "match_score": 88,
+          "match_reason": "性格开朗外向，善于带动气氛，社交能力强"
+        },
+        {
+          "user_id": "m_003",
+          "name": "思琪",
+          "age": 25,
+          "gender": "女",
+          "location": "上海",
+          "avatar": "https://example.com/avatar3.jpg",
+          "personality": "阳光开朗，幽默风趣，自来熟",
+          "interests": [
+            "健身",
+            "脱口秀",
+            "剧本杀",
+            "美食"
+          ],
+          "occupation": "品牌策划",
+          "education": "本科",
+          "confidence_icon": "✓",
+          "confidence_level": "medium",
+          "match_score": 82,
+          "match_reason": "性格外向幽默，喜欢社交活动，能带动聊天氛围"
+        }
+      ],
+      "total": 3,
+      "_schema": {
+        "backend_type": "MatchCardList",
+        "frontend_card": "match",
+        "description": "匹配结果列表，展示候选人卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 为您找到3位性格外向开朗的候选人",
+    "意图: 预期 'feedback_learning' vs 实际 'match_request'",
+    "UI组件: MatchCardList",
+    "延迟: 29117ms"
+  ],
+  "latency_ms": 29117.313623428345,
+  "error": null,
+  "executed_at": "2026-04-14T21:13:27.822429"
+}

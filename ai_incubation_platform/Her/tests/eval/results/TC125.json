@@ -1,0 +1,20 @@
+{
+  "test_id": "TC125",
+  "category": "happy_path",
+  "subcategory": "多轮对话",
+  "input_message": "第一个人的详细资料是什么？",
+  "expected_intent": "profile_detail",
+  "actual_intent": "conversation",
+  "actual_response": "",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: ",
+    "意图: 预期 'profile_detail' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 22868ms"
+  ],
+  "latency_ms": 22868.33691596985,
+  "error": null,
+  "executed_at": "2026-04-14T21:03:38.295244"
+}

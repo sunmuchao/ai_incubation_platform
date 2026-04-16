@@ -1,0 +1,20 @@
+{
+  "test_id": "TC012",
+  "category": "happy_path",
+  "subcategory": "破冰建议",
+  "input_message": "帮我想想怎么开口和她聊天",
+  "expected_intent": "icebreaker_request",
+  "actual_intent": "conversation",
+  "actual_response": "我来帮你准备开场白！让我先了解一下你们的情况，这样能给你更个性化的建议。",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 我来帮你准备开场白！让我先了解一下你们的情况，这样能给你更个性化的建议。",
+    "意图: 预期 'icebreaker_request' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 4631ms"
+  ],
+  "latency_ms": 4631.305932998657,
+  "error": null,
+  "executed_at": "2026-04-14T20:39:31.240116"
+}

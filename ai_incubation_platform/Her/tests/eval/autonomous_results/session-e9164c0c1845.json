@@ -1,0 +1,638 @@
+{
+  "session_id": "session-e9164c0c1845",
+  "scenario": {
+    "scenario_type": "compatibility_analysis",
+    "user_profile": {
+      "user_id": "test-user-7caca874",
+      "name": "赵敏",
+      "age": 29,
+      "gender": "female",
+      "location": "杭州",
+      "occupation": "教师",
+      "education": "master",
+      "interests": [
+        "阅读",
+        "瑜伽",
+        "烹饪"
+      ],
+      "relationship_goal": "serious",
+      "bio": "性格温和，重视家庭",
+      "accept_remote": "conditional",
+      "preferred_age_min": 28,
+      "preferred_age_max": 35,
+      "personality_traits": [
+        "温和",
+        "传统"
+      ]
+    },
+    "goal": "了解与候选人的匹配程度和建议",
+    "initial_message": "我最近看到一个匹配推荐，想了解一下我们是否合适",
+    "expected_flow": [
+      "发起请求",
+      "获得响应"
+    ],
+    "difficulty": "medium"
+  },
+  "user_profile": {
+    "id": "c089524e-ea3d-4b2e-8299-d4c6f95b99c6",
+    "name": "赵敏",
+    "age": 29,
+    "gender": "female",
+    "location": "杭州",
+    "occupation": "教师",
+    "education": "master",
+    "interests": [
+      "阅读",
+      "瑜伽",
+      "烹饪"
+    ],
+    "relationship_goal": "serious",
+    "bio": "性格温和，重视家庭",
+    "accept_remote": "conditional",
+    "preferred_age_min": 28,
+    "preferred_age_max": 35,
+    "preferred_location": "",
+    "deal_breakers": "",
+    "personality_traits": []
+  },
+  "goal": "了解与候选人的匹配程度和建议",
+  "goal_achieved": true,
+  "rounds": [
+    {
+      "round_id": 1,
+      "user_input": "我最近看到一个匹配推荐，想了解一下我们是否合适",
+      "agent_response": "我来帮您分析匹配度！让我先看看您最近的匹配推荐。找到了几位匹配推荐！让我为您展示：\n\n【匹配推荐】\n\n1. **吴磊**，26岁，成都\n   - 兴趣：运动、游戏、旅行\n   - 简介：外向开朗，但不太会聊天\n   - 置信度：✓ (57分)\n\n2. **李明**，30岁\n   - 关系目标：认真恋爱奔着结婚\n   - 置信度：✓ (57分)\n\n3. **陈大伟**，35岁，深圳\n   - 兴趣：阅读、健身、投资\n   - 简介：工作稳定，准备成家\n   - 置信度：✓ (57分)\n\n4. **周杰**，27岁，广州\n   - 兴趣：音乐、美食、户外\n   - 简介：喜欢尝试新鲜事物\n   - 置信度：✓ (57分)\n\n---\n\n请问您想分析哪一位的匹配度呢？您可以：\n- 告诉我名字（如\"分析一下陈大伟\"）\n- 或者说\"第一个\"、\"第二个\"等\n\n我会为您详细分析你们的匹配程度！",
+      "intent": {
+        "type": "match_request",
+        "confidence": 0.9,
+        "source": "ui_component"
+      },
+      "generative_ui": {
+        "component_type": "MatchCardList",
+        "props": {
+          "matches": [
+            {
+              "user_id": "68018347-4e9d-4a3d-a413-59ca2e6ee5e7",
+              "name": "吴磊",
+              "age": 26,
+              "gender": "male",
+              "location": "成都",
+              "interests": [
+                "[\"\\u8fd0\\u52a8\"",
+                " \"\\u6e38\\u620f\"",
+                " \"\\u65c5\\u884c\"]"
+              ],
+              "bio": "外向开朗，但不太会聊天",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "5aca0bd7-066e-4b9c-994b-234105d871a3",
+              "name": "李明",
+              "age": 30,
+              "gender": "male",
+              "location": "",
+              "interests": [
+                "[]"
+              ],
+              "bio": "",
+              "relationship_goal": "认真恋爱奔着结婚",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "45fc155a-18ac-4dbf-84e5-a79af764c968",
+              "name": "陈大伟",
+              "age": 35,
+              "gender": "male",
+              "location": "深圳",
+              "interests": [
+                "[\"\\u9605\\u8bfb\"",
+                " \"\\u5065\\u8eab\"",
+                " \"\\u6295\\u8d44\"]"
+              ],
+              "bio": "工作稳定，准备成家",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "ae083550-8c19-4a57-adad-3c243252bdd9",
+              "name": "吴磊",
+              "age": 26,
+              "gender": "male",
+              "location": "成都",
+              "interests": [
+                "[\"\\u8fd0\\u52a8\"",
+                " \"\\u6e38\\u620f\"",
+                " \"\\u65c5\\u884c\"]"
+              ],
+              "bio": "外向开朗，但不太会聊天",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "7d592f59-ae8d-455e-bbff-f0ef8572c8e8",
+              "name": "周杰",
+              "age": 27,
+              "gender": "male",
+              "location": "广州",
+              "interests": [
+                "[\"\\u97f3\\u4e50\"",
+                " \"\\u7f8e\\u98df\"",
+                " \"\\u6237\\u5916\"]"
+              ],
+              "bio": "喜欢尝试新鲜事物",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            }
+          ],
+          "total": 5,
+          "filter_applied": {
+            "age_range": "18-60",
+            "preferred_location": "杭州",
+            "accept_remote": null,
+            "same_city_count": 0,
+            "remote_count": 15
+          },
+          "user_preferences": {
+            "preferred_age_min": 18,
+            "preferred_age_max": 60,
+            "preferred_location": "杭州",
+            "accept_remote": null,
+            "relationship_goal": ""
+          },
+          "_schema": {
+            "backend_type": "MatchCardList",
+            "frontend_card": "match",
+            "description": "匹配结果列表，展示候选人卡片"
+          }
+        }
+      },
+      "tool_calls": [],
+      "latency_ms": 51909.06119346619,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-16T04:50:34.385573"
+    },
+    {
+      "round_id": 2,
+      "user_input": "分析一下陈大伟吧，他喜欢阅读，这个和我挺有共同语言的。不过他在深圳，我在杭州，想了解一下异地的匹配情况。",
+      "agent_response": "我来帮您分析匹配度！让我先看看您最近的匹配推荐。找到了几位匹配推荐！让我为您展示：\n\n【匹配推荐】\n\n1. **吴磊**，26岁，成都\n   - 兴趣：运动、游戏、旅行\n   - 简介：外向开朗，但不太会聊天\n   - 置信度：✓ (57分)\n\n2. **李明**，30岁\n   - 关系目标：认真恋爱奔着结婚\n   - 置信度：✓ (57分)\n\n3. **陈大伟**，35岁，深圳\n   - 兴趣：阅读、健身、投资\n   - 简介：工作稳定，准备成家\n   - 置信度：✓ (57分)\n\n4. **周杰**，27岁，广州\n   - 兴趣：音乐、美食、户外\n   - 简介：喜欢尝试新鲜事物\n   - 置信度：✓ (57分)\n\n---\n\n请问您想分析哪一位的匹配度呢？您可以：\n- 告诉我名字（如\"分析一下陈大伟\"）\n- 或者说\"第一个\"、\"第二个\"等\n\n我会为您详细分析你们的匹配程度！好的！陈大伟确实和您有共同兴趣——阅读。让我为您详细分析一下你们的匹配度，包括异地因素。【匹配度分析：赵敏 & 陈大伟】\n\n---\n\n### 📊 基本信息对比\n\n| 项目 | 您（赵敏） | 陈大伟 |\n|------|-----------|--------|\n| 年龄 | 29岁 | 35岁 |\n| 所在地 | 杭州 | 深圳 |\n| 兴趣爱好 | 阅读、瑜伽、烹饪 | 阅读、健身、投资 |\n| 简介 | 性格温和，重视家庭 | 工作稳定，准备成家 |\n\n---\n\n### ✅ 匹配亮点\n\n**1. 共同兴趣：阅读**\n您们都热爱阅读，这是一个很好的共同话题！可以分享书单、讨论读书心得，约会时也可以一起去书店或参加读书会活动。\n\n**2. 年龄差距适中**\n6岁的年龄差在婚恋中是比较理想的，他更成熟稳重，您年轻有活力，可以互补。\n\n**3. 价值观契合**\n- 您：性格温和，重视家庭\n- 他：工作稳定，准备成家\n\n双方都重视家庭，关系目标一致，这是长期关系的重要基础。\n\n---\n\n### ⚠️ 需要考虑的因素\n\n**1. 异地问题**\n- 他在深圳，您在杭州，距离约1500公里\n- 他的偏好是珠三角地区（深圳、广州、东莞）\n- 他接受\"珠三角地区\"的异地，但杭州不在该范围内\n\n**2. 需要确认的问题**\n- 您是否接受异地恋？\n- 未来是否有迁居或对方迁居的可能性？\n- 双方对异地恋的预期时长？\n\n---\n\n### 💡 建议\n\n异地恋确实需要更多沟通和规划，但如果双方都有诚意，距离不是不可逾越的障碍。建议：\n\n1. **先聊聊看**：通过聊天了解彼此更多，看看是否有足够的连接感\n2. **讨论异地规划**：如果聊得来，可以坦诚讨论对异地恋的看法和未来规划\n3. **考虑见面成本**：杭州-深圳交通便利，高铁约7小时，飞机约2小时\n\n---\n\n您想让我帮您生成一个开场白，先和他聊聊吗？😊",
+      "intent": {
+        "type": "match_request",
+        "confidence": 0.9,
+        "source": "ui_component"
+      },
+      "generative_ui": {
+        "component_type": "MatchCardList",
+        "props": {
+          "matches": [
+            {
+              "user_id": "68018347-4e9d-4a3d-a413-59ca2e6ee5e7",
+              "name": "吴磊",
+              "age": 26,
+              "gender": "male",
+              "location": "成都",
+              "interests": [
+                "[\"\\u8fd0\\u52a8\"",
+                " \"\\u6e38\\u620f\"",
+                " \"\\u65c5\\u884c\"]"
+              ],
+              "bio": "外向开朗，但不太会聊天",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "5aca0bd7-066e-4b9c-994b-234105d871a3",
+              "name": "李明",
+              "age": 30,
+              "gender": "male",
+              "location": "",
+              "interests": [
+                "[]"
+              ],
+              "bio": "",
+              "relationship_goal": "认真恋爱奔着结婚",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "45fc155a-18ac-4dbf-84e5-a79af764c968",
+              "name": "陈大伟",
+              "age": 35,
+              "gender": "male",
+              "location": "深圳",
+              "interests": [
+                "[\"\\u9605\\u8bfb\"",
+                " \"\\u5065\\u8eab\"",
+                " \"\\u6295\\u8d44\"]"
+              ],
+              "bio": "工作稳定，准备成家",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "ae083550-8c19-4a57-adad-3c243252bdd9",
+              "name": "吴磊",
+              "age": 26,
+              "gender": "male",
+              "location": "成都",
+              "interests": [
+                "[\"\\u8fd0\\u52a8\"",
+                " \"\\u6e38\\u620f\"",
+                " \"\\u65c5\\u884c\"]"
+              ],
+              "bio": "外向开朗，但不太会聊天",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "7d592f59-ae8d-455e-bbff-f0ef8572c8e8",
+              "name": "周杰",
+              "age": 27,
+              "gender": "male",
+              "location": "广州",
+              "interests": [
+                "[\"\\u97f3\\u4e50\"",
+                " \"\\u7f8e\\u98df\"",
+                " \"\\u6237\\u5916\"]"
+              ],
+              "bio": "喜欢尝试新鲜事物",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            }
+          ],
+          "total": 5,
+          "filter_applied": {
+            "age_range": "18-60",
+            "preferred_location": "杭州",
+            "accept_remote": null,
+            "same_city_count": 0,
+            "remote_count": 15
+          },
+          "user_preferences": {
+            "preferred_age_min": 18,
+            "preferred_age_max": 60,
+            "preferred_location": "杭州",
+            "accept_remote": null,
+            "relationship_goal": ""
+          },
+          "_schema": {
+            "backend_type": "MatchCardList",
+            "frontend_card": "match",
+            "description": "匹配结果列表，展示候选人卡片"
+          }
+        }
+      },
+      "tool_calls": [],
+      "latency_ms": 45164.002895355225,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-16T04:51:42.994698"
+    },
+    {
+      "round_id": 3,
+      "user_input": "好的，帮我生成一个开场白吧！阅读这个共同话题确实很适合作为切入点。不过关于异地的问题，我确实有些顾虑，毕竟他在深圳偏好珠三角地区，我希望能先了解一下他对异地恋的态度。",
+      "agent_response": "API 调用失败: HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=90)",
+      "intent": null,
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 90000.79798698425,
+      "error": "HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=90)",
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-16T04:53:41.518956"
+    },
+    {
+      "round_id": 4,
+      "user_input": "系统好像出了点问题，能再帮我试一次吗？我还是想生成一个关于阅读话题的开场白，顺便了解一下怎么试探对方对异地恋的态度。",
+      "agent_response": "API 调用失败: HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=90)",
+      "intent": null,
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 90004.16588783264,
+      "error": "HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=90)",
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-16T04:55:24.464648"
+    },
+    {
+      "round_id": 5,
+      "user_input": "系统好像不太稳定呀，已经失败好几次了。要不换个方式，你先告诉我陈大伟的基本资料和匹配分数，我自己想想怎么开场也行？",
+      "agent_response": "我来帮您分析匹配度！让我先看看您最近的匹配推荐。找到了几位匹配推荐！让我为您展示：\n\n【匹配推荐】\n\n1. **吴磊**，26岁，成都\n   - 兴趣：运动、游戏、旅行\n   - 简介：外向开朗，但不太会聊天\n   - 置信度：✓ (57分)\n\n2. **李明**，30岁\n   - 关系目标：认真恋爱奔着结婚\n   - 置信度：✓ (57分)\n\n3. **陈大伟**，35岁，深圳\n   - 兴趣：阅读、健身、投资\n   - 简介：工作稳定，准备成家\n   - 置信度：✓ (57分)\n\n4. **周杰**，27岁，广州\n   - 兴趣：音乐、美食、户外\n   - 简介：喜欢尝试新鲜事物\n   - 置信度：✓ (57分)\n\n---\n\n请问您想分析哪一位的匹配度呢？您可以：\n- 告诉我名字（如\"分析一下陈大伟\"）\n- 或者说\"第一个\"、\"第二个\"等\n\n我会为您详细分析你们的匹配程度！好的！陈大伟确实和您有共同兴趣——阅读。让我为您详细分析一下你们的匹配度，包括异地因素。【匹配度分析：赵敏 & 陈大伟】\n\n---\n\n### 📊 基本信息对比\n\n| 项目 | 您（赵敏） | 陈大伟 |\n|------|-----------|--------|\n| 年龄 | 29岁 | 35岁 |\n| 所在地 | 杭州 | 深圳 |\n| 兴趣爱好 | 阅读、瑜伽、烹饪 | 阅读、健身、投资 |\n| 简介 | 性格温和，重视家庭 | 工作稳定，准备成家 |\n\n---\n\n### ✅ 匹配亮点\n\n**1. 共同兴趣：阅读**\n您们都热爱阅读，这是一个很好的共同话题！可以分享书单、讨论读书心得，约会时也可以一起去书店或参加读书会活动。\n\n**2. 年龄差距适中**\n6岁的年龄差在婚恋中是比较理想的，他更成熟稳重，您年轻有活力，可以互补。\n\n**3. 价值观契合**\n- 您：性格温和，重视家庭\n- 他：工作稳定，准备成家\n\n双方都重视家庭，关系目标一致，这是长期关系的重要基础。\n\n---\n\n### ⚠️ 需要考虑的因素\n\n**1. 异地问题**\n- 他在深圳，您在杭州，距离约1500公里\n- 他的偏好是珠三角地区（深圳、广州、东莞）\n- 他接受\"珠三角地区\"的异地，但杭州不在该范围内\n\n**2. 需要确认的问题**\n- 您是否接受异地恋？\n- 未来是否有迁居或对方迁居的可能性？\n- 双方对异地恋的预期时长？\n\n---\n\n### 💡 建议\n\n异地恋确实需要更多沟通和规划，但如果双方都有诚意，距离不是不可逾越的障碍。建议：\n\n1. **先聊聊看**：通过聊天了解彼此更多，看看是否有足够的连接感\n2. **讨论异地规划**：如果聊得来，可以坦诚讨论对异地恋的看法和未来规划\n3. **考虑见面成本**：杭州-深圳交通便利，高铁约7小时，飞机约2小时\n\n---\n\n您想让我帮您生成一个开场白，先和他聊聊吗？😊好的！我来帮您生成一个开场白，既能从阅读话题切入，又能自然地了解他对异地恋的态度。【开场白推荐】\n\n为您设计了几个开场白选项，都从阅读切入，同时自然地了解他对异地恋的态度：\n\n---\n\n### 🌟 选项一：轻松自然型（推荐）\n\n> \"Hi 陈大伟，看到你也喜欢阅读，太有共鸣了！最近在读什么书呀？我最近在看《被讨厌的勇气》，感觉挺有启发的。对了，你在深圳生活应该很充实吧？我之前去过一次，节奏好快哈哈 😄\"\n\n**优点**：从阅读切入，顺便提到深圳，看他是否对异地话题有回应\n\n---\n\n### 🌟 选项二：直接坦诚型\n\n> \"Hi！看到我们都喜欢阅读，觉得很有缘分～ 我在杭州，平时喜欢逛书店、做瑜伽。注意到你在深圳，想了解一下，你对异地恋怎么看呀？我之前有顾虑，但觉得如果聊得来，距离也不是大问题 😊\"\n\n**优点**：直接表达诚意和顾虑，适合喜欢坦诚沟通的人\n\n---\n\n### 🌟 选项三：兴趣延伸型\n\n> \"Hi 陈大伟！看到你的资料，阅读和健身都是我很欣赏的兴趣～ 我平时也喜欢看书，最近在研究投资理财方面的书，你有推荐吗？另外好奇问一下，你平时工作忙吗？深圳和杭州感觉是两种不同的生活节奏呢 😄\"\n\n**优点**：从阅读延伸到投资（他的独特兴趣），同时自然带出城市话题\n\n---\n\n### 💡 小建议\n\n- **选项一**最轻松，适合先试探一下\n- 如果他回复积极，可以在后续聊天中自然聊到异地话题\n- 如果他主动提到\"你在杭州啊\"，说明他对异地是开放的\n\n您觉得哪个开场白更适合您的风格？或者需要我帮您调整一下？😊好的，没问题！让我重新为您生成开场白。好的，重新为您生成！\n\n---\n\n【开场白推荐】\n\n### 🌟 选项一：轻松自然型（推荐）\n\n> \"Hi 陈大伟！看到你也喜欢阅读，太有共鸣了～ 最近在读什么书呀？我最近在看《被讨厌的勇气》，感觉挺有启发的。对了，你在深圳生活应该很充实吧？我之前去过一次，感觉节奏好快哈哈 😄\"\n\n**试探技巧**：提到深圳后，看他是否主动回应\"你在杭州啊\"或对异地话题有反应\n\n---\n\n### 🌟 选项二：直接坦诚型\n\n> \"Hi！看到我们都喜欢阅读，觉得很有缘分～ 我在杭州，平时喜欢逛书店、做瑜伽。注意到你在深圳，想了解一下，你对异地恋怎么看呀？我之前有顾虑，但觉得如果聊得来，距离也不是大问题 😊\"\n\n**试探技巧**：直接表达诚意和顾虑，适合喜欢坦诚沟通的人\n\n---\n\n### 🌟 选项三：兴趣延伸型\n\n> \"Hi 陈大伟！看到你的资料，阅读和健身都是我很欣赏的兴趣～ 我平时也喜欢看书，最近在研究投资理财方面的书，你有推荐吗？另外好奇问一下，你平时工作忙吗？深圳和杭州感觉是两种不同的生活节奏呢 😄\"\n\n**试探技巧**：从城市节奏延伸，看他是否愿意聊异地话题\n\n---\n\n### 💡 如何试探异地恋态度\n\n**第一轮聊天**：用选项一或选项三开场，先建立连接\n\n**第二轮跟进**：如果他回复积极，可以自然地问：\n> \"感觉深圳和杭州还挺远的，你平时会经常出差吗？\"\n> 或\n> \"我之前有顾虑异地恋，但觉得如果两个人聊得来，距离也不是大问题，你怎么看呀？\"\n\n**观察他的回应**：\n- ✅ 积极回应 → 说明对异地开放\n- ⚠️ 回避话题 → 可能对异地有顾虑\n- ❌ 直接说\"不太接受异地\" → 可以及时止损\n\n---\n\n您觉得哪个开场白更适合？需要我帮您调整吗？😊没问题！我直接把之前获取的陈大伟资料整理给您：\n\n---\n\n【陈大伟 基本资料】\n\n| 项目 | 信息 |\n|------|------|\n| 姓名 | 陈大伟 |\n| 年龄 | 35岁 |\n| 所在地 | 深圳 |\n| 兴趣爱好 | 阅读、健身、投资 |\n| 个人简介 | 工作稳定，准备成家 |\n| 偏好年龄 | 26-36岁 |\n| 偏好地点 | 深圳、广州、东莞 |\n| 接受异地 | 珠三角地区 |\n\n---\n\n【匹配分析】\n\n| 维度 | 分析 |\n|------|------|\n| 年龄匹配 | ✅ 您29岁，在他偏好范围内（26-36岁） |\n| 共同兴趣 | ✅ 阅读（双方都喜欢） |\n| 异地情况 | ⚠️ 杭州不在他偏好的珠三角范围内 |\n| 价值观 | ✅ 双方都重视家庭，目标一致 |\n\n---\n\n【关键信息】\n\n- 他偏好珠三角地区（深圳、广州、东莞），杭州不在范围内\n- 他接受\"珠三角地区\"的异地，但对更远的城市态度未知\n- 年龄差距6岁，比较合适\n- 共同话题：阅读\n\n---\n\n您可以参考这些信息自己设计开场白。如果之后想让我帮您发起聊天，随时告诉我！😊",
+      "intent": {
+        "type": "match_request",
+        "confidence": 0.9,
+        "source": "ui_component"
+      },
+      "generative_ui": {
+        "component_type": "MatchCardList",
+        "props": {
+          "matches": [
+            {
+              "user_id": "68018347-4e9d-4a3d-a413-59ca2e6ee5e7",
+              "name": "吴磊",
+              "age": 26,
+              "gender": "male",
+              "location": "成都",
+              "interests": [
+                "[\"\\u8fd0\\u52a8\"",
+                " \"\\u6e38\\u620f\"",
+                " \"\\u65c5\\u884c\"]"
+              ],
+              "bio": "外向开朗，但不太会聊天",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "5aca0bd7-066e-4b9c-994b-234105d871a3",
+              "name": "李明",
+              "age": 30,
+              "gender": "male",
+              "location": "",
+              "interests": [
+                "[]"
+              ],
+              "bio": "",
+              "relationship_goal": "认真恋爱奔着结婚",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "45fc155a-18ac-4dbf-84e5-a79af764c968",
+              "name": "陈大伟",
+              "age": 35,
+              "gender": "male",
+              "location": "深圳",
+              "interests": [
+                "[\"\\u9605\\u8bfb\"",
+                " \"\\u5065\\u8eab\"",
+                " \"\\u6295\\u8d44\"]"
+              ],
+              "bio": "工作稳定，准备成家",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "ae083550-8c19-4a57-adad-3c243252bdd9",
+              "name": "吴磊",
+              "age": 26,
+              "gender": "male",
+              "location": "成都",
+              "interests": [
+                "[\"\\u8fd0\\u52a8\"",
+                " \"\\u6e38\\u620f\"",
+                " \"\\u65c5\\u884c\"]"
+              ],
+              "bio": "外向开朗，但不太会聊天",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "7d592f59-ae8d-455e-bbff-f0ef8572c8e8",
+              "name": "周杰",
+              "age": 27,
+              "gender": "male",
+              "location": "广州",
+              "interests": [
+                "[\"\\u97f3\\u4e50\"",
+                " \"\\u7f8e\\u98df\"",
+                " \"\\u6237\\u5916\"]"
+              ],
+              "bio": "喜欢尝试新鲜事物",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            }
+          ],
+          "total": 5,
+          "filter_applied": {
+            "age_range": "18-60",
+            "preferred_location": "杭州",
+            "accept_remote": null,
+            "same_city_count": 0,
+            "remote_count": 15
+          },
+          "user_preferences": {
+            "preferred_age_min": 18,
+            "preferred_age_max": 60,
+            "preferred_location": "杭州",
+            "accept_remote": null,
+            "relationship_goal": ""
+          },
+          "_schema": {
+            "backend_type": "MatchCardList",
+            "frontend_card": "match",
+            "description": "匹配结果列表，展示候选人卡片"
+          }
+        }
+      },
+      "tool_calls": [],
+      "latency_ms": 26035.87293624878,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-16T04:56:22.178033"
+    },
+    {
+      "round_id": 6,
+      "user_input": "谢谢你的详细分析！我觉得选项一比较适合我，轻松自然，先试探一下他对异地的态度。异地确实是我最大的顾虑，不过你说得对，先聊聊看，如果聊得来再深入讨论这个问题。谢谢你今天的帮助！",
+      "agent_response": "我来帮您分析匹配度！让我先看看您最近的匹配推荐。找到了几位匹配推荐！让我为您展示：\n\n【匹配推荐】\n\n1. **吴磊**，26岁，成都\n   - 兴趣：运动、游戏、旅行\n   - 简介：外向开朗，但不太会聊天\n   - 置信度：✓ (57分)\n\n2. **李明**，30岁\n   - 关系目标：认真恋爱奔着结婚\n   - 置信度：✓ (57分)\n\n3. **陈大伟**，35岁，深圳\n   - 兴趣：阅读、健身、投资\n   - 简介：工作稳定，准备成家\n   - 置信度：✓ (57分)\n\n4. **周杰**，27岁，广州\n   - 兴趣：音乐、美食、户外\n   - 简介：喜欢尝试新鲜事物\n   - 置信度：✓ (57分)\n\n---\n\n请问您想分析哪一位的匹配度呢？您可以：\n- 告诉我名字（如\"分析一下陈大伟\"）\n- 或者说\"第一个\"、\"第二个\"等\n\n我会为您详细分析你们的匹配程度！好的！陈大伟确实和您有共同兴趣——阅读。让我为您详细分析一下你们的匹配度，包括异地因素。【匹配度分析：赵敏 & 陈大伟】\n\n---\n\n### 📊 基本信息对比\n\n| 项目 | 您（赵敏） | 陈大伟 |\n|------|-----------|--------|\n| 年龄 | 29岁 | 35岁 |\n| 所在地 | 杭州 | 深圳 |\n| 兴趣爱好 | 阅读、瑜伽、烹饪 | 阅读、健身、投资 |\n| 简介 | 性格温和，重视家庭 | 工作稳定，准备成家 |\n\n---\n\n### ✅ 匹配亮点\n\n**1. 共同兴趣：阅读**\n您们都热爱阅读，这是一个很好的共同话题！可以分享书单、讨论读书心得，约会时也可以一起去书店或参加读书会活动。\n\n**2. 年龄差距适中**\n6岁的年龄差在婚恋中是比较理想的，他更成熟稳重，您年轻有活力，可以互补。\n\n**3. 价值观契合**\n- 您：性格温和，重视家庭\n- 他：工作稳定，准备成家\n\n双方都重视家庭，关系目标一致，这是长期关系的重要基础。\n\n---\n\n### ⚠️ 需要考虑的因素\n\n**1. 异地问题**\n- 他在深圳，您在杭州，距离约1500公里\n- 他的偏好是珠三角地区（深圳、广州、东莞）\n- 他接受\"珠三角地区\"的异地，但杭州不在该范围内\n\n**2. 需要确认的问题**\n- 您是否接受异地恋？\n- 未来是否有迁居或对方迁居的可能性？\n- 双方对异地恋的预期时长？\n\n---\n\n### 💡 建议\n\n异地恋确实需要更多沟通和规划，但如果双方都有诚意，距离不是不可逾越的障碍。建议：\n\n1. **先聊聊看**：通过聊天了解彼此更多，看看是否有足够的连接感\n2. **讨论异地规划**：如果聊得来，可以坦诚讨论对异地恋的看法和未来规划\n3. **考虑见面成本**：杭州-深圳交通便利，高铁约7小时，飞机约2小时\n\n---\n\n您想让我帮您生成一个开场白，先和他聊聊吗？😊好的！我来帮您生成一个开场白，既能从阅读话题切入，又能自然地了解他对异地恋的态度。【开场白推荐】\n\n为您设计了几个开场白选项，都从阅读切入，同时自然地了解他对异地恋的态度：\n\n---\n\n### 🌟 选项一：轻松自然型（推荐）\n\n> \"Hi 陈大伟，看到你也喜欢阅读，太有共鸣了！最近在读什么书呀？我最近在看《被讨厌的勇气》，感觉挺有启发的。对了，你在深圳生活应该很充实吧？我之前去过一次，节奏好快哈哈 😄\"\n\n**优点**：从阅读切入，顺便提到深圳，看他是否对异地话题有回应\n\n---\n\n### 🌟 选项二：直接坦诚型\n\n> \"Hi！看到我们都喜欢阅读，觉得很有缘分～ 我在杭州，平时喜欢逛书店、做瑜伽。注意到你在深圳，想了解一下，你对异地恋怎么看呀？我之前有顾虑，但觉得如果聊得来，距离也不是大问题 😊\"\n\n**优点**：直接表达诚意和顾虑，适合喜欢坦诚沟通的人\n\n---\n\n### 🌟 选项三：兴趣延伸型\n\n> \"Hi 陈大伟！看到你的资料，阅读和健身都是我很欣赏的兴趣～ 我平时也喜欢看书，最近在研究投资理财方面的书，你有推荐吗？另外好奇问一下，你平时工作忙吗？深圳和杭州感觉是两种不同的生活节奏呢 😄\"\n\n**优点**：从阅读延伸到投资（他的独特兴趣），同时自然带出城市话题\n\n---\n\n### 💡 小建议\n\n- **选项一**最轻松，适合先试探一下\n- 如果他回复积极，可以在后续聊天中自然聊到异地话题\n- 如果他主动提到\"你在杭州啊\"，说明他对异地是开放的\n\n您觉得哪个开场白更适合您的风格？或者需要我帮您调整一下？😊好的，没问题！让我重新为您生成开场白。好的，重新为您生成！\n\n---\n\n【开场白推荐】\n\n### 🌟 选项一：轻松自然型（推荐）\n\n> \"Hi 陈大伟！看到你也喜欢阅读，太有共鸣了～ 最近在读什么书呀？我最近在看《被讨厌的勇气》，感觉挺有启发的。对了，你在深圳生活应该很充实吧？我之前去过一次，感觉节奏好快哈哈 😄\"\n\n**试探技巧**：提到深圳后，看他是否主动回应\"你在杭州啊\"或对异地话题有反应\n\n---\n\n### 🌟 选项二：直接坦诚型\n\n> \"Hi！看到我们都喜欢阅读，觉得很有缘分～ 我在杭州，平时喜欢逛书店、做瑜伽。注意到你在深圳，想了解一下，你对异地恋怎么看呀？我之前有顾虑，但觉得如果聊得来，距离也不是大问题 😊\"\n\n**试探技巧**：直接表达诚意和顾虑，适合喜欢坦诚沟通的人\n\n---\n\n### 🌟 选项三：兴趣延伸型\n\n> \"Hi 陈大伟！看到你的资料，阅读和健身都是我很欣赏的兴趣～ 我平时也喜欢看书，最近在研究投资理财方面的书，你有推荐吗？另外好奇问一下，你平时工作忙吗？深圳和杭州感觉是两种不同的生活节奏呢 😄\"\n\n**试探技巧**：从城市节奏延伸，看他是否愿意聊异地话题\n\n---\n\n### 💡 如何试探异地恋态度\n\n**第一轮聊天**：用选项一或选项三开场，先建立连接\n\n**第二轮跟进**：如果他回复积极，可以自然地问：\n> \"感觉深圳和杭州还挺远的，你平时会经常出差吗？\"\n> 或\n> \"我之前有顾虑异地恋，但觉得如果两个人聊得来，距离也不是大问题，你怎么看呀？\"\n\n**观察他的回应**：\n- ✅ 积极回应 → 说明对异地开放\n- ⚠️ 回避话题 → 可能对异地有顾虑\n- ❌ 直接说\"不太接受异地\" → 可以及时止损\n\n---\n\n您觉得哪个开场白更适合？需要我帮您调整吗？😊没问题！我直接把之前获取的陈大伟资料整理给您：\n\n---\n\n【陈大伟 基本资料】\n\n| 项目 | 信息 |\n|------|------|\n| 姓名 | 陈大伟 |\n| 年龄 | 35岁 |\n| 所在地 | 深圳 |\n| 兴趣爱好 | 阅读、健身、投资 |\n| 个人简介 | 工作稳定，准备成家 |\n| 偏好年龄 | 26-36岁 |\n| 偏好地点 | 深圳、广州、东莞 |\n| 接受异地 | 珠三角地区 |\n\n---\n\n【匹配分析】\n\n| 维度 | 分析 |\n|------|------|\n| 年龄匹配 | ✅ 您29岁，在他偏好范围内（26-36岁） |\n| 共同兴趣 | ✅ 阅读（双方都喜欢） |\n| 异地情况 | ⚠️ 杭州不在他偏好的珠三角范围内 |\n| 价值观 | ✅ 双方都重视家庭，目标一致 |\n\n---\n\n【关键信息】\n\n- 他偏好珠三角地区（深圳、广州、东莞），杭州不在范围内\n- 他接受\"珠三角地区\"的异地，但对更远的城市态度未知\n- 年龄差距6岁，比较合适\n- 共同话题：阅读\n\n---\n\n您可以参考这些信息自己设计开场白。如果之后想让我帮您发起聊天，随时告诉我！😊不客气！很高兴能帮到您！😊\n\n---\n\n【总结一下今天的建议】\n\n✅ **开场白选择**：选项一，轻松自然型\n- 从阅读话题切入\n- 自然提到深圳，观察他的反应\n- 不急于暴露异地顾虑\n\n✅ **后续策略**：\n- 先建立连接，聊得来再深入讨论异地问题\n- 观察他是否主动回应城市话题\n- 如果聊得顺利，第二轮可以坦诚表达顾虑\n\n---\n\n【小贴士】\n\n异地恋确实需要勇气，但杭州和深圳交通便利，如果双方都有诚意，距离是可以克服的。先聊聊看，说不定会有惊喜！\n\n---\n\n祝您聊天顺利！如果之后需要帮忙分析对话、推荐话题、或者策划见面约会，随时来找我～ 加油！🌟",
+      "intent": {
+        "type": "match_request",
+        "confidence": 0.9,
+        "source": "ui_component"
+      },
+      "generative_ui": {
+        "component_type": "MatchCardList",
+        "props": {
+          "matches": [
+            {
+              "user_id": "68018347-4e9d-4a3d-a413-59ca2e6ee5e7",
+              "name": "吴磊",
+              "age": 26,
+              "gender": "male",
+              "location": "成都",
+              "interests": [
+                "[\"\\u8fd0\\u52a8\"",
+                " \"\\u6e38\\u620f\"",
+                " \"\\u65c5\\u884c\"]"
+              ],
+              "bio": "外向开朗，但不太会聊天",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "5aca0bd7-066e-4b9c-994b-234105d871a3",
+              "name": "李明",
+              "age": 30,
+              "gender": "male",
+              "location": "",
+              "interests": [
+                "[]"
+              ],
+              "bio": "",
+              "relationship_goal": "认真恋爱奔着结婚",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "45fc155a-18ac-4dbf-84e5-a79af764c968",
+              "name": "陈大伟",
+              "age": 35,
+              "gender": "male",
+              "location": "深圳",
+              "interests": [
+                "[\"\\u9605\\u8bfb\"",
+                " \"\\u5065\\u8eab\"",
+                " \"\\u6295\\u8d44\"]"
+              ],
+              "bio": "工作稳定，准备成家",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "ae083550-8c19-4a57-adad-3c243252bdd9",
+              "name": "吴磊",
+              "age": 26,
+              "gender": "male",
+              "location": "成都",
+              "interests": [
+                "[\"\\u8fd0\\u52a8\"",
+                " \"\\u6e38\\u620f\"",
+                " \"\\u65c5\\u884c\"]"
+              ],
+              "bio": "外向开朗，但不太会聊天",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            },
+            {
+              "user_id": "7d592f59-ae8d-455e-bbff-f0ef8572c8e8",
+              "name": "周杰",
+              "age": 27,
+              "gender": "male",
+              "location": "广州",
+              "interests": [
+                "[\"\\u97f3\\u4e50\"",
+                " \"\\u7f8e\\u98df\"",
+                " \"\\u6237\\u5916\"]"
+              ],
+              "bio": "喜欢尝试新鲜事物",
+              "relationship_goal": "",
+              "want_children": null,
+              "confidence_level": "medium",
+              "confidence_score": 57,
+              "confidence_icon": "✓"
+            }
+          ],
+          "total": 5,
+          "filter_applied": {
+            "age_range": "18-60",
+            "preferred_location": "杭州",
+            "accept_remote": null,
+            "same_city_count": 0,
+            "remote_count": 15
+          },
+          "user_preferences": {
+            "preferred_age_min": 18,
+            "preferred_age_max": 60,
+            "preferred_location": "杭州",
+            "accept_remote": null,
+            "relationship_goal": ""
+          },
+          "_schema": {
+            "backend_type": "MatchCardList",
+            "frontend_card": "match",
+            "description": "匹配结果列表，展示候选人卡片"
+          }
+        }
+      },
+      "tool_calls": [],
+      "latency_ms": 41071.276903152466,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-16T04:57:19.072168"
+    }
+  ],
+  "total_latency_ms": 344185.17780303955,
+  "evaluation": {
+    "goal_achieved": true,
+    "total_rounds": 6,
+    "avg_latency_ms": 57364.19630050659,
+    "errors_count": 2,
+    "ui_components_used": [
+      "MatchCardList",
+      "MatchCardList",
+      "MatchCardList",
+      "MatchCardList"
+    ],
+    "intent_types_seen": [
+      "match_request",
+      "match_request",
+      "match_request",
+      "match_request"
+    ],
+    "flow_quality": "unknown",
+    "naturalness": "unknown",
+    "tool_usage_correct": "unknown",
+    "overall_score": 0
+  },
+  "started_at": "2026-04-16T04:49:42.217403",
+  "ended_at": "2026-04-16T04:58:02.928380",
+  "total_rounds": 6
+}

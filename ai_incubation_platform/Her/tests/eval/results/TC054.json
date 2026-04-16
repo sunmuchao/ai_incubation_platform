@@ -1,0 +1,20 @@
+{
+  "test_id": "TC054",
+  "category": "happy_path",
+  "subcategory": "礼物推荐",
+  "input_message": "她生日快到了，送什么礼物好？",
+  "expected_intent": "gift_suggestion",
+  "actual_intent": "conversation",
+  "actual_response": "我来帮你想想生日礼物的好主意！不过我需要先了解一下这位朋友的情况，才能给你更贴心的建议：",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 我来帮你想想生日礼物的好主意！不过我需要先了解一下这位朋友的情况，才能给你更贴心的建议：",
+    "意图: 预期 'gift_suggestion' vs 实际 'conversation'",
+    "UI组件: 预期 'GiftSuggestionCard'，实际未返回",
+    "延迟: 3708ms"
+  ],
+  "latency_ms": 3708.021879196167,
+  "error": null,
+  "executed_at": "2026-04-14T20:48:15.089246"
+}

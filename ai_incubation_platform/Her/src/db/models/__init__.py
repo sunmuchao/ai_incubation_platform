@@ -122,8 +122,22 @@ from db.models.grayscale import (
 # ============= 关系进展 =============
 from db.models.relationship import RelationshipProgressDB, SavedLocationDB
 
+# ============= 通知领域（事件驱动主动通知）============
+from db.models.notification import (
+    UserNotificationPreferenceDB,
+    PendingNotificationDB,
+    TRIGGER_TYPES,
+    MATCHABLE_FIELDS,
+)
+
 # ============= 导入外部定义的模型 =============
 from models.membership import UserUsageTrackerDB  # noqa: F401
+from models.profile_confidence_models import (
+    ProfileConfidenceDetailDB,
+    CrossValidationRuleDB,
+    ConfidenceEvaluationLogDB,
+    VerificationSuggestionDB,
+)  # noqa: F401
 
 # ============= 统一导出 =============
 __all__ = [
@@ -193,8 +207,18 @@ __all__ = [
     # 关系进展
     "RelationshipProgressDB",
     "SavedLocationDB",
+    # 通知领域
+    "UserNotificationPreferenceDB",
+    "PendingNotificationDB",
+    "TRIGGER_TYPES",
+    "MATCHABLE_FIELDS",
     # 外部导入
     "UserUsageTrackerDB",
+    # 置信度评估（外部导入）
+    "ProfileConfidenceDetailDB",
+    "CrossValidationRuleDB",
+    "ConfidenceEvaluationLogDB",
+    "VerificationSuggestionDB",
 ]
 
 

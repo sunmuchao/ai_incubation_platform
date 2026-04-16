@@ -36,7 +36,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 # 测试数据集路径
 GOLDEN_DATASET_PATH = os.path.join(os.path.dirname(__file__), "golden_dataset.json")
-RESULTS_JSON_PATH = os.path.join(os.path.dirname(__file__), "evaluation_results.json")
+RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 REPORT_OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "evaluation_report.html")
 
 
@@ -76,103 +76,127 @@ class TestResult:
 
 
 class IncrementalResultWriter:
-    """增量结果写入器 - 支持断点续传"""
+    """增量结果写入器 - 支持断点续传（每个用例单独文件）"""
 
-    def __init__(self, results_path: str, test_cases: List[Dict], force_restart: bool = False):
-        self.results_path = results_path
+    def __init__(self, results_dir: str, test_cases: List[Dict], force_restart: bool = False):
+        self.results_dir = results_dir
         self.test_cases = test_cases
         self.force_restart = force_restart
         self.completed_ids: Set[str] = set()
         self.results: List[TestResult] = []
         self.meta: Dict[str, Any] = {}
 
-        # 初始化：读取已有结果或创建新文件
+        # 确保结果目录存在
+        os.makedirs(results_dir, exist_ok=True)
+
+        # 汇总文件路径
+        self.summary_path = os.path.join(results_dir, "evaluation_results.json")
+
+        # 初始化：读取已有结果
         self._initialize()
 
     def _initialize(self):
-        """初始化：读取已有结果或创建空文件"""
+        """初始化：扫描已有结果文件"""
         if self.force_restart:
             print("🔄 强制重新执行，忽略已有结果")
-            self._create_empty_file()
             return
 
-        if os.path.exists(self.results_path):
+        # 扫描 results 目录下的所有 TC*.json 文件
+        existing_files = [f for f in os.listdir(self.results_dir) if f.startswith("TC") and f.endswith(".json")]
+
+        for filename in existing_files:
+            test_id = filename.replace(".json", "")
+            filepath = os.path.join(self.results_dir, filename)
+
             try:
-                with open(self.results_path, "r", encoding="utf-8") as f:
+                with open(filepath, "r", encoding="utf-8") as f:
                     data = json.load(f)
 
-                # 提取已完成的用例 ID
-                for r in data.get("results", []):
-                    self.completed_ids.add(r.get("test_id"))
-                    # 恢复已有的结果
-                    self.results.append(TestResult(
-                        test_id=r.get("test_id"),
-                        category=r.get("category"),
-                        subcategory=r.get("subcategory"),
-                        input_message=r.get("input_message"),
-                        expected_intent=r.get("expected_intent"),
-                        actual_intent=r.get("actual_intent"),
-                        actual_response=r.get("actual_response", ""),
-                        generative_ui=r.get("generative_ui"),
-                        passed=r.get("passed", True),
-                        details=r.get("details", []),
-                        latency_ms=r.get("latency_ms", 0),
-                        error=r.get("error"),
-                        executed_at=r.get("executed_at", ""),
-                    ))
-
-                self.meta = data.get("meta", {})
-                print(f"📂 已读取 {len(self.completed_ids)} 个已完成用例")
-
+                self.completed_ids.add(test_id)
+                # 恢复已有的结果
+                result_data = data.get("result", data)
+                self.results.append(TestResult(
+                    test_id=test_id,
+                    category=result_data.get("category"),
+                    subcategory=result_data.get("subcategory"),
+                    input_message=result_data.get("input_message"),
+                    expected_intent=result_data.get("expected_intent"),
+                    actual_intent=result_data.get("actual_intent"),
+                    actual_response=result_data.get("actual_response", ""),
+                    generative_ui=result_data.get("generative_ui"),
+                    passed=result_data.get("passed", True),
+                    details=result_data.get("details", []),
+                    latency_ms=result_data.get("latency_ms", 0),
+                    error=result_data.get("error"),
+                    executed_at=result_data.get("executed_at", ""),
+                ))
             except Exception as e:
-                print(f"⚠️ 读取已有结果失败: {e}，将重新开始")
-                self._create_empty_file()
+                print(f"⚠️ 读取 {filename} 失败: {e}")
+
+        if self.completed_ids:
+            print(f"📂 已读取 {len(self.completed_ids)} 个已完成用例")
         else:
             print("📝 未找到已有结果文件，将从头开始")
-            self._create_empty_file()
-
-    def _create_empty_file(self):
-        """创建空结果文件"""
-        self.meta = {
-            "started_at": datetime.now().isoformat(),
-            "total_cases": len(self.test_cases),
-            "api_mode": "real_api",
-            "version": "v3_incremental"
-        }
-        self._save_to_file()
 
     def should_execute(self, test_id: str) -> bool:
         """判断是否应该执行此用例"""
         return test_id not in self.completed_ids
 
     def add_result(self, result: TestResult):
-        """添加新结果并立即写入文件"""
+        """添加新结果并立即写入单独文件"""
         self.results.append(result)
         self.completed_ids.add(result.test_id)
 
-        # 更新 meta
-        self.meta["completed_count"] = len(self.completed_ids)
-        self.meta["last_updated"] = datetime.now().isoformat()
+        # 🔴 立即写入单独文件（每个用例一个文件）
+        self._save_single_result(result)
 
-        # 立即写入文件（增量保存）
-        self._save_to_file()
+        # 同时更新汇总文件
+        self._save_summary_file()
 
         print(f"💾 已保存结果: {result.test_id}")
 
-    def _save_to_file(self):
-        """保存到文件"""
+    def _save_single_result(self, result: TestResult):
+        """保存单个结果到单独文件"""
+        filepath = os.path.join(self.results_dir, f"{result.test_id}.json")
+
         json_data = {
-            "meta": self.meta,
-            "test_cases": self.test_cases,  # 保留原始测试用例（含预期输出）
+            "test_id": result.test_id,
+            "category": result.category,
+            "subcategory": result.subcategory,
+            "input_message": result.input_message,
+            "expected_intent": result.expected_intent,
+            "actual_intent": result.actual_intent,
+            "actual_response": result.actual_response,
+            "generative_ui": result.generative_ui,
+            "passed": result.passed,
+            "details": result.details,
+            "latency_ms": result.latency_ms,
+            "error": result.error,
+            "executed_at": result.executed_at,
+        }
+
+        # 原子写入
+        temp_path = filepath + ".tmp"
+        with open(temp_path, "w", encoding="utf-8") as f:
+            json.dump(json_data, f, ensure_ascii=False, indent=2)
+        os.replace(temp_path, filepath)
+
+    def _save_summary_file(self):
+        """保存汇总文件（用于 HTML 报告生成）"""
+        json_data = {
+            "meta": {
+                "total_cases": len(self.test_cases),
+                "completed_count": len(self.completed_ids),
+                "last_updated": datetime.now().isoformat(),
+                "version": "v3_incremental_per_file"
+            },
             "results": [asdict(r) for r in self.results]
         }
 
-        # 原子写入：先写临时文件，再 rename
-        temp_path = self.results_path + ".tmp"
+        temp_path = self.summary_path + ".tmp"
         with open(temp_path, "w", encoding="utf-8") as f:
             json.dump(json_data, f, ensure_ascii=False, indent=2)
-
-        os.replace(temp_path, self.results_path)
+        os.replace(temp_path, self.summary_path)
 
     def get_stats(self) -> Dict[str, int]:
         """获取统计信息"""
@@ -467,14 +491,14 @@ async def run_evaluation(
     force_restart: bool = False,
     category_filter: str = None
 ) -> List[TestResult]:
-    """运行评估 - 增量版本"""
+    """运行评估 - 增量版本（每个用例单独文件）"""
 
     test_cases = get_test_cases(category_filter)
     validator = Validator()
     client = RealAPIClient() if use_real_api else MockAPIClient()
 
-    # 初始化增量写入器
-    result_writer = IncrementalResultWriter(RESULTS_JSON_PATH, test_cases, force_restart)
+    # 初始化增量写入器（传入目录路径）
+    result_writer = IncrementalResultWriter(RESULTS_DIR, test_cases, force_restart)
     stats = result_writer.get_stats()
 
     print(f"\n{'🌐 使用真实 API' if use_real_api else '🎭 使用模拟 API'}...")
@@ -591,10 +615,11 @@ def main():
     with open(args.output, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"\n📊 HTML 报告已生成: {args.output}")
-    print(f"📄 JSON 结果文件: {RESULTS_JSON_PATH}")
+    print(f"📄 单独结果文件目录: {RESULTS_DIR}")
+    print(f"📄 汇总结果文件: {os.path.join(RESULTS_DIR, 'evaluation_results.json')}")
 
     print(f"\n下一步: 运行 LLM-as-a-Judge 评估")
-    print(f"  python tests/eval/llm_judge.py --input {RESULTS_JSON_PATH}")
+    print(f"  python tests/eval/llm_judge.py --input {os.path.join(RESULTS_DIR, 'evaluation_results.json')}")
 
 
 if __name__ == "__main__":

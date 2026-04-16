@@ -468,6 +468,64 @@ class DeerFlowClient:
         return {"thread_id": thread_id, "checkpoints": checkpoints}
 
     # ------------------------------------------------------------------
+    # Internal helpers for history filtering
+    # ------------------------------------------------------------------
+
+    def _get_existing_message_ids(self, thread_id: str) -> set[str]:
+        """Get IDs of messages already in the thread's history.
+
+        This is used to filter out historical messages from the stream output.
+        LangGraph's messages stream mode may replay historical messages when
+        using a checkpointer - we only want to yield NEW messages.
+
+        Args:
+            thread_id: Thread ID to query.
+
+        Returns:
+            Set of message IDs that already exist in the thread history.
+        """
+        checkpointer = self._checkpointer
+        if checkpointer is None:
+            return set()
+
+        existing_ids: set[str] = set()
+        config = {"configurable": {"thread_id": thread_id}}
+
+        try:
+            # Get the latest checkpoint (most recent state)
+            latest_checkpoint = None
+            for cp in checkpointer.list(config, limit=1):
+                latest_checkpoint = cp
+                break
+
+            if latest_checkpoint is None:
+                return set()
+
+            # Extract message IDs from the latest state
+            channel_values = latest_checkpoint.checkpoint.get("channel_values", {})
+            messages = channel_values.get("messages", [])
+
+            for msg in messages:
+                msg_id = getattr(msg, "id", None)
+                if msg_id:
+                    existing_ids.add(msg_id)
+
+            logger.debug(
+                "Filtered %d existing message IDs from thread %s history",
+                len(existing_ids),
+                thread_id,
+            )
+            return existing_ids
+
+        except Exception as e:
+            logger.warning(
+                "Failed to get existing message IDs for thread %s: %s",
+                thread_id,
+                e,
+            )
+            return set()
+
+    # ------------------------------------------------------------------
     # Public API — conversation
     # ------------------------------------------------------------------
 
@@ -557,6 +615,11 @@ class DeerFlowClient:
         config = self._get_runnable_config(thread_id, **kwargs)
         self._ensure_agent(config)
 
+        # 🔧 [关键修复] 获取历史消息 ID，用于过滤重复消息
+        # LangGraph 的 messages stream mode 在 checkpointer 场景下会重放历史消息
+        # 我们需要过滤掉这些历史消息，只 yield 新生成的消息
+        existing_message_ids: set[str] = self._get_existing_message_ids(thread_id)
+
         state: dict[str, Any] = {"messages": [HumanMessage(content=message)]}
         context = {"thread_id": thread_id}
         if self._agent_name:
@@ -624,6 +687,11 @@ class DeerFlowClient:
 
                 msg_id = getattr(msg_chunk, "id", None)
 
+                # 🔧 [关键修复] 过滤历史消息
+                # 如果消息 ID 已存在于 thread 历史中，跳过不 yield
+                if msg_id and msg_id in existing_message_ids:
+                    continue
+
                 if isinstance(msg_chunk, AIMessage):
                     text = self._extract_text(msg_chunk.content)
                     counted_usage = _account_usage(msg_id, msg_chunk.usage_metadata)
@@ -653,6 +721,11 @@ class DeerFlowClient:
                     continue
                 if msg_id:
                     seen_ids.add(msg_id)
+
+                # 🔧 [关键修复] 过滤历史消息（双重保险）
+                # 如果消息 ID 已存在于 thread 历史中，跳过不 yield
+                if msg_id and msg_id in existing_message_ids:
+                    continue
 
                 # Already streamed via ``messages`` mode; only (defensively)
                 # capture usage here and skip re-synthesizing the event.

@@ -28,6 +28,10 @@
     "her_relationship_guide": {
       "enabled": true,
       "description": "Her 关系指导流程 - 关系健康检查到冲突调解"
+    },
+    "autonomous_test": {
+      "enabled": true,
+      "description": "自主对话测试框架 - AI自动生成多轮对话测试场景，发现系统问题"
     }
   }
 }

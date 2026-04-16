@@ -1,0 +1,89 @@
+{
+  "test_id": "TC140",
+  "category": "edge_cases",
+  "subcategory": "服务异常",
+  "input_message": "帮我找对象",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "请先完善你的个人资料，我会为你推荐合适的人选",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "欢迎来到 Her！为了帮你找到合适的人，先了解一下你的基本情况吧~",
+      "question_type": "profile_collection",
+      "steps": [
+        {
+          "field": "name",
+          "question": "你叫什么名字？",
+          "required": true
+        },
+        {
+          "field": "age",
+          "question": "你今年多大？",
+          "required": true
+        },
+        {
+          "field": "gender",
+          "question": "你的性别是？",
+          "options": [
+            "男",
+            "女"
+          ],
+          "required": true
+        },
+        {
+          "field": "location",
+          "question": "你现在在哪个城市？",
+          "required": true
+        }
+      ],
+      "preference_questions": [
+        {
+          "field": "relationship_goal",
+          "question": "你希望找什么样的关系？",
+          "options": [
+            "长期伴侣",
+            "短期约会",
+            "先做朋友",
+            "看感觉"
+          ],
+          "required": true
+        },
+        {
+          "field": "preferred_location",
+          "question": "对对方的位置有要求吗？",
+          "options": [
+            "只找同城",
+            "同城优先",
+            "异地也可以",
+            "不限"
+          ],
+          "required": true
+        },
+        {
+          "field": "preferred_age",
+          "question": "希望对方的年龄范围是？",
+          "type": "range",
+          "min": 18,
+          "max": 65,
+          "required": true
+        }
+      ],
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请先完善你的个人资料，我会为你推荐合适的人选",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 19108ms"
+  ],
+  "latency_ms": 19107.850074768066,
+  "error": null,
+  "executed_at": "2026-04-14T21:09:59.808496"
+}

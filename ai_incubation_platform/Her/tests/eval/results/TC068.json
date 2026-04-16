@@ -1,0 +1,20 @@
+{
+  "test_id": "TC068",
+  "category": "happy_path",
+  "subcategory": "置信度反馈",
+  "input_message": "这个推荐很棒，我很喜欢！",
+  "expected_intent": "confidence_feedback",
+  "actual_intent": "conversation",
+  "actual_response": "太棒了！很高兴你喜欢这个推荐 😊\n\n现在你有几个选择：\n\n**1. 开启对话** — 我可以帮你准备一句开场白，让你和 TA 自然地聊起来\n\n**2. 深入分析** — 详细看看你们的匹配度，包括性格、价值观、生活方式等维度\n\n**3. 继续看看** — 我再为你推荐其他候选人，多比较一下\n\n你想先做什么呢？",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 太棒了！很高兴你喜欢这个推荐 😊\n\n现在你有几个选择：\n\n**1. 开启对话** — 我可以帮你准备一句开场白，让你和 TA 自然地聊起来\n\n**2. 深入分析** — 详细看看你们的匹配度，包括性格、价值观、生活方式等维度\n\n**3. 继续看看** — 我再为你推荐其他候选人，多比较一下\n\n你想先做什么呢？",
+    "意图: 预期 'confidence_feedback' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 15873ms"
+  ],
+  "latency_ms": 15872.549057006836,
+  "error": null,
+  "executed_at": "2026-04-14T20:50:54.250309"
+}

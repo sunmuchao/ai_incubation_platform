@@ -1,17 +1,23 @@
 """
 统一配置管理模块
 所有配置从环境变量读取，支持.env 文件
+
+🔧 [架构原则] 所有路径基于项目根目录（Her/），不使用相对路径
 """
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional, List
+from pathlib import Path
 import os
 from dotenv import load_dotenv
 import secrets
 import warnings
 
+# ============= 项目根目录（唯一基准点）============
+# 无论从哪个目录启动，PROJECT_ROOT 永远指向 Her/
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 # 加载.env 文件（从项目根目录加载）
-_base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-load_dotenv(os.path.join(_base_dir, '.env'))
+load_dotenv(PROJECT_ROOT / '.env')
 
 
 class Settings(BaseSettings):
@@ -106,12 +112,14 @@ class Settings(BaseSettings):
     # 生产环境推荐使用 PostgreSQL，开发环境可使用 SQLite
     # 数据库 URL 格式：
     #   PostgreSQL: postgresql://user:password@host:port/database
-    #   SQLite: sqlite:///./path/to/database.db
-    _base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    #   SQLite: sqlite:///absolute/path/to/database.db
+
+    # 🔧 [统一原则] 所有路径基于 PROJECT_ROOT
+    # 数据库永远放在项目根目录下，不管从哪里启动都访问同一个文件
+    _default_db_path = PROJECT_ROOT / 'matchmaker_agent.db'
     database_url: str = os.getenv(
         "DATABASE_URL",
-        # 开发环境默认使用 SQLite，生产环境应设置 DATABASE_URL 环境变量
-        f"sqlite:///{os.path.join(_base_dir, 'matchmaker.db')}"
+        f"sqlite:///{_default_db_path}"
     )
     # 数据库连接池配置（生产环境优化）
     database_pool_size: int = int(os.getenv("DATABASE_POOL_SIZE", "10"))
@@ -160,13 +168,29 @@ class Settings(BaseSettings):
 # 全局配置实例
 settings = Settings()
 
+# 🔧 [路径规范化] SQLite 相对路径自动转换为绝对路径
+# 如果 DATABASE_URL 是相对路径的 SQLite（如 sqlite:///matchmaker_agent.db）
+# 自动转换为基于 PROJECT_ROOT 的绝对路径
+if settings.database_url.startswith("sqlite:///") and not settings.database_url.startswith("sqlite:////"):
+    # sqlite:///xxx 表示相对路径（三个斜杠）
+    # sqlite:////xxx 表示绝对路径（四个斜杠）
+    db_filename = settings.database_url.replace("sqlite:///", "")
+    if not Path(db_filename).is_absolute():
+        # 相对路径 → 转换为 PROJECT_ROOT 下的绝对路径
+        absolute_path = PROJECT_ROOT / db_filename
+        settings.database_url = f"sqlite:///{absolute_path}"
+        warnings.warn(
+            f"DATABASE_URL was relative path, auto-converted to absolute: {settings.database_url}"
+        )
+
 # 配置验证
 # 生产环境强制关闭 DEBUG 模式
 if settings.environment == "production" and settings.debug:
     raise ValueError("DEBUG mode must be disabled in production environment for security. Set DEBUG=false")
 
 # JWT Secret 配置
-_JWT_SECRET_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".jwt_secret")
+# 🔧 [统一原则] JWT 密钥文件也放在项目根目录
+_JWT_SECRET_FILE = PROJECT_ROOT / ".jwt_secret"
 
 if not settings.jwt_secret_key or len(settings.jwt_secret_key) < 32:
     if settings.environment == "production":
@@ -176,16 +200,15 @@ if not settings.jwt_secret_key or len(settings.jwt_secret_key) < 32:
         )
     else:
         # 非生产环境：尝试从文件加载持久化的密钥
-        if os.path.exists(_JWT_SECRET_FILE):
+        if _JWT_SECRET_FILE.exists():
             try:
-                with open(_JWT_SECRET_FILE, "r") as f:
-                    saved_secret = f.read().strip()
-                    if len(saved_secret) >= 32:
-                        settings.jwt_secret_key = saved_secret
-                        warnings.warn(
-                            "JWT_SECRET_KEY loaded from .jwt_secret file. "
-                            "For production, set JWT_SECRET_KEY environment variable."
-                        )
+                saved_secret = _JWT_SECRET_FILE.read_text().strip()
+                if len(saved_secret) >= 32:
+                    settings.jwt_secret_key = saved_secret
+                    warnings.warn(
+                        "JWT_SECRET_KEY loaded from .jwt_secret file. "
+                        "For production, set JWT_SECRET_KEY environment variable."
+                    )
             except Exception as e:
                 warnings.warn(f"Failed to load JWT secret from file: {e}")
 
@@ -193,8 +216,7 @@ if not settings.jwt_secret_key or len(settings.jwt_secret_key) < 32:
         if not settings.jwt_secret_key or len(settings.jwt_secret_key) < 32:
             settings.jwt_secret_key = secrets.token_urlsafe(32)
             try:
-                with open(_JWT_SECRET_FILE, "w") as f:
-                    f.write(settings.jwt_secret_key)
+                _JWT_SECRET_FILE.write_text(settings.jwt_secret_key)
                 warnings.warn(
                     "JWT_SECRET_KEY generated and saved to .jwt_secret file. "
                     "This secret will persist across server restarts. "

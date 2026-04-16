@@ -1,0 +1,43 @@
+{
+  "test_id": "TC142",
+  "category": "edge_cases",
+  "subcategory": "重复请求",
+  "input_message": "帮我找对象",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "请先完善您的基本信息",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "你的性别是？",
+      "question_type": "single_choice",
+      "options": [
+        {
+          "label": "男生",
+          "value": "male"
+        },
+        {
+          "label": "女生",
+          "value": "female"
+        }
+      ],
+      "dimension": "gender",
+      "progress": "1/5",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请先完善您的基本信息",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 15658ms"
+  ],
+  "latency_ms": 15658.004999160767,
+  "error": null,
+  "executed_at": "2026-04-14T21:10:35.435139"
+}

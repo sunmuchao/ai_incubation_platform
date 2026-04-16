@@ -1,0 +1,62 @@
+{
+  "test_id": "TC148",
+  "category": "happy_path",
+  "subcategory": "画像收集流程",
+  "input_message": "我现在只想找同城的了",
+  "expected_intent": "preference_update",
+  "actual_intent": "profile_collection",
+  "actual_response": "需要完善基本信息以开始同城匹配",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "请先完善你的基本信息",
+      "question_type": "form",
+      "fields": [
+        {
+          "field": "name",
+          "label": "昵称",
+          "type": "text",
+          "required": true
+        },
+        {
+          "field": "age",
+          "label": "年龄",
+          "type": "number",
+          "required": true
+        },
+        {
+          "field": "gender",
+          "label": "性别",
+          "type": "select",
+          "options": [
+            "男",
+            "女"
+          ],
+          "required": true
+        },
+        {
+          "field": "location",
+          "label": "所在城市",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "message": "完善信息后，我会为你推荐同城优质对象~",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 需要完善基本信息以开始同城匹配",
+    "意图: 预期 'preference_update' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 23351ms"
+  ],
+  "latency_ms": 23351.497173309326,
+  "error": null,
+  "executed_at": "2026-04-14T21:12:17.451478"
+}

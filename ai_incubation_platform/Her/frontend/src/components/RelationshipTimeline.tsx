@@ -238,7 +238,9 @@ const RelationshipTimeline: React.FC<RelationshipTimelineProps> = ({
   if (loading) {
     return (
       <div className="timeline-loading">
-        <Spin size="large" tip="加载关系时间线..." />
+        <Spin size="large" tip="加载关系时间线...">
+          <div style={{ padding: 50 }} />
+        </Spin>
       </div>
     )
   }

@@ -1,31 +1,17 @@
 """
 服务模块导出 - P3
+
+注：以下服务已废弃并归档，不再导出：
+- dynamic_profile_service → DeerFlow her_tools 动态画像
+- quick_start_service → /api/profile/quickstart 直接操作数据库
+- vector_adjustment_service → 被 quick_start_service 引用（孤岛链）
 """
 from services.behavior_tracking_service import behavior_service, BehaviorTrackingService
 from services.conversation_analysis_service import conversation_analyzer, ConversationAnalysisService
-from services.dynamic_profile_service import dynamic_profile_service, DynamicUserProfileService
 from services.relationship_progress_service import relationship_progress_service, RelationshipProgressService
 from services.activity_recommendation_service import activity_recommendation_service, ActivityRecommendationService, MapAPIService, GeoService
 from services.behavior_log_service import BehaviorLogService, get_behavior_log_service
 from services.report_service import ReportService, get_report_service, ReportStatus, ReportType
-from services.quick_start_service import (
-    QuickStartService,
-    FeedbackLearningService,
-    SocialProofService,
-    get_quick_start_service,
-    get_feedback_learning_service,
-    get_social_proof_service,
-)
-from services.vector_adjustment_service import (
-    VectorAdjustmentService,
-    BehaviorSignalCollector,
-    get_vector_adjustment_service,
-    get_behavior_signal_collector,
-    VectorAdjustment,
-    LearningResult,
-    FEEDBACK_TO_VECTOR_MAPPING,
-    BEHAVIOR_TO_VECTOR_MAPPING,
-)
 from services.grayscale_config_service import (
     GrayscaleConfigService,
     get_grayscale_config_service,
@@ -41,8 +27,6 @@ __all__ = [
     "BehaviorTrackingService",
     "conversation_analyzer",
     "ConversationAnalysisService",
-    "dynamic_profile_service",
-    "DynamicUserProfileService",
     "relationship_progress_service",
     "RelationshipProgressService",
     "activity_recommendation_service",
@@ -56,22 +40,6 @@ __all__ = [
     "get_report_service",
     "ReportStatus",
     "ReportType",
-    # 渐进式智能匹配服务
-    "QuickStartService",
-    "FeedbackLearningService",
-    "SocialProofService",
-    "get_quick_start_service",
-    "get_feedback_learning_service",
-    "get_social_proof_service",
-    # 向量调整服务
-    "VectorAdjustmentService",
-    "BehaviorSignalCollector",
-    "get_vector_adjustment_service",
-    "get_behavior_signal_collector",
-    "VectorAdjustment",
-    "LearningResult",
-    "FEEDBACK_TO_VECTOR_MAPPING",
-    "BEHAVIOR_TO_VECTOR_MAPPING",
     # 灰度配置服务
     "GrayscaleConfigService",
     "get_grayscale_config_service",

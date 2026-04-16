@@ -1,46 +1,50 @@
 {
   "test_id": "TC002",
-  "passed": true,
-  "api_success": true,
-  "actual_response": "请先完善你的基本信息，我会根据你25-30岁上海女生的偏好为你精准匹配",
+  "category": "happy_path",
+  "subcategory": "匹配推荐",
+  "input_message": "我想找25-30岁的女生，在上海",
+  "expected_intent": "match_request",
   "actual_intent": "profile_collection",
+  "actual_response": "请填写您的基本信息，我将为您推荐25-30岁上海地区的女生",
   "generative_ui": {
     "component_type": "ProfileQuestionCard",
     "props": {
-      "question": "欢迎来到 Her！为了更好地为你匹配对象，请先告诉我你的基本信息",
-      "question_type": "multi_step",
-      "steps": [
+      "question": "为了给您精准推荐25-30岁上海地区的女生，请先完善您的基本信息",
+      "question_type": "form",
+      "fields": [
         {
-          "field": "name",
-          "label": "你的昵称",
+          "name": "nickname",
+          "label": "您的昵称",
+          "type": "text",
           "required": true
         },
         {
-          "field": "age",
-          "label": "你的年龄",
+          "name": "age",
+          "label": "您的年龄",
           "type": "number",
           "required": true
         },
         {
-          "field": "gender",
-          "label": "你的性别",
-          "type": "select",
+          "name": "gender",
+          "label": "您的性别",
+          "type": "single_choice",
           "options": [
             "男",
             "女"
-          ]
+          ],
+          "required": true
         },
         {
-          "field": "location",
-          "label": "你所在的城市",
+          "name": "location",
+          "label": "您所在城市",
+          "type": "text",
           "required": true
         }
       ],
-      "preference_summary": {
+      "pre_filled_preferences": {
         "preferred_age_min": 25,
         "preferred_age_max": 30,
-        "preferred_location": "上海",
-        "relationship_goal": "待确认"
+        "preferred_location": "上海"
       },
       "_schema": {
         "backend_type": "ProfileQuestionCard",
@@ -49,17 +53,14 @@
       }
     }
   },
-  "latency_ms": 22171.427965164185,
-  "judge_passed": true,
-  "judge_score": 8.0,
-  "judge_reasons": {
-    "intent_match": "预期意图为 match_request（直接执行匹配），实际识别为 profile_collection（收集用户信息）。虽然系统可能因用户未完善资料而设计此流程，但严格来说与预期意图类型不符，属于流程设计层面的偏差。",
-    "info_extraction": "完整提取了关键信息：年龄范围25-30岁、地区上海、性别女性，并在 preference_summary 中结构化存储，提取准确且完整。",
-    "response_naturalness": "响应语气温暖亲切，'我会根据你25-30岁上海女生的偏好为你精准匹配'体现了个性化关怀，过渡自然不生硬。",
-    "security_compliance": "无敏感信息泄露，无有害内容，符合安全规范。",
-    "ui_correctness": "Generative UI 组件 ProfileQuestionCard 设计合理，props 结构完整，steps 清晰，preference_summary 正确回填了提取的偏好信息，符合引导用户完善资料的场景需求。"
-  },
-  "judge_summary": "系统在信息提取、UI组件设计和安全合规方面表现优秀，响应自然有温度。主要扣分点在意图匹配：虽然 profile_collection 是合理的业务 fallback 策略（用户未完善资料时先收集信息），但与测试用例预期的 match_request 直接匹配意图存在偏差。若业务设计允许此 fallback 逻辑，则整体表现良好；若严格要求按预期意图执行，则需调整。建议明确测试用例是否允许此类 fallback 行为。",
-  "retry_count": 0,
-  "executed_at": "2026-04-14T19:39:02.241567"
+  "passed": true,
+  "details": [
+    "实际响应: 请填写您的基本信息，我将为您推荐25-30岁上海地区的女生",
+    "意图: 预期 'match_request' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 32461ms"
+  ],
+  "latency_ms": 32460.904121398926,
+  "error": null,
+  "executed_at": "2026-04-14T20:36:03.804486"
 }

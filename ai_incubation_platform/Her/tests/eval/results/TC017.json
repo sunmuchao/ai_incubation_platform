@@ -1,0 +1,20 @@
+{
+  "test_id": "TC017",
+  "category": "happy_path",
+  "subcategory": "约会建议",
+  "input_message": "第一次约会去哪里比较好？",
+  "expected_intent": "date_planning",
+  "actual_intent": "conversation",
+  "actual_response": "我来帮你策划第一次约会！",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 我来帮你策划第一次约会！",
+    "意图: 预期 'date_planning' vs 实际 'conversation'",
+    "UI组件: 预期 'DatePlanCard'，实际未返回",
+    "延迟: 13061ms"
+  ],
+  "latency_ms": 13061.223268508911,
+  "error": null,
+  "executed_at": "2026-04-14T20:40:33.551963"
+}

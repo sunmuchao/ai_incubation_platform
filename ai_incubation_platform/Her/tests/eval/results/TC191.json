@@ -1,0 +1,73 @@
+{
+  "test_id": "TC191",
+  "category": "edge_cases",
+  "subcategory": "错误恢复",
+  "input_message": "帮我找对象",
+  "expected_intent": "profile_needed",
+  "actual_intent": "profile_collection",
+  "actual_response": "请先完善个人资料，我会为你推荐合适的对象",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "欢迎来到 Her！为了帮你找到合适的另一半，我们先来完善一下你的资料吧~",
+      "question_type": "multi_step",
+      "steps": [
+        {
+          "step": 1,
+          "question": "请问你的名字是？",
+          "field": "name",
+          "type": "text"
+        },
+        {
+          "step": 2,
+          "question": "你的年龄是？",
+          "field": "age",
+          "type": "number"
+        },
+        {
+          "step": 3,
+          "question": "你的性别是？",
+          "field": "gender",
+          "type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ]
+        },
+        {
+          "step": 4,
+          "question": "你目前在哪个城市？",
+          "field": "location",
+          "type": "text"
+        },
+        {
+          "step": 5,
+          "question": "你想找什么类型的关系？",
+          "field": "relationship_goal",
+          "type": "single_choice",
+          "options": [
+            "认真恋爱",
+            "结婚对象",
+            "先做朋友",
+            "随缘"
+          ]
+        }
+      ],
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 请先完善个人资料，我会为你推荐合适的对象",
+    "意图: 预期 'profile_needed' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 28098ms"
+  ],
+  "latency_ms": 28098.384857177734,
+  "error": null,
+  "executed_at": "2026-04-14T21:20:47.999347"
+}

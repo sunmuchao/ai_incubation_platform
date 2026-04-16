@@ -32,10 +32,13 @@ class HerAnalyzeCompatibilityTool(BaseTool):
 
     name: str = "her_analyze_compatibility"
     description: str = """
-分析两个用户的兼容性。查询双方画像数据。
+【触发条件】用户说"合适吗"、"匹配度"、"我们配吗"、"分析一下我们"时调用。
 
-参数：user_id（可选）, target_user_id
-返回：{ user_a: {...}, user_b: {...}, comparison_factors: [...] }
+【参数】
+- user_id: 用户 ID（可选）
+- target_user_id: 目标用户 ID（必须）
+
+【返回】双方画像对比 JSON，Agent 根据此生成匹配度分析。
 """
     args_schema: Type[BaseModel] = HerAnalyzeCompatibilityInput
 

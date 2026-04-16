@@ -15,7 +15,6 @@ import {
 import {
   HeartOutlined, HeartFilled, CrownOutlined, EyeOutlined, LockOutlined, UserOutlined, StarFilled
 } from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
 import { whoLikesMeApi, WhoLikesMeResponse, LikeUser } from '../api/whoLikesMeApi'
 
 const { Text, Title, Paragraph } = Typography
@@ -36,7 +35,6 @@ const WhoLikesMePage: React.FC<WhoLikesMePageProps> = ({
   userId,
   onMatch
 }) => {
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<WhoLikesMeResponse | null>(null)
   const [sortBy, setSortBy] = useState<'time' | 'compatibility'>('time')
@@ -145,7 +143,7 @@ const WhoLikesMePage: React.FC<WhoLikesMePageProps> = ({
               type="primary"
               size="large"
               icon={<CrownOutlined />}
-              onClick={() => navigate('/membership')}
+              onClick={() => message.info('会员功能开发中')}
               style={{
                 background: GOLD_COLOR,
                 borderColor: GOLD_COLOR,
@@ -217,7 +215,7 @@ const WhoLikesMePage: React.FC<WhoLikesMePageProps> = ({
             <Button
               type="link"
               icon={<CrownOutlined style={{ color: GOLD_COLOR }} />}
-              onClick={() => navigate('/membership')}
+              onClick={() => message.info('会员功能开发中')}
               style={{ color: GOLD_COLOR }}
             >
               升级会员查看全部
@@ -366,7 +364,9 @@ const WhoLikesMePage: React.FC<WhoLikesMePageProps> = ({
   if (loading && !data) {
     return (
       <div style={{ padding: 48, textAlign: 'center' }}>
-        <Spin size="large" tip="加载喜欢你的人..." />
+        <Spin size="large" tip="加载喜欢你的人...">
+          <div style={{ padding: 50 }} />
+        </Spin>
       </div>
     )
   }
@@ -386,7 +386,7 @@ const WhoLikesMePage: React.FC<WhoLikesMePageProps> = ({
               <Button
                 type="primary"
                 icon={<EyeOutlined />}
-                onClick={() => navigate('/profile')}
+                onClick={() => message.info('资料优化功能开发中')}
                 style={{
                   background: PRIMARY_COLOR,
                   borderColor: PRIMARY_COLOR,

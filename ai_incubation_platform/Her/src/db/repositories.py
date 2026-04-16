@@ -45,7 +45,10 @@ class UserRepository:
             preferred_age_max=user_data.get("preferred_age_max", 60),
             preferred_location=user_data.get("preferred_location"),
             preferred_gender=user_data.get("preferred_gender"),
-            sexual_orientation=user_data.get("sexual_orientation", "heterosexual")
+            sexual_orientation=user_data.get("sexual_orientation", "heterosexual"),
+            # 🔧 [新增] 支持注册时设置偏好字段
+            accept_remote=user_data.get("accept_remote"),
+            relationship_goal=user_data.get("relationship_goal"),
         )
         self.db.add(db_user)
         self.db.commit()

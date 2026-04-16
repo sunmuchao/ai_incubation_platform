@@ -33,14 +33,15 @@ class HerFindMatchesTool(BaseTool):
 
     name: str = "her_find_matches"
     description: str = """
-查找匹配对象。从数据库查询候选用户。
+【触发条件】用户说"找对象"、"推荐"、"相亲"、"匹配"、"给我找人"时调用。
 
-参数：
-- user_id: 用户 ID（可选，默认使用当前用户）
-- intent: 用户意图描述（可选，Agent 会解读）
+【禁止场景】用户说"介绍某人的详情"、"TA是谁"、"TA怎么样"时 → 调用 her_get_target_user（不是本工具）。
+
+【参数】
+- user_id: 用户 ID（可选，默认当前用户）
 - limit: 返回数量（默认 5）
 
-返回：{ matches: [...], total: N }
+【返回】候选用户列表 JSON。
 """
     args_schema: Type[BaseModel] = HerFindMatchesInput
 
@@ -82,7 +83,20 @@ class HerFindMatchesTool(BaseTool):
         preferred_age_min = user_prefs.get("preferred_age_min") or 18
         preferred_age_max = user_prefs.get("preferred_age_max") or 60
         preferred_location = user_prefs.get("preferred_location") or user_prefs.get("location")
-        accept_remote = user_prefs.get("accept_remote")  # "同城优先", "接受异地", "只找同城"
+
+        # 🔧 [修复] accept_remote 值映射：英文 -> 中文
+        # 数据库可能存储英文值（no/yes/conditional）或中文值
+        raw_accept_remote = user_prefs.get("accept_remote")
+        accept_remote_mapping = {
+            "no": "只找同城",
+            "yes": "接受异地",
+            "conditional": "同城优先",  # 可接受异地，但优先同城
+            "只找同城": "只找同城",
+            "接受异地": "接受异地",
+            "同城优先": "同城优先",
+        }
+        accept_remote = accept_remote_mapping.get(raw_accept_remote, raw_accept_remote) if raw_accept_remote else None
+
         user_gender = user_prefs.get("gender")
         user_relationship_goal = user_prefs.get("relationship_goal")
 
@@ -166,7 +180,9 @@ class HerFindMatchesTool(BaseTool):
                 matches = remote_matches[:limit]
 
         # ===== 第六步：返回结果 =====
+        # 🔧 [关键] 添加 component_type，让 API 能构建 generative_ui
         result_data = {
+            "component_type": "MatchCardList",  # 🔧 [新增] 指定 UI 类型
             "matches": matches,
             "total": len(matches),
             "filter_applied": {
@@ -203,10 +219,13 @@ class HerDailyRecommendTool(BaseTool):
 
     name: str = "her_daily_recommend"
     description: str = """
-获取每日精选推荐。查询最新活跃用户。
+【触发条件】用户说"每日推荐"、"今日推荐"、"每天推荐"时调用。
 
-参数：user_id: 用户 ID（可选，默认使用当前用户）
-返回：{ recommendations: [...], total: N }
+【禁止场景】用户说"找对象"时 → 调用 her_find_matches（不是本工具）。
+
+【参数】user_id: 用户 ID（可选，默认当前用户）
+
+【返回】今日活跃用户列表 JSON。
 """
     args_schema: Type[BaseModel] = HerDailyRecommendInput
 

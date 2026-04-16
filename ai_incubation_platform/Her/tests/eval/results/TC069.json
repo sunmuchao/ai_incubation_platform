@@ -1,0 +1,20 @@
+{
+  "test_id": "TC069",
+  "category": "happy_path",
+  "subcategory": "约会提醒",
+  "input_message": "提醒我明天下午三点约会",
+  "expected_intent": "date_reminder_set",
+  "actual_intent": "conversation",
+  "actual_response": "我来为您设置明天下午三点的约会提醒。",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 我来为您设置明天下午三点的约会提醒。",
+    "意图: 预期 'date_reminder_set' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 4245ms"
+  ],
+  "latency_ms": 4244.696617126465,
+  "error": null,
+  "executed_at": "2026-04-14T20:50:58.506855"
+}

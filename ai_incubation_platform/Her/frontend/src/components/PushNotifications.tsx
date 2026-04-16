@@ -133,7 +133,9 @@ const PushNotifications: React.FC<PushNotificationsProps> = ({
         <div className="notification-list">
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <Spin tip={t('common.loading')} />
+              <Spin tip={t('common.loading')}>
+                <div style={{ padding: 20 }} />
+              </Spin>
             </div>
           ) : unreadConversations.length === 0 ? (
             <Empty description={t('notification.noNewMessages')} image={Empty.PRESENTED_IMAGE_SIMPLE} />

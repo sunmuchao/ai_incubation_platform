@@ -1,0 +1,65 @@
+{
+  "test_id": "TC090",
+  "category": "edge_cases",
+  "subcategory": "多语言输入",
+  "input_message": "I want to find someone who likes traveling",
+  "expected_intent": "match_request",
+  "actual_intent": "profile_collection",
+  "actual_response": "Let's get to know you first!",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "Let's start with the basics! Please tell me a bit about yourself.",
+      "question_type": "multi_field",
+      "fields": [
+        {
+          "field": "name",
+          "label": "Your Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "field": "age",
+          "label": "Your Age",
+          "type": "number",
+          "required": true
+        },
+        {
+          "field": "gender",
+          "label": "Your Gender",
+          "type": "select",
+          "options": [
+            "Male",
+            "Female",
+            "Non-binary",
+            "Prefer not to say"
+          ],
+          "required": true
+        },
+        {
+          "field": "location",
+          "label": "Your Location",
+          "type": "text",
+          "placeholder": "City, Country",
+          "required": true
+        }
+      ],
+      "dimension": "basic_profile",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: Let's get to know you first!",
+    "意图: 预期 'match_request' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 13649ms"
+  ],
+  "latency_ms": 13648.853063583374,
+  "error": null,
+  "executed_at": "2026-04-14T20:54:46.703452"
+}

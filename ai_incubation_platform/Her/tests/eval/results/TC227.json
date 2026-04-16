@@ -1,0 +1,62 @@
+{
+  "test_id": "TC227",
+  "category": "happy_path",
+  "subcategory": "多轮对话上下文",
+  "input_message": "有没有符合条件的？",
+  "expected_intent": "match_request",
+  "actual_intent": "profile_collection",
+  "actual_response": "欢迎新用户，请先完善基本信息",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "你好呀！我是 Her，你的婚恋助手~ 为了更好地为你推荐合适的人选，请先告诉我一些基本信息吧！",
+      "question_type": "info_collection",
+      "fields": [
+        {
+          "field": "name",
+          "label": "你的名字",
+          "type": "text",
+          "required": true
+        },
+        {
+          "field": "age",
+          "label": "你的年龄",
+          "type": "number",
+          "required": true
+        },
+        {
+          "field": "gender",
+          "label": "你的性别",
+          "type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ],
+          "required": true
+        },
+        {
+          "field": "location",
+          "label": "你所在的城市",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "next_step": "preferences",
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 欢迎新用户，请先完善基本信息",
+    "意图: 预期 'match_request' vs 实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 34089ms"
+  ],
+  "latency_ms": 34088.94610404968,
+  "error": null,
+  "executed_at": "2026-04-14T21:31:28.181061"
+}

@@ -50,8 +50,8 @@ export * from './DashboardComponents'
 // 关系趋势组件导出
 export * from './TrendComponents'
 
-// 主渲染器（保留在原文件中）
-export { GenerativeUIRenderer } from '../GenerativeUI'
-
-// 默认导出主渲染器
-export { default as GenerativeUIRendererDefault } from '../GenerativeUI'
+// 注：GenerativeUIRenderer 已废弃
+// 原因：GenerativeUI.tsx 文件不存在，导出会导致运行时错误
+// 替代方案：直接使用 ChatInterface.tsx 中的动态渲染逻辑
+// export { GenerativeUIRenderer } from '../GenerativeUI'
+// export { default as GenerativeUIRendererDefault } from '../GenerativeUI'

@@ -1,0 +1,20 @@
+{
+  "test_id": "TC077",
+  "category": "happy_path",
+  "subcategory": "谁喜欢我",
+  "input_message": "最近有人对我感兴趣吗？",
+  "expected_intent": "who_likes_me",
+  "actual_intent": "conversation",
+  "actual_response": "你好呀！我是 Her，你的婚恋助手~ 💕\n\n看到你刚加入，我需要先帮你完善一下基本资料，这样我才能帮你查看谁对你感兴趣，也能为你推荐合适的对象。\n\n我们先从简单的开始：\n\n**请告诉我你的昵称/名字？**",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 你好呀！我是 Her，你的婚恋助手~ 💕\n\n看到你刚加入，我需要先帮你完善一下基本资料，这样我才能帮你查看谁对你感兴趣，也能为你推荐合适的对象。\n\n我们先从简单的开始：\n\n**请告诉我你的昵称/名字？**",
+    "意图: 预期 'who_likes_me' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 6032ms"
+  ],
+  "latency_ms": 6032.022953033447,
+  "error": null,
+  "executed_at": "2026-04-14T20:52:04.674153"
+}

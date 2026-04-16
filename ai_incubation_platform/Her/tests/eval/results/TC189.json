@@ -1,0 +1,69 @@
+{
+  "test_id": "TC189",
+  "category": "happy_path",
+  "subcategory": "工具调用链路",
+  "input_message": "佳慧喜欢什么，第一次约会去哪好？",
+  "expected_intent": "multi_tool_chain",
+  "actual_intent": "date_planning",
+  "actual_response": "为佳慧准备了3个第一次约会方案，推荐咖啡厅约会",
+  "generative_ui": {
+    "component_type": "DatePlanCard",
+    "props": {
+      "target_name": "佳慧",
+      "plans": [
+        {
+          "type": "经典咖啡厅约会",
+          "description": "选择一家环境优雅的精品咖啡厅，氛围轻松，方便聊天了解彼此",
+          "activities": [
+            "下午茶",
+            "轻松聊天",
+            "互相了解"
+          ],
+          "suitable_for": "初次见面",
+          "duration": "1-2小时",
+          "tips": "选择安静、有特色的咖啡厅，避免太吵闹的连锁咖啡店"
+        },
+        {
+          "type": "文艺展览约会",
+          "description": "参观美术馆或博物馆，有共同话题可聊，也能展现你的品味",
+          "activities": [
+            "看展览",
+            "讨论艺术",
+            "拍照留念"
+          ],
+          "suitable_for": "喜欢文化艺术的对象",
+          "duration": "2-3小时",
+          "tips": "提前了解展览内容，准备好几个有趣的话题"
+        },
+        {
+          "type": "公园漫步约会",
+          "description": "在环境优美的公园散步，自然轻松，不会有尴尬沉默",
+          "activities": [
+            "散步",
+            "野餐",
+            "欣赏风景"
+          ],
+          "suitable_for": "天气好的日子",
+          "duration": "2-3小时",
+          "tips": "可以准备一些小零食，增加互动机会"
+        }
+      ],
+      "recommendation": "建议选择咖啡厅约会，氛围轻松，进退自如，是第一次见面的安全选择",
+      "_schema": {
+        "backend_type": "DatePlanCard",
+        "frontend_card": "feature",
+        "description": "约会方案卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 为佳慧准备了3个第一次约会方案，推荐咖啡厅约会",
+    "意图: 预期 'multi_tool_chain' vs 实际 'date_planning'",
+    "UI组件: DatePlanCard",
+    "延迟: 18126ms"
+  ],
+  "latency_ms": 18126.26314163208,
+  "error": null,
+  "executed_at": "2026-04-14T21:20:15.636846"
+}

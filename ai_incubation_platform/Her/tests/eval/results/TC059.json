@@ -1,0 +1,20 @@
+{
+  "test_id": "TC059",
+  "category": "happy_path",
+  "subcategory": "AI陪伴",
+  "input_message": "我今天心情不太好，陪我聊聊吧",
+  "expected_intent": "ai_companion",
+  "actual_intent": "conversation",
+  "actual_response": "我在这里呢。刚才技术出了点问题，让你久等了，抱歉。\n\n你说今天心情不太好——我在这里陪你。你想聊聊发生了什么吗？还是不太想说，想先随便说点别的也行，我都在。\n\n你想怎么聊，听你的。",
+  "generative_ui": null,
+  "passed": true,
+  "details": [
+    "实际响应: 我在这里呢。刚才技术出了点问题，让你久等了，抱歉。\n\n你说今天心情不太好——我在这里陪你。你想聊聊发生了什么吗？还是不太想说，想先随便说点别的也行，我都在。\n\n你想怎么聊，听你的。",
+    "意图: 预期 'ai_companion' vs 实际 'conversation'",
+    "UI组件: 无",
+    "延迟: 3601ms"
+  ],
+  "latency_ms": 3600.7816791534424,
+  "error": null,
+  "executed_at": "2026-04-14T20:49:20.879014"
+}

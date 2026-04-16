@@ -1,0 +1,65 @@
+{
+  "test_id": "TC210",
+  "category": "happy_path",
+  "subcategory": "GenerativeUI验证",
+  "input_message": "帮我找对象",
+  "expected_intent": null,
+  "actual_intent": "profile_collection",
+  "actual_response": "完善资料后为您匹配最合适的人选",
+  "generative_ui": {
+    "component_type": "ProfileQuestionCard",
+    "props": {
+      "question": "请先完善您的基本信息",
+      "question_type": "profile_collection",
+      "required_fields": [
+        {
+          "field": "gender",
+          "label": "您的性别",
+          "type": "single_choice",
+          "options": [
+            "男",
+            "女"
+          ]
+        },
+        {
+          "field": "age",
+          "label": "您的年龄",
+          "type": "number",
+          "min": 18,
+          "max": 80
+        },
+        {
+          "field": "location",
+          "label": "您所在的城市",
+          "type": "text"
+        },
+        {
+          "field": "relationship_goal",
+          "label": "您寻找的关系类型",
+          "type": "single_choice",
+          "options": [
+            "结婚",
+            "恋爱",
+            "交友",
+            "待定"
+          ]
+        }
+      ],
+      "_schema": {
+        "backend_type": "ProfileQuestionCard",
+        "frontend_card": "profile_question",
+        "description": "用户画像问题卡片"
+      }
+    }
+  },
+  "passed": true,
+  "details": [
+    "实际响应: 完善资料后为您匹配最合适的人选",
+    "意图: 无预期，实际 'profile_collection'",
+    "UI组件: ProfileQuestionCard",
+    "延迟: 16554ms"
+  ],
+  "latency_ms": 16554.0771484375,
+  "error": null,
+  "executed_at": "2026-04-14T21:25:56.593847"
+}

@@ -165,11 +165,14 @@ def initialize_default_skills() -> SkillRegistry:
     registry.register(get_precommunication_skill(), tags=["core", "communication", "core"])
     registry.register(get_omniscient_insight_skill(), tags=["core", "awareness", "core"])
 
-    # ===== 核心：意图路由 Skill（问诊台） =====
-    # IntentRouter 是系统的核心入口，所有对话都通过此 Skill 处理
-    from agent.skills.intent_router_skill import get_intent_router_skill
-
-    registry.register(get_intent_router_skill(), tags=["core", "intent_router", "entry_point"])
+    # ===== [已废弃] 意图路由 Skill =====
+    # IntentRouterSkill 已废弃（见 DEPRECATED.md）
+    # 新架构：用户消息 → DeerFlow Agent → her_tools
+    # DeerFlow Agent 通过 SOUL.md 直接理解意图并调用工具
+    # 不再需要中间的"传话员"层
+    #
+    # from agent.skills.intent_router_skill import get_intent_router_skill
+    # registry.register(get_intent_router_skill(), tags=["core", "intent_router", "entry_point"])
 
     # Enhancement Skills - 增强 AI 自主性
     from agent.skills.relationship_coach_skill import get_relationship_coach_skill
@@ -212,8 +215,7 @@ def initialize_default_skills() -> SkillRegistry:
     registry.register(get_relationship_prophet_skill(), tags=["love_language", "relationship", "prediction", "core"])
 
     # Dating - 实战演习
-    from agent.skills.date_coach_skill import get_date_coach_skill
-    # 注：date_assistant_skill 已废弃，功能已整合到 date_coach_skill
+    # 注：date_coach_skill 和 date_assistant_skill 已废弃，功能已整合到 DeerFlow Agent
 
     # Integration - 终极关系
     from agent.skills.relationship_curator_skill import get_relationship_curator_skill
