@@ -144,6 +144,34 @@ GENERATIVE_UI_SCHEMA: Dict[str, ComponentSchema] = {
         "description": "AI 响应卡片（纯文本）",
     },
 
+    # ===== 对话引导 =====
+    "ConversationGuideCard": {
+        "backend_type": "ConversationGuideCard",
+        "frontend_card": "conversation_guide",
+        "required_props": ["guide_type", "content"],
+        "description": "对话引导卡片，用于 conversation 场景（开场白建议、聊天状态确认、通知说明等）",
+    },
+    "ChatConfirmCard": {
+        "backend_type": "ChatConfirmCard",
+        "frontend_card": "chat_confirm",
+        "required_props": ["status", "message"],
+        "description": "聊天状态确认卡片，显示聊天是否已发送、对方是否能看到",
+    },
+    "NotificationStatusCard": {
+        "backend_type": "NotificationStatusCard",
+        "frontend_card": "notification_status",
+        "required_props": ["capabilities"],
+        "description": "通知状态卡片，展示通知能力开关（App内通知、系统推送等）",
+    },
+
+    # ===== 聊天发起 =====
+    "ChatInitiationCard": {
+        "backend_type": "ChatInitiationCard",
+        "frontend_card": "chat_initiation",
+        "required_props": ["target_user_id", "target_user_name"],
+        "description": "发起聊天确认卡片，显示目标用户信息并提示用户在App中操作",
+    },
+
     # ===== 学习结果确认 =====
     "LearningConfirmationCard": {
         "backend_type": "LearningConfirmationCard",

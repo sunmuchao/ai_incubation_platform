@@ -81,13 +81,16 @@ class HerSuggestTopicsTool(BaseTool):
         unique_target_interests = list(target_interests - user_interests)
 
         result_data = {
+            "component_type": "ConversationGuideCard",  # 🔧 [新增] 指定 UI 类型
+            "intent_type": "topic_request",  # 🔧 [新增] 指定意图类型
             "user_profile": {
                 "interests": user.get("interests", []),
                 "location": user.get("location", ""),
                 "age": user.get("age", 0),
                 "bio": user.get("bio", ""),
             },
-            "target_profile": target_user if target_user else None,
+            "target_profile": target_user if target_user else None,  # 🔧 [保留] 目标用户信息
+            "selected_user": target_user if target_user else None,  # 🔧 [新增] 确保 UserProfileCard 能正确构建
             "conversation_history": conversation_history,
             "analysis": {
                 "common_interests": common_interests,
@@ -101,7 +104,8 @@ class HerSuggestTopicsTool(BaseTool):
         return ToolResult(
             success=True,
             data=result_data,
-            summary=f"用户有 {len(user_interests)} 个兴趣，共同兴趣 {len(common_interests)} 个"
+            instruction="获取到了用户的兴趣和对话历史，请根据 analysis 数据向用户推荐聊天话题。",
+            output_hint=f"根据你们的情况，我帮你推荐几个聊天话题~",
         )
 
     async def _get_conversation_history(self, user_id: str, match_id: str) -> List[Dict]:
@@ -217,12 +221,23 @@ class HerGetIcebreakerTool(BaseTool):
             })
 
         result_data = {
+            "component_type": "ConversationGuideCard",  # 🔧 [新增] 指定 UI 类型
+            "intent_type": "icebreaker_request",  # 🔧 [新增] 指定意图类型
             "user_profile": {
                 "interests": user.get("interests", []),
                 "location": user.get("location", ""),
                 "bio": user.get("bio", ""),
             },
             "target_profile": {
+                "user_id": match_id,  # 🔧 [新增] 添加 user_id，确保 API 层能正确识别
+                "name": target_user.get("name", target_name),
+                "interests": target_user.get("interests", []),
+                "location": target_user.get("location", ""),
+                "bio": target_user.get("bio", ""),
+                "age": target_user.get("age", 0),
+            },
+            "selected_user": {  # 🔧 [新增] 同时设置 selected_user，确保 UserProfileCard 能正确构建
+                "user_id": match_id,
                 "name": target_user.get("name", target_name),
                 "interests": target_user.get("interests", []),
                 "location": target_user.get("location", ""),
@@ -236,7 +251,8 @@ class HerGetIcebreakerTool(BaseTool):
         return ToolResult(
             success=True,
             data=result_data,
-            summary=f"目标用户 {target_user.get('name', target_name)} 有 {len(target_interests)} 个兴趣，共同兴趣 {len(common_interests)} 个"
+            instruction="获取到了目标用户的匹配点数据，请根据 match_points 向用户推荐个性化开场白。",
+            output_hint=f"根据你和 {target_user.get('name', 'TA')} 的共同点，我帮你准备几个开场白建议~",
         )
 
 

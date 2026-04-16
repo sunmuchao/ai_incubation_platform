@@ -37,7 +37,10 @@ from api.deerflow import (
     build_generative_ui_from_tool_result,
     infer_intent_from_response,
     _normalize_generative_ui,
+    _finalize_match_generative_ui,
+    _coerce_interests_to_str_list,
     _align_ai_message_with_structured_result,
+    _render_structured_result_message,
     _build_observability_trace,
     _enrich_tool_result_with_observability,
     _build_ui_response,
@@ -476,6 +479,27 @@ class TestGenerativeUIBuilder:
         assert ui["component_type"] == "UserProfileCard"
         assert "user_id" in ui["props"]
 
+    def test_no_user_profile_card_when_user_profile_has_no_id(self):
+        """icebreaker 场景下 user_profile 可能是当前用户，缺少ID时不应渲染详情卡"""
+        tool_result = {
+            "success": True,
+            "data": {
+                "user_profile": {  # 当前用户简化画像（无 user_id/id）
+                    "interests": ["编程", "篮球", "电影"],
+                    "location": "北京",
+                },
+                "target_profile": {
+                    "name": "深圳测试女5",
+                    "interests": ["编程", "游戏"],
+                },
+                "match_points": [{"type": "interest", "content": ["编程"]}],
+            },
+            "summary": "目标用户 深圳测试女5 有 5 个兴趣，共同兴趣 1 个",
+        }
+
+        ui = build_generative_ui_from_tool_result(tool_result)
+        assert ui["component_type"] == "SimpleResponse"
+
     def test_build_ui_compatibility_chart(self):
         """测试构建兼容性分析 UI"""
         tool_result = {
@@ -633,6 +657,90 @@ class TestMessageAlignment:
         }
         aligned = _align_ai_message_with_structured_result("这里是推荐名单", ui)
         assert aligned.startswith("【匹配结果】")
+
+    def test_render_structured_query_result_for_placeholder(self):
+        """占位查询文案应展开为可读表格"""
+        message = "查询成功，返回 2 行数据"
+        tool_result = {
+            "success": True,
+            "data": {
+                "columns": ["city", "count"],
+                "rows": [{"city": "杭州", "count": 3}, {"city": "南京", "count": 2}],
+                "row_count": 2,
+            },
+        }
+        rendered = _render_structured_result_message(message, tool_result, None)
+        assert "查询完成，结果如下" in rendered
+        assert "| city | count |" in rendered
+        assert "杭州" in rendered
+
+    def test_render_structured_comparison_result_for_placeholder(self):
+        """占位对比文案应展开为画像对比摘要"""
+        message = "对比 林小雨 和 杭州测试男10 的画像"
+        tool_result = {
+            "success": True,
+            "data": {
+                "user_a": {"name": "林小雨"},
+                "user_b": {"name": "杭州测试男10"},
+                "comparison_factors": [
+                    {"factor": "年龄差距", "user_a": 25, "user_b": 32},
+                    {"factor": "兴趣爱好", "user_a": ["旅行"], "user_b": ["旅行"], "common": ["旅行"]},
+                ],
+            },
+        }
+        rendered = _render_structured_result_message(message, tool_result, None)
+        assert "已完成画像对比" in rendered
+        assert "共同点：旅行" in rendered
+
+    def test_render_relaxation_suggestions_for_empty_match(self):
+        """0命中且有放宽建议时应输出统一建议模板"""
+        message = "找到 0 位候选对象"
+        tool_result = {
+            "success": True,
+            "data": {
+                "component_type": "MatchCardList",
+                "matches": [],
+                "relaxation_suggestions": [
+                    {
+                        "dimension": "accept_remote",
+                        "current": "只找同城",
+                        "suggestion": "同城优先",
+                        "reason": "当前同城命中 0，但异地有 12 位候选",
+                    }
+                ],
+            },
+        }
+        rendered = _render_structured_result_message(message, tool_result, None)
+        assert "严格按你当前要求" in rendered
+        assert "仅建议，不会自动变更" in rendered
+        assert "accept_remote" in rendered
+
+
+class TestMatchCardIntegrity:
+    """匹配列表：兴趣规范化 + 只找同城不变量"""
+
+    def test_coerce_interests_json_array_string(self):
+        assert _coerce_interests_to_str_list('["阅读", "健身"]') == ["阅读", "健身"]
+
+    def test_finalize_clears_matches_when_same_city_invariant_broken(self):
+        ui = {
+            "component_type": "MatchCardList",
+            "props": {
+                "matches": [
+                    {"name": "A", "location": "成都"},
+                ],
+                "filter_applied": {
+                    "preferred_location": "上海",
+                    "accept_remote": "只找同城",
+                },
+            },
+        }
+        tool_result = {"data": {"query_request_id": "rid-tool"}}
+        notice, out = _finalize_match_generative_ui(ui, tool_result)
+        assert "不一致" in notice
+        assert out["props"]["matches"] == []
+        assert out["props"]["query_integrity"]["code"] == "FILTER_LOCATION_MISMATCH"
+        assert out["props"]["matched_count"] == 0
 
 
 class TestObservabilityTrace:

@@ -21,11 +21,25 @@ class MatchResult(BaseModel):
 
 
 class ToolResult(BaseModel):
-    """工具统一返回格式"""
+    """
+    工具统一返回格式
+
+    【Agent Native 设计原则】
+    - instruction: 给 Agent 的执行指令，必须执行而非输出给用户
+    - output_hint: 给用户的回复提示模板，Agent 可参考转换
+    - data: 结构化数据，Agent 用于决策和渲染 UI
+
+    重要：Agent 必须执行 instruction，不能直接输出给用户！
+    """
     success: bool = Field(description="是否成功")
-    data: Dict[str, Any] = Field(default_factory=dict, description="结构化数据")
-    summary: str = Field(default="", description="一句话总结，用于 Agent 理解")
+    data: Dict[str, Any] = Field(default_factory=dict, description="结构化数据，供 Agent 决策和 UI 渲染")
+    # 🔧 [根治] 重命名 summary → instruction，语义更明确
+    instruction: str = Field(default="", description="给 Agent 的执行指令，必须执行而非输出给用户。例如：'请依据 enabled 字段向用户说明'")
+    # 🔧 [新增] output_hint: 提供用户友好回复提示，Agent 可参考转换
+    output_hint: str = Field(default="", description="给用户的回复提示模板，Agent 可参考转换为自然语言。例如：'你发消息后，他会收到通知提醒'")
     error: str = Field(default="", description="错误信息")
+    # 🔧 [兼容] 保留 summary 字段用于向后兼容，但标记为 deprecated
+    summary: str = Field(default="", description="[已废弃] 请使用 instruction 和 output_hint")
 
 
 # ==================== Input Schemas ====================
@@ -126,6 +140,11 @@ class HerFindUserByNameInput(BaseModel):
     limit: int = Field(default=5, description="返回数量")
 
 
+class HerGetProductCapabilitiesInput(BaseModel):
+    """查询产品能力开关（通知/提醒等），无业务参数"""
+    unused: str = Field(default="", description="可留空，占位以兼容工具框架")
+
+
 # ==================== Exports ====================
 
 __all__ = [
@@ -146,4 +165,5 @@ __all__ = [
     "HerInitiateChatInput",
     "HerSafeQueryInput",
     "HerFindUserByNameInput",
+    "HerGetProductCapabilitiesInput",
 ]

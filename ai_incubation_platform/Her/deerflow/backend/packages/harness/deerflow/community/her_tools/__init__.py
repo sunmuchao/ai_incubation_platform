@@ -29,6 +29,7 @@ her_tools 只做数据查询，不包含任何业务逻辑或模板！
 - her_get_conversation_history: 获取对话历史
 - her_safe_query: 安全 SQL 查询（Agent 可以自己生成查询，补齐缺失信息）【新增】
 - her_find_user_by_name: 按名字查找用户（便捷封装）【新增】
+- her_get_product_capabilities: 查询产品能力开关（通知/提醒等）【新增】
 
 设计原则（Agent Native）：
 - 所有工具只返回原始数据（JSON）
@@ -57,6 +58,7 @@ her_tools 只做数据查询，不包含任何业务逻辑或模板！
 - profile_tools.py: 资料相关工具
 - user_tools.py: 用户数据相关工具
 - query_tools.py: 安全查询工具【新增】
+- capabilities_tools.py: 产品能力开关【新增】
 """
 
 # ==================== 从模块导入 ====================
@@ -79,6 +81,7 @@ from .schemas import (
     HerInitiateChatInput,
     HerSafeQueryInput,
     HerFindUserByNameInput,
+    HerGetProductCapabilitiesInput,
 )
 
 from .helpers import (
@@ -138,6 +141,11 @@ from .query_tools import (
     her_find_user_by_name_tool,
 )
 
+from .capabilities_tools import (
+    HerGetProductCapabilitiesTool,
+    her_get_product_capabilities_tool,
+)
+
 
 # ==================== 统一导出 ====================
 
@@ -160,6 +168,7 @@ __all__ = [
     "HerInitiateChatInput",
     "HerSafeQueryInput",
     "HerFindUserByNameInput",
+    "HerGetProductCapabilitiesInput",
     # Helpers
     "get_her_root",
     "ensure_her_in_path",
@@ -203,6 +212,8 @@ __all__ = [
     "HerFindUserByNameTool",
     "her_safe_query_tool",
     "her_find_user_by_name_tool",
+    "HerGetProductCapabilitiesTool",
+    "her_get_product_capabilities_tool",
 ]
 
 
@@ -225,4 +236,5 @@ HER_TOOLS = [
     # 新增：安全查询工具
     her_safe_query_tool,
     her_find_user_by_name_tool,
+    her_get_product_capabilities_tool,
 ]

@@ -80,7 +80,9 @@ Agent 应该：
         return ToolResult(
             success=True,
             data={"user_profile": user},
-            summary=f"获取用户 {user.get('name', user_id)} 的画像"
+            # 🔧 [根治] instruction 是给 Agent 的指令，output_hint 是给用户的回复提示
+            instruction="获取到了用户画像数据，请根据数据特点分析用户。",
+            output_hint=f"好的，我了解 {user.get('name', '你')} 的基本情况了~",
         )
 
 
@@ -134,10 +136,14 @@ class HerGetTargetUserTool(BaseTool):
         return ToolResult(
             success=True,
             data={
+                "component_type": "UserProfileCard",  # 🔧 [新增] 指定 UI 类型
+                "intent_type": "view_profile",  # 🔧 [新增] 指定意图类型
                 "selected_user": target_user,  # 🔧 [关键] 使用 selected_user 触发 UserProfileCard
                 "user_profile": target_user,   # 同时设置 user_profile 作为备用
             },
-            summary=f"获取目标用户 {target_user.get('name', target_user_id)} 的画像"
+            # 🔧 [根治] instruction 是给 Agent 的指令，output_hint 是给用户的回复提示
+            instruction="获取到了目标用户的画像数据，请向用户展示详细信息。",
+            output_hint=f"好的！这是 {target_user.get('name', 'TA')} 的详细信息~",
         )
 
 
@@ -285,17 +291,30 @@ class HerInitiateChatTool(BaseTool):
                 summary="无法获取目标用户信息"
             )
 
-        # 返回精简的用户信息，用于 ChatInitiationCard
+        # 🔧 [修复] 返回结构化数据，包含 component_type 和 intent_type
+        # 让 API 能正确构建 ChatInitiationCard 并识别意图
         return ToolResult(
             success=True,
             data={
+                "component_type": "ChatInitiationCard",  # 🔧 [新增] 指定 UI 类型
+                "intent_type": "initiate_chat",  # 🔧 [新增] 指定意图类型
                 "target_user_id": target_user_id,
                 "target_user_name": target_user.get("name", "TA"),
                 "target_user_avatar": target_user.get("avatar_url", ""),
+                "target_user_location": target_user.get("location", ""),
+                "target_user_age": target_user.get("age", 0),
+                "target_user_interests": target_user.get("interests", []),
                 "context": context,
                 "compatibility_score": compatibility_score,
+                "_schema": {
+                    "backend_type": "ChatInitiationCard",
+                    "frontend_card": "chat_initiation",
+                    "description": "发起聊天确认卡片，显示目标用户信息并提示用户在App中操作"
+                }
             },
-            summary=f"准备发起聊天：{target_user.get('name', target_user_id)}"
+            # 🔧 [根治] instruction 是给 Agent 的指令，output_hint 是给用户的回复提示
+            instruction="已准备好发起聊天的数据，请引导用户在 App 中点击开始对话按钮。",
+            output_hint=f"好的！我为你准备好了和 {target_user.get('name', 'TA')} 的聊天。请在 App 中点击"开始对话"按钮，就可以给他发消息了~",
         )
 
 

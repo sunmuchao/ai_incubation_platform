@@ -7,6 +7,7 @@ allowed-tools:
   - her_get_icebreaker
   - her_suggest_topics
   - her_optimize_message
+  - her_get_product_capabilities
 ---
 
 # Her 聊天助手
@@ -29,6 +30,8 @@ allowed-tools:
 - "我和匹配的对象聊什么"
 
 ## 🔧 关键行为规则
+
+**通知 / 提醒 / 推送**：若用户问及「会不会通知我」「有没有提醒」「有人找我是否知道」等**产品通知能力**，必须先调用 `her_get_product_capabilities`，再仅按工具返回的 `enabled` 与说明回答；禁止未查工具就断言。
 
 **当用户问题缺少具体上下文时，Agent 必须主动采取以下行动之一：**
 

@@ -946,7 +946,7 @@ async def _get_user_state_for_tags(user_id: str) -> Dict:
             ).all()
 
             has_unread_messages = any(
-                conv.unread_count_1 > 0 if conv.user_id_1 == user_id else conv.unread_count_2 > 0
+                conv.unread_count_user1 > 0 if conv.user_id_1 == user_id else conv.unread_count_user2 > 0
                 for conv in conversations
             ) if conversations else False
 

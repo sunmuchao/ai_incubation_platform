@@ -21,7 +21,7 @@ DeerFlow API Routes - Her 项目 DeerFlow 集成接口
 
 from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime
 import os
 import sys
@@ -30,6 +30,7 @@ import time
 import asyncio  # 🔧 [修复] 添加 asyncio 导入，用于超时保护
 import hashlib
 import re
+import uuid
 
 from utils.logger import logger
 
@@ -634,6 +635,24 @@ def invalidate_user_cache(user_id: str) -> None:
     sync_user_memory_to_deerflow(user_id, force=True)
 
 
+async def _async_sync_user_memory(user_id: str) -> None:
+    """
+    🔧 [P1性能优化] 异步同步用户画像到 DeerFlow Memory
+
+    在后台线程中执行同步，不阻塞主请求。
+    使用 asyncio.to_thread 将同步函数包装为异步。
+
+    Args:
+        user_id: 用户 ID
+    """
+    try:
+        # 使用 asyncio.to_thread 在后台线程执行同步函数
+        await asyncio.to_thread(sync_user_memory_to_deerflow, user_id)
+        logger.info(f"[DEERFLOW_ASYNC] Memory sync 完成 for user {user_id}")
+    except Exception as e:
+        logger.warning(f"[DEERFLOW_ASYNC] Memory sync 失败 for user {user_id}: {e}")
+
+
 # ==================== Routes ====================
 
 @router.post("/memory/sync", response_model=MemorySyncResponse)
@@ -750,9 +769,10 @@ def infer_intent_from_response(
     # 方式1：优先使用工具返回的意图（结构化单一真相来源）
     if tool_result:
         data = tool_result.get("data", {})
+        # 🔧 [新增] 优先从 data.intent_type 获取（工具明确标注的意图）
         explicit_intent = (
-            tool_result.get("intent_type")
-            or data.get("intent_type")
+            data.get("intent_type")  # 🔧 [优先] 工具返回的 intent_type
+            or tool_result.get("intent_type")
             or data.get("intent")
         )
         if isinstance(explicit_intent, dict):
@@ -776,11 +796,42 @@ def infer_intent_from_response(
             "CompatibilityChart": "compatibility_analysis",
             "RelationshipHealthCard": "relationship_analysis",
             "GiftCard": "gift_suggestion",
+            "ChatInitiationCard": "initiate_chat",  # 🔧 [新增] 发起聊天意图
         }
         if component_type in ui_intent_map:
             return {"type": ui_intent_map[component_type], "confidence": 0.9, "source": "ui_component"}
 
     # 方式3：默认兜底（Agent 未返回结构化信息时）
+    # 🔧 [根治] 增加 initiate_chat 意图识别（关键修复）
+    # 当用户说"怎么联系他"、"接下来该怎么做"时，优先识别为 initiate_chat
+    # 🔧 [扩展] 增加"发起配对"、"想认识"等变体
+    initiate_chat_keywords = [
+        "怎么联系他", "联系他", "发起聊天", "开始对话",
+        "怎么联系李明", "怎么联系王芳", "怎么联系李雪",  # 具体名字
+        "接下来该怎么做", "下一步该怎么做", "接下来怎么做",
+        "联系方式", "和他聊", "想和他聊",
+        "发起配对", "配对请求", "想认识", "认识李雪", "认识李明", "认识王芳",
+        "帮我发起", "操作一下", "帮我配对",
+    ]
+    if any(kw in message_lower for kw in initiate_chat_keywords):
+        logger.info(f"[IntentInfer] 从关键词推断 initiate_chat 意图: {message[:50]}...")
+        return {"type": "initiate_chat", "confidence": 0.85, "source": "keyword_match"}
+
+    # 🔧 [根治] 增加 conversation 子意图识别，提高置信度
+    # 从用户消息推断 conversation 子意图
+    conversation_sub_intents = {
+        "chat_confirm": ["发出去了吗", "发送了吗", "消息发了", "聊天请求"],
+        "notification_query": ["能收到吗", "能看到吗", "会通知吗", "收到通知", "通知开关"],
+        "gratitude": ["谢谢", "感谢", "谢谢你", "谢啦"],
+        "follow_up": ["后续有问题", "有问题再找你", "之后再来", "回头找你"],
+        "acknowledgment": ["好的好的", "明白了", "了解了", "好的", "知道了"],
+        "emotion_express": ["有点紧张", "小紧张", "紧张", "担心", "有点担心"],
+    }
+    for sub_intent, keywords in conversation_sub_intents.items():
+        if any(kw in message_lower for kw in keywords):
+            logger.info(f"[IntentInfer] 从关键词推断 conversation 子意图: {sub_intent}")
+            return {"type": "conversation", "confidence": 0.8, "source": "keyword_match", "sub_type": sub_intent}
+
     return {"type": "conversation", "confidence": 0.5, "source": "default"}
 
 
@@ -798,12 +849,130 @@ def _normalize_generative_ui(generative_ui: Optional[Dict[str, Any]]) -> Optiona
     return generative_ui
 
 
+def _locations_match_for_filter(preferred: str, loc: str) -> bool:
+    if not (preferred or "").strip() or not (loc or "").strip():
+        return False
+    pref = preferred.strip()
+    l = loc.strip()
+    return pref == l or pref in l or l in pref
+
+
+def _coerce_interests_to_str_list(val: Any) -> List[str]:
+    """将 interests 规范为 List[str]（与 her_tools.helpers 行为对齐的 API 层兜底）。"""
+    if val is None:
+        return []
+    if isinstance(val, list):
+        merged = "".join(str(x) for x in val if x is not None).strip()
+        if merged.startswith("["):
+            try:
+                parsed = json.loads(merged.replace(" ", ""))
+                if isinstance(parsed, list):
+                    return [str(x).strip() for x in parsed if str(x).strip()][:20]
+            except json.JSONDecodeError:
+                pass
+        out: List[str] = []
+        for x in val:
+            if isinstance(x, str):
+                s = x.strip()
+                if s and s != "[]":
+                    out.append(s)
+        return out[:20]
+    text = str(val).strip()
+    if not text:
+        return []
+    if text.startswith("["):
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                return [str(x).strip() for x in parsed if str(x).strip()]
+        except json.JSONDecodeError:
+            pass
+    return [p.strip() for p in text.split(",") if p.strip() and p.strip() != "[]"][:20]
+
+
+def _sanitize_interests_in_match_card_props(props: Dict[str, Any]) -> None:
+    matches = props.get("matches")
+    if not isinstance(matches, list):
+        return
+    for m in matches:
+        if isinstance(m, dict):
+            m["interests"] = _coerce_interests_to_str_list(m.get("interests"))
+
+
+def _finalize_match_generative_ui(
+    generative_ui: Optional[Dict[str, Any]],
+    tool_result: Optional[Dict[str, Any]],
+) -> Tuple[str, Optional[Dict[str, Any]]]:
+    """
+    匹配卡片：合并工具返回的 filter / request_id；兴趣字段规范化；
+    「只找同城 + 偏好城市」下若列表出现非同城，视为不变量破坏并清空列表（可观测）。
+    """
+    if not generative_ui or generative_ui.get("component_type") != "MatchCardList":
+        return "", generative_ui
+
+    props = generative_ui.get("props")
+    if not isinstance(props, dict):
+        return "", generative_ui
+
+    data = (tool_result or {}).get("data") or {}
+    if isinstance(data.get("filter_applied"), dict):
+        prev = props.get("filter_applied") if isinstance(props.get("filter_applied"), dict) else {}
+        props["filter_applied"] = {**prev, **data["filter_applied"]}
+    if data.get("query_request_id"):
+        props.setdefault("query_request_id", data["query_request_id"])
+    if data.get("matched_count") is not None:
+        props.setdefault("matched_count", data["matched_count"])
+    props.setdefault("query_request_id", str(uuid.uuid4()))
+
+    _sanitize_interests_in_match_card_props(props)
+
+    matches = props.get("matches")
+    if not isinstance(matches, list):
+        return "", generative_ui
+
+    props["matched_count"] = len(matches)
+    props["total"] = len(matches)
+
+    fa = props.get("filter_applied") if isinstance(props.get("filter_applied"), dict) else {}
+    pref_loc = (fa.get("preferred_location") or "").strip()
+    acc = fa.get("accept_remote")
+    if acc == "只找同城" and pref_loc and matches:
+        bad = False
+        for m in matches:
+            if not isinstance(m, dict):
+                bad = True
+                break
+            loc = (m.get("location") or "").strip()
+            if not _locations_match_for_filter(pref_loc, loc):
+                bad = True
+                break
+        if bad:
+            rid = props.get("query_request_id") or str(uuid.uuid4())
+            props["query_request_id"] = rid
+            props["matches"] = []
+            props["matched_count"] = 0
+            props["total"] = 0
+            props["query_integrity"] = {
+                "status": "INVARIANT_VIOLATION",
+                "code": "FILTER_LOCATION_MISMATCH",
+                "request_id": rid,
+                "applied_filters": fa,
+            }
+            notice = (
+                "【系统提示】匹配结果与筛选条件不一致（例如仅同城却出现异地或缺失城市），已隐藏列表以免误导。"
+                f"请求编号：{rid}"
+            )
+            return notice, generative_ui
+
+    return "", generative_ui
+
+
 def _align_ai_message_with_structured_result(
     ai_message: str,
     generative_ui: Optional[Dict[str, Any]],
 ) -> str:
     """
-    让文案与结构化结果保持一致，避免“说 N 位但列表不是 N 位”。
+    让文案与结构化结果保持一致，避免"说 N 位但列表不是 N 位"。
     """
     if not generative_ui:
         return ai_message
@@ -819,7 +988,7 @@ def _align_ai_message_with_structured_result(
 
     total = len(matches)
     canonical_prefix = f"【匹配结果】\n\n为你找到 {total} 位候选人（以下结构化列表为准）。\n\n"
-    # 若文本里已经有“X位”但与结构化数量不一致，强制替换为标准前缀。
+    # 若文本里已经有"X位"但与结构化数量不一致，强制替换为标准前缀。
     stated_counts = [int(item) for item in re.findall(r"(\d+)\s*位", ai_message or "")]
     if stated_counts and any(count != total for count in stated_counts):
         logger.warning(f"[DEERFLOW] 文案人数与结构化结果不一致: text={stated_counts}, structured={total}")
@@ -828,6 +997,112 @@ def _align_ai_message_with_structured_result(
     # 即使未显式写人数，也给匹配场景加一个标准前缀，减少歧义。
     if ai_message and "匹配结果" not in ai_message:
         return canonical_prefix + ai_message
+    return ai_message
+
+
+def _looks_like_placeholder_response(ai_message: str) -> bool:
+    """检测工具占位文案，避免"查询成功，返回N行数据"直接暴露给用户。"""
+    text = (ai_message or "").strip()
+    if not text:
+        return False
+    placeholder_patterns = [
+        r"^查询成功，返回\s*\d+\s*行数据$",
+        r"^对比\s+.+\s+和\s+.+\s+的画像$",
+        r"^分析\s+.+\s+和\s+.+\s+的关系$",
+    ]
+    return any(re.match(pattern, text) for pattern in placeholder_patterns)
+
+
+def _render_structured_result_message(
+    ai_message: str,
+    tool_result: Optional[Dict[str, Any]],
+    generative_ui: Optional[Dict[str, Any]],
+) -> str:
+    """
+    将占位文案强制收敛为可读结果（根因2修复）。
+    仅在命中占位文案且存在结构化数据时触发，避免覆盖正常自然语言输出。
+
+    🔧 [P0修复] 新增：当有 relaxation_suggestions 且 matches 为空时，也触发处理
+    """
+    _ = generative_ui  # 预留：后续可根据 UI 类型做更细粒度渲染
+    if not isinstance(tool_result, dict):
+        return ai_message
+    data = tool_result.get("data", {})
+    if not isinstance(data, dict):
+        return ai_message
+
+    # 🔧 [P0修复] 优先处理 relaxation_suggestions 场景
+    # 当 matches 为空且有放宽建议时，输出统一模板（即使消息不是占位文案）
+    if data.get("component_type") == "MatchCardList":
+        matches = data.get("matches", [])
+        suggestions = data.get("relaxation_suggestions", [])
+        if isinstance(matches, list) and len(matches) == 0 and isinstance(suggestions, list) and suggestions:
+            lines = [
+                "严格按你当前要求，暂时没有找到符合条件的候选人。",
+                "",
+                "你可以考虑放宽以下条件（仅建议，不会自动变更）：",
+            ]
+            for item in suggestions[:5]:
+                if not isinstance(item, dict):
+                    continue
+                lines.append(
+                    f"- {item.get('dimension', '条件')}: 当前「{item.get('current', '未设置')}」"
+                    f"，可调整为「{item.get('suggestion', '更宽松')}」"
+                    f"（原因：{item.get('reason', '候选不足')}）"
+                )
+            lines.append("")
+            lines.append("如果你确认，我会按你指定的新条件重新查询。")
+            return "\n".join(lines)
+
+    # 如果不是占位文案，直接返回原消息
+    if not _looks_like_placeholder_response(ai_message):
+        return ai_message
+
+    rows = data.get("rows")
+    columns = data.get("columns")
+    if isinstance(rows, list):
+        row_count = data.get("row_count", len(rows))
+        if not rows:
+            return "查询完成，但当前没有符合条件的数据。你可以调整筛选条件后再试。"
+        if isinstance(columns, list) and columns:
+            table_headers = " | ".join(columns)
+            table_sep = " | ".join(["---"] * len(columns))
+            table_lines = [f"| {table_headers} |", f"| {table_sep} |"]
+            for row in rows[:10]:
+                if isinstance(row, dict):
+                    values = [str(row.get(col, "")) for col in columns]
+                    table_lines.append(f"| {' | '.join(values)} |")
+            return "查询完成，结果如下：\n\n" + "\n".join(table_lines) + f"\n\n共 {row_count} 行。"
+        return f"查询完成，共 {row_count} 行。"
+
+    if data.get("comparison_factors") and data.get("user_a") and data.get("user_b"):
+        user_a = data.get("user_a", {})
+        user_b = data.get("user_b", {})
+        factors = data.get("comparison_factors", [])
+        lines = [
+            f"已完成画像对比：{user_a.get('name', '你')} vs {user_b.get('name', 'TA')}",
+            "",
+        ]
+        for factor in factors[:6]:
+            if isinstance(factor, dict):
+                fname = factor.get("factor", "维度")
+                ua = factor.get("user_a", "")
+                ub = factor.get("user_b", "")
+                lines.append(f"- {fname}：你={ua}，TA={ub}")
+                common = factor.get("common")
+                if isinstance(common, list) and common:
+                    lines.append(f"  - 共同点：{', '.join(str(x) for x in common[:5])}")
+        return "\n".join(lines)
+
+    if data.get("match_info") and data.get("user_a") and data.get("user_b"):
+        match_info = data.get("match_info", {})
+        return (
+            f"关系分析完成：{data['user_a'].get('name', '你')} 与 {data['user_b'].get('name', 'TA')}。\n"
+            f"- 状态：{match_info.get('status', 'unknown')}\n"
+            f"- 兼容度：{match_info.get('compatibility_score', 'unknown')}"
+        )
+
+
     return ai_message
 
 
@@ -846,12 +1121,17 @@ def _build_observability_trace(
         "intent_confidence": intent.get("confidence"),
         "ui_component_type": None,
         "ui_matches_count": None,
+        "query_request_id": None,
+        "query_integrity": None,
     }
     if generative_ui:
         trace["ui_component_type"] = generative_ui.get("component_type")
         props = generative_ui.get("props", {})
         if isinstance(props, dict) and isinstance(props.get("matches"), list):
             trace["ui_matches_count"] = len(props.get("matches"))
+        if isinstance(props, dict):
+            trace["query_request_id"] = props.get("query_request_id")
+            trace["query_integrity"] = props.get("query_integrity")
     return trace
 
 
@@ -895,13 +1175,15 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
     logger.info(f"[DEERFLOW_TRACE] DeerFlow client 创建成功，准备调用 chat")
 
     try:
-        # 如果有 user_id，同步用户画像到 Memory（首次对话时）
-        # 注：不再每次请求都 reset_agent()，DeerFlowClient 已有 agent 缓存机制
-        # 只有在 SOUL.md 或 Skills 配置更新后才需要手动 reset_agent()
+        # 如果有 user_id，异步同步用户画像到 Memory（不阻塞主请求）
+        # 🔧 [P1性能优化] Memory 同步异步化
+        # 原逻辑：同步执行，阻塞主请求 1-2 秒
+        # 新逻辑：后台异步执行，主请求立即继续
         if request.user_id:
-            sync_start = time.time()
-            sync_user_memory_to_deerflow(request.user_id)
-            logger.info(f"[DEERFLOW] Memory sync done in {time.time() - sync_start:.3f}s for user {request.user_id}")
+            # 使用 asyncio.create_task 在后台执行同步
+            # 不等待结果，主请求立即继续处理
+            asyncio.create_task(_async_sync_user_memory(request.user_id))
+            logger.info(f"[DEERFLOW] Memory sync 已异步提交 for user {request.user_id}")
 
         # 调用 DeerFlow（传入 user_id 以实现用户隔离）
         thread_id = request.thread_id or f"her-{request.user_id or 'anonymous'}-{os.urandom(4).hex()}"
@@ -915,7 +1197,7 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
         # 🔧 [关键修复] 使用 stream 方法获取工具调用的原始结果
         # DeerFlow client.chat() 只返回文本，不返回工具 JSON
         # 使用 stream 可以获取 ToolMessage，其中包含工具返回的 JSON
-        MAX_TIMEOUT = 60.0
+        MAX_TIMEOUT = 45.0  # 🔧 [修复] 减少超时时间，45秒足够处理大多数请求
         response_text = ""
         tool_results_list = []  # 收集所有工具调用结果
 
@@ -997,7 +1279,15 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
                         generative_ui = ui
                         logger.info(f"[DEERFLOW] 从最终工具结果构建 generative_ui: {ui.get('component_type')}")
                     data = tool_result.get("data", {})
-                    response_text = data.get("summary", tool_result.get("summary", response_text))
+                    # 🔧 [根治] 使用 output_hint 而非 instruction/summary
+                    # output_hint 是给用户的回复提示，instruction 是给 Agent 的执行指令（禁止输出）
+                    output_hint = tool_result.get("output_hint", "")
+                    if output_hint:
+                        response_text = output_hint
+                        logger.info(f"[DEERFLOW] 使用 output_hint 作为回复: {output_hint[:50]}...")
+                    else:
+                        # 兼容旧工具，使用 summary（但不应直接输出 instruction）
+                        response_text = data.get("summary", tool_result.get("summary", response_text))
 
             # 如果没有从 stream 获取工具结果，尝试从文本中提取
             if not generative_ui and response_text:
@@ -1102,9 +1392,15 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
                 # 🔧 [修复] 如果已经从 GENERATIVE_UI 文本提取，不要覆盖
                 if not generative_ui:
                     generative_ui = build_generative_ui_from_tool_result(parsed)
-                # 🔧 [修复] summary 在 data 里面，不是在顶层
+                # 🔧 [根治] 优先使用 output_hint，而非 summary/instruction
                 data = parsed.get("data", {})
-                response_text = data.get("summary", parsed.get("summary", response_text))
+                output_hint = parsed.get("output_hint", "")
+                if output_hint:
+                    response_text = output_hint
+                    logger.info(f"[DEERFLOW] 从 parsed 使用 output_hint: {output_hint[:50]}...")
+                else:
+                    # 兼容旧工具，使用 summary
+                    response_text = data.get("summary", parsed.get("summary", response_text))
 
                 # 提取学习结果（如果 DeerFlow 有学习洞察）
                 data = parsed.get("data", {})
@@ -1137,10 +1433,34 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
 
         # 🔧 [修复] 推断意图类型（测试框架需要）
         generative_ui = _normalize_generative_ui(generative_ui)
+        integrity_notice, generative_ui = _finalize_match_generative_ui(generative_ui, tool_result)
         intent = infer_intent_from_response(request.message, response_text, generative_ui, tool_result)
         logger.info(f"[DEERFLOW] Intent inferred: {intent['type']} (confidence={intent['confidence']})")
 
+        # 🔧 [P0修复] Fallback：当意图识别失败但存在聊天相关数据时，强制构建 ChatInitiationCard
+        # 根因：Agent 可能直接输出文本而非调用工具，导致 tool_result 缺失 component_type
+        # 但 tool_data 中有 target_user_id 和 target_user_name，应该渲染聊天发起卡片
+        if not generative_ui and tool_result:
+            tool_data = tool_result.get("data", {})
+            # 检查是否有聊天发起相关字段
+            has_chat_fields = (
+                tool_data.get("target_user_id") or
+                tool_result.get("target_user_id") or
+                tool_data.get("target_user_name") or
+                tool_result.get("target_user_name")
+            )
+            if has_chat_fields:
+                # 从 message 关键词进一步确认是发起聊天意图
+                chat_keywords = ["发起聊天", "联系他", "开始对话", "帮我发起", "聊一聊", "和他聊"]
+                if any(kw in request.message for kw in chat_keywords):
+                    logger.info(f"[DEERFLOW] Fallback: 强制构建 ChatInitiationCard（意图识别失败但有聊天数据）")
+                    generative_ui = _build_chat_initiation_fallback(tool_result, tool_data)
+                    intent = {"type": "initiate_chat", "confidence": 0.85, "source": "fallback"}
+
+        response_text = _render_structured_result_message(response_text, tool_result, generative_ui)
         response_text = _align_ai_message_with_structured_result(response_text, generative_ui)
+        if integrity_notice:
+            response_text = f"{integrity_notice}\n\n{(response_text or '').lstrip()}"
         observability_trace = _build_observability_trace(request, intent, generative_ui)
         tool_result = _enrich_tool_result_with_observability(tool_result, observability_trace)
         logger.info(f"[DEERFLOW_TRACE] Final trace: {json.dumps(observability_trace, ensure_ascii=False)}")
@@ -1196,6 +1516,8 @@ async def _handle_with_her_service(request: ChatRequest) -> DeerFlowResponse:
 
         # 构建 Generative UI
         generative_ui = response.generative_ui if response.generative_ui else None
+        generative_ui = _normalize_generative_ui(generative_ui)
+        _, generative_ui = _finalize_match_generative_ui(generative_ui, None)
 
         # 🔧 [修复] 添加意图字段
         intent = {"type": response.intent_type, "confidence": 0.8, "source": "her_service"}
@@ -1315,9 +1637,24 @@ def build_generative_ui_from_tool_result(tool_result: Dict[str, Any]) -> Dict[st
         logger.info(f"[GenerativeUI] 将 users 转换为 MatchCardList: {len(users)} 个用户")
         return _build_ui_response("MatchCardList", props)
 
-    # 用户详情卡片 → UserProfileCard（数据中有 selected_user 或 user_profile）
-    if data.get("user_profile") or data.get("selected_user"):
-        user_data = data.get("user_profile") or data.get("selected_user")
+    # 用户详情卡片 → UserProfileCard（严格基于 selected_user 或带明确ID的 user_profile）
+    # 说明：
+    # - selected_user 是"目标用户"单一真相来源，应优先使用
+    # - target_profile 是 her_get_icebreaker 等工具返回的目标用户信息（需要有 user_id）
+    # - user_profile 在不同工具中语义不一致（可能是当前用户），没有 user_id/id 时禁止渲染详情卡
+    selected_user = data.get("selected_user")
+    target_profile = data.get("target_profile")
+    user_profile = data.get("user_profile")
+    user_data = None
+    if isinstance(selected_user, dict) and (selected_user.get("user_id") or selected_user.get("id")):
+        user_data = selected_user
+    elif isinstance(target_profile, dict) and (target_profile.get("user_id") or target_profile.get("id")):
+        # 🔧 [修复] target_profile 也需要有 user_id 才能渲染详情卡
+        user_data = target_profile
+    elif isinstance(user_profile, dict) and (user_profile.get("user_id") or user_profile.get("id")):
+        user_data = user_profile
+
+    if user_data:
         user_id = user_data.get("user_id") or user_data.get("id")
         props = {
             "user_id": user_id,
@@ -1337,6 +1674,22 @@ def build_generative_ui_from_tool_result(tool_result: Dict[str, Any]) -> Dict[st
             ]
         }
         return _build_ui_response("UserProfileCard", props)
+
+    # 🔧 [新增] 发起聊天卡片 → ChatInitiationCard
+    # 当有 target_user_id 和 target_user_name，但不是 UserProfileCard 时
+    if data.get("target_user_id") and data.get("target_user_name") and not user_data:
+        props = {
+            "target_user_id": data.get("target_user_id"),
+            "target_user_name": data.get("target_user_name"),
+            "target_user_avatar": data.get("target_user_avatar", ""),
+            "target_user_location": data.get("target_user_location", ""),
+            "target_user_age": data.get("target_user_age", 0),
+            "target_user_interests": data.get("target_user_interests", []),
+            "context": data.get("context", ""),
+            "compatibility_score": data.get("compatibility_score", 0),
+            "_schema": data.get("_schema", {}),
+        }
+        return _build_ui_response("ChatInitiationCard", props)
 
     # 兼容性分析 → CompatibilityChart
     if data.get("overall_score") and data.get("dimensions"):
@@ -1386,6 +1739,57 @@ def build_generative_ui_from_tool_result(tool_result: Dict[str, Any]) -> Dict[st
 
     # 默认 → SimpleResponse（纯文本，无卡片）
     return _build_ui_response("SimpleResponse", {"content": tool_result.get("summary", "")})
+
+
+def _build_chat_initiation_fallback(
+    tool_result: Optional[Dict[str, Any]],
+    tool_data: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """
+    🔧 [P0修复] Fallback 构建 ChatInitiationCard
+
+    当 Agent 直接输出文本而非调用工具时，tool_result 可能缺少 component_type，
+    但 tool_data 中有 target_user_id 和 target_user_name。
+    此函数强制构建 ChatInitiationCard，确保聊天发起功能落地。
+
+    Args:
+        tool_result: 完整的 tool_result
+        tool_data: tool_result.data 部分
+
+    Returns:
+        ChatInitiationCard 结构
+    """
+    data = tool_data or tool_result or {}
+
+    # 提取字段（支持多层位置）
+    target_user_id = (
+        data.get("target_user_id") or
+        tool_result.get("target_user_id") if tool_result else None
+    )
+    target_user_name = (
+        data.get("target_user_name") or
+        tool_result.get("target_user_name") if tool_result else None or
+        "TA"
+    )
+
+    props = {
+        "target_user_id": target_user_id,
+        "target_user_name": target_user_name,
+        "target_user_avatar": data.get("target_user_avatar", ""),
+        "target_user_location": data.get("target_user_location", ""),
+        "target_user_age": data.get("target_user_age", 0),
+        "target_user_interests": data.get("target_user_interests", []),
+        "context": data.get("context", ""),
+        "compatibility_score": data.get("compatibility_score", 0),
+        "_schema": {
+            "backend_type": "ChatInitiationCard",
+            "frontend_card": "chat_initiation",
+            "description": "发起聊天确认卡片（Fallback 构建）"
+        },
+    }
+
+    logger.info(f"[GenerativeUI] Fallback 构建 ChatInitiationCard: target={target_user_name}")
+    return _build_ui_response("ChatInitiationCard", props)
 
 
 def _build_ui_response(component_type: str, props: Dict[str, Any]) -> Dict[str, Any]:

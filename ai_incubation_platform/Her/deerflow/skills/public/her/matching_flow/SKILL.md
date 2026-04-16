@@ -8,6 +8,7 @@ allowed-tools:
   - her_get_icebreaker
   - her_plan_date
   - her_update_preference
+  - her_get_product_capabilities
 ---
 
 # Her 智能匹配流程
@@ -27,6 +28,8 @@ allowed-tools:
 ## 执行流程
 
 此 Skill 描述了一个完整的匹配流程，Agent 应根据用户反馈动态调整：
+
+**通知类问题**：若用户问及 App 是否会**提醒 / 通知 / 推送**（新匹配、喜欢、消息等），必须先调用 `her_get_product_capabilities`，再回答。
 
 ### Phase 1: 找匹配对象
 

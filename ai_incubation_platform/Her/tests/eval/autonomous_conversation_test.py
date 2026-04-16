@@ -312,6 +312,11 @@ def generate_scenario_with_llm(scenario_type: str = None) -> Dict[str, Any]:
         response = call_llm(prompt, system_prompt=system_prompt, temperature=0.8)
         # 解析 JSON
         scenario = json.loads(response.strip())
+        # 🔧 [关键修复] 调用方指定的 scenario_type 是单一真相来源：
+        # LLM 可能在 JSON 里“跑偏”填错 scenario_type，导致测试目标被污染。
+        scenario["scenario_type"] = scenario_type
+        # 补齐默认 goal（防止 LLM 漏字段或与类型不一致）
+        scenario.setdefault("goal", scenario_info.get("goal", ""))
         # 添加 user_id
         scenario["user_profile"]["user_id"] = f"test-user-{uuid.uuid4().hex[:8]}"
         return scenario
@@ -872,7 +877,7 @@ class RealAPIClient:
 
     def __init__(self, base_url: str = "http://localhost:8002"):
         self.base_url = base_url
-        self.timeout = 90
+        self.timeout = 60  # 🔧 [修复] 减少超时时间，90秒过长
 
     async def call_chat(self, message: str, user_id: str, thread_id: str = None) -> Dict[str, Any]:
         """调用对话 API"""
@@ -1349,12 +1354,33 @@ class ConversationEngine:
             latency_ms = (time.time() - start_time) * 1000
 
             # 记录本轮
+            # 🔧 [新增] 提取 tool_calls 信息
+            tool_calls = []
+            tool_result = api_response.get("tool_result")
+            if tool_result:
+                # 从 tool_result 中提取工具调用信息
+                observability = tool_result.get("observability", {})
+                if observability:
+                    tool_calls.append({
+                        "intent_type": observability.get("intent_type"),
+                        "intent_source": observability.get("intent_source"),
+                        "ui_component_type": observability.get("ui_component_type"),
+                        "ui_matches_count": observability.get("ui_matches_count"),
+                        "query_request_id": observability.get("query_request_id"),
+                    })
+                # 如果有更多工具信息，添加到列表
+                if tool_result.get("data"):
+                    tool_calls.append({
+                        "tool_data": tool_result.get("data"),
+                    })
+
             round_record = ConversationRound(
                 round_id=round_id,
                 user_input=user_input,
                 agent_response=api_response.get("ai_message", ""),
                 intent=api_response.get("intent"),
                 generative_ui=api_response.get("generative_ui"),
+                tool_calls=tool_calls,  # 🔧 [新增] 添加 tool_calls 记录
                 latency_ms=latency_ms,
                 error=api_response.get("error"),
                 timestamp=datetime.now().isoformat(),
@@ -1448,6 +1474,35 @@ class ConversationEngine:
                         {"topic": "兴趣爱好", "suggestion": "分享一本喜欢的书"},
                         {"topic": "美食", "suggestion": "讨论最近尝试的餐厅"},
                     ],
+                },
+            }
+            return response
+
+        # 🔧 [发起聊天] 用户请求发起聊天（优先级最高）
+        # 🔧 [关键修复] 识别"怎么联系"、"下一步"、"接下来"等触发词
+        # 🔧 [扩展] 增加"发起配对"、"想认识"等变体
+        # 🔧 [优先级] 在 compatibility_analysis 之前识别，避免被"匹配度"关键词覆盖
+        initiate_chat_keywords = [
+            "联系他", "发起聊天", "开始对话", "怎么联系", "联系方式",
+            "下一步", "接下来该怎么做", "和他聊", "怎么联系他",
+            "联系李明", "联系王芳", "联系李雪",
+            "发起配对", "配对请求", "想认识", "认识李雪", "认识李明", "认识王芳",
+            "帮我发起", "操作一下", "帮我配对", "牵线搭桥",
+        ]
+        if any(kw in message_lower for kw in initiate_chat_keywords):
+            response["ai_message"] = "好的！我为你准备好了聊天。请在 App 中点击'开始对话'按钮，就可以给他发消息了~"
+            response["intent"] = {"type": "initiate_chat", "confidence": 0.9}
+            response["generative_ui"] = {
+                "component_type": "ChatInitiationCard",
+                "props": {
+                    "target_user": {
+                        "name": "李明",
+                        "age": 29,
+                        "location": "上海",
+                        "interests": ["健身", "电影"],
+                    },
+                    "status": "ready",
+                    "hint": "点击开始对话，向对方发送消息",
                 },
             }
             return response

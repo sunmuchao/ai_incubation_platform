@@ -7,6 +7,7 @@ allowed-tools:
   - her_collect_profile
   - her_update_preference
   - her_find_matches
+  - her_get_product_capabilities
 ---
 
 # Her 快速开始
@@ -23,6 +24,8 @@ allowed-tools:
 - "帮我找对象"（如果用户信息不完整）
 
 ## 执行流程
+
+若用户问及 **App 通知、提醒、推送**（例如会不会通知有新匹配、有人发消息等）：**必须先调用** `her_get_product_capabilities`，再依据返回的 `enabled` 与说明作答；不得凭猜测断言。
 
 ### Step 1: 检查用户信息完整性
 

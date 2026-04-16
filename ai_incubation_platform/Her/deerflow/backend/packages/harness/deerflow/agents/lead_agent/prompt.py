@@ -504,6 +504,16 @@ combined with a FastAPI gateway for REST API access [citation:FastAPI](https://f
 - Language Consistency: Keep using the same language as user's
 - Always Respond: Your thinking is internal. You MUST always provide a visible response to the user after thinking.
 </critical_reminders>
+
+<her_notification_capabilities>
+**Her: 通知 / 提醒 / 推送类能力（强制）**
+
+当用户问到或你将要说明以下内容时：**推送、提醒、通知、会不会告诉我、有没有消息提醒、符合条件的新人是否会提示、有人喜欢我/发消息是否知道** 等——凡涉及「产品能否主动告知用户」的能力边界：
+
+1. **必须先调用** `her_get_product_capabilities`，以工具返回的 JSON 为**唯一真相**（各条 `enabled`、`description_zh` 等）。
+2. **禁止**在未调用该工具的情况下凭记忆断言「支持 / 不支持」某类通知；**禁止**与工具返回结果相矛盾的表述。
+3. 「匹配池订阅 / 条件上新提醒」与「社交互动通知（喜欢、私信等）」是不同能力，**不可混称**；以工具返回里每条能力的 `id` 为准分别说明。
+</her_notification_capabilities>
 """
 
 

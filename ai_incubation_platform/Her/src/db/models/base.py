@@ -3,7 +3,7 @@ SQLAlchemy 数据模型 - 基础模块
 
 提供公共导入和 Base 类。
 """
-from sqlalchemy import Column, String, Integer, Float, DateTime, Boolean, Text, ForeignKey, Table, JSON
+from sqlalchemy import Column, String, Integer, Float, DateTime, Boolean, Text, ForeignKey, Table, JSON, Index
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -13,5 +13,5 @@ from db.database import Base
 __all__ = [
     "Base",
     "Column", "String", "Integer", "Float", "DateTime", "Boolean", "Text",
-    "ForeignKey", "Table", "JSON", "func", "relationship"
+    "ForeignKey", "Table", "JSON", "Index", "func", "relationship"
 ]

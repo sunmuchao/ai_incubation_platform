@@ -9,7 +9,7 @@ import asyncio
 import os
 import sys
 import re
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +126,43 @@ def run_async(coro):
             new_loop.close()
 
 
+def normalize_user_interests_field(raw: Optional[Any]) -> List[str]:
+    """
+    将 users.interests 存值规范为 List[str]。
+    支持：JSON 数组字符串、逗号分隔、空值。
+    """
+    if raw is None:
+        return []
+    text = str(raw).strip()
+    if not text:
+        return []
+    if text.startswith("["):
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                return [str(x).strip() for x in parsed if str(x).strip()]
+        except json.JSONDecodeError:
+            pass
+    parts = [p.strip() for p in text.split(",") if p.strip() and p.strip() != "[]"]
+    return parts[:20]
+
+
+def should_exclude_demo_candidate_name(name: Optional[str]) -> bool:
+    """
+    过滤明显测试/演示昵称，避免进入真实推荐（数据校验/安全边界）。
+    可通过环境变量 HER_EXCLUDE_NAME_SUBSTRINGS 覆盖，逗号分隔子串。
+    """
+    n = (name or "").strip()
+    if not n:
+        return False
+    raw = os.environ.get("HER_EXCLUDE_NAME_SUBSTRINGS", "安全测试,自动化测试,单元测试")
+    for frag in raw.split(","):
+        frag = frag.strip()
+        if frag and frag in n:
+            return True
+    return False
+
+
 # ==================== Database Access ====================
 
 def get_db_user(user_id: str) -> Optional[Dict[str, Any]]:
@@ -137,12 +174,7 @@ def get_db_user(user_id: str) -> Optional[Dict[str, Any]]:
     with db_session() as db:
         user = db.query(UserDB).filter(UserDB.id == user_id).first()
         if user:
-            interests = []
-            if user.interests:
-                try:
-                    interests = json.loads(user.interests)
-                except:
-                    interests = user.interests.split(",")
+            interests = normalize_user_interests_field(getattr(user, "interests", None))
 
             # 基本信息
             user_data = {
@@ -260,4 +292,6 @@ __all__ = [
     "run_async",
     "get_db_user",
     "get_user_confidence",
+    "normalize_user_interests_field",
+    "should_exclude_demo_candidate_name",
 ]

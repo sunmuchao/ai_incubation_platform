@@ -22,7 +22,7 @@ class UserDB(Base):
     values = Column(Text, default="")
     bio = Column(Text, default="")
     avatar_url = Column(String(500), nullable=True)
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, index=True)  # 🔧 [性能优化] 添加索引，匹配查询频繁使用
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -68,7 +68,7 @@ class UserDB(Base):
     # ===== 违规计数 =====
     violation_count = Column(Integer, default=0, index=True)
     ban_reason = Column(Text, nullable=True)
-    is_permanently_banned = Column(Boolean, default=False)
+    is_permanently_banned = Column(Boolean, default=False, index=True)  # 🔧 [性能优化] 添加索引，匹配查询频繁使用
 
     # ===== 手机号登录 =====
     phone = Column(String(20), unique=True, nullable=True, index=True)
@@ -87,5 +87,12 @@ class UserDB(Base):
     profile_confidence = Column(Float, default=0.3)
     profile_completeness = Column(Float, default=0.0)
     profile_updated_at = Column(DateTime(timezone=True), nullable=True)
+
+    # ===== 复合索引（P1性能优化）=====
+    # 优化匹配查询：WHERE age >= min AND age <= max AND gender = ? AND is_active = True
+    __table_args__ = (
+        Index('ix_users_match_query', 'age', 'gender', 'is_active'),
+        Index('ix_users_active_banned', 'is_active', 'is_permanently_banned'),
+    )
 
 __all__ = ["UserDB"]
