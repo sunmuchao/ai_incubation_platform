@@ -13,6 +13,7 @@ from typing import List, Optional, Dict, Any
 from db.database import get_db
 from services.who_likes_me_service import WhoLikesMeService, get_who_likes_me_service
 from services.membership_service import MembershipService
+from models.membership import MembershipTier
 from utils.logger import logger
 
 router = APIRouter(prefix="/api/who-likes-me", tags=["Who Likes Me"])
@@ -68,7 +69,8 @@ async def get_who_likes_me(
     try:
         # 检查会员状态
         membership_service = MembershipService(db)
-        is_member = membership_service.is_member(user_id)
+        membership = membership_service.get_user_membership(user_id)
+        is_member = membership.is_active() and membership.tier != MembershipTier.FREE
 
         # 获取喜欢列表
         service = get_who_likes_me_service(db)
@@ -117,7 +119,8 @@ async def like_back(
     try:
         # 检查会员状态
         membership_service = MembershipService(db)
-        is_member = membership_service.is_member(user_id)
+        membership = membership_service.get_user_membership(user_id)
+        is_member = membership.is_active() and membership.tier != MembershipTier.FREE
 
         if not is_member:
             return {

@@ -33,38 +33,43 @@ export type ConfidenceLevel = 'very_high' | 'high' | 'medium' | 'low'
 
 // ==================== 配置 ====================
 
+// 🚀 [改进] 用户友好的置信度配置
 const LEVEL_CONFIG = {
   very_high: {
     color: '#faad14',
     bgColor: '#faad14',
     icon: '💎',
-    name: '极可信',
-    description: '信息经过多重验证，可信度极高',
+    name: '资料已核实',  // 🚀 [改进] 更友好的文案
+    description: '资料完整且经过身份认证，可信度极高',  // 🚀 [改进] 更清晰的说明
     antColor: 'gold',
+    hint: '已完成实名认证 + 人脸核身',  // 🚀 [改进] 解释说明
   },
   high: {
     color: '#52c41a',
     bgColor: '#52c41a',
     icon: '🌟',
-    name: '较可信',
-    description: '信息一致性良好，可信度较高',
+    name: '资料较完整',  // 🚀 [改进] 更友好的文案
+    description: '资料完整度良好，建议进一步认证提升可信度',
     antColor: 'success',
+    hint: '基本信息已填写完整',
   },
   medium: {
     color: '#1890ff',
     bgColor: '#1890ff',
     icon: '✓',
-    name: '普通用户',
-    description: '基本信息已验证，建议进一步认证',
+    name: '基本资料',  // 🚀 [改进] 更友好的文案
+    description: '基本信息已填写，建议补充更多资料',
     antColor: 'processing',
+    hint: '建议完成认证提升可信度',
   },
   low: {
     color: '#fa8c16',
     bgColor: '#fa8c16',
     icon: '⚠️',
-    name: '需谨慎',
-    description: '信息存在异常标记，建议谨慎交往',
+    name: '资料待完善',  // 🚀 [改进] 更友好的文案
+    description: '资料不完整，建议先完善基本信息',
     antColor: 'warning',
+    hint: '补充资料后可提升匹配质量',
   },
 }
 
@@ -203,12 +208,19 @@ const ConfidenceBadge: React.FC<ConfidenceBadgeProps> = ({
           <div className="tooltip-header">
             <span className="tooltip-icon">{config.icon}</span>
             <span className="tooltip-name">{config.name}</span>
-            <span className="tooltip-percent">{Math.round(summary.confidence * 100)}%</span>
+            {/* 🚀 [改进] 可选显示百分比 */}
+            {showPercent && (
+              <span className="tooltip-percent">{Math.round(summary.confidence * 100)}%</span>
+            )}
           </div>
           <div className="tooltip-desc">{config.description}</div>
+          {/* 🚀 [改进] 添加解释说明 */}
+          <div className="tooltip-hint" style={{ marginTop: 4, fontSize: 12, color: '#666' }}>
+            💡 {config.hint}
+          </div>
           {summary.flags_count > 0 && (
             <div className="tooltip-warning">
-              <WarningOutlined /> {summary.flags_count} 项信息异常
+              <WarningOutlined /> {summary.flags_count} 项信息待完善
             </div>
           )}
           {summary.verified && (

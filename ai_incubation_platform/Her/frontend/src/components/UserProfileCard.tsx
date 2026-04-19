@@ -8,11 +8,30 @@ import {
   EnvironmentOutlined,
   HeartOutlined,
   CheckCircleOutlined,
+  BookOutlined,
+  DollarOutlined,
 } from '@ant-design/icons'
 import ConfidenceBadge from './ConfidenceBadge'
 import './MatchCard.less'
 
 const { Text, Title, Paragraph } = Typography
+
+// 关系目标中英文映射
+const RELATIONSHIP_GOAL_MAP: Record<string, string> = {
+  serious: '认真恋爱',
+  marriage: '奔着结婚',
+  dating: '轻松交友',
+  casual: '随便聊聊',
+}
+
+// 🚀 [改进] 学历中英文映射
+const EDUCATION_MAP: Record<string, string> = {
+  high_school: '高中',
+  college: '大专',
+  bachelor: '本科',
+  master: '硕士',
+  phd: '博士',
+}
 
 interface UserProfileCardProps {
   user_id: string
@@ -27,6 +46,10 @@ interface UserProfileCardProps {
   bio?: string
   relationship_goal?: string
   avatar_url?: string
+  // 🚀 [改进] 新增字段
+  education?: string  // 学历
+  income?: number  // 收入（万元）
+  income_range?: string  // 收入范围描述
   actions?: Array<{
     label: string
     action: string
@@ -49,6 +72,10 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({
   bio,
   relationship_goal,
   avatar_url,
+  // 🚀 [改进] 新增字段
+  education,
+  income,
+  income_range,
   actions = [],
   onStartChat,
   onViewProfile,
@@ -69,12 +96,13 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({
     }
   }, [confidence_level])
 
-  // 处理按钮点击
+  // 处理按钮点击（actions.target_user_id 可能未填全，回退到卡片级 user_id）
   const handleAction = (action: string, targetUserId: string) => {
+    const id = targetUserId || user_id
     if (action === 'start_chat' && onStartChat) {
-      onStartChat(targetUserId)
+      onStartChat(id)
     } else if (action === 'view_profile' && onViewProfile) {
-      onViewProfile(targetUserId)
+      onViewProfile(id)
     }
   }
 
@@ -115,19 +143,38 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({
 
       <Divider />
 
-      {/* 职业 */}
-      {occupation && (
-        <div style={{ marginBottom: 12 }}>
-          <Text strong>职业：</Text>
-          <Text>{occupation}</Text>
-        </div>
-      )}
+      {/* 🚀 [改进] 基础信息（职业、学历、收入） */}
+      <div style={{ marginBottom: 12 }}>
+        {/* 职业 */}
+        {occupation && (
+          <div style={{ marginBottom: 8 }}>
+            <Text strong>职业：</Text>
+            <Text>{occupation}</Text>
+          </div>
+        )}
+        {/* 学历 */}
+        {education && (
+          <div style={{ marginBottom: 8 }}>
+            <BookOutlined style={{ marginRight: 4, color: '#1890ff' }} />
+            <Text strong>学历：</Text>
+            <Tag color="geekblue">{EDUCATION_MAP[education] || education}</Tag>
+          </div>
+        )}
+        {/* 收入 */}
+        {(income_range || income) && (
+          <div style={{ marginBottom: 8 }}>
+            <DollarOutlined style={{ marginRight: 4, color: '#52c41a' }} />
+            <Text strong>收入：</Text>
+            <Tag color="green">{income_range || (income ? `${income}万/年` : '未填写')}</Tag>
+          </div>
+        )}
+      </div>
 
       {/* 关系目标 */}
       {relationship_goal && (
         <div style={{ marginBottom: 12 }}>
           <Text strong>关系目标：</Text>
-          <Tag color="pink">{relationship_goal}</Tag>
+          <Tag color="pink">{RELATIONSHIP_GOAL_MAP[relationship_goal] || relationship_goal}</Tag>
         </div>
       )}
 

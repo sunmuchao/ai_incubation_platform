@@ -97,16 +97,11 @@ class WebSocketService {
   }
 
   private buildDefaultUrl(userId: string): string {
-    // 直接连接后端 WebSocket (端口 8000)
-    // Vite WebSocket 代理在某些情况下可能不稳定，直接连接更可靠
-    // 注意：开发环境使用 ws://，生产环境需要 wss://
-    const isDev = window.location.port === '3005'
-    if (isDev) {
-      // 开发环境：直接连接后端 8000 端口
-      return `ws://localhost:8000/api/chat/ws/${userId}`
-    }
-    // 生产环境：通过同源代理
+    // 使用 Vite WebSocket 代理（配置在 vite.config.ts）
+    // 代理配置：/api -> http://localhost:8002, ws: true
+    // 通过相对路径让 Vite 代理处理 WebSocket 连接
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    // 开发和生产环境统一使用同源路径，由 Vite/Nginx 代理转发
     return `${protocol}//${window.location.host}/api/chat/ws/${userId}`
   }
 

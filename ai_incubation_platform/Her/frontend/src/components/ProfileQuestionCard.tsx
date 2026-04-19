@@ -2,15 +2,69 @@
  * AI 动态生成的问题卡片
  *
  * 用于在对话中收集用户信息，AI 自主生成问题和选项
+ *
+ * 🎯 [改进] 添加进度指示器 + 品牌视觉升级
  */
 
 import React from 'react'
-import { Card, Button, Space, Typography, Tag, Checkbox, Radio, message, Spin, Input } from 'antd'
-import { CheckCircleOutlined, LoadingOutlined, ForwardOutlined } from '@ant-design/icons'
+import { Card, Button, Space, Typography, Tag, Checkbox, Radio, message, Spin, Input, Progress } from 'antd'
+import { CheckCircleOutlined, LoadingOutlined, ForwardOutlined, HeartFilled, StarFilled, ThunderboltFilled } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import './ProfileQuestionCard.less'
 
 const { Text, Title } = Typography
+
+// 字段分组配置（用于进度显示和视觉样式）
+const FIELD_GROUPS = {
+  // 核心必填（第一组）
+  core: ['name', 'age', 'gender', 'location'],
+  // 属性信息（第二组）
+  attributes: ['height', 'education', 'occupation', 'income', 'housing', 'has_car'],
+  // 一票否决维度（第三组 - 重要）
+  veto: ['want_children', 'spending_style'],
+  // 价值观与生活方式（第四组 - 可延迟）
+  lifestyle: ['family_importance', 'work_life_balance', 'migration_willingness', 'accept_remote', 'sleep_type'],
+}
+
+// 字段重要性级别
+const FIELD_IMPORTANCE: Record<string, 'core' | 'important' | 'optional'> = {
+  // 核心必填
+  name: 'core',
+  age: 'core',
+  gender: 'core',
+  location: 'core',
+  // 重要（一票否决）
+  want_children: 'important',
+  spending_style: 'important',
+  // 可选/可延迟
+  height: 'optional',
+  education: 'optional',
+  occupation: 'optional',
+  income: 'optional',
+  housing: 'optional',
+  has_car: 'optional',
+  family_importance: 'optional',
+  work_life_balance: 'optional',
+  migration_willingness: 'optional',
+  accept_remote: 'optional',
+  sleep_type: 'optional',
+}
+
+// 字段装饰图标
+const FIELD_ICONS: Record<string, React.ReactNode> = {
+  name: <HeartFilled style={{ color: '#FF8FAB' }} />,
+  age: <StarFilled style={{ color: '#FFB6C1' }} />,
+  gender: <span style={{ fontSize: 16 }}>👤</span>,
+  location: <span style={{ fontSize: 16 }}>📍</span>,
+  want_children: <span style={{ fontSize: 16 }}>👶</span>,
+  spending_style: <span style={{ fontSize: 16 }}>💰</span>,
+  height: <span style={{ fontSize: 16 }}>📏</span>,
+  education: <span style={{ fontSize: 16 }}>🎓</span>,
+  occupation: <span style={{ fontSize: 16 }}>💼</span>,
+  income: <span style={{ fontSize: 16 }}>💵</span>,
+  housing: <span style={{ fontSize: 16 }}>🏠</span>,
+  has_car: <span style={{ fontSize: 16 }}>🚗</span>,
+}
 
 interface QuestionOption {
   value: string
@@ -26,6 +80,16 @@ interface ProfileQuestionCardProps {
   dimension: string
   depth?: number  // 追问深度，0=首次提问，1+=追问
   optional?: boolean  // 是否为可选字段（用户可跳过）
+  veto_dimension?: boolean  // 是否为一票否决维度（重要）
+  // 🎯 [新增] 进度信息
+  progress?: {
+    current: number  // 当前是第几个问题
+    total: number    // 总共有多少问题
+    group?: string   // 当前分组名称（如"核心信息"、"一票否决"）
+  }
+  // 🎯 [新增] 快速填表入口
+  showQuickFill?: boolean  // 是否显示"快速填表"按钮
+  onQuickFill?: () => void  // 快速填表回调
   onAnswer: (dimension: string, value: string | string[], depth: number) => Promise<void>  // 改为 Promise
   onSkip?: (dimension: string) => Promise<void>  // 跳过回调
 }
@@ -38,6 +102,10 @@ const ProfileQuestionCard: React.FC<ProfileQuestionCardProps> = ({
   dimension,
   depth = 0,
   optional = false,
+  veto_dimension = false,
+  progress,
+  showQuickFill = false,
+  onQuickFill,
   onAnswer,
   onSkip,
 }) => {
@@ -48,6 +116,24 @@ const ProfileQuestionCard: React.FC<ProfileQuestionCardProps> = ({
   const [loading, setLoading] = React.useState(false)  // 新增 loading 状态
   const [skipping, setSkipping] = React.useState(false)  // 跳过 loading 状态
   const [error, setError] = React.useState<string | null>(null)  // 新增 error 状态
+
+  // 🎯 [新增] 计算进度百分比
+  const progressPercent = progress ? Math.round((progress.current / progress.total) * 100) : 0
+
+  // 🎯 [新增] 判断是否为一票否决维度（使用 props 或配置）
+  const isVetoDimension = veto_dimension || FIELD_IMPORTANCE[dimension] === 'important'
+
+  // 🎯 [新增] 获取字段装饰图标
+  const fieldIcon = FIELD_ICONS[dimension]
+
+  // 🎯 [新增] 根据重要性级别确定卡片样式类名
+  const cardClassName = React.useMemo(() => {
+    const classes = ['profile-question-card']
+    if (depth > 0) classes.push('follow-up')
+    if (isVetoDimension) classes.push('veto-dimension')  // 一票否决特殊样式
+    if (FIELD_IMPORTANCE[dimension] === 'core') classes.push('core-dimension')  // 核心信息样式
+    return classes.join(' ')
+  }, [depth, isVetoDimension, dimension])
 
   // 单选点击
   const handleSingleSelect = async (value: string) => {
@@ -294,8 +380,37 @@ const ProfileQuestionCard: React.FC<ProfileQuestionCardProps> = ({
   )
 
   return (
-    <Card className={`profile-question-card ${depth > 0 ? 'follow-up' : ''}`} bordered={false}>
+    <Card className={cardClassName} variant="borderless">
+      {/* 🎯 [新增] 进度指示器 */}
+      {progress && (
+        <div className="progress-header">
+          <div className="progress-info">
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {progress.group ? `${progress.group} · ` : ''}第 {progress.current}/{progress.total} 步
+            </Text>
+            {fieldIcon && <span className="field-icon">{fieldIcon}</span>}
+          </div>
+          <Progress
+            percent={progressPercent}
+            size="small"
+            showInfo={false}
+            strokeColor={{
+              '0%': '#D4A59A',
+              '100%': '#C88B8B',
+            }}
+            trailColor="rgba(212, 165, 154, 0.15)"
+          />
+        </div>
+      )}
+
       <div className="question-header">
+        {/* 一票否决维度特殊提示 */}
+        {isVetoDimension && (
+          <div className="veto-badge">
+            <ThunderboltFilled style={{ color: '#C88B8B', marginRight: 4 }} />
+            <Text style={{ fontSize: 11, color: '#C88B8B' }}>重要维度 · 影响匹配结果</Text>
+          </div>
+        )}
         {depth > 0 && (
           <Tag color="#D4A59A" style={{ marginBottom: 8, fontSize: 11 }}>
             再说说看~
@@ -318,6 +433,25 @@ const ProfileQuestionCard: React.FC<ProfileQuestionCardProps> = ({
         {questionType === 'tags' && renderTags()}
         {questionType === 'input' && renderInput()}
       </div>
+
+      {/* 🎯 [新增] 快速填表入口 */}
+      {showQuickFill && onQuickFill && !submitted && !loading && (
+        <div className="quick-fill-section">
+          <Button
+            type="default"
+            block
+            onClick={onQuickFill}
+            style={{
+              marginTop: 12,
+              borderRadius: 20,
+              borderColor: '#D4A59A',
+              color: '#D4A59A',
+            }}
+          >
+            <ForwardOutlined /> 快速填完剩余问题，直接开始匹配
+          </Button>
+        </div>
+      )}
 
       {/* 可选字段的跳过按钮 */}
       {optional && !submitted && !loading && !skipping && onSkip && (

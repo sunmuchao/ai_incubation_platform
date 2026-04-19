@@ -188,14 +188,14 @@ class CancelDateRequest(BaseModel):
 async def schedule_video_date(
     request: ScheduleDateRequest,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """预约视频约会"""
     service = VideoDateService(db)
 
     try:
         result = service.schedule_date(
-            user_id_1=current_user.id,
+            user_id_1=current_user,
             user_id_2=request.partner_id,
             scheduled_time=request.scheduled_time,
             duration_minutes=request.duration_minutes,
@@ -216,12 +216,12 @@ async def get_date_list(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取我的约会列表"""
     service = VideoDateService(db)
     dates = service.get_user_date_list(
-        user_id=current_user.id,
+        user_id=current_user,
         status=status,
         limit=limit,
         offset=offset
@@ -236,7 +236,7 @@ async def get_date_list(
 async def get_date_info(
     date_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取约会详情"""
     service = VideoDateService(db)
@@ -246,7 +246,7 @@ async def get_date_info(
         raise HTTPException(status_code=404, detail="约会不存在")
 
     # 检查权限
-    if info["user_id_1"] != current_user.id and info["user_id_2"] != current_user.id:
+    if info["user_id_1"] != current_user and info["user_id_2"] != current_user:
         raise HTTPException(status_code=403, detail="无权查看此约会")
 
     return {
@@ -260,13 +260,13 @@ async def start_video_date(
     date_id: str,
     request: StartDateRequest = None,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """开始视频约会"""
     service = VideoDateService(db)
 
     try:
-        result = service.start_date(date_id, current_user.id)
+        result = service.start_date(date_id, current_user)
         return {
             "success": True,
             "data": result
@@ -280,7 +280,7 @@ async def complete_video_date(
     date_id: str,
     request: RateDateRequest,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """完成视频约会并提交评分"""
     service = VideoDateService(db)
@@ -288,7 +288,7 @@ async def complete_video_date(
     try:
         service.complete_date(
             date_id=date_id,
-            user_id=current_user.id,
+            user_id=current_user,
             rating=request.rating,
             review=request.review
         )
@@ -305,14 +305,14 @@ async def cancel_video_date(
     date_id: str,
     request: CancelDateRequest = None,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """取消视频约会"""
     service = VideoDateService(db)
     reason = request.reason if request else ""
 
     try:
-        service.cancel_date(date_id, current_user.id, reason)
+        service.cancel_date(date_id, current_user, reason)
         return {
             "success": True,
             "message": "约会已取消"
@@ -325,11 +325,11 @@ async def cancel_video_date(
 async def get_upcoming_reminders(
     hours: int = Query(24, ge=1, le=168),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取即将到期的约会提醒"""
     service = VideoDateService(db)
-    reminders = service.get_upcoming_reminders(current_user.id, hours)
+    reminders = service.get_upcoming_reminders(current_user, hours)
     return {
         "success": True,
         "data": reminders
@@ -343,7 +343,7 @@ async def get_icebreaker_questions(
     date_id: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取破冰问题推荐"""
     service = IcebreakerService(db)
@@ -384,7 +384,7 @@ AVAILABLE_BACKGROUNDS = [
 @router.get("/backgrounds", response_model=Dict[str, Any])
 async def get_virtual_backgrounds(
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取可用背景列表"""
     # 从数据库加载自定义背景
@@ -424,7 +424,7 @@ async def set_virtual_background(
     date_id: str = Body(...),
     background_id: str = Body(...),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """设置虚拟背景"""
     # 实现背景设置逻辑
@@ -440,7 +440,7 @@ async def set_virtual_background(
             # 背景不存在，创建新记录
             setting = VideoDateBackgroundSettingDB(
                 date_id=date_id,
-                user_id=current_user.id,
+                user_id=current_user,
                 background_id=background_id,
                 created_at=datetime.now()
             )
@@ -485,7 +485,7 @@ class ReportDateRequest(BaseModel):
 async def block_user(
     request: BlockUserRequest,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """拉黑约会对象"""
     from db.models import UserBlockDB
@@ -493,7 +493,7 @@ async def block_user(
 
     # 检查是否已拉黑
     existing = db.query(UserBlockDB).filter(
-        UserBlockDB.blocker_id == current_user.id,
+        UserBlockDB.blocker_id == current_user,
         UserBlockDB.blocked_user_id == request.user_id
     ).first()
 
@@ -502,7 +502,7 @@ async def block_user(
 
     block = UserBlockDB(
         id=str(uuid.uuid4()),
-        blocker_id=current_user.id,
+        blocker_id=current_user,
         blocked_user_id=request.user_id,
         reason=request.reason,
         block_scope='["chat", "video_date", "matching"]'
@@ -521,7 +521,7 @@ async def block_user(
 async def report_video_date(
     request: ReportDateRequest,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """举报约会对象"""
     from db.models import VideoDateReportDB
@@ -538,8 +538,8 @@ async def report_video_date(
     report = VideoDateReportDB(
         id=str(uuid.uuid4()),
         date_id=request.date_id,
-        reporter_id=current_user.id,
-        reported_user_id=date_info["user_id_2"] if date_info["user_id_1"] == current_user.id else date_info["user_id_1"],
+        reporter_id=current_user,
+        reported_user_id=date_info["user_id_2"] if date_info["user_id_1"] == current_user else date_info["user_id_1"],
         reason=request.reason,
         description=request.description,
         status="pending"
@@ -564,7 +564,7 @@ async def report_video_date(
 async def emergency_stop(
     date_id: str = Body(...),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """一键求助 - 紧急情况下快速结束约会并通知平台"""
     from db.models import VideoDateReportDB
@@ -573,7 +573,7 @@ async def emergency_stop(
     # 立即结束约会
     date_service = VideoDateService(db)
     try:
-        date_service.cancel_date(date_id, current_user.id, "emergency_stop")
+        date_service.cancel_date(date_id, current_user, "emergency_stop")
     except ValueError:
         pass  # 约会可能已结束
 
@@ -583,8 +583,8 @@ async def emergency_stop(
         report = VideoDateReportDB(
             id=str(uuid.uuid4()),
             date_id=date_id,
-            reporter_id=current_user.id,
-            reported_user_id=date_info["user_id_2"] if date_info["user_id_1"] == current_user.id else date_info["user_id_1"],
+            reporter_id=current_user,
+            reported_user_id=date_info["user_id_2"] if date_info["user_id_1"] == current_user else date_info["user_id_1"],
             reason="inappropriate_behavior",
             description="用户触发了一键求助",
             status="under_review"
@@ -597,7 +597,7 @@ async def emergency_stop(
     # - 站内信通知管理员
     # - 短信通知值班人员
     # - 邮件通知安全团队
-    logger.warning(f"VideoDateAPI: Emergency alert for date={date_id}, reporter={current_user.id}")
+    logger.warning(f"VideoDateAPI: Emergency alert for date={date_id}, reporter={current_user}")
     logger.warning("VideoDateAPI: Admin notification sent (mock)")
 
     # 生产环境应实现：
@@ -606,7 +606,7 @@ async def emergency_stop(
     # notification_service.send_admin_alert(
     #     alert_type="emergency_sos",
     #     date_id=date_id,
-    #     reporter_id=current_user.id,
+    #     reporter_id=current_user,
     #     reported_user_id=reported_user_id
     # )
 
@@ -621,7 +621,7 @@ async def emergency_stop(
 @router.get("/games", response_model=Dict[str, Any])
 async def get_available_games(
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取可用游戏列表"""
     games = [
@@ -659,12 +659,12 @@ async def get_available_games(
 async def create_video_call(
     receiver_id: str = Body(..., embed=True),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """创建视频通话"""
     call_service = VideoCallService(db)
     try:
-        call_data = call_service.create_call(current_user.id, receiver_id)
+        call_data = call_service.create_call(current_user, receiver_id)
         return {"success": True, "data": call_data}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -674,12 +674,12 @@ async def create_video_call(
 async def accept_video_call(
     call_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """接受视频通话"""
     call_service = VideoCallService(db)
     try:
-        call_data = call_service.accept_call(call_id, current_user.id)
+        call_data = call_service.accept_call(call_id, current_user)
         return {"success": True, "data": call_data}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -689,12 +689,12 @@ async def accept_video_call(
 async def reject_video_call(
     call_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """拒绝视频通话"""
     call_service = VideoCallService(db)
     try:
-        call_service.reject_call(call_id, current_user.id)
+        call_service.reject_call(call_id, current_user)
         return {"success": True, "message": "通话已拒绝"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -706,12 +706,12 @@ async def end_video_call(
     duration_seconds: Optional[int] = Body(default=None),
     quality_score: Optional[float] = Body(default=None),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """结束视频通话"""
     call_service = VideoCallService(db)
     try:
-        call_service.end_call(call_id, current_user.id, duration_seconds, quality_score)
+        call_service.end_call(call_id, current_user, duration_seconds, quality_score)
         return {"success": True, "message": "通话已结束"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -721,7 +721,7 @@ async def end_video_call(
 async def get_call_info(
     call_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取通话信息"""
     call_service = VideoCallService(db)
@@ -736,31 +736,31 @@ async def get_call_history(
     limit: int = 20,
     offset: int = 0,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取通话历史"""
     call_service = VideoCallService(db)
-    history = call_service.get_user_call_history(current_user.id, limit, offset)
+    history = call_service.get_user_call_history(current_user, limit, offset)
     return {"success": True, "data": history}
 
 
 @router.get("/call/active", response_model=Dict[str, Any])
 async def get_active_calls(
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取活跃的通话"""
     call_service = VideoCallService(db)
-    active_calls = call_service.get_active_calls(current_user.id)
+    active_calls = call_service.get_active_calls(current_user)
     return {"success": True, "data": active_calls}
 
 
 @router.get("/call/stats", response_model=Dict[str, Any])
 async def get_call_stats(
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取通话统计"""
     call_service = VideoCallService(db)
-    stats = call_service.get_call_stats(current_user.id)
+    stats = call_service.get_call_stats(current_user)
     return {"success": True, "data": stats}

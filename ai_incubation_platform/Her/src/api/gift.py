@@ -137,7 +137,7 @@ async def get_gift(gift_id: str):
 @router.post("/send", response_model=GiftSendResponse)
 async def send_gift(
     request: SendGiftRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     发送礼物
@@ -151,7 +151,7 @@ async def send_gift(
     Returns:
         发送结果
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     logger.info(f"Sending gift: {user_id} -> {request.target_user_id}, gift={request.gift_id}")
 
     if request.count < 1:
@@ -176,7 +176,7 @@ async def send_gift(
 @router.get("/received", response_model=List[ReceivedGiftResponse])
 async def get_received_gifts(
     limit: int = 20,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     获取收到的礼物列表
@@ -187,7 +187,7 @@ async def get_received_gifts(
     Returns:
         收到的礼物列表
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     db = next(get_db())
     gift_svc = get_gift_service(db)
 
@@ -224,7 +224,7 @@ async def get_received_gifts(
 @router.get("/sent", response_model=List[ReceivedGiftResponse])
 async def get_sent_gifts(
     limit: int = 20,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     获取发送的礼物列表
@@ -235,7 +235,7 @@ async def get_sent_gifts(
     Returns:
         发送的礼物列表
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     db = next(get_db())
     gift_svc = get_gift_service(db)
 
@@ -270,14 +270,14 @@ async def get_sent_gifts(
 
 
 @router.get("/stats", response_model=GiftStatsResponse)
-async def get_gift_stats(current_user: dict = Depends(get_current_user)):
+async def get_gift_stats(current_user: str = Depends(get_current_user)):
     """
     获取用户礼物统计
 
     Returns:
         礼物统计数据
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     db = next(get_db())
     gift_svc = get_gift_service(db)
 
@@ -299,7 +299,7 @@ async def get_gift_stats(current_user: dict = Depends(get_current_user)):
 @router.post("/{transaction_id}/seen")
 async def mark_gift_seen(
     transaction_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     标记礼物已查看
@@ -310,7 +310,7 @@ async def mark_gift_seen(
     Returns:
         标记结果
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
 
     db = next(get_db())
     gift_svc = get_gift_service(db)
@@ -327,14 +327,14 @@ async def mark_gift_seen(
 
 
 @router.get("/unseen-count")
-async def get_unseen_gifts_count(current_user: dict = Depends(get_current_user)):
+async def get_unseen_gifts_count(current_user: str = Depends(get_current_user)):
     """
     获取未查看礼物数量
 
     Returns:
         未查看礼物数量
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     db = next(get_db())
     gift_svc = get_gift_service(db)
 

@@ -475,6 +475,45 @@ const SwipeMatchCard: React.FC<SwipeMatchCardProps> = ({
             <Text type="secondary">{match.user?.location || '未知'}</Text>
           </div>
 
+          {/* 🚀 [新增] Her 推荐理由 - 显示关键匹配点 */}
+          {(match.reasoning || (match.common_interests && match.common_interests.length > 0) || compatibilityPercent >= 70) && (
+            <div className="her-recommendation">
+              <div className="her-badge">
+                <span className="her-icon">💫</span>
+                <Text className="her-label">Her 认为</Text>
+              </div>
+              <div className="match-reasons">
+                {/* 推荐理由文字 */}
+                {match.reasoning && (
+                  <Text className="reason-text">{match.reasoning}</Text>
+                )}
+                {/* 如果没有 reasoning，自动生成匹配点 */}
+                {!match.reasoning && (
+                  <>
+                    {/* 共同兴趣 */}
+                    {match.common_interests && match.common_interests.length > 0 && (
+                      <Text className="reason-item">
+                        🎯 共同兴趣：{match.common_interests.slice(0, 2).join('、')}
+                      </Text>
+                    )}
+                    {/* 高匹配度 */}
+                    {compatibilityPercent >= 70 && (
+                      <Text className="reason-item">
+                        💕 匹配度高达 {compatibilityPercent}%
+                      </Text>
+                    )}
+                    {/* 同城 */}
+                    {match.user?.location && (
+                      <Text className="reason-item">
+                        📍 都在{match.user.location}
+                      </Text>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           <Paragraph ellipsis={{ rows: 2 }} className="user-bio">
             {match.user?.bio || '这个人很神秘~'}
           </Paragraph>

@@ -129,7 +129,7 @@ class PaymentStatsResponse(BaseModel):
 # ==================== 优惠券 API ====================
 
 @router.get("/coupons/list")
-async def list_coupons(current_user: dict = Depends(get_current_user)):
+async def list_coupons(current_user: str = Depends(get_current_user)):
     """
     获取所有可用优惠券（仅管理员）
     """
@@ -161,7 +161,7 @@ async def list_coupons(current_user: dict = Depends(get_current_user)):
 @router.post("/coupons/create")
 async def create_coupon(
     request: CouponCreate,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     创建优惠券（仅管理员）
@@ -202,7 +202,7 @@ async def create_coupon(
 @router.post("/coupons/claim")
 async def claim_coupon(
     request: dict,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     领取优惠券
@@ -215,7 +215,7 @@ async def claim_coupon(
     db = next(get_db())
     payment_svc = get_payment_service(db)
 
-    success, message = payment_svc.claim_coupon(current_user["user_id"], coupon_code)
+    success, message = payment_svc.claim_coupon(current_user, coupon_code)
 
     if not success:
         raise HTTPException(status_code=400, detail=message)
@@ -224,14 +224,14 @@ async def claim_coupon(
 
 
 @router.get("/coupons/my", response_model=List[UserCouponResponse])
-async def get_my_coupons(current_user: dict = Depends(get_current_user)):
+async def get_my_coupons(current_user: str = Depends(get_current_user)):
     """
     获取我的优惠券
     """
     db = next(get_db())
     payment_svc = get_payment_service(db)
 
-    user_coupons = payment_svc.get_user_coupons(current_user["user_id"])
+    user_coupons = payment_svc.get_user_coupons(current_user)
 
     # 获取优惠券详情
     result = []
@@ -255,7 +255,7 @@ async def get_my_coupons(current_user: dict = Depends(get_current_user)):
 @router.post("/coupons/apply", response_model=ApplyCouponResponse)
 async def apply_coupon(
     request: ApplyCouponRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     应用优惠券到订单
@@ -268,7 +268,7 @@ async def apply_coupon(
     db = next(get_db())
     payment_svc = get_payment_service(db)
 
-    return payment_svc.apply_coupon(current_user["user_id"], request)
+    return payment_svc.apply_coupon(current_user, request)
 
 
 # ==================== 退款 API ====================
@@ -276,7 +276,7 @@ async def apply_coupon(
 @router.post("/refunds/create")
 async def create_refund(
     request: RefundCreateRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     创建退款申请
@@ -291,7 +291,7 @@ async def create_refund(
     try:
         refund = payment_svc.create_refund(
             order_id=request.order_id,
-            user_id=current_user["user_id"],
+            user_id=current_user,
             reason=request.reason,
             description=request.description,
         )
@@ -309,14 +309,14 @@ async def create_refund(
 
 
 @router.get("/refunds/my", response_model=List[RefundResponse])
-async def get_my_refunds(current_user: dict = Depends(get_current_user)):
+async def get_my_refunds(current_user: str = Depends(get_current_user)):
     """
     获取我的退款申请
     """
     db = next(get_db())
     payment_svc = get_payment_service(db)
 
-    refunds = payment_svc.get_user_refunds(current_user["user_id"])
+    refunds = payment_svc.get_user_refunds(current_user)
 
     return [
         RefundResponse(
@@ -337,7 +337,7 @@ async def get_my_refunds(current_user: dict = Depends(get_current_user)):
 @router.post("/refunds/approve")
 async def approve_refund(
     request: RefundApproveRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     批准退款（仅管理员）
@@ -348,7 +348,7 @@ async def approve_refund(
     try:
         payment_svc.approve_refund(
             refund_id=request.refund_id,
-            reviewed_by=current_user["user_id"],
+            reviewed_by=current_user,
             note=request.note,
         )
 
@@ -360,7 +360,7 @@ async def approve_refund(
 @router.post("/refunds/reject")
 async def reject_refund(
     request: RefundRejectRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     拒绝退款（仅管理员）
@@ -371,7 +371,7 @@ async def reject_refund(
     try:
         payment_svc.reject_refund(
             refund_id=request.refund_id,
-            reviewed_by=current_user["user_id"],
+            reviewed_by=current_user,
             note=request.note,
         )
 
@@ -385,7 +385,7 @@ async def reject_refund(
 @router.post("/invoices/create")
 async def create_invoice(
     request: InvoiceCreateRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     创建发票申请
@@ -406,7 +406,7 @@ async def create_invoice(
     try:
         invoice = payment_svc.create_invoice(
             order_id=request.order_id,
-            user_id=current_user["user_id"],
+            user_id=current_user,
             invoice_data={
                 "invoice_type": request.invoice_type.value,
                 "buyer_name": request.buyer_name,
@@ -429,14 +429,14 @@ async def create_invoice(
 
 
 @router.get("/invoices/my", response_model=List[InvoiceResponse])
-async def get_my_invoices(current_user: dict = Depends(get_current_user)):
+async def get_my_invoices(current_user: str = Depends(get_current_user)):
     """
     获取我的发票
     """
     db = next(get_db())
     payment_svc = get_payment_service(db)
 
-    invoices = payment_svc.get_user_invoices(current_user["user_id"])
+    invoices = payment_svc.get_user_invoices(current_user)
 
     return [
         InvoiceResponse(
@@ -457,7 +457,7 @@ async def get_my_invoices(current_user: dict = Depends(get_current_user)):
 
 
 @router.post("/invoices/{invoice_id}/issue")
-async def issue_invoice(invoice_id: str, current_user: dict = Depends(get_current_user)):
+async def issue_invoice(invoice_id: str, current_user: str = Depends(get_current_user)):
     """
     开具发票（仅管理员）
     """
@@ -475,7 +475,7 @@ async def issue_invoice(invoice_id: str, current_user: dict = Depends(get_curren
 async def send_invoice(
     invoice_id: str,
     request: dict,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     发送发票（仅管理员）
@@ -499,7 +499,7 @@ async def send_invoice(
 @router.post("/trial/start")
 async def start_trial(
     request: TrialStartRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     开始免费试用
@@ -511,7 +511,7 @@ async def start_trial(
     payment_svc = get_payment_service(db)
 
     success, message = payment_svc.start_free_trial(
-        user_id=current_user["user_id"],
+        user_id=current_user,
         tier=request.tier,
         duration_days=request.duration_days,
     )
@@ -523,14 +523,14 @@ async def start_trial(
 
 
 @router.get("/trial/status")
-async def get_trial_status(current_user: dict = Depends(get_current_user)):
+async def get_trial_status(current_user: str = Depends(get_current_user)):
     """
     获取试用状态
     """
     db = next(get_db())
     payment_svc = get_payment_service(db)
 
-    trial = payment_svc.get_user_trial(current_user["user_id"])
+    trial = payment_svc.get_user_trial(current_user)
 
     if not trial:
         return {"available": True, "message": "您有免费试用资格"}
@@ -551,14 +551,14 @@ async def get_trial_status(current_user: dict = Depends(get_current_user)):
 # ==================== 订阅管理 API ====================
 
 @router.get("/subscription/status")
-async def get_subscription_status(current_user: dict = Depends(get_current_user)):
+async def get_subscription_status(current_user: str = Depends(get_current_user)):
     """
     获取订阅状态
     """
     db = next(get_db())
     payment_svc = get_payment_service(db)
 
-    subscription = payment_svc.get_subscription(current_user["user_id"])
+    subscription = payment_svc.get_subscription(current_user)
 
     if not subscription:
         return {"active": False, "message": "暂无活跃订阅"}
@@ -580,7 +580,7 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
 @router.post("/subscription/cancel")
 async def cancel_subscription(
     request: dict,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     取消订阅
@@ -591,7 +591,7 @@ async def cancel_subscription(
     payment_svc = get_payment_service(db)
 
     reason = request.get("reason", "")
-    success = payment_svc.cancel_subscription(current_user["user_id"], reason)
+    success = payment_svc.cancel_subscription(current_user, reason)
 
     if not success:
         raise HTTPException(status_code=400, detail="没有活跃订阅")
@@ -605,7 +605,7 @@ async def cancel_subscription(
 # ==================== 统计 API ====================
 
 @router.get("/stats")
-async def get_payment_stats(current_user: dict = Depends(get_current_user)):
+async def get_payment_stats(current_user: str = Depends(get_current_user)):
     """
     获取支付统计（仅管理员）
     """
@@ -626,7 +626,7 @@ async def get_payment_stats(current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/stats/coupons")
-async def get_coupon_stats(current_user: dict = Depends(get_current_user)):
+async def get_coupon_stats(current_user: str = Depends(get_current_user)):
     """
     获取优惠券统计（仅管理员）
     """
@@ -645,7 +645,7 @@ async def get_coupon_stats(current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/stats/trials")
-async def get_trial_stats(current_user: dict = Depends(get_current_user)):
+async def get_trial_stats(current_user: str = Depends(get_current_user)):
     """
     获取试用统计（仅管理员）
     """

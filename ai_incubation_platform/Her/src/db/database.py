@@ -67,7 +67,12 @@ def get_db() -> Generator[Session, None, None]:
     try:
         yield db
     except Exception as e:
-        logger.error(f"🗄️ [DB:SESSION] Error during session trace_id={trace_id} error={str(e)}", exc_info=True)
+        # 🔧 [修复] 捕获完整的验证错误详情（Pydantic ValidationError 包含字段信息）
+        error_detail = str(e)
+        if hasattr(e, 'errors'):
+            # Pydantic ValidationError 有 errors() 方法返回详细字段错误
+            error_detail = f"{e} - Details: {e.errors()}"
+        logger.error(f"🗄️ [DB:SESSION] Error during session trace_id={trace_id} error={error_detail}", exc_info=True)
         raise
     finally:
         logger.debug(f"🗄️ [DB:SESSION] Closing session trace_id={trace_id}")

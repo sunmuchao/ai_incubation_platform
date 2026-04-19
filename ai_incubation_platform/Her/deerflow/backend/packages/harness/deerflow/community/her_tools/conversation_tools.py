@@ -30,24 +30,33 @@ logger = logging.getLogger(__name__)
 
 class HerSuggestTopicsTool(BaseTool):
     """
-    Her 话题推荐工具 - 纯数据查询
+    Her 话题推荐工具 - 纯数据查询（Agent Native 设计）
 
-    【Agent Native 设计】
-    此工具只返回原始数据，不生成话题模板。
-    Agent（LLM）根据返回的用户画像自主生成个性化话题。
+    只返回原始数据，Agent 自行生成个性化话题。
     """
 
     name: str = "her_suggest_topics"
     description: str = """
-【触发条件】用户说"话题"、"说什么"、"有什么可以聊"、"聊天内容"时调用。
+获取聊天话题推荐所需的用户画像数据。
 
-【禁止场景】用户说"介绍某人的详情"时 → 调用 her_get_target_user（不是本工具）。
+【能力】
+返回双方兴趣、对话历史等原始数据，供你自主生成话题建议。
 
 【参数】
 - user_id: 用户 ID（可选）
 - match_id: 匹配对象 ID（可选）
 
-【返回】双方画像和已聊话题 JSON，Agent 根据此生成新话题。
+【返回】
+- user_profile: 用户画像
+- target_profile: 目标用户画像
+- analysis: 共同兴趣、独特兴趣分析
+- conversation_history: 已聊话题（避免重复）
+
+【使用场景】
+当用户想获取聊天话题、说什么时调用此工具。
+
+【注意】
+此工具只返回原始数据，你需要根据数据自主生成话题建议。
 """
     args_schema: Type[BaseModel] = HerSuggestTopicsInput
 
@@ -81,16 +90,16 @@ class HerSuggestTopicsTool(BaseTool):
         unique_target_interests = list(target_interests - user_interests)
 
         result_data = {
-            "component_type": "ConversationGuideCard",  # 🔧 [新增] 指定 UI 类型
-            "intent_type": "topic_request",  # 🔧 [新增] 指定意图类型
+            "component_type": "ConversationGuideCard",
+            "intent_type": "topic_request",
             "user_profile": {
                 "interests": user.get("interests", []),
                 "location": user.get("location", ""),
                 "age": user.get("age", 0),
                 "bio": user.get("bio", ""),
             },
-            "target_profile": target_user if target_user else None,  # 🔧 [保留] 目标用户信息
-            "selected_user": target_user if target_user else None,  # 🔧 [新增] 确保 UserProfileCard 能正确构建
+            "target_profile": target_user if target_user else None,
+            "selected_user": target_user if target_user else None,
             "conversation_history": conversation_history,
             "analysis": {
                 "common_interests": common_interests,
@@ -98,14 +107,11 @@ class HerSuggestTopicsTool(BaseTool):
                 "unique_target_interests": unique_target_interests,
                 "history_count": len(conversation_history),
             },
-            "hint": "Agent 应根据数据自主生成话题，考虑：共同点、关系阶段、避免重复",
         }
 
         return ToolResult(
             success=True,
-            data=result_data,
-            instruction="获取到了用户的兴趣和对话历史，请根据 analysis 数据向用户推荐聊天话题。",
-            output_hint=f"根据你们的情况，我帮你推荐几个聊天话题~",
+            data=result_data
         )
 
     async def _get_conversation_history(self, user_id: str, match_id: str) -> List[Dict]:
@@ -138,26 +144,32 @@ class HerSuggestTopicsTool(BaseTool):
 
 class HerGetIcebreakerTool(BaseTool):
     """
-    Her 破冰建议工具 - 纯数据查询
+    Her 破冰建议工具 - 纯数据查询（Agent Native 设计）
 
-    【Agent Native 设计】
-    此工具只返回原始数据，不生成破冰模板。
-    Agent（LLM）根据返回的用户画像自主生成个性化开场白。
+    只返回原始数据，Agent 自行生成个性化开场白。
     """
 
     name: str = "her_get_icebreaker"
     description: str = """
-【触发条件】用户说"聊什么"、"怎么开场"、"破冰"、"怎么开口"、"我和匹配的对象聊什么"时调用。
+获取破冰开场白所需的匹配点数据。
 
-【禁止场景】
-- 用户说"介绍某人的详情"时 → 调用 her_get_target_user（不是本工具）
-- 用户说"联系他"时 → 调用 her_initiate_chat（不是本工具）
+【能力】
+返回双方共同兴趣、地点匹配等原始数据，供你自主生成开场白建议。
 
 【参数】
 - user_id: 用户 ID（可选）
-- match_id: 目标用户 ID（可选，如果缺失，Agent 应先调用 her_find_matches 获取最近匹配）
+- match_id: 目标用户 ID（可选）
 
-【返回】双方画像和匹配点 JSON，Agent 根据此生成个性化开场白。
+【返回】
+- user_profile: 用户画像
+- target_profile: 目标用户画像
+- match_points: 匹配点分析（共同兴趣、同城等）
+
+【使用场景】
+当用户想获取开场白建议、怎么破冰时调用此工具。
+
+【注意】
+此工具只返回原始数据，你需要根据匹配点自主生成个性化开场白，避免"Hi你好"等通用模板。
 """
     args_schema: Type[BaseModel] = HerGetIcebreakerInput
 
@@ -183,9 +195,7 @@ class HerGetIcebreakerTool(BaseTool):
                     "user_profile": user,
                     "target_profile": None,
                     "match_points": [],
-                    "hint": "缺少目标用户信息，Agent 可以询问用户想和谁破冰",
-                },
-                summary="缺少目标用户信息"
+                }
             )
 
         # 分析匹配点
@@ -202,13 +212,11 @@ class HerGetIcebreakerTool(BaseTool):
             match_points.append({
                 "type": "interest",
                 "content": common_interests,
-                "hint": "可以围绕共同兴趣开场",
             })
         if same_location:
             match_points.append({
                 "type": "location",
                 "content": user.get("location"),
-                "hint": "可以围绕同城开场",
             })
 
         # 目标用户独特特点
@@ -217,26 +225,25 @@ class HerGetIcebreakerTool(BaseTool):
             match_points.append({
                 "type": "target_unique",
                 "content": unique_target_interests,
-                "hint": "可以围绕对方的独特兴趣开场（显示你看了对方资料）",
             })
 
         result_data = {
-            "component_type": "ConversationGuideCard",  # 🔧 [新增] 指定 UI 类型
-            "intent_type": "icebreaker_request",  # 🔧 [新增] 指定意图类型
+            "component_type": "ConversationGuideCard",
+            "intent_type": "icebreaker_request",
             "user_profile": {
                 "interests": user.get("interests", []),
                 "location": user.get("location", ""),
                 "bio": user.get("bio", ""),
             },
             "target_profile": {
-                "user_id": match_id,  # 🔧 [新增] 添加 user_id，确保 API 层能正确识别
+                "user_id": match_id,
                 "name": target_user.get("name", target_name),
                 "interests": target_user.get("interests", []),
                 "location": target_user.get("location", ""),
                 "bio": target_user.get("bio", ""),
                 "age": target_user.get("age", 0),
             },
-            "selected_user": {  # 🔧 [新增] 同时设置 selected_user，确保 UserProfileCard 能正确构建
+            "selected_user": {
                 "user_id": match_id,
                 "name": target_user.get("name", target_name),
                 "interests": target_user.get("interests", []),
@@ -245,14 +252,11 @@ class HerGetIcebreakerTool(BaseTool):
                 "age": target_user.get("age", 0),
             },
             "match_points": match_points,
-            "hint": "Agent 应根据匹配点创造个性化开场白，避免'Hi你好'等通用模板",
         }
 
         return ToolResult(
             success=True,
-            data=result_data,
-            instruction="获取到了目标用户的匹配点数据，请根据 match_points 向用户推荐个性化开场白。",
-            output_hint=f"根据你和 {target_user.get('name', 'TA')} 的共同点，我帮你准备几个开场白建议~",
+            data=result_data
         )
 
 
@@ -260,23 +264,34 @@ class HerGetIcebreakerTool(BaseTool):
 
 class HerPlanDateTool(BaseTool):
     """
-    Her 约会策划工具 - 纯数据查询
+    Her 约会策划工具 - 纯数据查询（Agent Native 设计）
 
-    【Agent Native 设计】
-    此工具只返回原始数据，不生成约会模板。
-    Agent（LLM）根据返回的用户画像和地点信息自主生成约会方案。
+    只返回原始数据，Agent 自行生成约会方案。
     """
 
     name: str = "her_plan_date"
     description: str = """
-【触发条件】用户说"约会去哪"、"见面地点"、"约会方案"、"约会推荐"时调用。
+获取约会策划所需的用户画像和活动数据。
+
+【能力】
+返回双方兴趣、地点、活动类型等原始数据，供你自主生成约会方案。
 
 【参数】
 - user_id: 用户 ID（可选）
 - match_id: 约会对象 ID（可选）
 - location: 约会地点范围（可选）
 
-【返回】双方画像和活动选项 JSON，Agent 根据此生成具体约会方案。
+【返回】
+- user_profile: 用户画像（兴趣、消费偏好等）
+- target_profile: 目标用户画像
+- date_context: 约会地点、共同兴趣
+- activity_options: 活动类型参考
+
+【使用场景】
+当用户想获取约会地点、见面方案时调用此工具。
+
+【注意】
+此工具只返回原始数据，你需要自主生成具体约会方案，给出具体的地点和安排。
 """
     args_schema: Type[BaseModel] = HerPlanDateInput
 
@@ -343,13 +358,11 @@ class HerPlanDateTool(BaseTool):
                 "user_preferences": preferences,
             },
             "activity_options": relevant_categories,
-            "hint": "Agent 应根据数据创造具体约会方案，避免'附近咖啡厅'等模糊建议，给出具体的地点和安排",
         }
 
         return ToolResult(
             success=True,
-            data=result_data,
-            summary=f"双方共同兴趣 {len(common_interests)} 个，约会地点范围 {date_location}"
+            data=result_data
         )
 
 

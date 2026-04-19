@@ -35,6 +35,8 @@ class UserSimulationAgent:
         self.name = self.profile.get("name", "TA")
         self.age = self.profile.get("age", 25)
         self.gender = self.profile.get("gender", "unknown")
+        self.location = self.profile.get("location", "")  # 居住地
+        self.occupation = self.profile.get("occupation", "") or self.profile.get("job", "")  # 职业
         self.interests = self._parse_interests(self.profile.get("interests", []))
         self.values = self._parse_values(self.profile.get("values", {}))
         self.bio = self.profile.get("bio", "")
@@ -297,8 +299,16 @@ class UserSimulationAgent:
             if not getattr(settings, 'llm_enabled', False):
                 return None
 
-            # 构建用户画像
-            profile_str = f"你是{self.name}，{self.age}岁，职业是{self.profile.get('job', '未知')}。"
+            # 构建用户画像 - 包含核心信息：姓名、年龄、性别、居住地、职业、兴趣
+            profile_parts = [f"你是{self.name}，{self.age}岁"]
+            if self.gender and self.gender != "unknown":
+                gender_str = "男" if self.gender == "male" else "女"
+                profile_parts.append(f"{gender_str}性")
+            if self.location:
+                profile_parts.append(f"住在{self.location}")
+            if self.occupation:
+                profile_parts.append(f"职业是{self.occupation}")
+            profile_str = "，".join(profile_parts) + "。"
             if self.interests:
                 profile_str += f"兴趣爱好：{', '.join(self.interests[:5])}。"
             if self.bio:
@@ -370,7 +380,12 @@ class UserSimulationAgent:
 
         # 1. 自我介绍类问题
         if any(phrase in message_content for phrase in ["介绍一下你自己", "介绍一下你", "你是谁", "你叫什么"]):
-            reply = f"你好呀～我是{self.name}，{self.age}岁，职业是{self.profile.get('job', '自由职业')}。"
+            reply = f"你好呀～我是{self.name}，{self.age}岁"
+            if self.location:
+                reply += f"，住在{self.location}"
+            if self.occupation:
+                reply += f"，职业是{self.occupation}"
+            reply += "。"
             if self.interests:
                 reply += f"平时喜欢{', '.join(self.interests[:3])}。很高兴认识你！😊"
             else:
@@ -399,19 +414,26 @@ class UserSimulationAgent:
         if any(word in message_lower for word in ["旅行", "旅游", "去过", "玩"]):
             return random.choice(templates["travel"])
 
-        # 6. 美食话题
+        # 6. 居住地问题
+        if any(phrase in message_content for phrase in ["你在哪里", "你住在哪里", "你现在住", "你住在", "你在哪"]):
+            if self.location:
+                return f"我现在住在{self.location}，这边还挺方便的～你呢？😊"
+            else:
+                return "我目前还在到处跑呢，没有固定住的地方。你住在哪里呀？"
+
+        # 7. 美食话题
         if any(word in message_lower for word in ["吃", "美食", "饭", "菜", "味道"]):
             return random.choice(templates["food"])
 
-        # 7. 工作话题
+        # 8. 工作话题
         if any(word in message_lower for word in ["工作", "忙", "累", "辛苦", "加班"]):
             return random.choice(templates["work"])
 
-        # 8. 问题类
+        # 9. 问题类
         if "?" in message_content or "吗" in message_content:
             return random.choice(templates["question"])
 
-        # 9. 通用回复
+        # 10. 通用回复
         return random.choice(templates["general"])
 
     def simulate_receive_message(

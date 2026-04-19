@@ -2,10 +2,9 @@
 // Tinder 风式的卡片滑动浏览体验
 
 import React, { useCallback, useMemo } from 'react'
-import { Typography, Button, Space } from 'antd'
-import { ArrowLeftOutlined, QuestionCircleOutlined } from '@ant-design/icons'
+import { Typography, Button, Space, Tag } from 'antd'
+import { ArrowLeftOutlined, HeartFilled, StarFilled, CrownOutlined } from '@ant-design/icons'
 import SwipeMatchContainer from '../components/SwipeMatchContainer'
-import { DailyLimitBadge } from '../components/DailyLimitIndicator'
 import { authStorage } from '../utils/storage'
 import './SwipeMatchPage.less'
 
@@ -37,8 +36,11 @@ const SwipeMatchPage: React.FC<SwipeMatchPageProps> = ({ onBack }) => {
         <Title level={5} className="page-title">
           滑动匹配
         </Title>
-        {/* 每日限制显示 */}
-        <DailyLimitBadge userId={userId} />
+        {/* 🚀 [改进] Header 只显示简单的次数数字 */}
+        <Space size={4}>
+          <HeartFilled style={{ fontSize: 14, color: '#C88B8B' }} />
+          <Text style={{ fontSize: 12 }}>50</Text>
+        </Space>
       </div>
 
       {/* 滑动说明 */}
@@ -61,11 +63,35 @@ const SwipeMatchPage: React.FC<SwipeMatchPageProps> = ({ onBack }) => {
         <SwipeMatchContainer />
       </div>
 
-      {/* 底部提示 */}
-      <div className="swipe-page-footer">
-        <Text type="secondary" className="footer-tip">
-          滑动开始匹配，发现有趣的灵魂 ✨
-        </Text>
+      {/* 🚀 [改进] 底部提示改为：剩余次数 + 引导 */}
+      <div className="swipe-page-footer swipe-limit-footer">
+        <div className="limit-display">
+          <Space size={8}>
+            {/* Likes */}
+            <div className="limit-item likes">
+              <HeartFilled style={{ color: '#C88B8B' }} />
+              <Text>今日还可喜欢 <Text strong style={{ color: '#C88B8B' }}>45</Text> 次</Text>
+            </div>
+            {/* Super Likes */}
+            <div className="limit-item super-likes">
+              <StarFilled style={{ color: '#FFD700' }} />
+              <Text>超级喜欢 <Text strong style={{ color: '#FFD700' }}>5</Text> 次</Text>
+            </div>
+          </Space>
+        </div>
+        {/* 会员升级引导 */}
+        <Tag
+          color="gold"
+          style={{ cursor: 'pointer', borderRadius: 12 }}
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('trigger-feature', {
+              detail: { feature: { action: 'membership' } }
+            }))
+          }}
+        >
+          <CrownOutlined style={{ marginRight: 4 }} />
+          升级会员无限滑动
+        </Tag>
       </div>
     </div>
   )

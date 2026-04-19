@@ -88,13 +88,13 @@ class VerificationRecordResponse(BaseModel):
 # ==================== API 端点 ====================
 
 @router.get("/status", response_model=VerificationStatusResponse)
-async def get_verification_status(current_user: dict = Depends(get_current_user)):
+async def get_verification_status(current_user: str = Depends(get_current_user)):
     """
     获取用户认证状态
 
     返回人脸认证、身份认证、徽章等完整状态信息
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     db = next(get_db())
     service = get_face_verification_service(db)
 
@@ -119,7 +119,7 @@ async def get_verification_status(current_user: dict = Depends(get_current_user)
 @router.post("/start", response_model=FaceVerificationResponse)
 async def start_verification(
     request: StartVerificationRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     开始人脸认证流程
@@ -130,7 +130,7 @@ async def start_verification(
     Returns:
         认证流程状态
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     logger.info(f"Starting face verification: user={user_id}, method={request.method}")
 
     db = next(get_db())
@@ -149,7 +149,7 @@ async def start_verification(
 @router.post("/submit", response_model=FaceVerificationResponse)
 async def submit_verification(
     request: SubmitPhotoRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     提交人脸照片进行认证
@@ -163,7 +163,7 @@ async def submit_verification(
     Returns:
         认证结果
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     logger.info(f"Submitting face verification: user={user_id}")
 
     # 验证照片数据
@@ -199,14 +199,14 @@ async def submit_verification(
 
 
 @router.post("/retry", response_model=FaceVerificationResponse)
-async def retry_verification(current_user: dict = Depends(get_current_user)):
+async def retry_verification(current_user: str = Depends(get_current_user)):
     """
     重试人脸认证
 
     Returns:
         重试状态
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
 
     db = next(get_db())
     service = get_face_verification_service(db)
@@ -220,14 +220,14 @@ async def retry_verification(current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/record", response_model=VerificationRecordResponse)
-async def get_verification_record(current_user: dict = Depends(get_current_user)):
+async def get_verification_record(current_user: str = Depends(get_current_user)):
     """
     获取用户认证记录
 
     Returns:
         认证记录详情
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
 
     db = next(get_db())
     service = get_face_verification_service(db)

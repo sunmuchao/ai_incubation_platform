@@ -143,7 +143,7 @@ class VerifyPhotoRequest(BaseModel):
 async def upload_photo(
     request: PhotoUploadRequest,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     上传照片
@@ -157,7 +157,7 @@ async def upload_photo(
 
     try:
         photo = service.upload_photo(
-            user_id=current_user.id,
+            user_id=current_user,
             photo_url=request.photo_url,
             photo_type=request.photo_type,
             ai_tags=request.ai_tags,
@@ -173,7 +173,7 @@ async def upload_photo_file(
     file: UploadFile = File(..., description="照片文件"),
     photo_type: str = Form(default="chat", description="照片类型"),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     上传照片文件（用于聊天图片等场景）
@@ -189,7 +189,7 @@ async def upload_photo_file(
 
     # 生成唯一文件名
     file_ext = file.filename.split('.')[-1] if file.filename and '.' in file.filename else 'jpg'
-    unique_filename = f"{current_user.id}_{uuid.uuid4().hex[:8]}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.{file_ext}"
+    unique_filename = f"{current_user}_{uuid.uuid4().hex[:8]}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.{file_ext}"
     file_path = os.path.join(STATIC_DIR, unique_filename)
 
     # 保存文件
@@ -212,7 +212,7 @@ async def upload_photo_file(
         service = PhotoService(db)
         try:
             photo = service.upload_photo(
-                user_id=current_user.id,
+                user_id=current_user,
                 photo_url=photo_url,
                 photo_type=photo_type
             )
@@ -238,11 +238,11 @@ async def upload_photo_file(
 async def get_my_photos(
     approved_only: bool = Query(default=False, description="是否只返回已审核通过的照片"),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取当前用户的照片列表"""
     service = PhotoService(db)
-    photos = service.get_user_photos(current_user.id, approved_only=approved_only)
+    photos = service.get_user_photos(current_user, approved_only=approved_only)
     return photos
 
 
@@ -250,7 +250,7 @@ async def get_my_photos(
 async def get_photo(
     photo_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取指定照片的详情"""
     service = PhotoService(db)
@@ -260,7 +260,7 @@ async def get_photo(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="照片不存在")
 
     # 权限检查：只能查看自己的照片或已审核通过的公共照片
-    if photo.user_id != current_user.id and photo.moderation_status != "approved":
+    if photo.user_id != current_user and photo.moderation_status != "approved":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权查看此照片")
 
     return photo
@@ -270,7 +270,7 @@ async def get_photo(
 async def get_user_photos(
     user_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取指定用户的已审核通过照片列表"""
     service = PhotoService(db)
@@ -282,11 +282,11 @@ async def get_user_photos(
 async def update_photo_order(
     request: PhotoOrderUpdateRequest,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """更新用户照片的显示顺序"""
     service = PhotoService(db)
-    success = service.update_photo_order(current_user.id, request.photo_ids)
+    success = service.update_photo_order(current_user, request.photo_ids)
 
     if not success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="更新失败")
@@ -298,11 +298,11 @@ async def update_photo_order(
 async def delete_photo(
     photo_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """删除照片"""
     service = PhotoService(db)
-    success = service.delete_photo(photo_id, current_user.id)
+    success = service.delete_photo(photo_id, current_user)
 
     if not success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="删除失败")
@@ -315,7 +315,7 @@ async def moderate_photo(
     photo_id: str,
     request: ModeratePhotoRequest,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     审核照片 (仅管理员可用)
@@ -330,7 +330,7 @@ async def moderate_photo(
 
     photo = service.moderate_photo(
         photo_id=photo_id,
-        moderator_id=current_user.id,
+        moderator_id=current_user,
         status=request.status,
         reason=request.reason
     )
@@ -346,7 +346,7 @@ async def verify_photo(
     photo_id: str,
     request: VerifyPhotoRequest,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     验证照片姿势 (真人验证)
@@ -358,7 +358,7 @@ async def verify_photo(
 
     photo = service.verify_photo_pose(
         photo_id=photo_id,
-        user_id=current_user.id,
+        user_id=current_user,
         pose=request.pose,
         is_match=request.is_match
     )
@@ -373,7 +373,7 @@ async def verify_photo(
 async def like_photo(
     photo_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """点赞照片"""
     service = PhotoService(db)
@@ -389,7 +389,7 @@ async def like_photo(
 async def view_photo(
     photo_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """增加照片查看次数"""
     service = PhotoService(db)
@@ -404,11 +404,11 @@ async def view_photo(
 @router.get("/stats/verified-count", summary="获取已验证照片数量")
 async def get_verified_count(
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取当前用户的已验证照片数量"""
     service = PhotoService(db)
-    count = service.get_verified_photos_count(current_user.id)
+    count = service.get_verified_photos_count(current_user)
     return {"verified_count": count}
 
 
@@ -416,11 +416,11 @@ async def get_verified_count(
 async def get_avatar_url(
     user_id: Optional[str] = Query(default=None, description="用户 ID，不传则为当前用户"),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取用户头像 URL"""
     service = PhotoService(db)
-    target_user_id = user_id or current_user.id
+    target_user_id = user_id or current_user
     avatar_url = service.get_avatar_url(target_user_id)
     return {"avatar_url": avatar_url}
 
@@ -432,7 +432,7 @@ async def ai_moderate_photo(
     ai_tags: Optional[str] = Form(default=None, description="AI 分析标签 JSON 字符串"),
     quality_score: Optional[float] = Form(default=None, description="质量评分"),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     AI 自动审核照片

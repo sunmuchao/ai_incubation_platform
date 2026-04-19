@@ -104,10 +104,6 @@ sql: SQL 查询语句（必须是 SELECT）
 
 【返回】
 { "rows": [...], "columns": [...], "row_count": N }
-
-Agent 应该：
-- 解析返回的 rows，提取需要的信息（如 user_id）
-- 继续执行后续操作（如调用 her_get_target_user）
 """
 
     args_schema: Type[BaseModel] = HerSafeQueryInput
@@ -118,8 +114,7 @@ Agent 应该：
         if not validation_result["valid"]:
             return json.dumps(ToolResult(
                 success=False,
-                error=validation_result["error"],
-                summary="SQL 查询被安全边界拒绝"
+                error=validation_result["error"]
             ).model_dump(), ensure_ascii=False)
 
         try:
@@ -128,8 +123,7 @@ Agent 应该：
             logger.error(f"[her_safe_query] 查询执行失败: {e}")
             return json.dumps(ToolResult(
                 success=False,
-                error=str(e),
-                summary="SQL 查询执行失败"
+                error=str(e)
             ).model_dump(), ensure_ascii=False)
 
         return json.dumps(result.model_dump(), ensure_ascii=False)
@@ -176,16 +170,14 @@ Agent 应该：
                         "columns": columns,
                         "row_count": len(rows),
                         "query": safe_sql,
-                    },
-                    summary=f"查询成功，返回 {len(rows)} 行数据"
+                    }
                 )
 
         except Exception as e:
             logger.error(f"[her_safe_query] 执行失败: {e}")
             return ToolResult(
                 success=False,
-                error=f"SQL 执行错误: {str(e)}",
-                summary="查询执行失败"
+                error=f"SQL 执行错误: {str(e)}"
             )
 
     def _validate_sql(self, sql: str) -> dict:
@@ -250,15 +242,23 @@ class HerFindUserByNameTool(BaseTool):
 
     name: str = "her_find_user_by_name"
     description: str = """
-【触发条件】当你只有用户名字，需要获取 user_id 时调用。
+根据名字查找用户，获取 user_id。
 
-【使用场景】用户说"看看李明的详细介绍" → 你只有名字"李明" → 调用此工具获取 user_id → 再调用 her_get_target_user。
+【能力】
+通过名字（支持模糊匹配）查找用户，返回匹配的用户列表。
 
 【参数】
 - name: 用户名字
-- location: 城市（可选）
+- location: 城市（可选，用于缩小范围）
+- limit: 返回数量（默认 5）
 
-【返回】用户列表（含 user_id）。
+【返回】
+- users: 匹配的用户列表（含 user_id、姓名、地点）
+- total: 匹配总数
+
+【使用场景】
+当你只有用户名字，需要获取 user_id 时调用此工具。
+例如：用户说"看看李明的详细介绍" → 你只有名字"李明" → 调用此工具获取 user_id → 再调用 her_get_target_user。
 """
 
     args_schema: Type[BaseModel] = HerFindUserByNameInput
@@ -269,8 +269,7 @@ class HerFindUserByNameTool(BaseTool):
         except Exception as e:
             return json.dumps(ToolResult(
                 success=False,
-                error=str(e),
-                summary="查询失败"
+                error=str(e)
             ).model_dump(), ensure_ascii=False)
 
         return json.dumps(result.model_dump(), ensure_ascii=False)
@@ -321,16 +320,14 @@ class HerFindUserByNameTool(BaseTool):
                         "users": user_list,
                         "total": len(user_list),
                         "query_name": name,
-                    },
-                    summary=f"找到 {len(user_list)} 个匹配 '{name}' 的用户"
+                    }
                 )
 
         except Exception as e:
             logger.error(f"[her_find_user_by_name] 查询失败: {e}")
             return ToolResult(
                 success=False,
-                error=str(e),
-                summary="查询失败"
+                error=str(e)
             )
 
 

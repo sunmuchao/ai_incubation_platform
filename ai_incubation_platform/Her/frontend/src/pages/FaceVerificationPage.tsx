@@ -618,7 +618,7 @@ const StepComplete: React.FC<StepCompleteProps> = ({
         />
 
         {/* 徽章展示 */}
-        <Card className="badge-display" bordered={false}>
+        <Card className="badge-display" variant="borderless">
           <div style={{ textAlign: 'center' }}>
             <Tag
               color={badge.color}
@@ -660,7 +660,7 @@ const StepComplete: React.FC<StepCompleteProps> = ({
 
         {/* 信任分展示 */}
         {status?.trust_score && (
-          <Card className="trust-score-card" bordered={false}>
+          <Card className="trust-score-card" variant="borderless">
             <Space>
               <SafetyCertificateOutlined style={{ color: '#52c41a' }} />
               <Text>当前信任分：<Text strong style={{ color: '#52c41a' }}>{status.trust_score}</Text></Text>

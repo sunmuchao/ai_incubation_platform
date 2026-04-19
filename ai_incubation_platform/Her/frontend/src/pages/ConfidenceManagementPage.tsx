@@ -195,7 +195,7 @@ const ConfidenceManagementPage: React.FC<ConfidenceManagementPageProps> = ({ onB
       )}
 
       {/* 总置信度卡片 */}
-      <Card className="overall-card" bordered={false}>
+      <Card className="overall-card" variant="borderless">
         <Row gutter={[24, 24]} align="middle">
           <Col flex="auto">
             <Space direction="vertical" size="small">
@@ -273,7 +273,7 @@ const ConfidenceManagementPage: React.FC<ConfidenceManagementPageProps> = ({ onB
                 <Card
                   size="small"
                   className={`dimension-item dimension-${key}`}
-                  bordered={false}
+                  variant="borderless"
                 >
                   <Statistic
                     title={dimensionNames[key]}
@@ -421,7 +421,7 @@ const ConfidenceManagementPage: React.FC<ConfidenceManagementPageProps> = ({ onB
       </Card>
 
       {/* 系统解释 */}
-      <Card className="explain-card" bordered={false}>
+      <Card className="explain-card" variant="borderless">
         <Button
           type="link"
           icon={<QuestionCircleOutlined />}

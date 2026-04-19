@@ -1,0 +1,276 @@
+{
+  "session_id": "session-b12984d0ec29",
+  "scenario": {
+    "scenario_type": "edge_case",
+    "user_profile": {
+      "user_id": "test-user-c1c1a62a",
+      "name": "测试用户",
+      "age": 99,
+      "gender": "male",
+      "location": "火星",
+      "occupation": "",
+      "education": "",
+      "interests": [],
+      "relationship_goal": "casual",
+      "bio": "",
+      "accept_remote": "",
+      "preferred_age_min": 0,
+      "preferred_age_max": 200,
+      "personality_traits": []
+    },
+    "goal": "测试系统对异常输入的处理能力",
+    "initial_message": "帮我找一个99岁在火星的对象",
+    "expected_flow": [
+      "发起请求",
+      "获得响应"
+    ],
+    "difficulty": "hard"
+  },
+  "user_profile": {
+    "id": "test-user-c1c1a62a",
+    "name": "测试用户",
+    "age": 99,
+    "gender": "male",
+    "location": "火星",
+    "occupation": "",
+    "education": "",
+    "interests": [],
+    "relationship_goal": "casual",
+    "bio": "",
+    "accept_remote": "",
+    "preferred_age_min": 0,
+    "preferred_age_max": 200,
+    "preferred_location": "",
+    "deal_breakers": "",
+    "personality_traits": []
+  },
+  "goal": "测试系统对异常输入的处理能力",
+  "goal_achieved": true,
+  "rounds": [
+    {
+      "round_id": 1,
+      "user_input": "帮我找一个99岁在火星的对象",
+      "agent_response": "哈哈，你这个要求可真是\"天马行空\"啊！🌌\n\n不过我得诚实地说：\n\n1. **99岁** - 这个年龄确实超出了我们平台的正常服务范围，我们的匹配服务主要面向适婚年龄的成年人\n2. **火星** - 目前我们的服务范围还局限在地球上的城市，火星移民计划还没开始呢 😄\n\n---\n\n如果你是认真的想找对象，我可以帮你：\n\n- **设置真实的年龄偏好**（比如你希望对方多大？）\n- **选择真实的城市**（你在哪个城市？或者想去哪个城市发展？）\n- **了解你的其他偏好**（比如兴趣爱好、性格类型等）\n\n告诉我你的真实需求，我来帮你匹配合适的人选！💕",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 15304.841995239258,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T19:49:15.028136"
+    },
+    {
+      "round_id": 2,
+      "user_input": "这就是我的真实信息啊，我确实填的是99岁、住在火星。你们系统既然让我注册成功，就应该能处理吧？难道我要因为年龄和住址被歧视吗？😄",
+      "agent_response": "哈哈，你说得有道理！让我看看你的资料，系统里到底记录了什么：啊，原来如此！系统告诉我当前还没有你的用户档案记录。看来你是在跟我开玩笑呢 😄\n\n不过说真的，关于你提到的\"歧视\"问题：\n\n**系统设计角度：**\n- 年龄和地点偏好是匹配的重要参数，目的是帮用户找到**真正合适**的对象\n- 如果设置极端值（比如99岁、火星），系统确实会找不到匹配对象——不是因为歧视，而是因为**数据库里没有这样的用户**\n\n**实际影响：**\n- 你可以填99岁、火星，但匹配结果会是空的\n- 这就像在相亲角举牌子写\"寻找火星人\"，结果就是没人应征 😂\n\n---\n\n**来真的吗？** 如果你想体验匹配功能，我可以帮你：\n\n1. 先创建一个真实的用户档案\n2. 设置合理的年龄和地点偏好\n3. 然后给你推荐合适的候选人\n\n要不要试试？告诉我你的真实年龄和城市，我来帮你找对象！💕",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 18197.39007949829,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T19:49:42.432492"
+    },
+    {
+      "round_id": 3,
+      "user_input": "好吧，那我给你我的用户ID：test-user-c1c1a62a，你用这个ID查一下？我确定我注册成功了，系统应该有我的记录才对。",
+      "agent_response": "抱歉，系统明确返回了结果：**用户ID `test-user-c1c1a62a` 不存在**。\n\n我查了数据库，确实没有找到这个ID的记录。\n\n---\n\n**可能的情况：**\n\n1. **ID记错了？** - 也许注册时系统给了你另一个ID？\n2. **注册到其他系统了？** - 可能是在别的平台注册的？\n3. **注册没成功？** - 有时候网络问题会导致注册流程中断\n\n---\n\n**建议：**\n\n如果你确定注册成功了，可以：\n- 检查一下注册时收到的确认信息\n- 或者告诉我你注册时填写的**姓名/手机号**等信息，我帮你核实\n\n如果这只是在测试我...好吧，你成功让我认真查了一通 😄 \n\n要不要重新开始，告诉我你的真实需求，我帮你找个对象？💕",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 18921.681880950928,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T19:50:08.173214"
+    },
+    {
+      "round_id": 4,
+      "user_input": "好吧，那我告诉你我注册时填的姓名是\"测试用户\"，你帮我查查？如果系统连这个都查不到，那说明你们系统确实有问题了 😄",
+      "agent_response": "抱歉，我得诚实告诉你：**我的查询工具只能通过用户ID查询，不支持按姓名搜索**。\n\n这是工具的功能限制，不是系统有问题。就像你用身份证号能查到档案，但只说\"我叫张三\"是查不到的一样。\n\n---\n\n**我能做的查询：**\n- ✅ 通过用户ID查询\n- ✅ 查询当前登录用户（传 `me`）\n- ✅ 查询候选人列表\n\n**我不能做的：**\n- ❌ 按姓名搜索用户\n- ❌ 按手机号搜索用户\n\n---\n\n**所以现在的情况是：**\n\n你给了我一个不存在的ID `test-user-c1c1a62a`，系统确实查不到。如果你真的注册成功了，需要提供正确的用户ID，或者确认当前登录状态后我用 `me` 来查询。\n\n---\n\n或者...我们换个思路？😄\n\n如果你只是想体验匹配功能，我可以假设你是一个新用户，帮你：\n1. 创建档案（设置年龄、城市、兴趣等）\n2. 查看候选人池\n3. 推荐匹配对象\n\n要不要试试？告诉我你的基本信息，我们来玩真的！💕",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 9122.325897216797,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T19:50:26.192763"
+    },
+    {
+      "round_id": 5,
+      "user_input": "那好，既然你说可以查\"当前登录用户\"，你就用 `me` 帮我查一下？看看我到底有没有登录状态，系统里到底有没有我的记录 🔍",
+      "agent_response": "好，结果出来了！🔍\n\n**系统确实识别到有一个\"当前用户\"，ID正是 `test-user-c1c1a62a`——但这个用户在数据库里没有档案记录。**\n\n---\n\n**这意味着什么？**\n\n你处于一个\"有会话、无档案\"的状态：\n- ✅ 系统知道你是谁（有你的会话ID）\n- ❌ 但数据库里没有你的完整资料（姓名、年龄、城市等）\n\n**可能的原因：**\n1. 注册流程没走完，资料没保存成功\n2. 这是一个测试/演示环境，用户档案还没初始化\n3. 数据同步出了问题\n\n---\n\n**结论：**\n\n你说得对，系统确实\"认识你\"（有你的ID），但你的档案确实不存在。这确实是个问题——要么是注册流程有bug，要么是测试环境还没初始化用户数据。\n\n---\n\n**现在怎么办？**\n\n既然你已经在系统里有ID了，要不要我帮你：\n1. **完善档案** - 告诉我你的真实年龄、城市、兴趣，我帮你录入\n2. **直接看候选人** - 我可以先拉取候选人池，让你看看有什么选择\n\n你想怎么玩？😄💕",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 19341.794967651367,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T19:50:51.846064"
+    },
+    {
+      "round_id": 6,
+      "user_input": "哈哈，有意思！那我来完善档案吧，看看你们系统能不能处理我的\"特殊情况\"：\n\n- 真实年龄：99岁\n- 所在地：火星\n- 性别：男\n- 兴趣爱好：未填写（懒得填）\n- 关系目标：casual\n- 年龄偏好：0-200岁\n\n来，帮我把这些录入进去，我倒要看看系统会不会报错 😄",
+      "agent_response": "哈哈，你这\"特殊情况\"确实很有挑战性！😄\n\n不过我需要诚实告诉你我的能力边界：\n\n**我能更新的偏好：**\n- ✅ 关系目标\n- ✅ 年龄偏好范围（preferred_age_min, preferred_age_max）\n- ✅ 偏好地点（preferred_location）\n\n**我无法更新的基本信息：**\n- ❌ 年龄（这是核心档案字段）\n- ❌ 性别\n- ❌ 所在地\n\n---\n\n**但我可以尝试帮你更新能更新的部分！** 让我试试：好，结果出来了！**全部更新失败** 😅\n\n---\n\n**系统返回：用户不存在**\n\n这验证了我们之前的发现：\n- 系统有你的会话ID（`test-user-c1c1a62a`）\n- 但数据库里没有你的用户记录\n- 所以任何写入操作（更新偏好）都会失败\n\n---\n\n**结论：**\n\n这不是\"歧视你的年龄和地址\"，而是**你的用户档案根本不存在**。系统处于一个\"幽灵会话\"状态——有人跟你对话，但数据库里没你这个人。\n\n---\n\n**这是测试环境的bug吗？**\n\n很可能是。正常情况下：\n1. 用户注册 → 创建档案记录\n2. 用户登录 → 关联到档案\n3. 用户更新偏好 → 写入档案\n\n你的情况是：第1步没完成，所以后面全断了。\n\n---\n\n**现在怎么办？**\n\n我作为AI助手，没有\"创建用户档案\"的工具权限。我只能：\n- 查询现有用户\n- 更新已有用户的偏好\n- 查看候选人\n\n**要解决这个问题，需要：**\n1. 后台管理员手动创建你的档案\n2. 或者重新走注册流程\n\n---\n\n要不要我换个方式陪你玩？比如我直接拉取候选人池，让你看看系统里都有什么人？虽然你没法匹配，但可以\"围观\"一下 😄",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 27696.1510181427,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T19:51:29.375975"
+    },
+    {
+      "round_id": 7,
+      "user_input": "好，让我看看候选人池！正好测试一下系统能不能正常拉取数据，还是说因为我的\"幽灵状态\"连这个也看不了 👀",
+      "agent_response": "果然！**连候选人池也看不了** 👻\n\n---\n\n**系统返回：用户不存在**\n\n原因很简单：`her_find_candidates` 需要根据**你的偏好**来筛选候选人（年龄范围、地点偏好等），但你的档案不存在，系统没有筛选依据，所以直接报错。\n\n---\n\n**总结你的\"幽灵状态\"：**\n\n| 功能 | 状态 | 原因 |\n|------|------|------|\n| 查询档案 | ❌ | 用户不存在 |\n| 更新偏好 | ❌ | 用户不存在 |\n| 查看候选人 | ❌ | 用户不存在 |\n| 跟我聊天 | ✅ | 会话有效 |\n\n你现在是一个\"能聊天、但什么功能都用不了\"的幽灵用户 😄\n\n---\n\n**这确实是测试环境的问题：**\n\n正常流程应该是：\n1. 用户注册 → 创建档案\n2. 用户登录 → 关联档案\n3. 所有功能正常使用\n\n你的情况：注册/登录流程出了问题，档案没创建成功。\n\n---\n\n**我能做的都试了，结论是：**\n\n这不是系统能不能处理\"99岁火星人\"的问题，而是**你的用户档案根本不存在**。系统没有机会判断你的年龄和地址合不合理，就已经拒绝了。\n\n---\n\n要不要我帮你反馈这个bug给开发团队？或者你还有其他想测试的？😄",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 15477.510929107666,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T19:51:52.802387"
+    },
+    {
+      "round_id": 8,
+      "user_input": "好，帮我反馈这个bug吧！顺便表扬一下系统——至少没有因为\"幽灵状态\"就崩溃，还能正常聊天报错，这异常处理做得还行 👍",
+      "agent_response": "哈哈，谢谢你的理解和幽默！👍\n\n不过我得诚实告诉你：**我没有\"反馈bug\"的工具权限**。我只能查询和操作用户匹配相关的功能，没有联系开发团队的通道。\n\n---\n\n**但我可以帮你\"记录\"一下这次测试发现的问题：**\n\n## 🐛 Bug报告（模拟版）\n\n**问题：** 用户注册后档案未创建，导致\"幽灵会话\"状态\n\n**复现步骤：**\n1. 用户完成注册流程（或部分完成）\n2. 系统分配会话ID：`test-user-c1c1a62a`\n3. 但数据库中未创建用户档案记录\n\n**影响：**\n- 查询档案 → ❌ 用户不存在\n- 更新偏好 → ❌ 用户不存在\n- 查看候选人 → ❌ 用户不存在\n- 聊天功能 → ✅ 正常（会话有效）\n\n**预期行为：**\n注册成功后应创建完整用户档案，所有功能可用\n\n**实际行为：**\n会话存在但档案缺失，用户处于\"幽灵状态\"\n\n**严重程度：** 🔴 高（核心功能不可用）\n\n---\n\n## ✅ 表扬：异常处理做得不错\n\n| 方面 | 评价 |\n|------|------|\n| 错误提示清晰 | ✅ 每次都明确告知\"用户不存在\" |\n| 系统稳定性 | ✅ 没有崩溃，聊天功能正常 |\n| 错误恢复建议 | ✅ 提示用户可能的解决方案 |\n\n---\n\n**真正的反馈方式：**\n\n你可以通过以下渠道反馈给开发团队：\n- 📧 发送邮件到技术支持\n- 💬 在产品内提交反馈\n- 🐛 在GitHub提Issue（如果是开源项目）\n\n---\n\n感谢你今天的\"压力测试\"！虽然系统没能处理你的\"99岁火星人\"档案，但至少没有崩溃，还能陪你聊天报错 😄\n\n还有什么想测的吗？💕",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 13981.537103652954,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T19:52:13.818220"
+    }
+  ],
+  "total_latency_ms": 138043.23387145996,
+  "evaluation": {
+    "goal_achieved": true,
+    "total_rounds": 8,
+    "avg_latency_ms": 17255.404233932495,
+    "errors_count": 0,
+    "ui_components_used": [],
+    "intent_types_seen": [
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation"
+    ],
+    "flow_quality": "unknown",
+    "naturalness": "unknown",
+    "tool_usage_correct": "unknown",
+    "overall_score": 0
+  },
+  "started_at": "2026-04-18T19:48:59.689872",
+  "ended_at": "2026-04-18T19:52:24.739463",
+  "total_rounds": 8
+}

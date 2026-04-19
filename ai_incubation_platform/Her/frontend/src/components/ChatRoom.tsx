@@ -5,16 +5,20 @@
  * - 发送/接收消息
  * - 消息历史记录
  * - 已读/未读状态
+ * - Her 助手提示（问题 9 修复）
+ * - 发送动画反馈（问题 10 修复）
+ * - 表情入口优化（问题 11 修复）
  */
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Input, Button, Avatar, Typography, Space, Empty, Tooltip, message, Tag, Modal, Dropdown, Badge } from 'antd'
-import { SendOutlined, LeftOutlined, PictureOutlined, SmileOutlined, MoreOutlined, EyeInvisibleOutlined, EyeOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { Input, Button, Avatar, Typography, Space, Empty, Tooltip, message, Tag, Modal, Dropdown, Badge, Spin } from 'antd'
+import { SendOutlined, LeftOutlined, PictureOutlined, SmileOutlined, MoreOutlined, EyeInvisibleOutlined, EyeOutlined, ClockCircleOutlined, RocketOutlined, CloseOutlined, BulbOutlined } from '@ant-design/icons'
 import type { MatchCandidate } from '../types'
 import { chatApi, yourTurnApi } from '../api'
 import { websocketService } from '../services/websocket'
 import { authStorage, herStorage } from '../utils/storage'
 import { isIOS, optimizeIOSScroll, optimizeIOSInput } from '../utils/iosUtils'
+import HerAvatar from '../assets/her-avatar.svg'
 import type { MenuProps } from 'antd'
 import './ChatRoom.less'
 
@@ -62,9 +66,183 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
   const [yourTurnReminder, setYourTurnReminder] = useState<any>(null) // 提醒详情
 
   // Her 休眠状态（本地状态，同步到父组件）
-  const [herSleepingLocal, setHerSleepingLocal] = useState(herSleeping)
+  // 🔧 [问题16方案A] 默认唤醒 Her，让用户能立刻看到悬浮球
+  const [herSleepingLocal, setHerSleepingLocal] = useState(() => {
+    // 🔧 [修复] 首次进入聊天室时，默认唤醒（不休眠）
+    // 只有用户主动休眠后才隐藏悬浮球
+    return herStorage.isSleepingInChat()
+  })
 
-  // 图片和表情功能状态
+  // 🔧 [问题16方案A] Her 提示条状态 - 首次进入时显示，告知用户 Her 正在旁观
+  const [showHerTip, setShowHerTip] = useState(() => {
+    // 如果用户已经主动休眠了，不显示提示
+    // 否则默认显示提示，3秒后自动隐藏
+    return !herStorage.isSleepingInChat()
+  })
+
+  // 🔧 [问题9修复] 首次进入时，3 秒后自动隐藏 Her 提示条
+  useEffect(() => {
+    if (showHerTip) {
+      const timer = setTimeout(() => {
+        setShowHerTip(false)
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [showHerTip])
+
+  // ==================== 🔧 [改进点4] 犹豫检测 + Her 智能建议 ====================
+
+  // Her 建议状态
+  interface HerAdvice {
+    message: string       // 建议内容
+    triggerType: string   // 触发类型：'no_reply' | 'input_hesitate' | 'emoji_hesitate'
+    timestamp: Date       // 显示时间
+  }
+  const [herAdvice, setHerAdvice] = useState<HerAdvice | null>(null)
+  const [herAdviceLoading, setHerAdviceLoading] = useState(false)
+
+  // 犹豫检测状态
+  const [lastPartnerMessageTime, setLastPartnerMessageTime] = useState<Date | null>(null)  // 对方最后发消息时间
+  const [userLastSendTime, setUserLastSendTime] = useState<Date | null>(null)  // 用户最后发送时间
+  const [inputStartTime, setInputStartTime] = useState<Date | null>(null)  // 输入开始时间
+  const [emojiOpenCount, setEmojiOpenCount] = useState(0)  // 表情面板打开次数
+  const hesitationDetectedRef = useRef(false)  // 是否已触发犹豫检测（避免重复触发）
+
+  // 犹豫检测配置
+  const HESITATION_CONFIG = {
+    NO_REPLY_THRESHOLD: 30000,      // 对方发消息后，用户多久没回复触发（30秒）
+    INPUT_HESITATE_THRESHOLD: 20000, // 输入框有内容但没发送触发（20秒）
+    EMOJI_OPEN_THRESHOLD: 3,        // 表情面板打开次数触发（3次）
+    ADVICE_DISPLAY_DURATION: 8000,  // 建议显示时长（8秒）
+  }
+
+  // 🔧 [改进点4] 检测 1：对方发消息后，用户多久没回复
+  useEffect(() => {
+    if (!lastPartnerMessageTime || herSleepingLocal || hesitationDetectedRef.current) return
+
+    const checkInterval = setInterval(() => {
+      const now = new Date()
+      const elapsed = now.getTime() - lastPartnerMessageTime.getTime()
+
+      // 超过阈值没回复 → 触发犹豫检测
+      if (elapsed > HESITATION_CONFIG.NO_REPLY_THRESHOLD && !hesitationDetectedRef.current) {
+        hesitationDetectedRef.current = true
+        triggerHerAdvice('no_reply', '对方发消息了，用户犹豫怎么回复')
+      }
+    }, 5000)  // 每 5 秒检查一次
+
+    return () => clearInterval(checkInterval)
+  }, [lastPartnerMessageTime, herSleepingLocal])
+
+  // 🔧 [改进点4] 检测 2：输入框有内容但没发送
+  useEffect(() => {
+    // 用户刚发送消息，重置犹豫检测
+    if (userLastSendTime) {
+      const elapsed = new Date().getTime() - userLastSendTime.getTime()
+      if (elapsed < 5000) {  // 发送后 5 秒内不触发犹豫检测
+        return
+      }
+    }
+
+    if (!inputValue.trim()) {
+      // 输入框清空，重置输入开始时间
+      setInputStartTime(null)
+      return
+    }
+
+    // 输入框有内容，记录开始时间
+    if (!inputStartTime) {
+      setInputStartTime(new Date())
+    }
+
+    // 检测犹豫：输入框有内容超过阈值时间
+    const inputHesitateTimer = setTimeout(() => {
+      if (inputValue.trim() && !hesitationDetectedRef.current && !herSleepingLocal) {
+        hesitationDetectedRef.current = true
+        triggerHerAdvice('input_hesitate', '用户在输入但犹豫发送')
+      }
+    }, HESITATION_CONFIG.INPUT_HESITATE_THRESHOLD)
+
+    return () => clearTimeout(inputHesitateTimer)
+  }, [inputValue, inputStartTime, userLastSendTime, herSleepingLocal])
+
+  // 🔧 [改进点4] 触发 Her 建议（直接显示建议气泡）
+  const triggerHerAdvice = useCallback((triggerType: string, context: string) => {
+    if (herSleepingLocal) return
+
+    console.log(`[犹豫检测] 触发类型: ${triggerType}, 上下文: ${context}`)
+
+    // 🔧 [临时方案] 根据触发类型生成预设建议
+    // 后续改进点5实施后，改为调用 Her API 获取建议
+    let adviceMessage = ''
+
+    // 获取当前用户 ID（直接从 storage 获取，避免依赖顺序）
+    const userId = authStorage.getUser()?.id || authStorage.getUser()?.username || 'anonymous'
+
+    // 获取最近一条对方消息的内容（用于生成针对性建议）
+    const lastPartnerMessage = messages.filter(m => m.sender_id !== userId).pop()
+    const lastPartnerContent = lastPartnerMessage?.content || ''
+
+    switch (triggerType) {
+      case 'no_reply':
+        // 对方发消息后用户没回复
+        if (lastPartnerContent.includes('旅行') || lastPartnerContent.includes('旅游')) {
+          adviceMessage = '可以分享你的旅行经历，或者问她去过最难忘的地方'
+        } else if (lastPartnerContent.includes('电影') || lastPartnerContent.includes('看书')) {
+          adviceMessage = '可以聊聊最近看的电影或书籍，问问她的推荐'
+        } else if (lastPartnerContent.includes('吃') || lastPartnerContent.includes('美食')) {
+          adviceMessage = '可以聊聊你喜欢的美食，或者问她有什么餐厅推荐'
+        } else {
+          adviceMessage = '可以先回应她的话题，再延伸到你的经历'
+        }
+        break
+
+      case 'input_hesitate':
+        // 用户在输入但犹豫发送
+        adviceMessage = '不确定怎么表达？可以试着发送，对方会理解的'
+        break
+
+      case 'emoji_hesitate':
+        // 用户犹豫发表情
+        adviceMessage = '发个 😊 笑脸或 ❤️ 爱心，简单又温暖'
+        break
+
+      default:
+        adviceMessage = '点击详细对话，让 Her 帮你想想'
+    }
+
+    // 设置建议状态
+    setHerAdvice({
+      message: adviceMessage,
+      triggerType,
+      timestamp: new Date(),
+    })
+    setHerAdviceLoading(false)
+
+    // 8 秒后自动消失
+    setTimeout(() => {
+      setHerAdvice(null)
+      hesitationDetectedRef.current = false
+    }, HESITATION_CONFIG.ADVICE_DISPLAY_DURATION)
+  }, [herSleepingLocal, messages])
+
+  // 🔧 [改进点4] 重置犹豫检测状态（用户发送消息后）
+  const resetHesitationDetection = useCallback(() => {
+    hesitationDetectedRef.current = false
+    setLastPartnerMessageTime(null)
+    setInputStartTime(null)
+    setEmojiOpenCount(0)
+    setHerAdvice(null)
+  }, [])
+
+  // 🔧 [改进点4] 关闭建议气泡
+  const handleCloseAdvice = useCallback(() => {
+    setHerAdvice(null)
+    // 重置犹豫检测，允许下次触发
+    hesitationDetectedRef.current = false
+  }, [])
+
+  // ==================== 图片和表情功能状态 ====================
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showImageUpload, setShowImageUpload] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -214,9 +392,21 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
   }, [selectedFile, actualPartnerId, isUploadingImage, imagePreview, currentUserId])
 
   // 表情选择处理
+  // 🔧 [改进点4] 表情点击计数，用于犹豫检测
   const handleEmojiClick = useCallback(() => {
     setShowEmojiPicker(prev => !prev)
-  }, [])
+
+    // 如果是打开表情面板（之前是关闭状态）
+    if (!showEmojiPicker) {
+      setEmojiOpenCount(prev => prev + 1)
+
+      // 超过阈值 → 触发犹豫检测
+      if (emojiOpenCount + 1 >= HESITATION_CONFIG.EMOJI_OPEN_THRESHOLD && !hesitationDetectedRef.current && !herSleepingLocal) {
+        hesitationDetectedRef.current = true
+        triggerHerAdvice('emoji_hesitate', '用户犹豫发表情')
+      }
+    }
+  }, [showEmojiPicker, emojiOpenCount, herSleepingLocal, triggerHerAdvice])
 
   const handleEmojiSelect = useCallback(async (emoji: string) => {
     setShowEmojiPicker(false)
@@ -316,6 +506,11 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
             console.log('[ChatRoom] New message created:', newMessage.id)
             return [...prev, newMessage]
           })
+
+          // 🔧 [改进点4] 收到对方消息，记录时间用于犹豫检测
+          setLastPartnerMessageTime(new Date())
+          // 重置犹豫检测状态，允许新的犹豫检测
+          hesitationDetectedRef.current = false
         } else {
           console.log('[ChatRoom] Skipping message - sender_id does not match currentPartnerId')
         }
@@ -356,6 +551,29 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
   useEffect(() => {
     scrollToBottomDebounced()
   }, [messages])
+
+  // 🚀 [改进点5] 向悬浮球发送上下文更新事件
+  // 让悬浮球 Her 了解当前用户、聊天对象和最近消息
+  useEffect(() => {
+    if (!actualPartnerId) return
+
+    // 构建最近消息（最多 5 条）
+    const recentMessages = messages.slice(-5).map(msg => ({
+      content: msg.content,
+      sender: msg.sender_id === currentUserId ? 'user' : 'partner',
+      timestamp: new Date(msg.created_at),
+    }))
+
+    // 派发上下文更新事件
+    window.dispatchEvent(new CustomEvent('her-context-update', {
+      detail: {
+        partnerId: actualPartnerId,
+        partnerName: actualPartnerName,
+        partnerAvatar: actualPartnerAvatar,
+        recentMessages,
+      }
+    }))
+  }, [messages, actualPartnerId, actualPartnerName, actualPartnerAvatar, currentUserId])
 
   // 加载历史消息
   useEffect(() => {
@@ -427,6 +645,10 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
     setInputValue('')
     setIsLoading(true)
 
+    // 🔧 [改进点4] 用户发送消息，重置犹豫检测状态
+    setUserLastSendTime(new Date())
+    resetHesitationDetection()
+
     try {
       // 使用 REST API 发送消息
       const result = await chatApi.sendMessage({
@@ -458,7 +680,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
     } finally {
       setIsLoading(false)
     }
-  }, [inputValue, isLoading, actualPartnerId, currentUserId])
+  }, [inputValue, isLoading, actualPartnerId, currentUserId, resetHesitationDetection])
 
   // 模拟对方回复 (开发环境)
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -703,6 +925,67 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
         </div>
       )}
 
+      {/* 🔧 [问题9修复] Her 活跃提示条 - 首次进入时显示，告诉用户 Her 正在旁观 */}
+      {!herSleepingLocal && showHerTip && (
+        <div className="her-active-tip-bar">
+          <Avatar size={20} src={HerAvatar} style={{ backgroundColor: '#fff', padding: 2 }} />
+          <Text style={{ fontSize: 12, color: '#C88B8B' }}>
+            Her 正在旁观，点击右下角悬浮球可请求建议
+          </Text>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => setShowHerTip(false)}
+            style={{ fontSize: 12, padding: '0 4px', marginLeft: 8 }}
+          >
+            知道了
+          </Button>
+        </div>
+      )}
+
+      {/* 🔧 [改进点4] Her 智能建议气泡 - 只在用户犹豫时显示 */}
+      {!herSleepingLocal && herAdvice && (
+        <div className="her-advice-bubble">
+          <div className="advice-header">
+            <Avatar size={20} src={HerAvatar} style={{ backgroundColor: '#fff', padding: 2 }} />
+            <Text style={{ fontSize: 12, color: '#C88B8B', fontWeight: 500 }}>Her 建议</Text>
+          </div>
+          <div className="advice-content">
+            <Text style={{ fontSize: 13, color: '#666' }}>{herAdvice.message}</Text>
+          </div>
+          <div className="advice-actions">
+            <Button
+              type="link"
+              size="small"
+              icon={<BulbOutlined />}
+              onClick={() => {
+                // 触发悬浮球面板打开，让用户跟 Her 详细对话
+                window.dispatchEvent(new CustomEvent('open-her-panel'))
+                handleCloseAdvice()
+              }}
+              style={{ fontSize: 12, color: '#C88B8B' }}
+            >
+              详细对话
+            </Button>
+            <Button
+              type="text"
+              size="small"
+              icon={<CloseOutlined />}
+              onClick={handleCloseAdvice}
+              style={{ fontSize: 12, color: '#999' }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 🔧 [改进点4] Her 建议加载状态 */}
+      {herAdviceLoading && (
+        <div className="her-advice-loading">
+          <Spin size="small" />
+          <Text type="secondary" style={{ fontSize: 12 }}>Her 正在思考...</Text>
+        </div>
+      )}
+
       {/* 消息列表 */}
       <div className="chat-room-messages" ref={messagesContainerRef}>
         {messages.length === 0 ? (
@@ -792,15 +1075,19 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
           onChange={handleImageSelect}
         />
 
-        <div className="input-tools">
-          <Space>
-            <Tooltip title="图片">
-              <Button type="text" icon={<PictureOutlined />} onClick={handleImageClick} />
-            </Tooltip>
-            <Tooltip title="表情">
-              <Button type="text" icon={<SmileOutlined />} onClick={handleEmojiClick} />
-            </Tooltip>
-          </Space>
+        {/* 🔧 [问题11修复] 表情按钮移到更显眼位置 - 输入框左侧 */}
+        <div className="input-tools-left">
+          <Tooltip title="表情">
+            <Button
+              type="text"
+              icon={<SmileOutlined style={{ fontSize: 20 }} />}
+              onClick={handleEmojiClick}
+              className={showEmojiPicker ? 'emoji-btn-active' : ''}
+            />
+          </Tooltip>
+          <Tooltip title="图片">
+            <Button type="text" icon={<PictureOutlined style={{ fontSize: 20 }} />} onClick={handleImageClick} />
+          </Tooltip>
         </div>
 
         <div className="input-wrapper">
@@ -811,13 +1098,17 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
             onKeyDown={handleKeyPress}
             placeholder="输入消息..."
             suffix={
-              <Button
-                type="primary"
-                icon={<SendOutlined />}
-                onClick={handleSend}
-                disabled={!inputValue.trim() || isLoading}
-                size="small"
-              />
+              <Space size={4}>
+                {/* 🔧 [问题10修复] 发送按钮动画效果 */}
+                <Button
+                  type="primary"
+                  icon={isLoading ? <RocketOutlined className="send-animation" /> : <SendOutlined />}
+                  onClick={handleSend}
+                  disabled={!inputValue.trim() || isLoading}
+                  size="small"
+                  className={`send-btn ${isLoading ? 'sending' : ''}`}
+                />
+              </Space>
             }
             size="large"
             className="chat-input"

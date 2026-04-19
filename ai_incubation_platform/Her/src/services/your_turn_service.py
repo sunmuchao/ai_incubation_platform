@@ -44,13 +44,13 @@ class YourTurnReminderService(BaseService):
         # 且超过 REMINDER_DELAY_HOURS 小时
 
         # 简化实现：查询最近对方发消息但用户未回复的对话
-        from db.models import ConversationDB, MessageDB
+        from db.models import ChatConversationDB, ChatMessageDB
 
         # 获取用户所有对话
-        conversations = self.db.query(ConversationDB).filter(
+        conversations = self.db.query(ChatConversationDB).filter(
             or_(
-                ConversationDB.user_id_1 == user_id,
-                ConversationDB.user_id_2 == user_id
+                ChatConversationDB.user_id_1 == user_id,
+                ChatConversationDB.user_id_2 == user_id
             )
         ).all()
 
@@ -62,9 +62,9 @@ class YourTurnReminderService(BaseService):
             partner_id = conv.user_id_2 if conv.user_id_1 == user_id else conv.user_id_1
 
             # 查询最后一条消息
-            last_message = self.db.query(MessageDB).filter(
-                MessageDB.conversation_id == conv.id
-            ).order_by(MessageDB.created_at.desc()).first()
+            last_message = self.db.query(ChatMessageDB).filter(
+                ChatMessageDB.conversation_id == conv.id
+            ).order_by(ChatMessageDB.created_at.desc()).first()
 
             if not last_message:
                 continue
@@ -80,10 +80,10 @@ class YourTurnReminderService(BaseService):
 
                 if time_since_message >= timedelta(hours=self.REMINDER_DELAY_HOURS):
                     # 检查是否在消息后有用户的回复
-                    user_reply = self.db.query(MessageDB).filter(
-                        MessageDB.conversation_id == conv.id,
-                        MessageDB.sender_id == user_id,
-                        MessageDB.created_at > last_message.created_at
+                    user_reply = self.db.query(ChatMessageDB).filter(
+                        ChatMessageDB.conversation_id == conv.id,
+                        ChatMessageDB.sender_id == user_id,
+                        ChatMessageDB.created_at > last_message.created_at
                     ).first()
 
                     if not user_reply:

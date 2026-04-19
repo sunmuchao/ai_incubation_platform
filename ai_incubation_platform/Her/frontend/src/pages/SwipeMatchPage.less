@@ -108,6 +108,38 @@
   text-align: center;
 }
 
+// ==================== 🚀 [新增] 底部限制显示 ====================
+
+.swipe-limit-footer {
+  display: flex;
+  flex-direction: column;
+  gap: @space-2;
+  padding: @space-3 @space-4;
+
+  .limit-display {
+    display: flex;
+    justify-content: center;
+
+    .limit-item {
+      display: flex;
+      align-items: center;
+      gap: @space-1;
+      padding: @space-1 @space-2;
+      background: rgba(200, 139, 139, 0.06);
+      border-radius: @radius-md;
+      font-size: @font-size-sm;
+
+      .anticon {
+        font-size: 14px;
+      }
+
+      &.super-likes {
+        background: rgba(255, 215, 0, 0.08);
+      }
+    }
+  }
+}
+
 // ==================== 响应式设计 ====================
 
 @media (max-width: @breakpoint-md) {

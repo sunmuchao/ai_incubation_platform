@@ -370,7 +370,7 @@ const RegistrationConversationPage: React.FC<{
 
   return (
     <div className="registration-conversation-page">
-      <Card className="conversation-card" bordered={false}>
+      <Card className="conversation-card" variant="borderless">
         <div className="card-content-wrapper">
           {/* 顶部固定区域 - 头部和进度条 */}
           <div className="top-section">
@@ -413,7 +413,7 @@ const RegistrationConversationPage: React.FC<{
               </Paragraph>
 
               <div className="summary-card-wrapper">
-                <Card className="summary-card" bordered={false} title="Her 已了解的">
+                <Card className="summary-card" variant="borderless" title="Her 已了解的">
                   <Space direction="vertical" size="small" style={{ width: '100%' }}>
                     {collectedDimensions.map((dim, index) => (
                       <div key={index} className="dimension-item">

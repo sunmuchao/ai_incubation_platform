@@ -1,23 +1,27 @@
 /**
  * 聊天室组件样式 - 现代精致版
  * 参考：iOS Messages + Telegram 设计风格
+ * 🔧 [问题16方案C] 统一色调为 Her 粉色系，与 ChatInterface 保持一致
  */
 
 .chat-room {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: linear-gradient(180deg, #f8f9fb 0%, #f0f2f5 100%);
+  // 🔧 [方案C] 背景改为粉色系，与 ChatInterface 一致
+  background: linear-gradient(180deg, #fdf8f8 0%, #f8f2f2 100%);
   overflow: hidden;
 }
 
 // 顶部导航栏 - 毛玻璃效果
+// 🔧 [问题16方案C] Header 样式与 ChatInterface 统一
 .chat-room-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px;
-  background: rgba(255, 255, 255, 0.85);
+  // 🔧 [方案C] 背景改为与 ChatInterface 一致的白色
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(232, 232, 232, 0.5);
@@ -39,9 +43,10 @@
   color: #666 !important;
 
   &:hover {
-    background: rgba(102, 126, 234, 0.1) !important;
+    // 🔧 [方案C] hover 效果改为粉色系
+    background: rgba(200, 139, 139, 0.1) !important;
     transform: scale(1.08) rotate(-5deg);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 4px 12px rgba(200, 139, 139, 0.2);
   }
 
   &:active {
@@ -50,7 +55,7 @@
 }
 
 .partner-avatar {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 0 20px rgba(102, 126, 234, 0.15);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 0 20px rgba(200, 139, 139, 0.15);
   border: 2px solid white;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 
@@ -104,10 +109,11 @@
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
 
     &:hover {
-      color: #667eea;
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%) !important;
+      // 🔧 [方案C] hover 效果改为粉色系
+      color: #C88B8B;
+      background: linear-gradient(135deg, rgba(200, 139, 139, 0.15) 0%, rgba(212, 165, 154, 0.15) 100%) !important;
       transform: scale(1.1) rotate(5deg);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+      box-shadow: 0 4px 12px rgba(200, 139, 139, 0.25);
     }
   }
 }
@@ -135,6 +141,7 @@
 }
 
 // 日期分隔线 - 胶囊样式
+// 🔧 [问题16方案C] 改为粉色系
 .date-separator {
   display: flex;
   justify-content: center;
@@ -143,14 +150,15 @@
   position: relative;
 
   .ant-typography {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    // 🔧 [方案C] 背景改为粉色渐变
+    background: linear-gradient(135deg, #C88B8B 0%, #D4A59A 100%);
     color: white;
     padding: 6px 14px;
     border-radius: 20px;
     font-size: 11px !important;
     font-weight: 500;
     letter-spacing: 0.02em;
-    box-shadow: 0 2px 12px rgba(102, 126, 234, 0.4), 0 0 20px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 2px 12px rgba(200, 139, 139, 0.4), 0 0 20px rgba(200, 139, 139, 0.2);
     white-space: nowrap;
     // 移除 dateSeparatorGlow 动画
   }
@@ -171,10 +179,11 @@
     }
 
     .message-bubble.bubble-me {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      // 🔧 [方案C] 用户消息气泡改为粉色渐变
+      background: linear-gradient(135deg, #C88B8B 0%, #D4A59A 100%);
       color: #fff;
       border-radius: 20px 20px 6px 20px;
-      box-shadow: 0 2px 12px rgba(102, 126, 234, 0.35), 0 0 20px rgba(102, 126, 234, 0.15);
+      box-shadow: 0 2px 12px rgba(200, 139, 139, 0.35), 0 0 20px rgba(200, 139, 139, 0.15);
       position: relative;
 
       &::after {
@@ -267,12 +276,13 @@
 
       // 链接样式
       a {
-        color: #667eea;
+        // 🔧 [方案C] 链接改为粉色系
+        color: #C88B8B;
         text-decoration: none;
         transition: all 0.2s ease;
 
         &:hover {
-          color: #764ba2;
+          color: #D4A59A;
           text-decoration: underline;
           text-underline-offset: 3px;
         }
@@ -339,7 +349,8 @@
   }
 
   &.read {
-    color: #667eea !important;
+    // 🔧 [方案C] 已读状态改为粉色系
+    color: #C88B8B !important;
     font-weight: 600;
   }
 
@@ -361,27 +372,39 @@
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
 }
 
-.input-tools {
+// 🔧 [问题11修复] 表情按钮移到左侧，更显眼位置
+// 🔧 [问题16方案C] 改为粉色系
+.input-tools-left {
   display: flex;
-  gap: 6px;
+  gap: 4px;
+  padding-right: 8px;
 
   .ant-btn {
     font-size: 20px !important;
-    color: #999;
-    padding: 8px !important;
-    border-radius: 50% !important;
+    // 🔧 [方案C] 改为粉色系
+    color: #C88B8B;
+    padding: 10px !important;
+    border-radius: 12px !important;
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-    background: transparent !important;
+    background: rgba(200, 139, 139, 0.08) !important;
+    border: 1px solid rgba(200, 139, 139, 0.15) !important;
 
     &:hover {
-      color: #667eea;
-      background: rgba(102, 126, 234, 0.12) !important;
-      transform: scale(1.15) rotate(5deg);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+      color: #D4A59A;
+      background: rgba(212, 165, 154, 0.15) !important;
+      transform: scale(1.15);
+      box-shadow: 0 4px 12px rgba(200, 139, 139, 0.25);
     }
 
     &:active {
       transform: scale(0.95);
+    }
+
+    // 表情按钮激活状态
+    &.emoji-btn-active {
+      color: #C88B8B;
+      background: rgba(200, 139, 139, 0.15) !important;
+      border-color: rgba(200, 139, 139, 0.3) !important;
     }
   }
 }
@@ -401,9 +424,10 @@
       -webkit-backdrop-filter: blur(10px) !important;
 
       &:focus {
-        border-color: #667eea !important;
+        // 🔧 [方案C] focus 边框改为粉色系
+        border-color: #C88B8B !important;
         background: rgba(255, 255, 255, 0.95) !important;
-        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.12), 0 4px 12px rgba(102, 126, 234, 0.15) !important;
+        box-shadow: 0 0 0 4px rgba(200, 139, 139, 0.12), 0 4px 12px rgba(200, 139, 139, 0.15) !important;
       }
 
       &::placeholder {
@@ -418,17 +442,18 @@
 
       .ant-btn {
         border-radius: 20px !important;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        // 🔧 [方案C] 发送按钮改为粉色渐变
+        background: linear-gradient(135deg, #C88B8B 0%, #D4A59A 100%) !important;
         border: none !important;
         color: white !important;
         padding: 6px 14px !important;
         font-size: 16px !important;
         transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-        box-shadow: 0 2px 12px rgba(102, 126, 234, 0.4), 0 0 20px rgba(102, 126, 234, 0.2) !important;
+        box-shadow: 0 2px 12px rgba(200, 139, 139, 0.4), 0 0 20px rgba(200, 139, 139, 0.2) !important;
 
         &:hover {
           transform: scale(1.1) rotate(-3deg);
-          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5), 0 0 30px rgba(102, 126, 234, 0.3);
+          box-shadow: 0 6px 20px rgba(200, 139, 139, 0.5), 0 0 30px rgba(200, 139, 139, 0.3);
         }
 
         &:active {
@@ -439,12 +464,55 @@
           background: linear-gradient(135deg, #d9d9d9 0%, #b8b8b8 100%) !important;
           box-shadow: none;
         }
+
+        // 🔧 [问题10修复] 发送按钮动画样式
+        &.send-btn.sending {
+          animation: sendPulse 0.6s ease-out;
+          background: linear-gradient(135deg, #C88B8B 0%, #D4A59A 100%) !important;
+        }
+
+        // 发送动画图标
+        .send-animation {
+          animation: rocketFly 0.6s ease-out;
+        }
       }
     }
   }
 }
 
+// 🔧 [问题10修复] 发送动画效果
+@keyframes sendPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 2px 12px rgba(200, 139, 139, 0.4);
+  }
+  50% {
+    transform: scale(1.2);
+    box-shadow: 0 6px 24px rgba(200, 139, 139, 0.6), 0 0 40px rgba(200, 139, 139, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 2px 12px rgba(102, 126, 234, 0.4);
+  }
+}
+
+@keyframes rocketFly {
+  0% {
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translateX(-8px) rotate(-45deg) scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+}
+
 // 滚动条美化
+// 🔧 [问题16方案C] 改为粉色系
 .chat-room-messages::-webkit-scrollbar {
   width: 6px;
 }
@@ -454,28 +522,29 @@
 }
 
 .chat-room-messages::-webkit-scrollbar-thumb {
-  background: rgba(102, 126, 234, 0.3);
+  background: rgba(200, 139, 139, 0.3);
   border-radius: 3px;
   transition: background 0.3s ease;
 
   &:hover {
-    background: rgba(102, 126, 234, 0.5);
+    background: rgba(200, 139, 139, 0.5);
   }
 }
 
 .chat-room-messages::-webkit-scrollbar-track {
-  background: rgba(102, 126, 234, 0.05);
+  background: rgba(200, 139, 139, 0.05);
   border-radius: 3px;
 }
 
 .chat-room-messages::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+  // 🔧 [方案C] 滚动条改为粉色渐变
+  background: linear-gradient(180deg, rgba(200, 139, 139, 0.4) 0%, rgba(212, 165, 154, 0.4) 100%);
   border-radius: 3px;
-  box-shadow: inset 0 0 10px rgba(102, 126, 234, 0.2);
+  box-shadow: inset 0 0 10px rgba(200, 139, 139, 0.2);
 
   &:hover {
-    background: linear-gradient(180deg, rgba(102, 126, 234, 0.6) 0%, rgba(118, 75, 162, 0.6) 100%);
-    box-shadow: inset 0 0 15px rgba(102, 126, 234, 0.3);
+    background: linear-gradient(180deg, rgba(200, 139, 139, 0.6) 0%, rgba(212, 165, 154, 0.6) 100%);
+    box-shadow: inset 0 0 15px rgba(200, 139, 139, 0.3);
   }
 }
 
@@ -540,8 +609,9 @@
       border-radius: 8px !important;
       transition: all 0.2s ease !important;
 
+      // 🔧 [方案C] hover 效果改为粉色系
       &:hover {
-        background: rgba(102, 126, 234, 0.15) !important;
+        background: rgba(200, 139, 139, 0.15) !important;
         transform: scale(1.2);
       }
     }
@@ -566,21 +636,175 @@
 }
 
 // Her 休眠提示条
+// 🔧 [问题16方案C] 改为粉色系
 .her-sleeping-bar {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 8px 16px;
-  background: rgba(102, 126, 234, 0.08);
-  border-bottom: 1px solid rgba(102, 126, 234, 0.15);
+  background: rgba(200, 139, 139, 0.08);
+  border-bottom: 1px solid rgba(200, 139, 139, 0.15);
 
   .ant-btn-link {
-    color: #667eea;
+    color: #C88B8B;
 
     &:hover {
-      color: #764ba2;
+      color: #D4A59A;
     }
+  }
+}
+
+// 🔧 [问题9修复] Her 活跃提示条样式
+.her-active-tip-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(200, 139, 139, 0.12) 0%, rgba(212, 165, 154, 0.12) 100%);
+  border-bottom: 1px solid rgba(200, 139, 139, 0.25);
+  animation: tipFadeIn 0.5s ease-out;
+
+  @keyframes tipFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .ant-avatar {
+    animation: herPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes herPulse {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 rgba(200, 139, 139, 0);
+    }
+    50% {
+      transform: scale(1.1);
+      box-shadow: 0 0 12px rgba(200, 139, 139, 0.3);
+    }
+  }
+
+  .ant-btn-link {
+    color: #C88B8B;
+
+    &:hover {
+      color: #D4A59A;
+    }
+  }
+}
+
+// ==================== 🔧 [改进点4] Her 智能建议气泡样式 ====================
+
+// Her 建议气泡 - 显示在消息列表上方，不遮挡输入框
+.her-advice-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  margin: 0 16px 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 245, 245, 0.98) 100%);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(200, 139, 139, 0.3);
+  box-shadow: 0 2px 12px rgba(200, 139, 139, 0.2), 0 0 20px rgba(200, 139, 139, 0.1);
+  animation: adviceSlideIn 0.4s ease-out;
+  position: relative;
+  z-index: 50;
+
+  // 建议头部
+  .advice-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .ant-avatar {
+      animation: herAvatarPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes herAvatarPulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.08);
+      }
+    }
+  }
+
+  // 建议内容
+  .advice-content {
+    flex: 1;
+    padding: 4px 0;
+
+    .ant-typography {
+      line-height: 1.5;
+    }
+  }
+
+  // 建议操作按钮
+  .advice-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(200, 139, 139, 0.2);
+
+    .ant-btn-link {
+      color: #C88B8B;
+      padding: 0 8px;
+
+      &:hover {
+        color: #D4A59A;
+        background: rgba(200, 139, 139, 0.1);
+      }
+    }
+
+    .ant-btn-text {
+      color: #999;
+
+      &:hover {
+        color: #666;
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+  }
+
+  // 气泡入场动画
+  @keyframes adviceSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-15px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+}
+
+// Her 建议加载状态
+.her-advice-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  margin: 0 16px 12px;
+  background: rgba(200, 139, 139, 0.08);
+  border-radius: 12px;
+  border: 1px solid rgba(200, 139, 139, 0.15);
+  animation: adviceSlideIn 0.4s ease-out;
+
+  .ant-spin-dot {
+    color: #C88B8B;
   }
 }
 

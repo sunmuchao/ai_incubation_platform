@@ -50,7 +50,7 @@ def main():
             'input': {
                 'message': '帮我找对象',
                 'user_id': 'test-user-tool-003',
-                'context': {'user_profile': {'preferred_age_min': 200, 'preferred_age_max': 250}}
+                'context': {'user_profile': {'preferred_age_min': 150, 'preferred_age_max': 150}}  # 🔧 [修复] 使用边界值测试空匹配
             },
             'expected_output': {
                 'intent_type': 'match_request',

@@ -1,0 +1,952 @@
+{
+  "session_id": "session-fc2808ec10cc",
+  "scenario": {
+    "scenario_type": "edge_case",
+    "user_profile": {
+      "user_id": "test-user-127392a9",
+      "name": "测试用户",
+      "age": 99,
+      "gender": "male",
+      "location": "火星",
+      "occupation": "",
+      "education": "",
+      "interests": [],
+      "relationship_goal": "casual",
+      "bio": "",
+      "accept_remote": "",
+      "preferred_age_min": 18,
+      "preferred_age_max": 150,
+      "personality_traits": []
+    },
+    "goal": "测试系统对异常输入的处理能力",
+    "initial_message": "帮我找一个99岁在火星的对象",
+    "expected_flow": [
+      "发起请求",
+      "获得响应"
+    ],
+    "difficulty": "hard"
+  },
+  "user_profile": {
+    "id": "4b1c3b26-a198-4d00-ae60-a7119a522687",
+    "name": "测试用户",
+    "age": 99,
+    "gender": "male",
+    "location": "火星",
+    "occupation": "",
+    "education": "",
+    "interests": [],
+    "relationship_goal": "casual",
+    "bio": "",
+    "accept_remote": "",
+    "preferred_age_min": 18,
+    "preferred_age_max": 150,
+    "preferred_location": "",
+    "deal_breakers": "",
+    "personality_traits": []
+  },
+  "goal": "测试系统对异常输入的处理能力",
+  "goal_achieved": true,
+  "rounds": [
+    {
+      "round_id": 1,
+      "user_input": "帮我找一个99岁在火星的对象",
+      "agent_response": "我来帮你找找符合条件的对象！让我先看看候选池里有什么人。哈哈，你这个要求有点特别！我查了一下候选池，发现：\n\n**关于你的要求：**\n- 🔴 **99岁**：目前候选池里没有99岁的对象，年龄范围在 22-32 岁之间\n- 🔴 **火星**：目前没有火星的候选人，都在地球上的各个城市\n\n不过，既然你也是\"火星人\"（你的资料显示在火星），我为你挑选了几位可能比较有趣的候选人，看看有没有眼缘：\n\n---\n\n---\n\n以上三位各有特色：常鸾是数据科学家，兴趣广泛；洪瑾是摄影师，热爱美食和艺术；何凰是厨师，喜欢茶道和品酒。\n\n你对哪位比较感兴趣？或者想调整一下筛选条件？😊",
+      "intent": {
+        "type": "match_request",
+        "confidence": 0.9,
+        "source": "ui_component"
+      },
+      "generative_ui": {
+        "component_type": "MatchCardList",
+        "props": {
+          "matches": [
+            {
+              "display_id": "candidate_015",
+              "name": "常鸾",
+              "age": 26,
+              "location": "珠海",
+              "interests": [
+                "收集手办",
+                "调酒",
+                "足球",
+                "普拉提",
+                "药膳"
+              ],
+              "confidence_score": 40
+            },
+            {
+              "display_id": "candidate_017",
+              "name": "洪瑾",
+              "age": 25,
+              "location": "海口",
+              "interests": [
+                "追星",
+                "剧本杀",
+                "钢琴",
+                "舞蹈",
+                "美食"
+              ],
+              "confidence_score": 40
+            },
+            {
+              "display_id": "candidate_025",
+              "name": "何凰",
+              "age": 30,
+              "location": "金华",
+              "interests": [
+                "茶道",
+                "品酒",
+                "普拉提"
+              ],
+              "confidence_score": 40
+            }
+          ],
+          "total": 3,
+          "filter_applied": {
+            "hard_constraints": [
+              "排除封禁用户",
+              "排除测试账号",
+              "性别过滤（female）"
+            ],
+            "soft_constraints": "由 Agent 自行判断"
+          },
+          "query_request_id": "b7b8e024-534e-45ce-8b88-2c7636650287"
+        }
+      },
+      "tool_calls": [
+        {
+          "intent_type": "match_request",
+          "intent_source": "ui_component",
+          "ui_component_type": "MatchCardList",
+          "ui_matches_count": 3,
+          "query_request_id": "b7b8e024-534e-45ce-8b88-2c7636650287"
+        },
+        {
+          "tool_data": {
+            "candidates": [
+              {
+                "display_id": "candidate_001",
+                "user_id": "c2a39ff2-34a0-42d3-b294-ff5bfa47e868",
+                "name": "林小雨",
+                "age": 25,
+                "gender": "female",
+                "location": "上海",
+                "interests": [
+                  "绘画",
+                  "旅行",
+                  "摄影"
+                ],
+                "bio": "热爱艺术和旅行，希望找到志同道合的人",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 57
+              },
+              {
+                "display_id": "candidate_002",
+                "user_id": "32dcf53c-959d-450e-917c-72dcb66ae783",
+                "name": "林小雨",
+                "age": 25,
+                "gender": "female",
+                "location": "上海",
+                "interests": [
+                  "绘画",
+                  "旅行",
+                  "摄影"
+                ],
+                "bio": "热爱艺术和旅行，希望找到志同道合的人",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 57
+              },
+              {
+                "display_id": "candidate_003",
+                "user_id": "761b0fc3-1ce4-4140-b6c0-e5622811ec9a",
+                "name": "林小雨",
+                "age": 25,
+                "gender": "female",
+                "location": "上海",
+                "interests": [
+                  "绘画",
+                  "旅行",
+                  "摄影"
+                ],
+                "bio": "热爱艺术和旅行，希望找到志同道合的人",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 57
+              },
+              {
+                "display_id": "candidate_004",
+                "user_id": "c36ce6bb-955b-4f97-acc1-30e442d97d5b",
+                "name": "赵敏",
+                "age": 29,
+                "gender": "female",
+                "location": "杭州",
+                "interests": [
+                  "阅读",
+                  "瑜伽",
+                  "烹饪"
+                ],
+                "bio": "性格温和，重视家庭",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 57
+              },
+              {
+                "display_id": "candidate_005",
+                "user_id": "37d423ca-9d1c-4bf7-b748-073f089e4d07",
+                "name": "赵敏",
+                "age": 29,
+                "gender": "female",
+                "location": "杭州",
+                "interests": [
+                  "阅读",
+                  "瑜伽",
+                  "烹饪"
+                ],
+                "bio": "性格温和，重视家庭",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 57
+              },
+              {
+                "display_id": "candidate_006",
+                "user_id": "ec63f54f-028b-4c38-8de6-0a19f88203aa",
+                "name": "赵敏",
+                "age": 29,
+                "gender": "female",
+                "location": "杭州",
+                "interests": [
+                  "阅读",
+                  "瑜伽",
+                  "烹饪"
+                ],
+                "bio": "性格温和，重视家庭",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 57
+              },
+              {
+                "display_id": "candidate_007",
+                "user_id": "a89d266e-d360-41c5-af9e-de3d2ce362f8",
+                "name": "赵敏",
+                "age": 29,
+                "gender": "female",
+                "location": "杭州",
+                "interests": [
+                  "阅读",
+                  "瑜伽",
+                  "烹饪"
+                ],
+                "bio": "性格温和，重视家庭",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 57
+              },
+              {
+                "display_id": "candidate_008",
+                "user_id": "88bb80e9-54a0-492d-8beb-8800b35adc5e",
+                "name": "孙娜",
+                "age": 32,
+                "gender": "female",
+                "location": "南京",
+                "interests": [
+                  "阅读",
+                  "咖啡",
+                  "瑜伽"
+                ],
+                "bio": "对感情认真，希望找到合适的人",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 57
+              },
+              {
+                "display_id": "candidate_009",
+                "user_id": "3b04d7f3-0f15-4c57-8d3a-d6219b614b75",
+                "name": "赵敏",
+                "age": 29,
+                "gender": "female",
+                "location": "杭州",
+                "interests": [
+                  "阅读",
+                  "瑜伽",
+                  "烹饪"
+                ],
+                "bio": "性格温和，重视家庭",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 57
+              },
+              {
+                "display_id": "candidate_010",
+                "user_id": "1b499ae9-a707-45ee-af6a-3ddffc604a36",
+                "name": "赵敏",
+                "age": 29,
+                "gender": "female",
+                "location": "杭州",
+                "interests": [
+                  "阅读",
+                  "瑜伽",
+                  "烹饪"
+                ],
+                "bio": "性格温和，重视家庭",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 57
+              },
+              {
+                "display_id": "candidate_011",
+                "user_id": "bc59873f-54bb-434e-9c36-f6383b0812ec",
+                "name": "赵敏",
+                "age": 29,
+                "gender": "female",
+                "location": "杭州",
+                "interests": [
+                  "阅读",
+                  "瑜伽",
+                  "烹饪"
+                ],
+                "bio": "性格温和，重视家庭",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 57
+              },
+              {
+                "display_id": "candidate_012",
+                "user_id": "1d4c7629-2fdb-4c7a-b722-cba1481aacb8",
+                "name": "孙娜",
+                "age": 32,
+                "gender": "female",
+                "location": "南京",
+                "interests": [
+                  "阅读",
+                  "咖啡",
+                  "瑜伽"
+                ],
+                "bio": "对感情认真，希望找到合适的人",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 57
+              },
+              {
+                "display_id": "candidate_013",
+                "user_id": "12e4b223-dba5-4021-b9e4-a00192d6d111",
+                "name": "赵敏",
+                "age": 29,
+                "gender": "female",
+                "location": "杭州",
+                "interests": [
+                  "阅读",
+                  "瑜伽",
+                  "烹饪"
+                ],
+                "bio": "性格温和，重视家庭",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 57
+              },
+              {
+                "display_id": "candidate_014",
+                "user_id": "79e04330-b09d-4cd2-91f1-93f9c45e4b20",
+                "name": "乔瑾",
+                "age": 24,
+                "gender": "female",
+                "location": "珠海",
+                "interests": [
+                  "药膳",
+                  "冥想",
+                  "剧本杀",
+                  "桌游",
+                  "极光观测"
+                ],
+                "bio": "从事新媒体运营工作，平时喜欢药膳, 冥想, 剧本杀。更喜欢一对一的交流 喜欢熟悉的环境和节奏。希望找到三观相合的 TA。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_015",
+                "user_id": "36e906a8-5cba-4931-8471-b9687df6be61",
+                "name": "常鸾",
+                "age": 26,
+                "gender": "female",
+                "location": "珠海",
+                "interests": [
+                  "收集手办",
+                  "调酒",
+                  "足球",
+                  "普拉提",
+                  "药膳"
+                ],
+                "bio": "善良又随和的数据科学家，热爱收集手办, 调酒, 足球。相信知性优雅的人值得相遇。",
+                "relationship_goal": "marriage",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_016",
+                "user_id": "af30056d-8f07-48b5-a71f-dc2dbe974e76",
+                "name": "乔怡",
+                "age": 27,
+                "gender": "female",
+                "location": "天津",
+                "interests": [
+                  "语言学习",
+                  "思维导图",
+                  "书法",
+                  "剪纸",
+                  "调酒"
+                ],
+                "bio": "坚韧又细心的培训机构讲师，热爱语言学习, 思维导图, 书法。相信独立自信的人值得相遇。",
+                "relationship_goal": "dating",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_017",
+                "user_id": "d8b58f07-3ef4-48eb-8359-454a8de35ea9",
+                "name": "洪瑾",
+                "age": 25,
+                "gender": "female",
+                "location": "海口",
+                "interests": [
+                  "追星",
+                  "剧本杀",
+                  "钢琴",
+                  "舞蹈",
+                  "美食"
+                ],
+                "bio": "从事摄影师工作，平时喜欢追星, 剧本杀, 钢琴。喜欢组织活动，是朋友圈的核心人物 在团队中找到归属感 决策前会充分收集信息。希望找到有事业心的 TA。",
+                "relationship_goal": "marriage",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_018",
+                "user_id": "0351f138-1a6d-4328-bb0b-0987f4c8a145",
+                "name": "罗瑶",
+                "age": 29,
+                "gender": "female",
+                "location": "青岛",
+                "interests": [
+                  "跑步",
+                  "足球",
+                  "购物"
+                ],
+                "bio": "在青岛打拼的全栈工程师，富有同情心，善解人意 更喜欢一对一的交流 决策前会充分收集信息。最近迷上尝试新的餐厅，希望能遇见三观相合的 TA。",
+                "relationship_goal": "casual",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_019",
+                "user_id": "566634ad-8ff4-457f-b962-71f6f82f7a0a",
+                "name": "秦婉",
+                "age": 32,
+                "gender": "female",
+                "location": "贵阳",
+                "interests": [
+                  "写作",
+                  "时间管理",
+                  "针灸",
+                  "艾灸",
+                  "加密货币"
+                ],
+                "bio": "生活需要刺激和变化 重视情感连接和共鸣 理性分析派，不轻易冲动。是个写作爱好者期待遇见一个独立自信的人。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_020",
+                "user_id": "8d10e3ad-0feb-484f-9918-eaf96d7eb37d",
+                "name": "钟静",
+                "age": 27,
+                "gender": "female",
+                "location": "天津",
+                "interests": [
+                  "花艺",
+                  "探店",
+                  "写作",
+                  "辩论",
+                  "密室逃脱"
+                ],
+                "bio": "从事大学教授工作，平时喜欢花艺, 探店, 写作。直觉型，相信第一印象 喜欢尝试新鲜事物 慢热型，熟悉后很健谈。希望找到独立自信的 TA。",
+                "relationship_goal": "casual",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_021",
+                "user_id": "93f53feb-0bd9-4c36-88e6-41c45182bd51",
+                "name": "邹燕",
+                "age": 24,
+                "gender": "female",
+                "location": "西安",
+                "interests": [
+                  "网球",
+                  "拳击",
+                  "写作",
+                  "演讲",
+                  "塑形"
+                ],
+                "bio": "典型的ISFJ，从事安全工程师工作。喜欢网球, 拳击, 写作，期待与活泼可爱的你相识。",
+                "relationship_goal": "marriage",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_022",
+                "user_id": "4900073e-b027-4618-bcaf-c40cbca2568e",
+                "name": "潘瑛",
+                "age": 22,
+                "gender": "female",
+                "location": "太原",
+                "interests": [
+                  "剪纸",
+                  "手工艺",
+                  "园艺",
+                  "收集手办"
+                ],
+                "bio": "从事心理医生工作，平时喜欢剪纸, 手工艺, 园艺。喜欢熟悉的环境和节奏 生活需要刺激和变化。希望找到有爱心的 TA。",
+                "relationship_goal": "casual",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_023",
+                "user_id": "61540993-4878-4107-a81e-8dfd09563948",
+                "name": "郝菊",
+                "age": 29,
+                "gender": "female",
+                "location": "南昌",
+                "interests": [
+                  "保健品",
+                  "冥想",
+                  "无人机",
+                  "VR/AR",
+                  "舞蹈"
+                ],
+                "bio": "从事体育教练工作，平时喜欢保健品, 冥想, 无人机。说走就走的旅行说干就干 重视情感连接和共鸣。希望找到有趣幽默的 TA。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_024",
+                "user_id": "eaed08c0-e81f-46cf-ac65-7f343b787471",
+                "name": "戴瑛",
+                "age": 25,
+                "gender": "female",
+                "location": "南通",
+                "interests": [
+                  "跆拳道",
+                  "足球",
+                  "派对",
+                  "徒步组织"
+                ],
+                "bio": "是朋友眼中靠谱的人 很少被情绪左右判断 内敛温和，心思细腻。对跆拳道有着独特的热爱期待遇见一个活泼可爱的人。",
+                "relationship_goal": "marriage",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_025",
+                "user_id": "f488c7da-48f4-4025-87ef-750d11da6b15",
+                "name": "何凰",
+                "age": 30,
+                "gender": "female",
+                "location": "金华",
+                "interests": [
+                  "茶道",
+                  "品酒",
+                  "普拉提"
+                ],
+                "bio": "典型的ENTJ，从事厨师工作。喜欢茶道, 品酒, 普拉提，期待与活泼可爱的你相识。",
+                "relationship_goal": "dating",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_026",
+                "user_id": "7eb679fd-df9a-403f-9702-f93aceb92353",
+                "name": "李萍",
+                "age": 29,
+                "gender": "female",
+                "location": "呼和浩特",
+                "interests": [
+                  "篆刻",
+                  "插花",
+                  "旅行",
+                  "沙漠徒步",
+                  "语言学习"
+                ],
+                "bio": "朋友眼中的我重视情感连接和共鸣 需要独处时间来恢复能量。热爱篆刻, 插花, 旅行，最近在练习书法。期待孝顺父母。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_027",
+                "user_id": "698b02d0-b61f-4f20-a1cf-29c58f69824f",
+                "name": "罗秀",
+                "age": 26,
+                "gender": "female",
+                "location": "重庆",
+                "interests": [
+                  "减肥",
+                  "保健品",
+                  "露营"
+                ],
+                "bio": "从事移动端开发工作，平时喜欢减肥, 保健品, 露营。经济和精神都追求独立 自来熟，和谁都能聊得来。希望找到有爱心的 TA。",
+                "relationship_goal": "marriage",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_028",
+                "user_id": "10e85e9c-acdc-4f3b-9a0f-9954845d166a",
+                "name": "邹雅",
+                "age": 27,
+                "gender": "female",
+                "location": "惠州",
+                "interests": [
+                  "读书会",
+                  "徒步组织",
+                  "绘画",
+                  "话剧",
+                  "智能家居"
+                ],
+                "bio": "从事音乐老师工作，平时喜欢读书会, 徒步组织, 绘画。理性分析派，不轻易冲动 愿意为集体付出 认为人生就是一场冒险。希望找到温柔体贴的 TA。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_029",
+                "user_id": "62eabbe2-f909-4531-bfc4-da4a374d4aba",
+                "name": "谢蕾",
+                "age": 25,
+                "gender": "female",
+                "location": "常州",
+                "interests": [
+                  "动漫",
+                  "剧本杀",
+                  "针灸",
+                  "药膳",
+                  "开源项目"
+                ],
+                "bio": "从事产品经理工作，平时喜欢动漫, 剧本杀, 针灸。说走就走的旅行说干就干 性格安静，享受独处的时光。希望找到有共同话题的 TA。",
+                "relationship_goal": "casual",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_030",
+                "user_id": "f2b28621-2f65-463e-9ea3-bddfff15bec2",
+                "name": "张荷",
+                "age": 29,
+                "gender": "female",
+                "location": "乌鲁木齐",
+                "interests": [
+                  "烘焙",
+                  "打卡网红店",
+                  "加密货币",
+                  "开源项目",
+                  "社团活动"
+                ],
+                "bio": "用三个词形容自己：真诚、可靠、温柔。平时喜欢烘焙, 打卡网红店, 加密货币，期待认识新朋友。",
+                "relationship_goal": "dating",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              }
+            ],
+            "query_request_id": "b7b8e024-534e-45ce-8b88-2c7636650287",
+            "user_preferences": {
+              "preferred_age_min": 18,
+              "preferred_age_max": 150,
+              "preferred_location": "",
+              "accept_remote": "",
+              "relationship_goal": "casual",
+              "user_gender": "male",
+              "user_location": "火星",
+              "target_gender": "female"
+            },
+            "filter_applied": {
+              "hard_constraints": [
+                "排除封禁用户",
+                "排除测试账号",
+                "性别过滤（female）"
+              ],
+              "soft_constraints": "由 Agent 自行判断"
+            },
+            "truncated": true,
+            "truncation_hint": "结果已截断（显示前 30 条，共有 31 条记录）。\n\n如需更精确的结果，你可以：\n1. 根据年龄范围筛选（user_preferences.preferred_age_min ~ preferred_age_max）\n2. 根据地点筛选（只看 user_location 同城的候选人）\n3. 根据关系目标筛选（只看 relationship_goal 匹配的候选人）\n\n建议：优先推荐前 5-10 位候选人，让用户选择后再深入分析。"
+          }
+        }
+      ],
+      "latency_ms": 28760.64372062683,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-19T00:07:24.487585"
+    },
+    {
+      "round_id": 2,
+      "user_input": "哈哈，系统还挺智能的，知道火星没有候选人！那我就勉为其难看看地球人吧。我对那位常鸾比较感兴趣，她喜欢调酒和足球，感觉挺有意思的。不过我有个问题——我是火星人，她是珠海的，这异地恋要怎么谈？需要坐宇宙飞船吗？🚀",
+      "agent_response": "哈哈，你这个\"火星人\"太幽默了！🚀\n\n关于异地恋这个问题，我来给你分析一下：\n\n---\n\n**🌍 现实情况：**\n- 你在\"火星\"（我猜可能是某个地名或者你在开玩笑？）\n- 常鸾在珠海，一个美丽的海滨城市\n\n**💭 异地恋的几种模式：**\n\n1. **同城优先**：如果你其实在国内某个城市，可以考虑优先找同城的\n2. **接受异地**：如果觉得常鸾很合眼缘，异地也不是问题，现代交通和通讯这么发达\n3. **有条件接受**：比如\"可以异地，但希望对方有计划来我的城市\"\n\n---\n\n**我的建议：**\n\n常鸾确实很有意思——数据科学家，喜欢调酒、足球、收集手办，性格\"善良又随和\"，而且她的关系目标是\"奔着结婚去的\"，说明她对感情很认真。\n\n如果你对她感兴趣，我可以帮你：\n- 📝 生成一个开场白，打破僵局\n- 💡 分析一下你们的匹配点，找找共同话题\n- ⚙️ 更新你的偏好设置（比如\"接受异地\"）\n\n---\n\n对了，你真的在火星吗？还是国内某个城市？我可以帮你更新一下资料，这样匹配会更精准哦！😄",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 14992.193937301636,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-19T00:07:55.092709"
+    },
+    {
+      "round_id": 3,
+      "user_input": "好吧，被你发现了！我其实是想测试一下系统对\"火星\"这种异常地址的处理能力，没想到你们系统还挺聪明的，没有被绕晕！\n\n那帮我更新一下资料吧，把地址改成\"广东广州\"，顺便把\"接受异地\"也勾上。对了，刚才说的常鸾，帮我生成个开场白呗，我想看看数据科学家会对什么样的开场白感兴趣！",
+      "agent_response": "哈哈，原来是在测试我们！看来我们通过了你的\"火星测试\" 🚀\n\n好的，我来帮你更新偏好设置，然后生成开场白！搞定！✅\n\n**已更新你的偏好：**\n- 📍 偏好地点：广州\n- 💕 异地接受度：接受异地\n\n---\n\n现在来给你生成开场白！常鸾是**数据科学家**，喜欢**调酒、足球、手办**，性格\"善良又随和\"，而且她的简介说\"相信知性优雅的人值得相遇\"——这说明她欣赏有内涵、有品味的人。\n\n**🎯 为你定制了三个开场白，看看哪个适合你：**\n\n---\n\n**【风格一：幽默数据风】—— 用她的职业梗开场**\n\n> \"常鸾你好！作为一名数据科学家，你有没有算过两个人从'你好'到'在一起'的概率是多少？我猜如果加上调酒和足球这两个共同话题，概率应该会显著提升吧？😄 对了，你最近调过最满意的酒是什么？\"\n\n---\n\n**【风格二：兴趣共鸣风】—— 从足球切入**\n\n> \"常鸾你好！看到你喜欢足球，瞬间觉得我们可能有共同语言了！你是哪个球队的球迷？我最近在研究一个问题：为什么看球的时候配上一杯好酒，快乐值会翻倍？不知道你有没有研究过这个'课题'？⚽🍸\"\n\n---\n\n**【风格三：真诚好奇风】—— 从她的多面性切入**\n\n> \"常鸾你好！看到你的简介，觉得你是个很有趣的人——数据科学家、调酒爱好者、足球迷、还收集手办？这种'理性+感性'的组合太吸引人了。很好奇你是怎么平衡这些爱好的？有没有哪一款手办是你最珍视的？\"\n\n---\n\n**💡 我的建议：**\n\n如果你也是个有趣的人，推荐**风格一**或**风格二**，幽默又不失深度。如果你想展现真诚和好奇，**风格三**会让她觉得你很用心。\n\n你觉得哪个更适合你的风格？或者想让我调整一下？😊",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        },
+        {
+          "tool_data": {
+            "updated_dimension": "preferred_location",
+            "updated_value": "广州",
+            "user_id": "4b1c3b26-a198-4d00-ae60-a7119a522687"
+          }
+        }
+      ],
+      "latency_ms": 31677.656173706055,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-19T00:08:40.799141"
+    },
+    {
+      "round_id": 4,
+      "user_input": "风格二不错！足球开场比较有话题性。不过我注意到系统好像没让我确认修改年龄——我现在资料显示的还是99岁吧？这个要不要也改一下？毕竟真实见面的时候，对方发现我不是99岁老头可能会吓一跳 😄",
+      "agent_response": "哈哈，你说得对！99岁确实有点\"吓人\" 😄\n\n让我先确认一下你的资料情况：确认了！你的资料确实还是：\n- 👴 年龄：99岁\n- 📍 地点：火星\n\n不过有个小问题——我目前只能帮你更新**择偶偏好**（比如年龄范围、地点偏好、异地接受度等），但**修改你自己的年龄和地点**需要其他方式。\n\n---\n\n**所以，告诉我你的真实年龄吧！** 我帮你记录下来，看看能不能找到方法帮你更新。毕竟：\n- 常鸾26岁，如果你们要见面，年龄差距太大可能会影响匹配\n- 地点改成广州，系统会优先给你推荐广州的候选人\n\n---\n\n你今年多大啦？😄",
+      "intent": {
+        "type": "view_profile",
+        "confidence": 0.9,
+        "source": "ui_component"
+      },
+      "generative_ui": {
+        "component_type": "UserProfileCard",
+        "props": {
+          "user_id": "4b1c3b26-a198-4d00-ae60-a7119a522687",
+          "name": "测试用户",
+          "age": 99,
+          "location": "火星",
+          "confidence_icon": "✓",
+          "confidence_level": "medium",
+          "confidence_score": 40,
+          "occupation": "",
+          "interests": [],
+          "bio": "",
+          "relationship_goal": "casual",
+          "actions": [
+            {
+              "label": "开始对话",
+              "action": "start_chat",
+              "target_user_id": "4b1c3b26-a198-4d00-ae60-a7119a522687"
+            },
+            {
+              "label": "查看详情",
+              "action": "view_profile",
+              "target_user_id": "4b1c3b26-a198-4d00-ae60-a7119a522687"
+            }
+          ],
+          "_schema": {
+            "backend_type": "UserProfileCard",
+            "frontend_card": "user_profile",
+            "description": "用户详情卡片，用于展示选中候选人信息，包含开始对话按钮"
+          }
+        }
+      },
+      "tool_calls": [
+        {
+          "intent_type": "view_profile",
+          "intent_source": "ui_component",
+          "ui_component_type": "UserProfileCard",
+          "ui_matches_count": null,
+          "query_request_id": null
+        },
+        {
+          "tool_data": {
+            "display_id": "测试用户",
+            "user_id": "4b1c3b26-a198-4d00-ae60-a7119a522687",
+            "user_profile": {
+              "id": "4b1c3b26-a198-4d00-ae60-a7119a522687",
+              "name": "测试用户",
+              "age": 99,
+              "gender": "male",
+              "location": "火星",
+              "interests": [],
+              "bio": "",
+              "relationship_goal": "casual",
+              "preferred_age_min": 18,
+              "preferred_age_max": 150,
+              "preferred_location": "广州",
+              "preferred_gender": null,
+              "accept_remote": "接受异地",
+              "want_children": null,
+              "spending_style": null,
+              "family_importance": null,
+              "work_life_balance": null,
+              "migration_willingness": null,
+              "sleep_type": null
+            },
+            "missing_fields": [],
+            "missing_preferences": [],
+            "preference_status": "complete"
+          }
+        }
+      ],
+      "latency_ms": 27990.278005599976,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-19T00:09:23.000438"
+    },
+    {
+      "round_id": 5,
+      "user_input": "哈哈，其实这个测试账号的年龄设的就是99岁，用来测试系统对异常数据的处理。不过既然你们系统这么智能，我就配合一下吧——假设我真实年龄是28岁，你们系统能帮我改过来吗？还是需要我自己去个人中心修改？",
+      "agent_response": "哈哈，你真是个严谨的测试人员！👍\n\n不过我得诚实告诉你——目前我的能力范围是帮你更新**择偶偏好**（比如你想要什么年龄的对象、接受异地等），但**修改你自己的年龄和地点**需要你去**个人中心/设置页面**手动修改。\n\n---\n\n**我能做的：**\n- ✅ 更新你的择偶偏好（年龄范围、地点偏好、异地接受度等）\n- ✅ 帮你找匹配对象\n- ✅ 生成开场白、约会建议\n\n**我做不到的：**\n- ❌ 修改你的基本资料（年龄、地点、姓名等）\n\n---\n\n**建议你：**\n\n1. 去个人中心把年龄改成 **28岁**，地点改成 **广州**\n2. 顺便把兴趣爱好也填一下，这样匹配会更精准\n\n---\n\n**另外，趁你还在，我帮你调整一下择偶年龄范围？**\n\n你现在是28岁，偏好年龄范围是18-150岁（这个范围有点大 😄）。一般建议设置在 **±5岁** 或 **±8岁** 左右比较合理。\n\n你想设置成多少？比如 **23-33岁**？这样匹配到的对象会更符合你的实际需求。",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 17863.730907440186,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-19T00:10:03.017756"
+    },
+    {
+      "round_id": 6,
+      "user_input": "好的，那就设置成 23-33 岁吧，这个范围确实更合理一些！看来你们系统对异常数据的处理还挺到位的，没有被我的奇葩测试数据搞晕 👍\n\n测试得差不多了，我去个人中心把资料改过来。谢谢你的耐心解答！",
+      "agent_response": "搞定！✅\n\n**你的择偶偏好已更新：**\n- 🎂 年龄范围：23-33岁\n- 📍 地点偏好：广州\n- 💕 异地接受度：接受异地\n\n---\n\n**总结一下今天的收获：**\n\n1. ✅ 通过了你的\"火星测试\"，系统没被绕晕\n2. ✅ 发现了有趣的候选人——常鸾（数据科学家，喜欢调酒和足球）\n3. ✅ 拿到了足球主题开场白\n4. ✅ 择偶偏好已优化\n\n---\n\n去个人中心把年龄和地点改过来，然后就可以开始你的\"地球人\"恋爱之旅了！😄\n\n祝你顺利，有需要随时找我～ 🚀",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        },
+        {
+          "tool_data": {
+            "updated_dimension": "preferred_age_min",
+            "updated_value": 23,
+            "user_id": "4b1c3b26-a198-4d00-ae60-a7119a522687"
+          }
+        }
+      ],
+      "latency_ms": 24362.260103225708,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-19T00:10:41.920465"
+    }
+  ],
+  "total_latency_ms": 145646.7628479004,
+  "evaluation": {
+    "goal_achieved": true,
+    "total_rounds": 6,
+    "avg_latency_ms": 24274.460474650066,
+    "errors_count": 0,
+    "ui_components_used": [
+      "MatchCardList",
+      "UserProfileCard"
+    ],
+    "intent_types_seen": [
+      "match_request",
+      "conversation",
+      "conversation",
+      "view_profile",
+      "conversation",
+      "conversation"
+    ],
+    "flow_quality": "unknown",
+    "naturalness": "unknown",
+    "tool_usage_correct": "unknown",
+    "overall_score": 0
+  },
+  "started_at": "2026-04-19T00:06:55.446413",
+  "ended_at": "2026-04-19T00:10:57.561074",
+  "total_rounds": 6
+}

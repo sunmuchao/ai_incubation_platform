@@ -73,7 +73,7 @@ def get_twin_service(db: Session = Depends(get_db)) -> DigitalTwinService:
 
 @router.get("/profile", response_model=TwinProfileResponse)
 async def get_my_twin_profile(
-    current_user: dict = Depends(get_current_user),
+    current_user: str = Depends(get_current_user),
     service: DigitalTwinService = Depends(get_twin_service)
 ):
     """
@@ -81,7 +81,7 @@ async def get_my_twin_profile(
 
     返回当前用户的数字分身配置信息
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
     profile = service.get_twin_profile(user_id)
 
     if not profile:
@@ -101,7 +101,7 @@ async def get_my_twin_profile(
 @router.post("/profile/create", response_model=TwinProfileResponse)
 async def create_twin_profile(
     request: TwinProfileCreateRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: str = Depends(get_current_user),
     service: DigitalTwinService = Depends(get_twin_service)
 ):
     """
@@ -118,7 +118,7 @@ async def create_twin_profile(
     - 喜欢的话题
     - 开场白偏好
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
 
     success, message, profile = service.create_twin_profile(
         user_id=user_id,
@@ -148,7 +148,7 @@ async def create_twin_profile(
 @router.put("/profile/update", response_model=TwinProfileResponse)
 async def update_twin_profile(
     updates: Dict[str, Any] = Body(..., description="配置更新项"),
-    current_user: dict = Depends(get_current_user),
+    current_user: str = Depends(get_current_user),
     service: DigitalTwinService = Depends(get_twin_service)
 ):
     """
@@ -167,7 +167,7 @@ async def update_twin_profile(
     - simulation_temperature
     - response_length_preference
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
     success, message = service.update_twin_profile(user_id, updates)
 
     if not success:
@@ -184,7 +184,7 @@ async def update_twin_profile(
 @router.post("/simulation/start", response_model=SimulationResponse)
 async def start_simulation(
     request: SimulationStartRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: str = Depends(get_current_user),
     service: DigitalTwinService = Depends(get_twin_service)
 ):
     """
@@ -192,7 +192,7 @@ async def start_simulation(
 
     基于双方用户的分身配置，进行模拟对话
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
 
     success, message, simulation = service.start_simulation(
         user_a_id=user_id,
@@ -218,7 +218,7 @@ async def start_simulation(
 @router.post("/simulation/{simulation_id}/run", response_model=SimulationResponse)
 async def run_simulation(
     simulation_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: str = Depends(get_current_user),
     service: DigitalTwinService = Depends(get_twin_service)
 ):
     """
@@ -245,7 +245,7 @@ async def run_simulation(
 async def get_simulation_status(
     simulation_id: int,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: str = Depends(get_current_user),
     service: DigitalTwinService = Depends(get_twin_service)
 ):
     """
@@ -287,7 +287,7 @@ async def get_simulation_status(
 @router.post("/report/generate", response_model=ReportResponse)
 async def generate_report(
     simulation_id: int = Body(..., embed=True, description="模拟 ID"),
-    current_user: dict = Depends(get_current_user),
+    current_user: str = Depends(get_current_user),
     service: DigitalTwinService = Depends(get_twin_service)
 ):
     """
@@ -295,7 +295,7 @@ async def generate_report(
 
     基于模拟对话生成详细的复盘报告
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
 
     success, message, report = service.generate_report(simulation_id, user_id)
 
@@ -312,7 +312,7 @@ async def generate_report(
 @router.get("/report/{simulation_id}", response_model=ReportResponse)
 async def get_report(
     simulation_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: str = Depends(get_current_user),
     service: DigitalTwinService = Depends(get_twin_service)
 ):
     """
@@ -320,7 +320,7 @@ async def get_report(
 
     返回已生成的复盘报告
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
     report = service.get_report(user_id, simulation_id)
 
     if not report:
@@ -347,7 +347,7 @@ async def get_my_simulations(
     limit: int = Query(default=10, ge=1, le=50, description="返回数量"),
     offset: int = Query(default=0, ge=0, description="偏移量"),
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: str = Depends(get_current_user),
     service: DigitalTwinService = Depends(get_twin_service)
 ):
     """
@@ -355,7 +355,7 @@ async def get_my_simulations(
 
     返回当前用户参与的所有模拟会话
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
 
     from models.digital_twin_models import DigitalTwinSimulation
 

@@ -8,8 +8,8 @@
 4. 设置用户的择偶偏好
 
 使用方法：
-    cd /Users/sunmuchao/Downloads/ai_incubation_platform/matchmaker-agent
-    python scripts/generate_fake_users.py --count 10000 --auto-confirm
+    cd Her
+    python scripts/generate_fake_users.py --count 10000 --auto-confirm --batch-size 200
 """
 import sys
 import os
@@ -17,21 +17,21 @@ import argparse
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'src'))
 
 from db.database import SessionLocal
-from db.repositories import UserRepository
+from db.models import UserDB
 from datetime import datetime
 import json
 import uuid
 import random
 from utils.logger import logger
 
-# 预计算的密码哈希（所有用户密码均为 "123456"）
-# 使用固定哈希值避免重复计算 bcrypt（性能优化）
+# 预计算的密码哈希（所有用户密码均为 "123456"）；避免万级 bcrypt 计算
 DEFAULT_PASSWORD_HASH = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYIxF.0KLzm"
 
 # ==================== 数据池 ====================
 
-# 中文姓氏（扩展版 - 100 个常见姓氏）
+# 中文姓氏（扩展版 - 150 个常见姓氏，覆盖绝大多数人口）
 FIRST_NAMES = [
+    # 前 100 大姓（覆盖约 85% 人口）
     "王", "李", "张", "刘", "陈", "杨", "黄", "赵", "周", "吴",
     "徐", "孙", "马", "朱", "胡", "郭", "何", "高", "林", "罗",
     "郑", "梁", "谢", "宋", "唐", "许", "邓", "韩", "冯", "曹",
@@ -40,31 +40,59 @@ FIRST_NAMES = [
     "石", "姚", "谭", "廖", "邹", "熊", "金", "陆", "郝", "孔",
     "白", "崔", "康", "毛", "邱", "秦", "江", "尹", "黎", "易",
     "常", "武", "乔", "贺", "赖", "龚", "文", "庞", "樊", "兰",
-    "殷", "施", "洪", "段", "汤", "巴", "武", "岳", "祁", "牛"
+    "殷", "施", "洪", "段", "汤", "巴", "岳", "祁", "牛", "叶",
+    # 补充 50 个较常见姓氏
+    "万", "章", "鲁", "葛", "俞", "柳", "鲍", "史", "岑", "雷",
+    "钱", "孟", "尹", "阮", "闵", "倪", "严", "毕", "洪", "焦",
+    "侯", "柳", "齐", "莫", "裴", "焦", "管", "童", "叶", "钱",
+    "柳", "祁", "覃", "霍", "涂", "向", "顾", "阮", "梅", "凌",
+    "邢", "虞", "相", "伊", "褚", "余", "仲", "柳", "童", "伯"
 ]
 
-# 名字（两字 - 男性扩展版）
+# 名字（两字 - 男性扩展版，150 个）
 LAST_NAMES_MALE = [
+    # 传统经典名（50 个）
     "伟", "强", "磊", "洋", "勇", "军", "杰", "俊", "涛", "明",
     "鹏", "辉", "斌", "飞", "健", "刚", "平", "东", "峰", "波",
     "毅", "智", "旭", "晨", "宇", "泽", "浩", "然", "轩", "博",
     "文", "航", "天", "硕", "瑞", "铭", "远", "恒", "嘉", "诚",
-    "建", "志", "立", "永", "春", "明", "亮", "光", "荣", "兴",
-    "华", "成", "林", "庆", "德", "树", "柏", "松", "海", "江",
-    "河", "山", "石", "泉", "森", "炎", "烨", "焕", "灿", "烁",
-    "风", "云", "雷", "电", "星", "辰", "阳", "明", "辉", "耀"
+    "建", "志", "立", "永", "春", "亮", "光", "荣", "兴", "华",
+    # 自然意象名（30 个）
+    "林", "森", "柏", "松", "海", "江", "河", "山", "石", "泉",
+    "炎", "烨", "焕", "灿", "烁", "风", "云", "雷", "电", "星",
+    "辰", "阳", "昊", "晖", "曜", "曦", "昭", "昱", "暄", "晴",
+    # 现代流行名（40 个）
+    "成", "庆", "德", "树", "柯", "楠", "楷", "栋", "梁", "材",
+    "贤", "良", "才", "达", "通", "顺", "畅", "朗", "清", "正",
+    "威", "武", "雄", "豪", "英", "俊", "彦", "儒", "墨", "渊",
+    "坤", "乾", "震", "巽", "坎", "离", "艮", "兑", "衡", "岳",
+    # 品德修养名（30 个）
+    "信", "义", "仁", "礼", "孝", "忠", "廉", "勤", "俭", "让",
+    "谦", "慎", "笃", "厚", "淳", "朴", "实", "诚", "真", "挚",
+    "善", "美", "圣", "哲", "智", "慧", "觉", "悟", "修", "省"
 ]
 
-# 名字（两字 - 女性扩展版）
+# 名字（两字 - 女性扩展版，150 个）
 LAST_NAMES_FEMALE = [
-    "娜", "丽", "秀", "敏", "静", "丽", "艳", "娟", "芳", "燕",
-    "萍", "华", "梅", "霞", "玲", "桂", "芬", "英", "兰", "琴",
-    "欣", "怡", "雪", "悦", "彤", "瑶", "佳", "颖", "梦", "思",
-    "雨", "晓", "婉", "雅", "诗", "嘉", "慧", "琳", "晴", "月",
-    "柔", "曼", "蕾", "薇", "荷", "莲", "菊", "桂", "桃", "梅",
-    "兰", "竹", "凤", "鸾", "凰", "玉", "珠", "宝", "珍", "琪",
-    "瑗", "瑛", "瑾", "璇", "璐", "璟", "茗", "荷", "蓉", "蓓",
-    "绮", "绯", "缦", "倩", "姿", "音", "韵", "颜", "香", "馥"
+    # 传统经典名（50 个）
+    "娜", "丽", "秀", "敏", "静", "艳", "娟", "芳", "燕", "萍",
+    "华", "梅", "霞", "玲", "桂", "芬", "英", "兰", "琴", "欣",
+    "怡", "雪", "悦", "彤", "瑶", "佳", "颖", "梦", "思", "雨",
+    "晓", "婉", "雅", "诗", "嘉", "慧", "琳", "晴", "月", "柔",
+    "曼", "蕾", "薇", "荷", "莲", "菊", "桃", "竹", "凤", "鸾",
+    # 自然意象名（30 个）
+    "云", "霞", "虹", "霓", "雾", "露", "霜", "雪", "冰", "晶",
+    "莹", "珠", "玉", "宝", "珍", "琪", "瑗", "瑛", "瑾", "璇",
+    "璐", "璟", "茗", "蓉", "蓓", "绮", "绯", "缦", "倩", "姿",
+    # 现代流行名（40 个）
+    "萱", "嫣", "芷", "芸", "苑", "蕴", "融", "蓉", "莲", "菱",
+    "菲", "芳", "蕊", "苗", "苗", "蔓", "蔚", "蓝", "青", "翠",
+    "绿", "红", "紫", "丹", "朱", "彤", "橙", "黄", "白", "素",
+    "彩", "绘", "画", "图", "影", "像", "照", "映", "晖", "曦",
+    # 才艺修养名（30 个）
+    "音", "韵", "律", "曲", "歌", "舞", "乐", "琴", "瑟", "筝",
+    "笛", "萧", "笙", "管", "弦", "墨", "笔", "书", "画", "诗",
+    "词", "赋", "章", "句", "文", "章", "艺", "术", "才", "慧"
 ]
 
 # 职业列表（扩展版 - 100+ 种职业）
@@ -321,20 +349,30 @@ MATCH_OPTIONS = [
     "也恐高", "也怕黑", "也是个夜猫子"
 ]
 
+EDUCATION_OPTIONS = ["bachelor", "master", "college", "high_school", "phd"]
+RELATIONSHIP_GOALS = ["serious", "dating", "marriage", "casual"]
+
 
 def generate_username(index: int) -> str:
     """生成用户名"""
     return f"user_{index:04d}"
 
 
-def generate_name(gender: str) -> str:
-    """生成中文姓名"""
-    first = random.choice(FIRST_NAMES)
-    if gender == "male":
-        last = random.choice(LAST_NAMES_MALE)
-    else:
-        last = random.choice(LAST_NAMES_FEMALE)
-    return first + last
+def generate_name(gender: str, used_names: set = None, max_attempts: int = 100) -> str:
+    """生成中文姓名（支持唯一性检查）"""
+    for _ in range(max_attempts):
+        first = random.choice(FIRST_NAMES)
+        if gender == "male":
+            last = random.choice(LAST_NAMES_MALE)
+        else:
+            last = random.choice(LAST_NAMES_FEMALE)
+        name = first + last
+        if used_names is None or name not in used_names:
+            return name
+    # 如果尝试多次仍未找到唯一名字，添加随机数字后缀
+    base_name = first + last
+    suffix = random.randint(1, 999)
+    return f"{base_name}{suffix}"
 
 
 def generate_job() -> str:
@@ -459,13 +497,11 @@ def generate_preferred_age(my_age: int, gender: str) -> tuple:
     return min_age, max_age
 
 
-# 预计算的密码哈希（所有用户密码均为 "123456"）
-# 使用固定哈希值避免重复计算 bcrypt（性能优化）
-DEFAULT_PASSWORD_HASH = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYIxF.0KLzm"  # "123456" 的 bcrypt 哈希
-
-def generate_user(index: int, gender: str) -> dict:
+def generate_user(index: int, gender: str, used_names: set = None) -> dict:
     """生成单个用户数据"""
-    name = generate_name(gender)
+    name = generate_name(gender, used_names)
+    if used_names is not None:
+        used_names.add(name)
     age = generate_age(gender)
     job = generate_job()
     city = generate_city()
@@ -475,35 +511,59 @@ def generate_user(index: int, gender: str) -> dict:
     bio = generate_bio(job, city, interests, personality)
     pref_min, pref_max = generate_preferred_age(age, gender)
 
-    # 生成更真实的邮箱（包含姓名拼音元素）
-    name_pinyin = f"user{index:05d}"
-    email_domains = ["qq.com", "163.com", "gmail.com", "outlook.com", "sina.com", "hotmail.com"]
-    email = f"{name_pinyin}@{random.choice(email_domains)}"
+    # 全局唯一邮箱，避免与已有用户或重复跑脚本冲突
+    email = f"bulk_{index:05d}_{uuid.uuid4().hex[:10]}@seed.her.local"
+
+    rel_goal = random.choice(RELATIONSHIP_GOALS)
+    self_profile = {
+        "display_name": name,
+        "city": city,
+        "occupation": job,
+        "interests": interests[:10],
+        "personality_traits": personality["traits"],
+        "personality_note": personality["description"][:800],
+    }
+    desire_profile = {
+        "preferred_gender": "female" if gender == "male" else "male",
+        "age_min": pref_min,
+        "age_max": pref_max,
+        "relationship_goal": rel_goal,
+    }
 
     return {
         "id": str(uuid.uuid4()),
         "name": name,
         "email": email,
-        "password_hash": DEFAULT_PASSWORD_HASH,  # 使用预计算哈希
+        "password_hash": DEFAULT_PASSWORD_HASH,
         "age": age,
         "gender": gender,
         "location": city,
         "bio": bio,
-        "interests": json.dumps(interests),
-        "values": json.dumps(values),
+        "interests": json.dumps(interests, ensure_ascii=False),
+        "values": json.dumps(values, ensure_ascii=False),
         "preferred_age_min": pref_min,
         "preferred_age_max": pref_max,
-        "preferred_location": None,  # 不限制地点
+        "preferred_location": random.choice([None, city, random.choice(CITIES)]),
         "preferred_gender": "female" if gender == "male" else "male",
         "avatar_url": None,
         "is_active": True,
-        "job": job  # 添加 job 字段
+        "job": job,
+        "occupation": job[:50],
+        "education": random.choice(EDUCATION_OPTIONS),
+        "relationship_goal": rel_goal,
+        "accept_remote": random.choice(["yes", "no", "conditional"]),
+        "personality": personality["description"][:2000],
+        "self_profile_json": json.dumps(self_profile, ensure_ascii=False),
+        "desire_profile_json": json.dumps(desire_profile, ensure_ascii=False),
+        "profile_completeness": round(random.uniform(0.45, 0.92), 2),
+        "profile_confidence": round(random.uniform(0.35, 0.85), 2),
     }
 
 
 def generate_users(count: int = 50, male_ratio: float = 0.5):
-    """生成多个用户"""
+    """生成多个用户（名字唯一性保证）"""
     users = []
+    used_names: set = set()  # 跟踪已使用的名字，防止重复
     male_count = int(count * male_ratio)
     female_count = count - male_count
 
@@ -511,76 +571,89 @@ def generate_users(count: int = 50, male_ratio: float = 0.5):
 
     # 生成男性用户
     for i in range(male_count):
-        user = generate_user(i, "male")
+        user = generate_user(i, "male", used_names)
         users.append(user)
 
     # 生成女性用户
     for i in range(male_count, count):
-        user = generate_user(i, "female")
+        user = generate_user(i, "female", used_names)
         users.append(user)
 
-    logger.info(f"用户生成完成，共{len(users)}个用户")
+    logger.info(f"用户生成完成，共{len(users)}个用户，唯一名字数：{len(used_names)}")
     return users
 
 
-def import_users(users: list, batch_size: int = 500):
-    """批量导入用户到数据库（带进度条）"""
+def _user_row_to_userdb_kwargs(u: dict) -> dict:
+    """将生成器 dict 转为 UserDB 构造参数（仅包含模型列）。"""
+    job = u.get("occupation") or u.get("job") or ""
+    occ = (job or "")[:50] if job else None
+    return {
+        "id": u["id"],
+        "name": u["name"],
+        "email": u["email"],
+        "password_hash": u["password_hash"],
+        "age": u["age"],
+        "gender": u["gender"],
+        "location": u.get("location"),
+        "interests": u.get("interests", "[]"),
+        "values": u.get("values", "{}"),
+        "bio": u.get("bio", ""),
+        "avatar_url": u.get("avatar_url"),
+        "is_active": u.get("is_active", True),
+        "preferred_age_min": u.get("preferred_age_min", 18),
+        "preferred_age_max": u.get("preferred_age_max", 60),
+        "preferred_location": u.get("preferred_location"),
+        "preferred_gender": u.get("preferred_gender"),
+        "sexual_orientation": u.get("sexual_orientation", "heterosexual"),
+        "relationship_goal": u.get("relationship_goal"),
+        "personality": u.get("personality"),
+        "education": u.get("education"),
+        "occupation": occ,
+        "accept_remote": u.get("accept_remote"),
+        "self_profile_json": u.get("self_profile_json", "{}"),
+        "desire_profile_json": u.get("desire_profile_json", "{}"),
+        "profile_completeness": u.get("profile_completeness", 0.0),
+        "profile_confidence": u.get("profile_confidence", 0.3),
+    }
+
+
+def import_users(users: list, batch_size: int = 200):
+    """分批 add_all + 单次 commit，适合万级导入（避免每条 Repository.create 单独 commit）。"""
     db = SessionLocal()
-    user_repo = UserRepository(db)
     created_count = 0
-    skipped_count = 0
     error_count = 0
 
     print(f"\n开始导入用户，共{len(users)}个，批处理大小：{batch_size}")
     print("-" * 80)
 
     try:
-        # 分批处理
         for batch_start in range(0, len(users), batch_size):
             batch_end = min(batch_start + batch_size, len(users))
             batch = users[batch_start:batch_end]
             batch_num = batch_start // batch_size + 1
             total_batches = (len(users) + batch_size - 1) // batch_size
 
-            # 处理当前批次
-            batch_created = 0
-            batch_skipped = 0
-            batch_error = 0
-
+            objs = []
             for user_data in batch:
                 try:
-                    # 检查用户是否已存在
-                    existing_user = user_repo.get_by_email(user_data["email"])
-                    if existing_user:
-                        batch_skipped += 1
-                        continue
-
-                    # 创建用户
-                    user_repo.create(user_data)
-                    batch_created += 1
-
+                    objs.append(UserDB(**_user_row_to_userdb_kwargs(user_data)))
                 except Exception as e:
-                    logger.warning(f"创建用户 {user_data['email']} 失败：{e}")
-                    batch_error += 1
-                    continue
+                    logger.warning(f"构造用户 {user_data.get('email')} 失败：{e}")
+                    error_count += 1
 
-            created_count += batch_created
-            skipped_count += batch_skipped
-            error_count += batch_error
+            if objs:
+                db.add_all(objs)
+                db.commit()
+                created_count += len(objs)
 
-            # 提交当前批次
-            db.commit()
-
-            # 显示进度
             progress = (batch_end / len(users)) * 100
-            print(f"进度：{batch_num}/{total_batches} 批次 | "
-                  f"{progress:.1f}% | "
-                  f"本批成功：{batch_created} | "
-                  f"本批跳过：{batch_skipped} | "
-                  f"本批失败：{batch_error}")
+            print(
+                f"进度：{batch_num}/{total_batches} 批次 | {progress:.1f}% | "
+                f"本批写入：{len(objs)} | 累计成功：{created_count} | 构造失败：{error_count}"
+            )
 
         print("-" * 80)
-        print(f"用户导入完成！新建：{created_count}个，跳过：{skipped_count}个，失败：{error_count}个")
+        print(f"用户导入完成！新建：{created_count}个，构造失败：{error_count}个")
 
     except Exception as e:
         logger.error(f"导入用户失败：{e}")
@@ -678,7 +751,7 @@ def main():
     parser = argparse.ArgumentParser(description="生成逼真的虚假用户数据")
     parser.add_argument("--count", type=int, default=10000, help="生成用户数量（默认：10000）")
     parser.add_argument("--male-ratio", type=float, default=0.5, help="男性比例（默认：0.5）")
-    parser.add_argument("--batch-size", type=int, default=500, help="批处理大小（默认：500）")
+    parser.add_argument("--batch-size", type=int, default=200, help="批处理大小（默认：200，万级建议 200）")
     parser.add_argument("--auto-confirm", action="store_true", help="自动确认导入，无需交互确认")
     args = parser.parse_args()
 

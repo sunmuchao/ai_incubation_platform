@@ -384,6 +384,59 @@ export const deerflowClient = {
   },
 
   /**
+   * 🚀 [新增] 从 Agent 的 ai_message 中解析 [GENERATIVE_UI] 标签
+   *
+   * Agent 输出格式：
+   * ```
+   * [GENERATIVE_UI]
+   * {"component_type": "UserProfileCard", "props": {...}}
+   * [/GENERATIVE_UI]
+   * ```
+   *
+   * 返回：
+   * - natural_message: 纯文本部分（去掉标签后的内容）
+   * - generative_ui_cards: 解析后的 UI 卡片数组
+   */
+  parseGenerativeUITags(response: DeerFlowResponse): {
+    natural_message: string;
+    generative_ui_cards: GenerativeUI[];
+  } {
+    if (!response.ai_message) {
+      return { natural_message: '', generative_ui_cards: [] };
+    }
+
+    const message = response.ai_message;
+    const cards: GenerativeUI[] = [];
+
+    // 正则匹配 [GENERATIVE_UI]...[/GENERATIVE_UI] 标签
+    const tagRegex = /\[GENERATIVE_UI\]\s*([\s\S]*?)\s*\[\/GENERATIVE_UI\]/g;
+    let match;
+    let cleanMessage = message;
+
+    while ((match = tagRegex.exec(message)) !== null) {
+      try {
+        const cardJson = JSON.parse(match[1].trim());
+        cards.push({
+          component_type: cardJson.component_type || 'UserProfileCard',
+          props: cardJson.props || cardJson,  // 支持 {component_type, props} 和直接 {name, age...}
+        });
+        // 从消息中移除标签
+        cleanMessage = cleanMessage.replace(match[0], '');
+      } catch (e) {
+        console.warn('[parseGenerativeUITags] Failed to parse card JSON:', match[1], e);
+      }
+    }
+
+    // 清理多余空行（保留单个换行）
+    cleanMessage = cleanMessage.replace(/\n{3,}/g, '\n\n').trim();
+
+    return {
+      natural_message: cleanMessage,
+      generative_ui_cards: cards,
+    };
+  },
+
+  /**
    * 解析工具返回的结构化数据（兼容旧架构）
    *
    * 根据 component_type 返回对应类型的数据
@@ -409,11 +462,13 @@ export const deerflowClient = {
     const data = response.tool_result.data;
 
     // 匹配结果
-    if (data.matches || data.recommendations) {
+    // Agent Native：兼容 candidates（工具返回）、matches、recommendations 三种字段名
+    if (data.candidates || data.matches || data.recommendations) {
       return {
         type: 'matches',
         data: {
-          matches: (data.matches || data.recommendations) as MatchResult[],
+          // 字段名兼容：candidates → matches（统一为前端期望的字段名）
+          matches: (data.candidates || data.matches || data.recommendations) as MatchResult[],
           total: data.total,
         },
       };
@@ -458,6 +513,67 @@ export const deerflowClient = {
         data: {
           topics: data.topics,
           total: data.total,
+        },
+      };
+    }
+
+    // Agent Native：对话引导卡片（话题推荐、破冰建议）
+    if (data.intent_type && data.component_type === 'ConversationGuideCard') {
+      return {
+        type: data.intent_type,  // 'topic_request' 或 'icebreaker_request'
+        data: {
+          intent_type: data.intent_type,
+          user_profile: data.user_profile,
+          target_profile: data.target_profile,
+          selected_user: data.selected_user,
+          match_points: data.match_points,
+          analysis: data.analysis,
+          conversation_history: data.conversation_history,
+        },
+      };
+    }
+
+    // 兼容性分析（Agent Native：comparison_factors）
+    if (data.comparison_factors) {
+      return {
+        type: 'compatibility',
+        data: {
+          user_a: data.user_a,
+          user_b: data.user_b,
+          comparison_factors: data.comparison_factors,
+        },
+      };
+    }
+
+    // 用户画像查询
+    if (data.user_profile && !data.target_profile) {
+      return {
+        type: 'user_profile',
+        data: {
+          user_profile: data.user_profile,
+        },
+      };
+    }
+
+    // 目标用户画像查询（UserProfileCard）
+    if (data.selected_user || (data.user_profile && data.target_profile)) {
+      return {
+        type: 'target_user',
+        data: {
+          selected_user: data.selected_user || data.user_profile,
+          user_profile: data.user_profile,
+        },
+      };
+    }
+
+    // 对话历史查询
+    if (data.messages && data.silence_info) {
+      return {
+        type: 'conversation_history',
+        data: {
+          messages: data.messages,
+          total: data.total,
+          silence_info: data.silence_info,
         },
       };
     }

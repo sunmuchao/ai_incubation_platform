@@ -122,6 +122,9 @@ from db.models.grayscale import (
 # ============= 关系进展 =============
 from db.models.relationship import RelationshipProgressDB, SavedLocationDB
 
+# ============= 候选人反馈 =============
+from db.models.feedback import CandidateFeedbackDB, FeedbackStatisticsDB
+
 # ============= 通知领域（事件驱动主动通知）============
 from db.models.notification import (
     UserNotificationPreferenceDB,
@@ -207,6 +210,9 @@ __all__ = [
     # 关系进展
     "RelationshipProgressDB",
     "SavedLocationDB",
+    # 候选人反馈
+    "CandidateFeedbackDB",
+    "FeedbackStatisticsDB",
     # 通知领域
     "UserNotificationPreferenceDB",
     "PendingNotificationDB",

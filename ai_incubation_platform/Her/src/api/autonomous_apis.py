@@ -79,14 +79,14 @@ class PushHistoryResponse(BaseModel):
 
 @router.get("/push-preferences", response_model=PushPreferencesResponse)
 async def get_push_preferences(
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     获取用户推送偏好设置
 
     返回用户的推送开关、主动程度、免打扰时段等配置
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     logger.info(f"Getting push preferences for user: {user_id}")
 
     db = next(get_db())
@@ -133,7 +133,7 @@ async def get_push_preferences(
 @router.put("/push-preferences", response_model=PushPreferencesResponse)
 async def update_push_preferences(
     request: PushPreferencesRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     更新用户推送偏好设置
@@ -145,7 +145,7 @@ async def update_push_preferences(
     - preferred_channels: 偏好推送渠道
     - type_preferences: 各类型推送开关
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     logger.info(f"Updating push preferences for user: {user_id}")
 
     db = next(get_db())
@@ -303,14 +303,14 @@ async def get_heartbeat_rules(
 @router.get("/push-history", response_model=List[PushHistoryResponse])
 async def get_push_history(
     limit: int = 20,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     获取用户推送历史
 
     返回用户收到的推送记录、响应情况
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     logger.info(f"Getting push history for user: {user_id}, limit={limit}")
 
     db = next(get_db())
@@ -344,7 +344,7 @@ async def record_push_response(
     push_id: str,
     response_type: str,
     action_taken: Optional[str] = None,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     记录用户对推送的响应
@@ -356,7 +356,7 @@ async def record_push_response(
         response_type: 响应类型（clicked/ignored/acted/dismissed）
         action_taken: 用户采取的具体行动
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     logger.info(f"Recording push response: push_id={push_id}, user={user_id}, response={response_type}")
 
     db = next(get_db())

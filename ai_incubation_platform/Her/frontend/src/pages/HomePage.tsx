@@ -27,17 +27,25 @@ const WhoLikesMePage = lazy(() => import('./WhoLikesMePage'))
 const ConfidenceManagementPage = lazy(() => import('./ConfidenceManagementPage'))
 const FaceVerificationPage = lazy(() => import('./FaceVerificationPage'))
 const YourTurnReminder = lazy(() => import('../components/YourTurnReminder'))
+const FeatureGuideModal = lazy(() => import('../components/FeatureGuideModal')) // 🔧 [问题17方案B] 首次功能引导
 // 🚀 [性能优化] FeaturesButton 需要立即渲染，直接导入
 import { FeaturesButton } from '../components/FeaturesDrawer'
 import type { Feature } from '../components/FeaturesDrawer'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import HerAvatar from '../assets/her-avatar.svg'
 import { chatApi, conversationMatchingApi } from '../api'
-import { herStorage } from '../utils/storage'
+import { herStorage, guideStorage } from '../utils/storage' // 🔧 [问题17方案B] 导入 guideStorage
 import './HomePage.less'
 
 const { Header, Content } = Layout
 const { Text } = Typography
+
+// 聊天场景的快速入口选项
+const CHAT_SCENE_QUICK_OPTIONS = [
+  { label: '分析这位对象', trigger: '分析这位匹配对象' },
+  { label: '约见面建议', trigger: '我想约见面，有什么建议' },
+  { label: '聊天话题', trigger: '推荐一些聊天话题' },
+]
 
 interface HomePageProps {
   onLogout?: () => void
@@ -59,11 +67,40 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
   const [showWhoLikesMe, setShowWhoLikesMe] = useState(false) // Who Likes Me 页面状态
   const [showConfidence, setShowConfidence] = useState(false) // 置信度管理页面状态
   const [showFaceVerification, setShowFaceVerification] = useState(false) // 人脸认证页面状态
-  const [herSleeping, setHerSleeping] = useState(herStorage.isSleepingInChat()) // Her 休眠状态
+  // 🔧 [问题16方案A] 首次进入聊天室时，默认唤醒 Her（不休眠）
+  // 让用户能立刻看到悬浮球，知道 Her 正在旁观
+  const [herSleeping, setHerSleeping] = useState(() => {
+    // 🔧 [修复] 读取用户的休眠偏好，新用户默认唤醒
+    // 只有用户主动休眠后才隐藏悬浮球
+    return herStorage.isSleepingInChat()
+  })
+  // 🔧 [问题17方案B] 首次功能引导弹窗状态
+  // 新用户首次进入时显示，告知用户如何使用 Her
+  const [showFeatureGuide, setShowFeatureGuide] = useState(() => {
+    // 检查是否已显示过引导弹窗
+    return !guideStorage.isFeatureGuideShown()
+  })
+
+  // 🚀 [改进点5] 悬浮球 Her 的上下文（包含最近消息）
+  // 从 ChatRoom 接收上下文更新事件
+  const [floatingBallContext, setFloatingBallContext] = useState<{
+    partnerId: string
+    partnerName: string
+    partnerAvatar?: string
+    recentMessages?: Array<{
+      content: string
+      sender: 'user' | 'partner'
+      timestamp: Date
+    }>
+  } | null>(null)
+
   const userId = userInfo?.username || 'user-anonymous-dev'
 
   // 已通知的消息 ID 集合，避免重复弹窗
   const notifiedMessageIds = useRef<Set<string>>(new Set())
+
+  // 当前聊天对象 ID（ref 用于轮询逻辑中检查，避免给正在聊天的人发送通知）
+  const chatRoomPartnerIdRef = useRef<string | null>(null)
 
   // 布局检查 - 组件挂载时记录
   useEffect(() => {
@@ -104,7 +141,15 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
         const response = await chatApi.getConversations()
 
         if (Array.isArray(response)) {
-          const totalUnread = response.reduce((sum, conv) => sum + (conv.unread_count || 0), 0)
+          // 🔧 [修复] 计算未读数时排除当前聊天对象（用户正在聊天不需要通知）
+          const totalUnread = response.reduce((sum, conv) => {
+            const partnerId = conv.user_id_1 === userId ? conv.user_id_2 : conv.user_id_1
+            // 如果正在跟这个人聊天，不计入未读
+            if (chatRoomPartnerIdRef.current === partnerId) {
+              return sum
+            }
+            return sum + (conv.unread_count || 0)
+          }, 0)
 
           // 有新消息时，设置状态
           if (totalUnread > 0 && mounted) {
@@ -126,6 +171,13 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
 
           newConversations.forEach(conv => {
             const partnerId = conv.user_id_1 === userId ? conv.user_id_2 : conv.user_id_1
+
+            // 🔧 [修复] 如果用户正在聊天室中，跳过所有通知弹窗（避免打扰聊天体验）
+            // 无论消息来自当前聊天对象还是其他人，都不弹窗
+            if (chatRoomPartnerIdRef.current !== null) {
+              return
+            }
+
             const cachedMatch = matchesCacheRef.current[partnerId]
             const partnerName = cachedMatch?.user?.name || partnerId
 
@@ -199,12 +251,14 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
   const handleStartChat = (match: MatchCandidate) => {
     // 设置为聊天室模式
     setChatRoomMatch(match)
+    chatRoomPartnerIdRef.current = match.user?.id || null  // 记录当前聊天对象
     // 关闭详情弹窗
     setSelectedMatch(null)
   }
 
   const handleBackToChat = () => {
     setChatRoomMatch(null)
+    chatRoomPartnerIdRef.current = null  // 清除当前聊天对象
   }
 
   const handleChatInitialMatchConsumed = () => {
@@ -225,6 +279,16 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
       score: 0,
     }
     setChatRoomMatch(match)
+    chatRoomPartnerIdRef.current = partnerId  // 记录当前聊天对象，避免通知打扰
+  }
+
+  // 🚀 [新增] 快速对话回调 - 从悬浮球发送消息给 Her
+  const handleQuickChat = (message: string) => {
+    // 关闭 ChatRoom，返回 ChatInterface
+    setChatRoomMatch(null)
+    chatRoomPartnerIdRef.current = null  // 清除当前聊天对象
+    // 触发自定义事件，让 ChatInterface 接收消息
+    window.dispatchEvent(new CustomEvent('her-quick-chat', { detail: { message } }))
   }
 
   // 处理功能选择 - 在对话区生成功能卡片或切换页面
@@ -289,6 +353,13 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
     setShowFaceVerification(false)
   }
 
+  // 🔧 [问题17方案B] 关闭功能引导弹窗
+  const handleCloseFeatureGuide = () => {
+    setShowFeatureGuide(false)
+    // 标记已显示，下次不再弹出
+    guideStorage.markFeatureGuideShown()
+  }
+
   // 监听来自 ChatInterface 的事件
   useEffect(() => {
     const handleGoMatch = () => {
@@ -299,12 +370,19 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
       setShowFaceVerification(true)
     }
 
+    // 🚀 [改进点5] 监听来自 ChatRoom 的上下文更新事件
+    const handleHerContextUpdate = (e: CustomEvent) => {
+      setFloatingBallContext(e.detail)
+    }
+
     window.addEventListener('trigger-go-match', handleGoMatch)
     window.addEventListener('trigger-face-verification', handleFaceVerification)
+    window.addEventListener('her-context-update', handleHerContextUpdate as EventListener)
 
     return () => {
       window.removeEventListener('trigger-go-match', handleGoMatch)
       window.removeEventListener('trigger-face-verification', handleFaceVerification)
+      window.removeEventListener('her-context-update', handleHerContextUpdate as EventListener)
     }
   }, [])
 
@@ -491,10 +569,22 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
           <AgentFloatingBall
             visible={true}
             hasNewMessage={hasNewMessage}
-            chatContext={{
+            chatContext={floatingBallContext || {
               partnerId: chatRoomMatch.user?.id || '',
               partnerName: chatRoomMatch.user?.name || 'TA',
             }}
+            quickOptions={CHAT_SCENE_QUICK_OPTIONS}
+            onQuickChat={handleQuickChat}
+          />
+        </Suspense>
+      )}
+
+      {/* 🔧 [问题17方案B] 首次功能引导弹窗 - 新用户首次进入时显示 */}
+      {showFeatureGuide && (
+        <Suspense fallback={null}>
+          <FeatureGuideModal
+            open={showFeatureGuide}
+            onClose={handleCloseFeatureGuide}
           />
         </Suspense>
       )}

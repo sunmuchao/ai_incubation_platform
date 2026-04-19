@@ -1,0 +1,118 @@
+{
+  "session_id": "session-0e45bea3558f",
+  "scenario": {
+    "scenario_type": "match_request",
+    "user_profile": {
+      "user_id": "test-user-243c7ed7",
+      "name": "王浩",
+      "age": 28,
+      "gender": "male",
+      "location": "北京",
+      "occupation": "程序员",
+      "education": "bachelor",
+      "interests": [
+        "编程",
+        "篮球",
+        "电影"
+      ],
+      "relationship_goal": "serious",
+      "bio": "喜欢安静的生活，期待遇见有趣的灵魂",
+      "accept_remote": "conditional",
+      "preferred_age_min": 24,
+      "preferred_age_max": 30,
+      "preferred_location": "北京",
+      "personality_traits": [
+        "内向",
+        "理性"
+      ]
+    },
+    "goal": "获得符合偏好的匹配结果",
+    "initial_message": "你好，我想找一个合适的对象",
+    "expected_flow": [
+      "发起请求",
+      "获得响应"
+    ],
+    "difficulty": "easy"
+  },
+  "user_profile": {
+    "id": "test-user-243c7ed7",
+    "name": "王浩",
+    "age": 28,
+    "gender": "male",
+    "location": "北京",
+    "occupation": "程序员",
+    "education": "bachelor",
+    "interests": [
+      "编程",
+      "篮球",
+      "电影"
+    ],
+    "relationship_goal": "serious",
+    "bio": "喜欢安静的生活，期待遇见有趣的灵魂",
+    "accept_remote": "conditional",
+    "preferred_age_min": 24,
+    "preferred_age_max": 30,
+    "preferred_location": "北京",
+    "deal_breakers": "",
+    "personality_traits": []
+  },
+  "goal": "获得符合偏好的匹配结果",
+  "goal_achieved": false,
+  "rounds": [
+    {
+      "round_id": 1,
+      "user_input": "你好，我想找一个合适的对象",
+      "agent_response": "API 调用失败: HTTPConnectionPool(host='localhost', port=8002): Max retries exceeded with url: /api/deerflow/chat (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8002): Failed to establish a new connection: [Errno 61] Connection refused\"))",
+      "intent": null,
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 1.9850730895996094,
+      "error": "HTTPConnectionPool(host='localhost', port=8002): Max retries exceeded with url: /api/deerflow/chat (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8002): Failed to establish a new connection: [Errno 61] Connection refused\"))",
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T22:47:20.763734"
+    },
+    {
+      "round_id": 2,
+      "user_input": "看起来系统出问题了，服务器连不上。能帮我再试一次吗？或者你先帮我查查我的账户信息？我的用户ID是 test-user-243c7ed7。",
+      "agent_response": "API 调用失败: HTTPConnectionPool(host='localhost', port=8002): Max retries exceeded with url: /api/deerflow/chat (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8002): Failed to establish a new connection: [Errno 61] Connection refused\"))",
+      "intent": null,
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 2.2521018981933594,
+      "error": "HTTPConnectionPool(host='localhost', port=8002): Max retries exceeded with url: /api/deerflow/chat (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8002): Failed to establish a new connection: [Errno 61] Connection refused\"))",
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T22:47:25.514170"
+    },
+    {
+      "round_id": 3,
+      "user_input": "系统好像一直连不上后端服务器，端口 8002 被拒绝了。你们的技术团队在维护吗？要不我先等会儿再来试试？",
+      "agent_response": "API 调用失败: HTTPConnectionPool(host='localhost', port=8002): Max retries exceeded with url: /api/deerflow/chat (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8002): Failed to establish a new connection: [Errno 61] Connection refused\"))",
+      "intent": null,
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 1.669168472290039,
+      "error": "HTTPConnectionPool(host='localhost', port=8002): Max retries exceeded with url: /api/deerflow/chat (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=8002): Failed to establish a new connection: [Errno 61] Connection refused\"))",
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T22:47:31.489691"
+    }
+  ],
+  "total_latency_ms": 5.906343460083008,
+  "evaluation": {
+    "goal_achieved": false,
+    "total_rounds": 3,
+    "avg_latency_ms": 1.9687811533610027,
+    "errors_count": 3,
+    "ui_components_used": [],
+    "intent_types_seen": [],
+    "flow_quality": "unknown",
+    "naturalness": "unknown",
+    "tool_usage_correct": "unknown",
+    "overall_score": 0
+  },
+  "started_at": "2026-04-18T22:47:20.685475",
+  "ended_at": "2026-04-18T22:47:38.750004",
+  "total_rounds": 3
+}

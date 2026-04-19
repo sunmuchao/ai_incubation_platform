@@ -73,14 +73,14 @@ def get_identity_service(db: Session = Depends(get_db)) -> IdentityVerificationS
 
 @router.get("/trust-score", response_model=TrustScoreResponse)
 async def get_trust_score(
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     获取我的信任分
 
     信任分基于多源身份认证情况计算，范围 0-100
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
     service = get_identity_service()
 
     try:
@@ -97,14 +97,14 @@ async def get_trust_score(
 
 @router.get("/trust-badges", response_model=TrustBadgesResponse)
 async def get_trust_badges(
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     获取我的信任勋章
 
     返回用户已获得的所有活跃信任勋章
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
     service = get_identity_service()
 
     try:
@@ -122,7 +122,7 @@ async def get_trust_badges(
 @router.post("/education/submit", response_model=VerificationResponse)
 async def submit_education_verification(
     request: EducationVerificationRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     提交学历认证申请
@@ -134,7 +134,7 @@ async def submit_education_verification(
     - 毕业年份
     - 学信网验证码（可选）
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
     service = get_identity_service()
 
     try:
@@ -165,7 +165,7 @@ async def submit_education_verification(
 @router.post("/occupation/submit", response_model=VerificationResponse)
 async def submit_occupation_verification(
     request: OccupationVerificationRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     提交职业认证申请
@@ -177,7 +177,7 @@ async def submit_occupation_verification(
     - 工作邮箱（可选）
     - 验证方式（企业邮箱/在职证明/社保记录）
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
     service = get_identity_service()
 
     try:
@@ -208,14 +208,14 @@ async def submit_occupation_verification(
 @router.get("/verifications")
 async def get_user_verifications(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     获取我的验证记录
 
     返回所有类型的身份验证记录
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
 
     try:
         from db.models import IdentityVerificationDB
@@ -337,7 +337,7 @@ async def submit_income_verification(
     income_type: str = Body(default="salary", description="收入类型"),
     verification_method: str = Body(default="tax_record", description="验证方式"),
     bank_name: Optional[str] = Body(None, description="银行名称"),
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     提交收入认证申请
@@ -347,7 +347,7 @@ async def submit_income_verification(
     - 收入类型 (salary/bonus/investment/business/other)
     - 验证方式 (tax_record/bank_statement/social_security)
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
     service = get_identity_service()
 
     try:
@@ -381,7 +381,7 @@ async def submit_property_verification(
     property_area: Optional[float] = Body(None, description="面积（平方米）"),
     property_value: Optional[float] = Body(None, description="估值（万元）"),
     ownership_type: str = Body(default="sole", description="产权类型"),
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     提交房产认证申请
@@ -393,7 +393,7 @@ async def submit_property_verification(
     - 估值（万元）
     - 产权类型 (sole/joint/family)
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
     service = get_identity_service()
 
     try:
@@ -424,14 +424,14 @@ async def submit_property_verification(
 @router.post("/criminal-record/submit", response_model=VerificationResponse)
 async def submit_criminal_record_verification(
     verification_method: str = Body(default="police_api", description="验证方式"),
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     提交无犯罪记录认证申请
 
     通过公安 API 或无犯罪记录证明书进行认证。
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
     service = get_identity_service()
 
     try:
@@ -459,7 +459,7 @@ async def submit_criminal_record_verification(
 async def call_external_verification_api(
     api_name: str = Body(..., description="API 名称"),
     params: Dict[str, Any] = Body(..., description="API 参数"),
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     调用外部验证 API
@@ -495,7 +495,7 @@ async def approve_education_verification(
     credential_id: str,
     level: str = Query(..., description="学历等级"),
     level_value: int = Query(..., description="学历等级数值"),
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     批准学历认证（管理员功能）
@@ -520,7 +520,7 @@ async def approve_education_verification(
 async def approve_income_verification(
     credential_id: str,
     level_value: int = Query(..., description="收入等级数值"),
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     批准收入认证（管理员功能）
@@ -545,7 +545,7 @@ async def approve_income_verification(
 async def approve_property_verification(
     credential_id: str,
     level_value: int = Query(..., description="房产等级数值"),
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     批准房产认证（管理员功能）

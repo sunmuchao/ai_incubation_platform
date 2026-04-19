@@ -103,8 +103,8 @@ class MatchExecutor:
 
             # 创建 LLM 判断任务
             task = self._her_advisor.generate_match_advice(
-                user_id_a=user_id,
-                user_id_b=candidate_id,
+                user_a_id=user_id,
+                user_b_id=candidate_id,
                 user_a_profile=(self_profile, desire_profile),
                 user_b_profile=(candidate_self, candidate_desire),
                 compatibility_score=0.5

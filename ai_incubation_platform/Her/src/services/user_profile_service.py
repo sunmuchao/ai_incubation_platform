@@ -607,6 +607,27 @@ class UserProfileService:
 
         return self_score + desire_score
 
+    def _calculate_self_profile_completeness(self, self_profile: SelfProfile) -> float:
+        """计算 SelfProfile 完整度"""
+        self_complete_count = sum([
+            1 if self_profile.actual_personality else 0,
+            1 if self_profile.communication_style else 0,
+            1 if self_profile.emotional_needs else 0,
+            1 if self_profile.attachment_style else 0,
+            1 if self_profile.power_dynamic else 0,
+        ])
+        return self_complete_count / 5
+
+    def _calculate_desire_profile_completeness(self, desire_profile: DesireProfile) -> float:
+        """计算 DesireProfile 完整度"""
+        desire_complete_count = sum([
+            1 if desire_profile.actual_preference else 0,
+            1 if desire_profile.search_patterns else 0,
+            1 if desire_profile.clicked_types else 0,
+            1 if desire_profile.like_feedback else 0,
+        ])
+        return desire_complete_count / 4
+
     def clear_cache(self, user_id: Optional[str] = None) -> None:
         """
         清除缓存

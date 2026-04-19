@@ -53,7 +53,7 @@ class CacheClearResponse(BaseModel):
 # ============= API 端点 =============
 
 @router.get("/stats", response_model=CacheStatsResponse)
-async def get_cache_stats(current_user: dict = Depends(get_current_user)):
+async def get_cache_stats(current_user: str = Depends(get_current_user)):
     """
     获取语义缓存统计
 
@@ -74,7 +74,7 @@ async def get_cache_stats(current_user: dict = Depends(get_current_user)):
 @router.post("/test", response_model=CacheTestResponse)
 async def test_cache(
     request: CacheTestRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     测试缓存命中
@@ -109,7 +109,7 @@ async def test_cache(
 @router.post("/clear", response_model=CacheClearResponse)
 async def clear_cache(
     request: CacheClearRequest = None,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     清除语义缓存
@@ -131,7 +131,7 @@ async def clear_cache(
 
 
 @router.get("/config")
-async def get_cache_config(current_user: dict = Depends(get_current_user)):
+async def get_cache_config(current_user: str = Depends(get_current_user)):
     """
     获取缓存配置
     """
@@ -149,7 +149,7 @@ async def get_cache_config(current_user: dict = Depends(get_current_user)):
 async def update_cache_config(
     similarity_threshold: float = Body(default=0.95, ge=0, le=1),
     ttl: int = Body(default=3600, ge=60),
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     更新缓存配置

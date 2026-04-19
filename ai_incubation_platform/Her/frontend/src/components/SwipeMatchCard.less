@@ -186,6 +186,54 @@
   margin-top: auto;
 }
 
+// ==================== 🚀 [新增] Her 推荐理由 ====================
+
+.her-recommendation {
+  margin: @space-3 0;
+  padding: @space-3 @space-4;
+  background: linear-gradient(135deg, rgba(184, 115, 107, 0.08) 0%, rgba(212, 165, 154, 0.12) 100%);
+  border-radius: @radius-lg;
+  border: 1px solid rgba(184, 115, 107, 0.2);
+
+  .her-badge {
+    display: flex;
+    align-items: center;
+    gap: @space-1;
+    margin-bottom: @space-2;
+
+    .her-icon {
+      font-size: @font-size-sm;
+    }
+
+    .her-label {
+      font-size: @font-size-xs;
+      font-weight: @font-weight-semibold;
+      color: @color-primary;
+      letter-spacing: @letter-spacing-tight;
+    }
+  }
+
+  .match-reasons {
+    display: flex;
+    flex-direction: column;
+    gap: @space-1;
+
+    .reason-text {
+      font-size: @font-size-sm;
+      color: @text-secondary;
+      line-height: @line-height-base;
+    }
+
+    .reason-item {
+      font-size: @font-size-sm;
+      color: @text-secondary;
+      line-height: @line-height-relaxed;
+      display: inline-flex;
+      align-items: center;
+    }
+  }
+}
+
 .interest-tags {
   display: flex;
   flex-wrap: wrap;

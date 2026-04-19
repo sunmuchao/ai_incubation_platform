@@ -2,6 +2,10 @@
 Her Tools - Helpers Module
 
 Utility functions for Her tools: path resolution, user ID extraction, database access, etc.
+
+【性能优化】
+- 缓存模块导入状态，避免重复 ImportError 处理
+- 批量查询减少 N+1 问题
 """
 import logging
 import json
@@ -9,9 +13,42 @@ import asyncio
 import os
 import sys
 import re
+import time
 from typing import Optional, Dict, Any, List
 
 logger = logging.getLogger(__name__)
+
+# ===== 性能优化：缓存模块导入状态 =====
+_module_cache: Dict[str, bool] = {}
+_cached_imports: Dict[str, Any] = {}  # 缓存已导入的模块对象
+
+
+def _cached_import(module_path: str, attr_name: str = None) -> Any:
+    """
+    缓存导入，避免重复 import 开销
+
+    Args:
+        module_path: 模块路径（如 'utils.db_session_manager'）
+        attr_name: 要导入的属性名（如 'db_session'），不传则返回模块本身
+    """
+    cache_key = f"{module_path}:{attr_name}" if attr_name else module_path
+
+    if cache_key in _cached_imports:
+        return _cached_imports[cache_key]
+
+    ensure_her_in_path()
+
+    import_start = time.time()
+    module = __import__(module_path, fromlist=[attr_name] if attr_name else [])
+    logger.info(f"[cached_import] 导入 {cache_key} 耗时: {time.time() - import_start:.3f}s")
+
+    if attr_name:
+        result = getattr(module, attr_name)
+    else:
+        result = module
+
+    _cached_imports[cache_key] = result
+    return result
 
 
 # ==================== Path & Environment ====================
@@ -113,15 +150,20 @@ def get_current_user_id() -> str:
 
 def run_async(coro):
     """安全执行异步协程"""
+    start_time = time.time()
     try:
         loop = asyncio.get_running_loop()
         import concurrent.futures
         future = asyncio.run_coroutine_threadsafe(coro, loop)
-        return future.result(timeout=30.0)
+        result = future.result(timeout=30.0)
+        logger.info(f"[run_async] 使用现有loop耗时: {time.time() - start_time:.3f}s")
+        return result
     except RuntimeError:
         new_loop = asyncio.new_event_loop()
         try:
-            return new_loop.run_until_complete(coro)
+            result = new_loop.run_until_complete(coro)
+            logger.info(f"[run_async] 创建新loop耗时: {time.time() - start_time:.3f}s")
+            return result
         finally:
             new_loop.close()
 
@@ -167,12 +209,16 @@ def should_exclude_demo_candidate_name(name: Optional[str]) -> bool:
 
 def get_db_user(user_id: str) -> Optional[Dict[str, Any]]:
     """从数据库获取用户信息（包含偏好字段）"""
+    start_time = time.time()
     ensure_her_in_path()
     from utils.db_session_manager import db_session
     from db.models import UserDB
 
     with db_session() as db:
+        query_start = time.time()
         user = db.query(UserDB).filter(UserDB.id == user_id).first()
+        logger.info(f"[get_db_user] 数据库查询耗时: {time.time() - query_start:.3f}s, user_id={user_id}")
+
         if user:
             interests = normalize_user_interests_field(getattr(user, "interests", None))
 
@@ -192,6 +238,7 @@ def get_db_user(user_id: str) -> Optional[Dict[str, Any]]:
             user_data["preferred_age_min"] = getattr(user, 'preferred_age_min', None)
             user_data["preferred_age_max"] = getattr(user, 'preferred_age_max', None)
             user_data["preferred_location"] = getattr(user, 'preferred_location', None)
+            user_data["preferred_gender"] = getattr(user, 'preferred_gender', None)  # 想找什么性别（硬约束）
             user_data["accept_remote"] = getattr(user, 'accept_remote', None)  # 是否接受异地
             user_data["want_children"] = getattr(user, 'want_children', None)
             user_data["spending_style"] = getattr(user, 'spending_style', None)
@@ -202,7 +249,10 @@ def get_db_user(user_id: str) -> Optional[Dict[str, Any]]:
             user_data["migration_willingness"] = getattr(user, 'migration_willingness', None)
             user_data["sleep_type"] = getattr(user, 'sleep_type', None)
 
+            logger.info(f"[get_db_user] 总耗时: {time.time() - start_time:.3f}s, user_id={user_id}")
             return user_data
+
+    logger.info(f"[get_db_user] 用户不存在, 耗时: {time.time() - start_time:.3f}s, user_id={user_id}")
     return None
 
 
@@ -283,6 +333,87 @@ def get_user_confidence(user_id: str) -> Dict[str, Any]:
         }
 
 
+def batch_get_user_confidence(user_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+    """
+    🔧 [性能优化] 批量获取用户置信度信息
+
+    解决 N+1 查询问题：一次数据库查询获取所有用户的置信度。
+
+    Args:
+        user_ids: 用户 ID 列表
+
+    Returns:
+        Dict[user_id, confidence_info]
+    """
+    start_time = time.time()
+    if not user_ids:
+        return {}
+
+    ensure_her_in_path()
+    from utils.db_session_manager import db_session_readonly
+
+    # 默认置信度
+    default_confidence = {
+        "confidence_level": "medium",
+        "confidence_score": 40,
+        "confidence_icon": "✓",
+    }
+
+    result = {uid: default_confidence.copy() for uid in user_ids}
+
+    try:
+        with db_session_readonly() as db:
+            # 批量查询置信度详情表
+            try:
+                from models.profile_confidence_models import ProfileConfidenceDetailDB
+                confidence_details = db.query(ProfileConfidenceDetailDB).filter(
+                    ProfileConfidenceDetailDB.user_id.in_(user_ids)
+                ).all()
+
+                icon_map = {
+                    "very_high": "💎",
+                    "high": "🌟",
+                    "medium": "✓",
+                    "low": "⚠️"
+                }
+
+                for detail in confidence_details:
+                    level = detail.confidence_level or "medium"
+                    score = int(detail.overall_confidence * 100) if detail.overall_confidence else 30
+                    result[detail.user_id] = {
+                        "confidence_level": level,
+                        "confidence_score": score,
+                        "confidence_icon": icon_map.get(level, "✓"),
+                    }
+            except ImportError:
+                logger.warning("[batch_get_user_confidence] ProfileConfidenceDetailDB 模型未导入")
+
+            # 批量查询实名认证状态（补充已认证用户的置信度）
+            try:
+                from db.models import IdentityVerificationDB
+                verified_users = db.query(IdentityVerificationDB.user_id).filter(
+                    IdentityVerificationDB.user_id.in_(user_ids),
+                    IdentityVerificationDB.verification_status == "verified"
+                ).all()
+
+                for (uid,) in verified_users:
+                    # 如果没有更高级的置信度，升级为 high
+                    if result[uid]["confidence_level"] == "medium":
+                        result[uid] = {
+                            "confidence_level": "high",
+                            "confidence_score": 70,
+                            "confidence_icon": "🌟",
+                        }
+            except Exception as e:
+                logger.warning(f"[batch_get_user_confidence] 实名认证查询失败: {e}")
+
+    except Exception as e:
+        logger.warning(f"[batch_get_user_confidence] 批量获取置信度失败: {e}")
+
+    logger.info(f"[batch_get_user_confidence] 完成: {len(user_ids)} 用户, 耗时 {time.time() - start_time:.3f}s")
+    return result
+
+
 # ==================== Exports ====================
 
 __all__ = [
@@ -292,6 +423,7 @@ __all__ = [
     "run_async",
     "get_db_user",
     "get_user_confidence",
+    "batch_get_user_confidence",
     "normalize_user_interests_field",
     "should_exclude_demo_candidate_name",
 ]

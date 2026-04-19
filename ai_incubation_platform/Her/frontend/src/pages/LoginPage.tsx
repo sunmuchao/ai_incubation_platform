@@ -184,7 +184,12 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
 
       const response = await userApi.login(values.username, passwordHash)
       if (response.access_token) {
-        authStorage.saveAuth({ token: response.access_token, user: response.user })
+        // 🔧 [修复] 存储 access_token + refresh_token
+        authStorage.saveAuth({
+          access_token: response.access_token,
+          refresh_token: response.refresh_token,
+          user: response.user
+        })
         message.success('登录成功！')
         onLoginSuccess?.()
       }
@@ -263,7 +268,12 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
               gender: values.gender,
               location: values.location,
             }
-            authStorage.saveAuth({ token: loginResponse.access_token, user: fullUserInfo })
+            // 🔧 [修复] 存储 access_token + refresh_token
+            authStorage.saveAuth({
+              access_token: loginResponse.access_token,
+              refresh_token: loginResponse.refresh_token,
+              user: fullUserInfo
+            })
             registrationStorage.reset()
             message.success('注册并登录成功！')
             onLoginSuccess?.()
@@ -388,16 +398,17 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
         setWechatStatus(data.status)
 
         // 登录成功
-        if (data.status === 'confirmed' && data.token) {
+        if (data.status === 'confirmed' && (data.token || data.access_token)) {
           // 停止轮询
           if (wechatPollingRef.current) {
             clearInterval(wechatPollingRef.current)
             wechatPollingRef.current = null
           }
 
-          // 保存登录状态
+          // 🔧 [修复] 兼容旧格式 token 和新格式 access_token
           authStorage.saveAuth({
-            token: data.token,
+            access_token: data.access_token || data.token,
+            refresh_token: data.refresh_token || '', // 微信登录可能没有 refresh_token
             user: { id: data.user_id },
           })
 
@@ -406,8 +417,9 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
 
           // 获取完整用户信息
           try {
+            const accessToken = data.access_token || data.token
             const userResponse = await fetch('/api/users/me', {
-              headers: { Authorization: `Bearer ${data.token}` },
+              headers: { Authorization: `Bearer ${accessToken}` },
             })
             if (userResponse.ok) {
               const userData = await userResponse.json()
@@ -553,8 +565,10 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
                     type="link"
                     size="small"
                     onClick={() => {
+                      // 🔧 [修复] 开发环境使用兼容格式
                       authStorage.saveAuth({
-                        token: 'dev-token',
+                        access_token: 'dev-token',
+                        refresh_token: 'dev-refresh-token',
                         user: {
                           id: 'user-anonymous-dev',
                           username: 'user-anonymous-dev',
@@ -651,7 +665,7 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
           footer={null}
           width={360}
           centered
-          destroyOnClose
+          destroyOnHidden
         >
           <div className="wechat-login-content">
             {wechatLoading ? (
@@ -879,6 +893,7 @@ const RegisterForm: React.FC<{
             <Input.Password
               prefix={<LockOutlined />}
               placeholder="至少 8 个字符，建议包含大小写字母、数字、特殊字符"
+              autoComplete="new-password"
               iconRender={(visible) => visible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
               value={password}
               onChange={handlePasswordChange}

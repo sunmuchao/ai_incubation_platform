@@ -31,7 +31,13 @@ export const GENERATIVE_UI_SCHEMA: Record<string, ComponentSchema> = {
     backend_type: 'MatchCardList',
     frontend_card: 'match',
     required_props: ['matches'],
-    description: '匹配结果列表，展示候选人卡片',
+    description: '匹配结果列表，展示候选人卡片（支持筛选：地区、年龄、排序）',
+  },
+  FilterableMatchCardList: {
+    backend_type: 'FilterableMatchCardList',
+    frontend_card: 'match',
+    required_props: ['matches', 'all_candidates', 'total_candidates'],
+    description: '带筛选功能的候选人列表，用户可自主筛选地区、年龄、排序，支持"显示更多"',
   },
   DailyRecommendCard: {
     backend_type: 'DailyRecommendCard',
@@ -44,6 +50,12 @@ export const GENERATIVE_UI_SCHEMA: Record<string, ComponentSchema> = {
     frontend_card: 'user_profile',
     required_props: ['user_id', 'name', 'age', 'location'],
     description: '用户详情卡片，用于展示选中候选人信息，包含开始对话按钮',
+  },
+  UserProfileCardList: {
+    backend_type: 'UserProfileCardList',
+    frontend_card: 'user_profile_list',
+    required_props: ['cards', 'total'],
+    description: '多个用户卡片列表，Agent 逐个输出 UserProfileCard',
   },
 
   // ===== 信息收集 =====
@@ -146,6 +158,14 @@ export const GENERATIVE_UI_SCHEMA: Record<string, ComponentSchema> = {
     frontend_card: null,
     required_props: [],
     description: 'AI 响应卡片（纯文本）',
+  },
+
+  // ===== 对话引导 =====
+  ConversationGuideCard: {
+    backend_type: 'ConversationGuideCard',
+    frontend_card: 'feature',
+    required_props: ['intent_type'],
+    description: '对话引导卡片（话题推荐、破冰建议等），Agent 自主生成内容',
   },
 
   // ===== 学习结果确认 =====

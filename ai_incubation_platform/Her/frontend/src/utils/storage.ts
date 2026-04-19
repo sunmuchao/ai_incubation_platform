@@ -47,7 +47,8 @@ export interface UserInfo {
 }
 
 export interface AuthData {
-  token: string
+  access_token: string
+  refresh_token: string
   user: UserInfo
 }
 
@@ -56,28 +57,46 @@ export interface AuthData {
 const STORAGE_KEYS = {
   JWT_TOKEN: 'jwt_token',
   TOKEN: 'token', // 兼容旧版本
+  REFRESH_TOKEN: 'refresh_token', // 🔧 [新增] 刷新令牌
   USER_INFO: 'user_info',
   REGISTRATION_COMPLETED: 'has_completed_registration_conversation',
   TEST_USER_ID: 'test_user_id',
   PWA_INSTALL_DISMISSED: 'pwa-install-dismissed',
   HER_SLEEPING_IN_CHAT: 'her_sleeping_in_chat', // 聊天室中 Her 休眠偏好
+  CHAT_MESSAGES: 'chat_messages', // ChatInterface 消息持久化
+  FEATURE_GUIDE_SHOWN: 'feature_guide_shown', // 🔧 [问题17方案B] 首次功能引导已显示
 } as const
 
 // ==================== 认证存储 ====================
 
 export const authStorage = {
   /**
-   * 获取 JWT Token
+   * 获取 JWT Token (access_token)
    */
   getToken(): string | null {
     return localStorage.getItem(STORAGE_KEYS.JWT_TOKEN) || localStorage.getItem(STORAGE_KEYS.TOKEN)
   },
 
   /**
-   * 设置 JWT Token
+   * 设置 JWT Token (access_token)
    */
   setToken(token: string): void {
     localStorage.setItem(STORAGE_KEYS.JWT_TOKEN, token)
+  },
+
+  /**
+   * 获取 Refresh Token
+   * 🔧 [新增] 用于刷新 access_token
+   */
+  getRefreshToken(): string | null {
+    return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)
+  },
+
+  /**
+   * 设置 Refresh Token
+   */
+  setRefreshToken(token: string): void {
+    localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, token)
   },
 
   /**
@@ -120,9 +139,18 @@ export const authStorage = {
 
   /**
    * 保存认证数据 (登录成功后调用)
+   * 🔧 [修复] 存储 access_token + refresh_token
    */
   saveAuth(data: AuthData): void {
-    this.setToken(data.token)
+    // 兼容旧格式：如果传入的是 { token, user }，则只存储 token
+    if ('token' in data && !('access_token' in data)) {
+      this.setToken((data as any).token)
+    } else {
+      this.setToken(data.access_token)
+      if (data.refresh_token) {
+        this.setRefreshToken(data.refresh_token)
+      }
+    }
     this.setUser(data.user)
   },
 
@@ -139,6 +167,7 @@ export const authStorage = {
   clear(): void {
     localStorage.removeItem(STORAGE_KEYS.JWT_TOKEN)
     localStorage.removeItem(STORAGE_KEYS.TOKEN)
+    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN)
     localStorage.removeItem(STORAGE_KEYS.USER_INFO)
     localStorage.removeItem(STORAGE_KEYS.REGISTRATION_COMPLETED)
   },
@@ -210,9 +239,13 @@ export const pwaStorage = {
 export const herStorage = {
   /**
    * 检查在聊天室中 Her 是否处于休眠状态
+   * 🔧 [问题16方案A] 默认返回 false（唤醒），让用户能立刻看到悬浮球
    */
   isSleepingInChat(): boolean {
-    return localStorage.getItem(STORAGE_KEYS.HER_SLEEPING_IN_CHAT) === 'true'
+    const value = localStorage.getItem(STORAGE_KEYS.HER_SLEEPING_IN_CHAT)
+    // 🔧 [修复] 新用户默认唤醒（休眠需要用户主动设置）
+    // 只有明确设置为 'true' 才返回 true
+    return value === 'true'
   },
 
   /**
@@ -220,6 +253,110 @@ export const herStorage = {
    */
   setSleepingInChat(sleeping: boolean): void {
     localStorage.setItem(STORAGE_KEYS.HER_SLEEPING_IN_CHAT, sleeping ? 'true' : 'false')
+  },
+}
+
+// ==================== 首次引导弹窗存储 ====================
+
+/**
+ * 🔧 [问题17方案B] 首次功能引导弹窗存储
+ * 新用户首次进入时显示功能引导，告知用户如何使用 Her
+ */
+export const guideStorage = {
+  /**
+   * 检查是否已显示过功能引导弹窗
+   */
+  isFeatureGuideShown(): boolean {
+    return localStorage.getItem(STORAGE_KEYS.FEATURE_GUIDE_SHOWN) === 'true'
+  },
+
+  /**
+   * 标记功能引导弹窗已显示
+   */
+  markFeatureGuideShown(): void {
+    localStorage.setItem(STORAGE_KEYS.FEATURE_GUIDE_SHOWN, 'true')
+  },
+
+  /**
+   * 重置功能引导弹窗状态（用于测试）
+   */
+  resetFeatureGuide(): void {
+    localStorage.removeItem(STORAGE_KEYS.FEATURE_GUIDE_SHOWN)
+  },
+}
+
+// ==================== ChatInterface 消息存储 ====================
+
+// 消息存储上限（防止 localStorage 超限）
+const MAX_STORED_MESSAGES = 30
+
+export interface StoredMessage {
+  id: string
+  type: 'user' | 'ai' | 'system'
+  content: string
+  timestamp: string
+  generativeCard?: string
+  generativeData?: unknown
+  featureAction?: string
+  suggestions?: string[]
+  next_actions?: string[]
+  matches?: unknown[]
+}
+
+export const chatStorage = {
+  /**
+   * 获取用户的聊天消息
+   * @param userId 用户 ID，用于区分不同用户的消息
+   */
+  getMessages(userId: string): StoredMessage[] {
+    const key = `${STORAGE_KEYS.CHAT_MESSAGES}_${userId}`
+    const data = localStorage.getItem(key)
+    if (!data) return []
+
+    try {
+      const messages = JSON.parse(data) as StoredMessage[]
+      // 过滤掉过期消息（超过 7 天）
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+      return messages.filter(msg => {
+        const msgTime = new Date(msg.timestamp).getTime()
+        return msgTime > sevenDaysAgo
+      })
+    } catch {
+      return []
+    }
+  },
+
+  /**
+   * 保存用户的聊天消息
+   * @param userId 用户 ID
+   * @param messages 消息列表
+   */
+  setMessages(userId: string, messages: StoredMessage[]): void {
+    const key = `${STORAGE_KEYS.CHAT_MESSAGES}_${userId}`
+    // 只保留最近的消息（防止 localStorage 超限）
+    const toStore = messages.slice(-MAX_STORED_MESSAGES)
+    try {
+      localStorage.setItem(key, JSON.stringify(toStore))
+    } catch (e) {
+      // localStorage 超限，清理旧数据后重试
+      console.warn('[chatStorage] localStorage 超限，清理旧数据')
+      localStorage.removeItem(key)
+      try {
+        localStorage.setItem(key, JSON.stringify(toStore.slice(-15)))
+      } catch {
+        // 仍然失败，放弃存储
+        console.error('[chatStorage] 无法存储消息')
+      }
+    }
+  },
+
+  /**
+   * 清除用户的聊天消息
+   * @param userId 用户 ID
+   */
+  clearMessages(userId: string): void {
+    const key = `${STORAGE_KEYS.CHAT_MESSAGES}_${userId}`
+    localStorage.removeItem(key)
   },
 }
 
@@ -273,5 +410,7 @@ export default {
   dev: devStorage,
   pwa: pwaStorage,
   her: herStorage,
+  guide: guideStorage, // 🔧 [问题17方案B] 首次引导弹窗存储
+  chat: chatStorage,
   ...storage,
 }

@@ -19,11 +19,11 @@ router = APIRouter(prefix="/api/verification", tags=["verification"])
 @router.get("/badges")
 async def get_user_badges(
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取用户的信任徽章"""
     service = VerificationBadgeService(db)
-    badges = service.get_user_badges(current_user.id)
+    badges = service.get_user_badges(current_user)
 
     return {
         "success": True,
@@ -34,11 +34,11 @@ async def get_user_badges(
 @router.get("/trust-score")
 async def get_trust_score(
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取用户信任评分"""
     service = VerificationBadgeService(db)
-    trust_data = service.get_trust_score(current_user.id)
+    trust_data = service.get_trust_score(current_user)
 
     return {
         "success": True,
@@ -79,14 +79,14 @@ async def submit_education_verification(
     certificate_url: Optional[str] = Body(default=None),
     student_id_url: Optional[str] = Body(default=None),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """提交学历认证申请"""
     service = VerificationBadgeService(db)
 
     try:
         verification = service.submit_education_verification(
-            user_id=current_user.id,
+            user_id=current_user,
             school_name=school_name,
             degree=degree,
             major=major,
@@ -115,14 +115,14 @@ async def submit_career_verification(
     work_email: Optional[str] = Body(default=None),
     work_certificate_url: Optional[str] = Body(default=None),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """提交职业认证申请"""
     service = VerificationBadgeService(db)
 
     try:
         verification = service.submit_career_verification(
-            user_id=current_user.id,
+            user_id=current_user,
             company_name=company_name,
             position=position,
             industry=industry,
@@ -145,13 +145,13 @@ async def submit_career_verification(
 @router.get("/education/status")
 async def get_education_verification_status(
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取学历认证状态"""
     from db.models import EducationVerificationDB
 
     verification = db.query(EducationVerificationDB).filter(
-        EducationVerificationDB.user_id == current_user.id
+        EducationVerificationDB.user_id == current_user
     ).order_by(EducationVerificationDB.created_at.desc()).first()
 
     if not verification:
@@ -178,13 +178,13 @@ async def get_education_verification_status(
 @router.get("/career/status")
 async def get_career_verification_status(
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取职业认证状态"""
     from db.models import CareerVerificationDB
 
     verification = db.query(CareerVerificationDB).filter(
-        CareerVerificationDB.user_id == current_user.id
+        CareerVerificationDB.user_id == current_user
     ).order_by(CareerVerificationDB.created_at.desc()).first()
 
     if not verification:
@@ -212,7 +212,7 @@ async def approve_education_verification(
     verification_id: str,
     school_type: Optional[str] = Body(default=None),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """批准学历认证（管理员）"""
     from utils.admin_check import require_admin
@@ -236,7 +236,7 @@ async def approve_career_verification(
     verification_id: str,
     company_type: Optional[str] = Body(default=None),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """批准职业认证（管理员）"""
     from utils.admin_check import require_admin
@@ -258,7 +258,7 @@ async def approve_career_verification(
 @router.get("/stats")
 async def get_verification_stats(
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取认证统计（管理员）"""
     from utils.admin_check import require_admin

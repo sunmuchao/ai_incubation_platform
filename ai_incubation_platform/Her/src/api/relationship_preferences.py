@@ -43,11 +43,11 @@ async def get_relationship_statuses(db: Session = Depends(get_db)):
 @router.get("/preferences")
 async def get_user_preferences(
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取用户的关系偏好"""
     service = RelationshipPreferenceService(db)
-    preferences = service.get_user_preferences(current_user.id)
+    preferences = service.get_user_preferences(current_user)
 
     return {
         "success": True,
@@ -61,14 +61,14 @@ async def update_preferences(
     current_status: Optional[str] = Body(default=None),
     expectation_description: Optional[str] = Body(default=None),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """更新用户的关系偏好"""
     service = RelationshipPreferenceService(db)
 
     try:
         preferences = service.update_preferences(
-            user_id=current_user.id,
+            user_id=current_user,
             relationship_types=relationship_types,
             current_status=current_status,
             expectation_description=expectation_description,
@@ -86,13 +86,13 @@ async def update_preferences(
 async def check_relationship_compatibility(
     target_user_id: str,
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """检查与目标用户的关系兼容性"""
     service = RelationshipPreferenceService(db)
 
     compatibility = service.match_relationship_compatibility(
-        user_id=current_user.id,
+        user_id=current_user,
         target_user_id=target_user_id,
     )
 
@@ -105,11 +105,11 @@ async def check_relationship_compatibility(
 @router.get("/stats")
 async def get_compatibility_stats(
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """获取关系兼容性统计"""
     service = RelationshipPreferenceService(db)
-    stats = service.get_compatibility_stats(current_user.id)
+    stats = service.get_compatibility_stats(current_user)
 
     return {
         "success": True,
@@ -121,7 +121,7 @@ async def get_compatibility_stats(
 async def batch_check_compatibility(
     target_user_ids: List[str] = Body(...),
     db: Session = Depends(get_db),
-    current_user: UserDB = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """批量检查与多个用户的兼容性"""
     service = RelationshipPreferenceService(db)
@@ -129,7 +129,7 @@ async def batch_check_compatibility(
     results = {}
     for target_id in target_user_ids:
         results[target_id] = service.match_relationship_compatibility(
-            user_id=current_user.id,
+            user_id=current_user,
             target_user_id=target_id,
         )
 

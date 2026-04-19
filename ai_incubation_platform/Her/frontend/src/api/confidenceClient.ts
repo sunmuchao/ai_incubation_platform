@@ -72,7 +72,7 @@ const confidenceApi = {
    * 获取当前用户置信度摘要
    */
   async getConfidenceSummary(): Promise<ConfidenceSummary> {
-    const response = await apiClient.get('/api/profile-confidence/summary')
+    const response = await apiClient.get('/api/profile/confidence/summary')
     return response.data
   },
 
@@ -80,7 +80,7 @@ const confidenceApi = {
    * 获取其他用户置信度摘要
    */
   async getOtherUserConfidenceSummary(userId: string): Promise<ConfidenceSummary> {
-    const response = await apiClient.get(`/api/profile-confidence/summary/${userId}`)
+    const response = await apiClient.get(`/api/profile/confidence/summary/${userId}`)
     return response.data
   },
 
@@ -88,7 +88,7 @@ const confidenceApi = {
    * 获取置信度详情
    */
   async getConfidenceDetail(): Promise<ConfidenceDetail> {
-    const response = await apiClient.get('/api/profile-confidence/detail')
+    const response = await apiClient.get('/api/profile/confidence/detail')
     return response.data
   },
 
@@ -96,7 +96,7 @@ const confidenceApi = {
    * 获取验证建议
    */
   async getVerificationRecommendations(): Promise<{ recommendations: VerificationRecommendation[] }> {
-    const response = await apiClient.get('/api/profile-confidence/recommendations')
+    const response = await apiClient.get('/api/profile/confidence/recommendations')
     return response.data
   },
 
@@ -104,7 +104,7 @@ const confidenceApi = {
    * 刷新置信度评估
    */
   async refreshConfidence(force: boolean = false): Promise<{ success: boolean }> {
-    const response = await apiClient.post('/api/profile-confidence/refresh', { force })
+    const response = await apiClient.post('/api/profile/confidence/refresh', { force })
     return response.data
   },
 
@@ -112,7 +112,7 @@ const confidenceApi = {
    * 获取置信度解释
    */
   async getConfidenceExplanation(): Promise<ConfidenceExplanation> {
-    const response = await apiClient.get('/api/profile-confidence/explanation')
+    const response = await apiClient.get('/api/profile/confidence/explanation')
     return response.data
   },
 }

@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Depends, Body
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from datetime import datetime
+from sqlalchemy.orm import Session
 import json
 import uuid
 
@@ -20,6 +21,7 @@ from models.user import MatchResult, User
 from models.membership import MembershipTier
 from db.database import get_db
 from db.repositories import UserRepository
+from db.models import SwipeActionDB, MatchHistoryDB
 from utils.logger import logger, get_trace_id
 from cache import cache_manager
 from middleware.rate_limiter import rate_limit_match
@@ -745,17 +747,13 @@ async def get_recommendations(
     # 批量查询认证状态（优化 N+1 查询）
     candidate_ids = [c.get("user_id") for c in candidates]
     from sqlalchemy import text
-    # 🔧 [修复] SQL 参数绑定：单元素 tuple 需要特殊处理
-    if len(candidate_ids) == 1:
-        verified_users = db.execute(
-            text("SELECT user_id FROM identity_verifications WHERE user_id = :user_id AND verification_status = 'verified'"),
-            {"user_id": candidate_ids[0]}
-        ).fetchall()
-    else:
-        verified_users = db.execute(
-            text("SELECT user_id FROM identity_verifications WHERE user_id IN :user_ids AND verification_status = 'verified'"),
-            {"user_ids": tuple(candidate_ids)}
-        ).fetchall()
+    # 🔧 [修复] SQL 参数绑定：SQLite 不支持 IN :param 绑定 tuple，需展开
+    placeholders = ",".join([f":id_{i}" for i in range(len(candidate_ids))])
+    params = {f"id_{i}": id for i, id in enumerate(candidate_ids)}
+    verified_users = db.execute(
+        text(f"SELECT user_id FROM identity_verifications WHERE user_id IN ({placeholders}) AND verification_status = 'verified'"),
+        params
+    ).fetchall()
     verified_user_ids = {row[0] for row in verified_users}
 
     recommendations = []
@@ -796,7 +794,8 @@ async def get_recommendations(
 @router.post("/swipe")
 async def swipe(
     request: SwipeRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     滑动操作（喜欢/无感/超级喜欢）
@@ -805,69 +804,85 @@ async def swipe(
         target_user_id: 目标用户 ID
         action: 操作类型 (like, pass, super_like)
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     logger.info(f"Swipe: {user_id} -> {request.target_user_id}, action={request.action}")
 
     # 检查会员权限
-    db = get_db()
     membership_svc = get_membership_service(db)
     allowed, message = membership_svc.check_action_limit(user_id, request.action)
     if not allowed:
         raise HTTPException(status_code=403, detail=message)
 
-    service = UserRepository(get_db())
+    service = UserRepository(db)
 
     # 检查目标用户是否存在
     target_user = service.get_by_id(request.target_user_id)
     if not target_user:
         raise HTTPException(status_code=404, detail="目标用户不存在")
 
-    # 记录滑动行为到数据库
-    db = get_db()
-    cursor = db.cursor()
-
     # 检查是否已经滑动过
-    cursor.execute("""
-        SELECT * FROM swipe_actions
-        WHERE user_id = %s AND target_user_id = %s
-    """, (user_id, request.target_user_id))
+    existing = db.query(SwipeActionDB).filter(
+        SwipeActionDB.user_id == user_id,
+        SwipeActionDB.target_user_id == request.target_user_id
+    ).first()
 
-    existing = cursor.fetchone()
     if existing:
         # 已经滑动过，更新记录
-        cursor.execute("""
-            UPDATE swipe_actions
-            SET action = %s, created_at = %s
-            WHERE user_id = %s AND target_user_id = %s
-        """, (request.action, datetime.now(), user_id, request.target_user_id))
+        existing.action = request.action
+        existing.created_at = datetime.now()
     else:
         # 新记录
-        cursor.execute("""
-            INSERT INTO swipe_actions (id, user_id, target_user_id, action, created_at)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (str(uuid.uuid4()), user_id, request.target_user_id, request.action, datetime.now()))
+        swipe_action = SwipeActionDB(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            target_user_id=request.target_user_id,
+            action=request.action,
+            is_matched=False,
+            created_at=datetime.now()
+        )
+        db.add(swipe_action)
 
     db.commit()
 
     # 检查是否匹配（双向喜欢）
     is_match = False
+    match_id = None
     if request.action in ["like", "super_like"]:
         # 检查对方是否也喜欢当前用户
-        cursor.execute("""
-            SELECT * FROM swipe_actions
-            WHERE user_id = %s AND target_user_id = %s AND action IN ('like', 'super_like')
-        """, (request.target_user_id, user_id))
+        reverse_like = db.query(SwipeActionDB).filter(
+            SwipeActionDB.user_id == request.target_user_id,
+            SwipeActionDB.target_user_id == user_id,
+            SwipeActionDB.action.in_(["like", "super_like"])
+        ).first()
 
-        if cursor.fetchone():
+        if reverse_like:
             is_match = True
             match_id = str(uuid.uuid4())
             logger.info(f"Match! {user_id} <-> {request.target_user_id}")
 
             # 创建匹配记录
-            cursor.execute("""
-                INSERT INTO match_history (id, user_id_1, user_id_2, compatibility_score, status, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (match_id, user_id, request.target_user_id, 0.8, "matched", datetime.now()))
+            match_history = MatchHistoryDB(
+                id=match_id,
+                user_id_1=user_id,
+                user_id_2=request.target_user_id,
+                compatibility_score=0.8,
+                status="matched",
+                created_at=datetime.now()
+            )
+            db.add(match_history)
+
+            # 更新滑动记录为匹配状态
+            if existing:
+                existing.is_matched = True
+            else:
+                # 获取刚创建的滑动记录
+                new_swipe = db.query(SwipeActionDB).filter(
+                    SwipeActionDB.user_id == user_id,
+                    SwipeActionDB.target_user_id == request.target_user_id
+                ).first()
+                if new_swipe:
+                    new_swipe.is_matched = True
+
             db.commit()
 
             # AI Native: 触发匹配事件，引发破冰心跳
@@ -886,9 +901,6 @@ async def swipe(
                 logger.info(f"📡 [MATCH] Event 'match_created' emitted for match {match_id}")
             except Exception as e:
                 logger.warning(f"Failed to emit match_created event: {e}")
-
-    cursor.close()
-    db.close()
 
     # 获取剩余喜欢次数
     remaining = membership_svc.get_user_limit(user_id, "daily_likes")
@@ -910,7 +922,8 @@ async def swipe(
 @router.post("/swipe/{swipe_id}/undo")
 async def undo_swipe(
     swipe_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     撤销滑动操作（会员功能）
@@ -918,30 +931,24 @@ async def undo_swipe(
     Args:
         swipe_id: 滑动记录 ID
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
 
     # 检查是否有回退权限
-    db = get_db()
     membership_svc = get_membership_service(db)
     allowed, message = membership_svc.check_action_limit(user_id, "rewind")
     if not allowed:
         raise HTTPException(status_code=403, detail=message)
 
-    db = get_db()
-    cursor = db.cursor()
+    # 删除滑动记录（使用 SQLAlchemy ORM）
+    swipe_record = db.query(SwipeActionDB).filter(
+        SwipeActionDB.id == swipe_id,
+        SwipeActionDB.user_id == user_id
+    ).first()
 
-    # 删除滑动记录
-    cursor.execute("""
-        DELETE FROM swipe_actions
-        WHERE id = %s AND user_id = %s
-    """, (swipe_id, user_id))
-
-    affected = cursor.rowcount
-    db.commit()
-    cursor.close()
-    db.close()
-
-    if affected == 0:
+    if not swipe_record:
         raise HTTPException(status_code=404, detail="未找到滑动记录")
+
+    db.delete(swipe_record)
+    db.commit()
 
     return {"success": True, "message": "已撤销滑动"}

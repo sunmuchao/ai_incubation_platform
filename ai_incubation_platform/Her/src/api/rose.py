@@ -88,13 +88,13 @@ class RosePackageResponse(BaseModel):
 # ==================== API 端点 ====================
 
 @router.get("/balance", response_model=RoseBalanceResponse)
-async def get_rose_balance(current_user: dict = Depends(get_current_user)):
+async def get_rose_balance(current_user: str = Depends(get_current_user)):
     """
     获取用户玫瑰余额
 
     返回可用玫瑰数、已发送数、下月刷新时间等
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     db = next(get_db())
     rose_svc = get_rose_service(db)
 
@@ -112,7 +112,7 @@ async def get_rose_balance(current_user: dict = Depends(get_current_user)):
 @router.post("/send", response_model=RoseSendResponse)
 async def send_rose(
     request: RoseSendRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     发送玫瑰
@@ -124,7 +124,7 @@ async def send_rose(
     Returns:
         发送结果，包括剩余玫瑰数和是否匹配
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     logger.info(f"Sending rose: {user_id} -> {request.target_user_id}")
 
     # 验证附带消息长度
@@ -143,13 +143,13 @@ async def send_rose(
 
 
 @router.get("/standout", response_model=StandoutListResponse)
-async def get_standout_list(current_user: dict = Depends(get_current_user)):
+async def get_standout_list(current_user: str = Depends(get_current_user)):
     """
     获取 Standout 列表
 
     显示所有向你发送玫瑰的用户，按匹配度和发送时间排序
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     db = next(get_db())
     rose_svc = get_rose_service(db)
 
@@ -161,7 +161,7 @@ async def get_standout_list(current_user: dict = Depends(get_current_user)):
 @router.post("/standout/respond")
 async def respond_to_standout(
     request: RespondStandoutRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     回应 Standout 用户
@@ -173,7 +173,7 @@ async def respond_to_standout(
     Returns:
         回应结果
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
 
     if request.action not in ["like", "pass"]:
         raise HTTPException(status_code=400, detail="动作必须是 like 或 pass")
@@ -200,7 +200,7 @@ async def respond_to_standout(
 @router.post("/purchase", response_model=PurchaseRoseResponse)
 async def purchase_roses(
     request: PurchaseRoseRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     购买玫瑰
@@ -212,7 +212,7 @@ async def purchase_roses(
     Returns:
         购买结果，包括支付链接
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     logger.info(f"Purchasing roses: user={user_id}, package={request.package_type}")
 
     db = next(get_db())
@@ -246,7 +246,7 @@ async def purchase_roses(
 @router.post("/purchase/{purchase_id}/complete")
 async def complete_purchase(
     purchase_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     完成购买（支付成功后调用）
@@ -257,7 +257,7 @@ async def complete_purchase(
     Returns:
         完成结果，包括新增的玫瑰数
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
 
     db = next(get_db())
     rose_svc = get_rose_service(db)
@@ -308,14 +308,14 @@ async def get_rose_packages():
 @router.get("/transactions")
 async def get_rose_transactions(
     limit: int = 20,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     获取玫瑰交易记录
 
     显示用户发送和收到的玫瑰历史
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     db = next(get_db())
 
     from models.rose import RoseTransactionDB

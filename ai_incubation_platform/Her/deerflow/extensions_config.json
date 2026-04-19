@@ -25,6 +25,10 @@
       "enabled": true,
       "description": "Her 约会教练流程 - 约会前准备到约会后复盘"
     },
+    "her_match_display": {
+      "enabled": true,
+      "description": "Her 候选人展示规则 - 展示候选人时的输出格式规范"
+    },
     "her_relationship_guide": {
       "enabled": true,
       "description": "Her 关系指导流程 - 关系健康检查到冲突调解"

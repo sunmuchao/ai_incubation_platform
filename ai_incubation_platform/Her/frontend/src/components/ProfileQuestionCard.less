@@ -1,172 +1,298 @@
-/* AI 动态问题卡片样式 */
+/* AI 动态问题卡片样式 - 品牌视觉升级版 */
+
+// 品牌色系
+@brand-primary: #D4A59A;
+@brand-secondary: #C88B8B;
+@brand-light: rgba(212, 165, 154, 0.06);
+@brand-gradient: linear-gradient(135deg, @brand-primary 0%, @brand-secondary 100%);
 
 .profile-question-card {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(212, 165, 154, 0.12);
+  // 🎯 [改进] 品牌色渐变背景
+  background: linear-gradient(180deg, rgba(255, 248, 245, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(212, 165, 154, 0.15);
   overflow: hidden;
+  border: 1px solid rgba(212, 165, 154, 0.12);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 6px 24px rgba(212, 165, 154, 0.2);
+  }
 
   .ant-card-body {
-    padding: 16px;
-  }
-}
-
-.question-header {
-  margin-bottom: 16px;
-
-  .question-text {
-    margin-bottom: 4px !important;
-    color: #1a1a1a;
-    font-weight: 500;
+    padding: 20px;
   }
 
-  .question-subtitle {
-    display: block;
-    font-size: 13px;
-  }
-}
+  // 🎯 [新增] 进度指示器样式
+  .progress-header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(212, 165, 154, 0.1);
 
-.question-body {
-  // 通用选项网格
-  .options-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
 
-    &.hidden {
-      opacity: 0.3;
-      pointer-events: none;
-    }
-  }
-
-  // Loading 覆盖层
-  .loading-overlay {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    margin-bottom: 12px;
-  }
-
-  // 错误提示
-  .error-overlay {
-    padding: 12px;
-    margin-bottom: 12px;
-    text-align: center;
-    background: rgba(255, 77, 79, 0.06);
-    border-radius: 8px;
-  }
-
-  // 单选卡片
-  .option-card {
-    background: rgba(212, 165, 154, 0.06);
-    border: 1px solid rgba(212, 165, 154, 0.12);
-    border-radius: 12px;
-    padding: 14px 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    position: relative;
-
-    &:hover:not(.disabled) {
-      background: rgba(212, 165, 154, 0.12);
-      border-color: rgba(212, 165, 154, 0.25);
-      transform: translateY(-1px);
-    }
-
-    &.selected {
-      background: rgba(212, 165, 154, 0.15);
-      border-color: #D4A59A;
-      box-shadow: 0 2px 8px rgba(212, 165, 154, 0.2);
-    }
-
-    &.disabled {
-      opacity: 0.7;
-      cursor: default;
-    }
-
-    &.checkbox {
-      padding: 10px 12px;
-
-      .ant-checkbox-wrapper {
-        display: flex;
-        align-items: center;
+      .field-icon {
+        font-size: 18px;
+        opacity: 0.8;
       }
     }
 
-    .option-icon {
-      font-size: 18px;
-      flex-shrink: 0;
+    .ant-progress {
+      .ant-progress-bg {
+        border-radius: 4px;
+      }
+    }
+  }
+
+  .question-header {
+    margin-bottom: 16px;
+
+    // 🎯 [新增] 一票否决维度徽章
+    .veto-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      background: rgba(200, 139, 139, 0.1);
+      border-radius: 12px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(200, 139, 139, 0.2);
     }
 
-    .option-label {
-      flex: 1;
-      font-size: 14px;
-      color: #333;
-    }
-
-    .check-icon {
-      color: #D4A59A;
+    .question-text {
+      margin-bottom: 4px !important;
+      color: #1a1a1a;
+      font-weight: 600;
       font-size: 16px;
-      position: absolute;
-      right: 8px;
-      top: 50%;
-      transform: translateY(-50%);
+    }
+
+    .question-subtitle {
+      display: block;
+      font-size: 13px;
+      color: #666;
     }
   }
 
-  // 标签选择
-  .tags-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+  .question-body {
+    // 通用选项网格
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+
+      &.hidden {
+        opacity: 0.3;
+        pointer-events: none;
+      }
+    }
+
+    // Loading 覆盖层
+    .loading-overlay {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      margin-bottom: 12px;
+    }
+
+    // 错误提示
+    .error-overlay {
+      padding: 12px;
+      margin-bottom: 12px;
+      text-align: center;
+      background: rgba(255, 77, 79, 0.06);
+      border-radius: 12px;
+    }
+
+    // 🎯 [改进] 单选卡片 - 品牌视觉升级
+    .option-card {
+      background: linear-gradient(180deg, rgba(255, 248, 245, 0.8) 0%, rgba(212, 165, 154, 0.06) 100%);
+      border: 1px solid rgba(212, 165, 154, 0.15);
+      border-radius: 14px;
+      padding: 16px 14px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+
+      &:hover:not(.disabled) {
+        background: linear-gradient(180deg, rgba(255, 248, 245, 1) 0%, rgba(212, 165, 154, 0.12) 100%);
+        border-color: rgba(212, 165, 154, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(212, 165, 154, 0.15);
+      }
+
+      &.selected {
+        background: @brand-gradient;
+        border-color: @brand-primary;
+        color: white;
+        box-shadow: 0 4px 16px rgba(212, 165, 154, 0.25);
+
+        .option-label {
+          color: white;
+          font-weight: 500;
+        }
+
+        .check-icon {
+          color: white;
+        }
+      }
+
+      &.disabled {
+        opacity: 0.7;
+        cursor: default;
+      }
+
+      &.checkbox {
+        padding: 12px 14px;
+
+        .ant-checkbox-wrapper {
+          display: flex;
+          align-items: center;
+        }
+      }
+
+      .option-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+
+      .option-label {
+        flex: 1;
+        font-size: 14px;
+        color: #333;
+      }
+
+      .check-icon {
+        color: @brand-primary;
+        font-size: 18px;
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+    }
+
+    // 🎯 [改进] 标签选择 - 品牌视觉升级
+    .tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .question-tag {
+      padding: 10px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      background: linear-gradient(180deg, rgba(255, 248, 245, 0.8) 0%, rgba(212, 165, 154, 0.06) 100%);
+      border: 1px solid rgba(212, 165, 154, 0.15);
+      font-size: 14px;
+      margin: 0;
+
+      &:hover:not(.disabled) {
+        background: rgba(212, 165, 154, 0.12);
+        border-color: rgba(212, 165, 154, 0.25);
+        transform: scale(1.02);
+      }
+
+      &.selected {
+        background: @brand-gradient;
+        border-color: @brand-primary;
+        color: white;
+        box-shadow: 0 2px 8px rgba(212, 165, 154, 0.2);
+      }
+
+      &.disabled {
+        opacity: 0.7;
+        cursor: default;
+      }
+    }
+
+    .tags-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(212, 165, 154, 0.1);
+    }
+
+    // 🎯 [改进] 输入框样式
+    .input-choice {
+      .ant-input {
+        border-radius: 14px;
+        border-color: rgba(212, 165, 154, 0.2);
+
+        &:focus, &:hover {
+          border-color: @brand-primary;
+          box-shadow: 0 0 0 2px rgba(212, 165, 154, 0.1);
+        }
+      }
+    }
   }
 
-  .question-tag {
-    padding: 8px 14px;
-    border-radius: 16px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background: rgba(212, 165, 154, 0.06);
-    border: 1px solid rgba(212, 165, 154, 0.12);
-    font-size: 14px;
-    margin: 0;
+  // 🎯 [新增] 一票否决维度特殊样式（醒目的边框和背景）
+  &.veto-dimension {
+    border: 2px solid rgba(200, 139, 139, 0.3);
+    background: linear-gradient(180deg, rgba(255, 245, 240, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
 
-    &:hover:not(.disabled) {
-      background: rgba(212, 165, 154, 0.12);
-      border-color: rgba(212, 165, 154, 0.25);
+    .question-header {
+      .question-text {
+        color: @brand-secondary;
+      }
     }
 
-    &.selected {
-      background: linear-gradient(135deg, #D4A59A 0%, #C88B8B 100%);
-      border-color: #D4A59A;
-      color: white;
-    }
-
-    &.disabled {
-      opacity: 0.7;
-      cursor: default;
+    .option-card.selected {
+      background: linear-gradient(135deg, @brand-secondary 0%, #B87B7B 100%);
+      box-shadow: 0 4px 20px rgba(200, 139, 139, 0.3);
     }
   }
 
-  .tags-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 14px;
+  // 🎯 [新增] 核心信息样式
+  &.core-dimension {
+    .question-header .field-icon {
+      font-size: 22px;
+    }
+  }
+
+  // 🎯 [新增] 快速填表区域
+  .quick-fill-section {
+    margin-top: 16px;
     padding-top: 12px;
-    border-top: 1px solid rgba(0, 0, 0, 0.04);
+    border-top: 1px dashed rgba(212, 165, 154, 0.2);
+
+    .ant-btn {
+      &:hover {
+        background: rgba(212, 165, 154, 0.08);
+      }
+    }
   }
 }
 
 // 响应式
 @media (max-width: 400px) {
   .profile-question-card {
+    border-radius: 16px;
+
+    .ant-card-body {
+      padding: 16px;
+    }
+
     .options-grid {
       grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .question-tag {
+      padding: 8px 12px;
+      font-size: 13px;
     }
   }
 }

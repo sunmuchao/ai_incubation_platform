@@ -1,0 +1,198 @@
+{
+  "session_id": "session-fa55b6aeda43",
+  "scenario": {
+    "scenario_type": "edge_case",
+    "user_profile": {
+      "user_id": "test-user-70a3e563",
+      "name": "测试用户",
+      "age": 99,
+      "gender": "male",
+      "location": "火星",
+      "occupation": "",
+      "education": "",
+      "interests": [],
+      "relationship_goal": "casual",
+      "bio": "",
+      "accept_remote": "",
+      "preferred_age_min": 0,
+      "preferred_age_max": 200,
+      "personality_traits": []
+    },
+    "goal": "测试系统对异常输入的处理能力",
+    "initial_message": "帮我找一个99岁在火星的对象",
+    "expected_flow": [
+      "发起请求",
+      "获得响应"
+    ],
+    "difficulty": "hard"
+  },
+  "user_profile": {
+    "id": "test-user-70a3e563",
+    "name": "测试用户",
+    "age": 99,
+    "gender": "male",
+    "location": "火星",
+    "occupation": "",
+    "education": "",
+    "interests": [],
+    "relationship_goal": "casual",
+    "bio": "",
+    "accept_remote": "",
+    "preferred_age_min": 0,
+    "preferred_age_max": 200,
+    "preferred_location": "",
+    "deal_breakers": "",
+    "personality_traits": []
+  },
+  "goal": "测试系统对异常输入的处理能力",
+  "goal_achieved": true,
+  "rounds": [
+    {
+      "round_id": 1,
+      "user_input": "帮我找一个99岁在火星的对象",
+      "agent_response": "哈哈，你这个要求可真是\"天马行空\"啊！🚀\n\n不过说真的：\n- **99岁**：这个年龄的单身用户在我们的平台上可能比大熊猫还稀有\n- **火星**：目前火星移民计划还在筹备中，我们的用户都还在地球呢 😄\n\n我是真心想帮你找到合适的对象。要不你告诉我一些更实际的条件？比如：\n\n- 年龄范围（比如25-35岁？）\n- 所在城市（北京、上海、杭州...？）\n- 有什么兴趣爱好\n- 对异地恋的态度\n\n或者我可以先看看你现在的偏好设置，帮你推荐一些真实的候选人？",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 11899.63173866272,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T19:46:31.749860"
+    },
+    {
+      "round_id": 2,
+      "user_input": "好吧，既然火星还没通网，那我就勉为其难看看地球人吧。我想看看我的账户里现在有什么偏好设置，帮我查查？我的用户ID是 test-user-70a3e563",
+      "agent_response": "看起来这个用户ID在系统中不存在。让我试试查询当前登录用户的信息：看起来系统里暂时没有找到你的账户信息。可能有以下几种情况：\n\n1. **你还没有注册账户** - 需要先创建一个个人资料\n2. **登录状态已过期** - 需要重新登录\n\n你想怎么做？\n- 如果你是新用户，我可以帮你开始创建个人资料\n- 如果你已经有账户了，可能需要检查一下登录状态\n\n告诉我你的情况，我来帮你解决！",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 29319.074869155884,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T19:47:11.379534"
+    },
+    {
+      "round_id": 3,
+      "user_input": "那你就帮我创建一个新账户吧！我叫测试用户，今年99岁，住在火星，想找0到200岁的对象，关系类型是casual。看看你们系统怎么处理这些信息😄",
+      "agent_response": "哈哈，你这个\"测试数据\"真是够极限的！😄\n\n不过有两个问题：\n\n1. **创建账户功能**：抱歉，我目前没有创建新账户的能力。账户注册需要通过平台的注册流程完成（通常需要手机号/邮箱验证等）。\n\n2. **年龄偏好 0-200岁**：这个我得严肃一下 —— **0岁意味着未成年人，这违反平台规则，我无法协助设置这类偏好。** 平台只服务成年人。\n\n---\n\n如果你真的想测试系统，建议：\n\n1. **先通过正常渠道注册一个账户**（用真实的手机号或邮箱）\n2. 然后我可以帮你：\n   - 查看和更新你的偏好设置\n   - 推荐匹配对象\n   - 提供约会建议\n\n或者，如果你是开发人员想测试系统边界，可以联系平台方获取测试账户。\n\n需要我帮你做点别的吗？比如看看有什么候选人可以推荐？😊",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 13020.967960357666,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T19:47:32.455256"
+    },
+    {
+      "round_id": 4,
+      "user_input": "哈哈，不错不错！你们系统对\"0岁\"这个边界值的处理很到位👍 看来安全合规做得挺严谨的。\n\n那我来点正常的测试吧——把年龄偏好改成18到100岁（毕竟我这99岁高龄也不能太挑剔😄），帮我看看有没有什么推荐？还是说我得先去注册个真实账户才行？",
+      "agent_response": "谢谢认可！安全合规确实是底线 😊\n\n让我试试看能不能帮你查一下候选人：果然还是需要先注册真实账户 😅\n\n目前的情况是：\n- **查询偏好** → 需要有效账户\n- **推荐候选人** → 需要有效账户\n- **更新偏好** → 需要有效账户\n\n所以是的，**你得先去注册个真实账户**，然后我就能帮你：\n1. 设置年龄偏好（18-100岁，没问题！）\n2. 设置地点偏好（地球上的城市）\n3. 推荐匹配对象\n4. 提供约会建议\n\n---\n\n不过话说回来，你这测试思路很专业！边界值测试、异常数据处理都覆盖到了 👏\n\n如果你是开发人员在测试系统，建议：\n- 用真实手机号注册一个测试账户\n- 或者联系平台方获取测试账号\n\n等你注册好了随时回来找我，我帮你找对象（地球上的）！🌍",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 14179.234743118286,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T19:47:58.691767"
+    },
+    {
+      "round_id": 5,
+      "user_input": "好吧好吧，看来我这个\"火星99岁老爷爷\"确实得先走正规流程😄\n\n测试得差不多了，你们系统对异常输入的处理还挺稳健的——边界值校验、不存在账户的提示、功能权限控制都做得不错。唯一没测到的就是真实注册后的推荐功能了。\n\n对了，最后一个问题：如果我真的用手机号注册了，系统会根据我的\"火星\"地址给我推荐对象吗？还是会提示我\"请选择有效地球地址\"？🤔 还是说你们打算开拓星际婚恋市场？",
+      "agent_response": "哈哈，这个问题问得好！🛸\n\n说实话，**我不确定系统对\"火星\"地址的具体处理逻辑** —— 这取决于地址校验的实现方式：\n\n**可能的处理方式：**\n1. **严格校验** → 提示\"请选择有效的地球城市\"，必须从预设列表中选择\n2. **自由文本 + 后台审核** → 允许填写但人工审核时会打回\n3. **模糊匹配** → 尝试匹配到最接近的地球城市（\"火星\"可能被匹配到...美国宾州的 Mars 小镇？😄）\n\n---\n\n**关于星际婚恋市场：**\n\n目前平台还是专注于地球业务 🌍，毕竟：\n- 火星延迟 4-20 分钟，聊天体验太差\n- 约会见面成本太高（单程票约 6 个月）\n- 还没有\"火星同城\"的用户基数\n\n不过谁知道呢？等马斯克的星舰航班开通了，说不定真能开拓\"星际异地恋\"市场 🚀\n\n---\n\n感谢你的测试！你覆盖了：\n- ✅ 边界值校验（0岁、99岁）\n- ✅ 异常用户ID处理\n- ✅ 功能权限控制\n- ✅ 安全合规响应\n\n如果之后注册了真实账户，欢迎回来继续\"真机测试\"！😊",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 13795.862913131714,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T19:48:26.283960"
+    }
+  ],
+  "total_latency_ms": 82214.77222442627,
+  "evaluation": {
+    "goal_achieved": true,
+    "total_rounds": 5,
+    "avg_latency_ms": 16442.954444885254,
+    "errors_count": 0,
+    "ui_components_used": [],
+    "intent_types_seen": [
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation"
+    ],
+    "flow_quality": "unknown",
+    "naturalness": "unknown",
+    "tool_usage_correct": "unknown",
+    "overall_score": 0
+  },
+  "started_at": "2026-04-18T19:46:19.794277",
+  "ended_at": "2026-04-18T19:48:38.189492",
+  "total_rounds": 5
+}

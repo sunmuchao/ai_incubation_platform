@@ -129,11 +129,11 @@ async def get_membership_benefits():
 
 
 @router.get("/status", response_model=MembershipStatusResponse)
-async def get_membership_status(current_user: dict = Depends(get_current_user)):
+async def get_membership_status(current_user: str = Depends(get_current_user)):
     """
     获取当前用户的会员状态
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     db = next(get_db())
     membership_svc = get_membership_service(db)
     membership = membership_svc.get_user_membership(user_id)
@@ -163,7 +163,7 @@ async def get_membership_status(current_user: dict = Depends(get_current_user)):
 @router.post("/order", response_model=MembershipOrderResponse)
 async def create_membership_order(
     request: MembershipOrderRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     创建会员订单
@@ -174,7 +174,7 @@ async def create_membership_order(
     - **auto_renew**: 是否自动续费
     - **coupon_code**: 优惠码 (可选)
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     db = next(get_db())
     membership_svc = get_membership_service(db)
 
@@ -302,14 +302,14 @@ async def payment_callback(request: Request):
 @router.post("/check-feature", response_model=CheckFeatureResponse)
 async def check_feature_access(
     request: CheckFeatureRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     检查用户是否有权访问某个会员功能
 
     - **feature**: 功能标识 (如 unlimited_likes, super_likes 等)
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     db = next(get_db())
     membership_svc = get_membership_service(db)
 
@@ -329,14 +329,14 @@ async def check_feature_access(
 @router.post("/check-limit")
 async def check_action_limit(
     request: UseFeatureRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     检查用户是否可以执行某个动作
 
     - **action**: 动作类型 (like, super_like, rewind, boost)
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     db = next(get_db())
     membership_svc = get_membership_service(db)
 
@@ -351,14 +351,14 @@ async def check_action_limit(
 @router.post("/use-feature")
 async def use_feature(
     request: UseFeatureRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     使用会员功能（计数类）
 
     - **action**: 功能类型 (super_like, rewind, boost)
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     db = next(get_db())
     membership_svc = get_membership_service(db)
 
@@ -385,13 +385,13 @@ async def use_feature(
 
 
 @router.post("/cancel-subscription")
-async def cancel_subscription(current_user: dict = Depends(get_current_user)):
+async def cancel_subscription(current_user: str = Depends(get_current_user)):
     """
     取消自动续费
 
     用户可随时取消自动续费，已支付的费用不会退还
     """
-    user_id = current_user["user_id"]
+    user_id = current_user
     db = next(get_db())
     membership_svc = get_membership_service(db)
 
@@ -407,7 +407,7 @@ async def cancel_subscription(current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/stats", response_model=MembershipStatsResponse)
-async def get_membership_stats(current_user: dict = Depends(get_current_user)):
+async def get_membership_stats(current_user: str = Depends(get_current_user)):
     """
     获取会员统计信息（仅管理员）
     """

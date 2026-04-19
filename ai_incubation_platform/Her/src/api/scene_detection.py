@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/scene", tags=["场景检测"])
 async def detect_scene_endpoint(
     trigger: str = Body(..., embed=True),
     context: Dict[str, Any] = Body(default={}, embed=True),
-    current_user: dict = Depends(get_current_user),
+    current_user: str = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -30,7 +30,7 @@ async def detect_scene_endpoint(
     - 匹配成功时：trigger='match_created', context={'match_count': 1, 'compatibility_score': 85}
     - 聊天时长变化：trigger='chat_duration', context={'days': 7}
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
     service = get_scene_service()
 
     results = service.detect_scene(user_id, trigger, context)
@@ -46,7 +46,7 @@ async def detect_scene_endpoint(
 @router.get("/history/{user_id}")
 async def get_scene_history(
     user_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: str = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """获取用户场景历史"""

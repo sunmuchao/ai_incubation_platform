@@ -53,13 +53,13 @@ class InterventionHistoryResponse(BaseModel):
 # ============= API 端点 =============
 
 @router.get("/settings", response_model=InterventionLevelResponse)
-async def get_intervention_settings(current_user: dict = Depends(get_current_user)):
+async def get_intervention_settings(current_user: str = Depends(get_current_user)):
     """
     获取我的 AI 介入设置
 
     返回用户当前的 AI 介入等级和描述
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
 
     try:
         settings = agent_intervention_service.get_user_settings(user_id)
@@ -76,7 +76,7 @@ async def get_intervention_settings(current_user: dict = Depends(get_current_use
 @router.post("/settings", response_model=InterventionLevelResponse)
 async def set_intervention_settings(
     request: InterventionLevelRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     设置我的 AI 介入等级
@@ -88,7 +88,7 @@ async def set_intervention_settings(
     - active: 全方位指导（适合恋爱新手）
     - emergency: 仅紧急情况干预
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
 
     try:
         success, message = agent_intervention_service.set_user_intervention_level(
@@ -114,14 +114,14 @@ async def set_intervention_settings(
 @router.post("/check", response_model=InterventionCheckResponse)
 async def check_intervention(
     request: InterventionCheckRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     检查介入策略（测试用）
 
     用于预览某类事件会触发什么级别的介入
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
 
     try:
         config = agent_intervention_service.check_intervention(
@@ -151,14 +151,14 @@ async def check_intervention(
 async def execute_intervention(
     event_type: str = Body(..., embed=True),
     event_data: Dict = Body(default_factory=dict, embed=True),
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     执行介入（管理员接口）
 
     用于手动触发 AI 介入
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
 
     try:
         # 检查是否需要介入
@@ -196,14 +196,14 @@ async def execute_intervention(
 async def get_intervention_history(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    current_user: dict = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     """
     获取介入历史
 
     返回 AI 介入的历史记录
     """
-    user_id = current_user.get("user_id")
+    user_id = current_user
 
     try:
         history = agent_intervention_service.get_intervention_history(

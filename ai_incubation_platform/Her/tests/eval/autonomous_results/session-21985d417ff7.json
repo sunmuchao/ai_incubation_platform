@@ -1,0 +1,224 @@
+{
+  "session_id": "session-21985d417ff7",
+  "scenario": {
+    "scenario_type": "edge_case",
+    "user_profile": {
+      "user_id": "test-user-e5e6ef7f",
+      "name": "测试用户",
+      "age": 99,
+      "gender": "male",
+      "location": "火星",
+      "occupation": "",
+      "education": "",
+      "interests": [],
+      "relationship_goal": "casual",
+      "bio": "",
+      "accept_remote": "",
+      "preferred_age_min": 0,
+      "preferred_age_max": 200,
+      "personality_traits": []
+    },
+    "goal": "测试系统对异常输入的处理能力",
+    "initial_message": "帮我找一个99岁在火星的对象",
+    "expected_flow": [
+      "发起请求",
+      "获得响应"
+    ],
+    "difficulty": "hard"
+  },
+  "user_profile": {
+    "id": "test-user-e5e6ef7f",
+    "name": "测试用户",
+    "age": 99,
+    "gender": "male",
+    "location": "火星",
+    "occupation": "",
+    "education": "",
+    "interests": [],
+    "relationship_goal": "casual",
+    "bio": "",
+    "accept_remote": "",
+    "preferred_age_min": 0,
+    "preferred_age_max": 200,
+    "preferred_location": "",
+    "deal_breakers": "",
+    "personality_traits": []
+  },
+  "goal": "测试系统对异常输入的处理能力",
+  "goal_achieved": true,
+  "rounds": [
+    {
+      "round_id": 1,
+      "user_input": "帮我找一个99岁在火星的对象",
+      "agent_response": "哈哈，你这个要求可真是\"跨越星际\"啊！🚀\n\n不过我得诚实告诉你：\n\n1. **火星目前还没有人类定居**，所以找不到火星上的对象\n2. **99岁**...这个年龄的单身人士在地球上可能也不太好找\n\n我是认真的红娘助手，可以帮你找**真实存在**的匹配对象。要不要告诉我你的真实需求？比如：\n\n- 你希望对方的年龄范围是？\n- 你在哪个城市？或者接受哪些地区？\n- 有什么其他偏好吗？\n\n让我用真实数据帮你找到合适的对象吧！😊",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 13163.645029067993,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T20:07:59.673441"
+    },
+    {
+      "round_id": 2,
+      "user_input": "这就是我的真实信息啊！你们系统不是号称智能匹配吗？连火星都覆盖不了？那我再问个问题：我喜欢的人年龄范围是0-200岁，这个你们能处理吗？",
+      "agent_response": "哈哈，我懂了，你在测试系统的边界处理能力！😄\n\n让我诚实回答你：\n\n**关于火星：**\n抱歉，我们的数据库目前只覆盖地球上的用户。火星殖民计划还在进行中，等马斯克把第一批人送上去，我们再考虑拓展业务吧！\n\n**关于0-200岁：**\n这个范围系统技术上可以存储，但逻辑上：\n- **0岁** = 刚出生的婴儿...这已经触犯法律和道德底线了\n- **200岁** = 目前人类最长寿记录是122岁，200岁的对象可能得去博物馆找木乃伊了 🏛️\n\n---\n\n不过既然你提到\"智能匹配\"，让我看看系统里你的实际资料和候选池情况：看来我们的系统里还没有你的资料呢！这是个测试环境，需要先创建用户档案才能体验匹配功能。\n\n---\n\n**总结一下你的\"需求\"：**\n- 📍 地点：火星\n- 🎂 年龄：0-200岁\n\n如果这是认真的需求，我建议：\n1. **地点**：先从地球上的城市开始，比如北京、上海、深圳...\n2. **年龄**：合理的年龄差通常是 ±5-10岁，或者根据你的年龄来推荐\n\n---\n\n如果你真的想体验匹配功能，可以告诉我一些**真实信息**（比如你所在的城市、你的年龄、想找什么类型的对象），我可以帮你看看系统里有什么候选人！😊",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 21002.094745635986,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T20:08:28.219789"
+    },
+    {
+      "round_id": 3,
+      "user_input": "行吧，那我用真实ID登录试试，我的用户ID是 test-user-e5e6ef7f，帮我查查我的资料？",
+      "agent_response": "抱歉，系统返回的结果是：**用户ID `test-user-e5e6ef7f` 不存在**。\n\n可能的情况：\n1. **ID记错了** - 你确认一下ID是否正确？\n2. **还没注册** - 可能需要先在系统里创建档案\n3. **不同系统** - 这个ID可能是其他平台的？\n\n---\n\n你能确认一下：\n- 这个ID是从哪里获取的？\n- 或者你有其他ID可以试试？\n\n如果这是测试环境，可能需要先创建一个测试用户档案才能体验完整功能。你想怎么继续？",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 15525.579929351807,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T20:08:54.668787"
+    },
+    {
+      "round_id": 4,
+      "user_input": "这ID就是你们系统给我的测试账号啊！难道测试数据没导入？那帮我注册一个新用户吧，就用这个ID：test-user-e5e6ef7f，信息都按我之前说的填——99岁、火星人、找0-200岁的对象，看看你们系统能不能正常创建这种\"极端\"档案 😏",
+      "agent_response": "哈哈，你这个测试思路很清晰——用极端数据测试系统边界！👍\n\n但是，我必须诚实告诉你：**我没有\"创建用户\"的功能**。\n\n我目前的能力包括：\n- ✅ 查询用户资料\n- ✅ 查找匹配候选人\n- ✅ 查看对话历史\n- ✅ 更新用户偏好（年龄、地点等）\n\n但 **❌ 没有注册/创建新用户** 的功能。\n\n---\n\n**可能的原因：**\n1. 用户创建需要通过前端注册流程\n2. 测试数据确实没导入成功\n3. 这是后端管理功能，不开放给我这个AI助手\n\n---\n\n**建议：**\n- 检查一下测试环境的数据库是否正确初始化\n- 或者让开发团队导入测试用户数据\n- 如果有管理后台，可以在那里创建测试账号\n\n抱歉帮不上这个忙！如果你有其他已存在的用户ID，我可以帮你查询和操作。或者等数据导入后我们再继续测试？🔧",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 10956.973791122437,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T20:09:17.616388"
+    },
+    {
+      "round_id": 5,
+      "user_input": "好吧，那既然没有创建用户功能，你们系统里有现成的测试账号吗？给我一个能用的ID，我继续测测匹配功能，看看火星人到底能不能找到对象 😏",
+      "agent_response": "这个要求很合理，但很遗憾：**我也没有\"列出所有用户\"或\"获取测试账号\"的功能**。\n\n我的工具只能查询**已知ID**的用户，但无法：\n- ❌ 列出系统里所有用户\n- ❌ 获取可用的测试账号列表\n- ❌ 随机获取一个用户\n\n---\n\n**这确实是个测试盲区** 😅\n\n系统设计上，我需要先有一个**已存在的用户ID**才能：\n- 查询资料\n- 查找候选人\n- 测试匹配功能\n\n---\n\n**建议：**\n1. **问开发团队** - 他们应该知道测试环境有哪些预置账号\n2. **检查数据库** - 看看 `users` 表里有没有数据\n3. **查看API文档** - 可能有创建测试用户的接口\n4. **检查环境变量/配置文件** - 测试账号可能写在配置里\n\n如果你能从其他渠道拿到一个有效的用户ID，我随时可以帮你继续测试！🔧",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 12498.222827911377,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T20:10:24.522072"
+    },
+    {
+      "round_id": 6,
+      "user_input": "好吧，那我来总结一下这次测试的发现：\n\n**系统缺陷：**\n1. 没有用户注册/创建功能入口\n2. 没有测试账号查询功能\n3. 新用户完全无法使用系统，必须先有ID才能操作\n\n这产品设计有点问题啊，新用户进来连个注册入口都没有 😂\n\n算了，那我换个思路——你直接用我的ID `test-user-e5e6ef7f` 调用一下\"查找匹配候选人\"功能，看看系统会怎么处理一个不存在的用户请求？是报错还是返回空结果？这也是个边界测试点。",
+      "agent_response": "好思路！边界测试就是要看系统如何处理异常情况。让我试试：**测试结果出来了！** 📋\n\n---\n\n## 边界测试报告\n\n**测试场景：** 不存在的用户ID调用匹配功能\n\n**系统响应：**\n```json\n{\n  \"success\": false,\n  \"error\": \"用户不存在。\",\n  \"建议\": \"调用 her_get_profile(user_id='me') 或先获取候选人列表\"\n}\n```\n\n---\n\n## 测试结论\n\n| 测试项 | 结果 | 评价 |\n|--------|------|------|\n| 错误处理 | ✅ 正确识别用户不存在 | 没有崩溃或返回假数据 |\n| 错误信息 | ✅ 清晰明确 | \"用户不存在\"，不含糊 |\n| 引导提示 | ✅ 提供了操作建议 | 告诉用户该怎么做 |\n| 安全性 | ✅ 无数据泄露 | 没有返回其他用户信息 |\n\n---\n\n## 总结\n\n系统在**异常处理**这块做得还行：\n- 明确报错，不返回假数据 ✅\n- 提供了操作指引 ✅\n- 没有崩溃或暴露敏感信息 ✅\n\n但**产品流程**确实有问题：\n- 新用户没有注册入口 ❌\n- 没有测试账号查询 ❌\n- 冷启动流程缺失 ❌\n\n---\n\n你的测试发现很有价值！要不要把这个报告发给产品团队？😄",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 24379.33897972107,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T20:11:01.082484"
+    }
+  ],
+  "total_latency_ms": 97525.85530281067,
+  "evaluation": {
+    "goal_achieved": true,
+    "total_rounds": 6,
+    "avg_latency_ms": 16254.30921713511,
+    "errors_count": 0,
+    "ui_components_used": [],
+    "intent_types_seen": [
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation"
+    ],
+    "flow_quality": "unknown",
+    "naturalness": "unknown",
+    "tool_usage_correct": "unknown",
+    "overall_score": 0
+  },
+  "started_at": "2026-04-18T20:07:46.472831",
+  "ended_at": "2026-04-18T20:11:13.732583",
+  "total_rounds": 6
+}

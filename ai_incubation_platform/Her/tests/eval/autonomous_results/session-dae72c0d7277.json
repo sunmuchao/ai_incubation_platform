@@ -1,0 +1,969 @@
+{
+  "session_id": "session-dae72c0d7277",
+  "scenario": {
+    "scenario_type": "match_request",
+    "user_profile": {
+      "user_id": "test-user-853f4628",
+      "name": "林小雨",
+      "age": 25,
+      "gender": "female",
+      "location": "上海",
+      "occupation": "设计师",
+      "education": "bachelor",
+      "interests": [
+        "绘画",
+        "旅行",
+        "摄影"
+      ],
+      "relationship_goal": "serious",
+      "bio": "热爱艺术和旅行，希望找到志同道合的人",
+      "accept_remote": "no",
+      "preferred_age_min": 26,
+      "preferred_age_max": 32,
+      "preferred_location": "上海",
+      "personality_traits": [
+        "开朗",
+        "感性"
+      ]
+    },
+    "goal": "获得符合偏好的匹配结果",
+    "initial_message": "你好，我想找一个合适的对象",
+    "expected_flow": [
+      "发起请求",
+      "获得响应"
+    ],
+    "difficulty": "easy"
+  },
+  "user_profile": {
+    "id": "32dcf53c-959d-450e-917c-72dcb66ae783",
+    "name": "林小雨",
+    "age": 25,
+    "gender": "female",
+    "location": "上海",
+    "occupation": "设计师",
+    "education": "bachelor",
+    "interests": [
+      "绘画",
+      "旅行",
+      "摄影"
+    ],
+    "relationship_goal": "serious",
+    "bio": "热爱艺术和旅行，希望找到志同道合的人",
+    "accept_remote": "no",
+    "preferred_age_min": 26,
+    "preferred_age_max": 32,
+    "preferred_location": "上海",
+    "deal_breakers": "",
+    "personality_traits": []
+  },
+  "goal": "获得符合偏好的匹配结果",
+  "goal_achieved": true,
+  "rounds": [
+    {
+      "round_id": 1,
+      "user_input": "你好，我想找一个合适的对象",
+      "agent_response": "你好林小雨！很高兴帮你找对象 💕\n\n让我先看看有哪些适合你的候选人～根据你的偏好（26-32岁、上海同城、认真恋爱），我为你精选了4位最匹配的候选人：\n\n---\n\n---\n\n**我的推荐理由：**\n\n- **施林**（29岁）- 年龄完美匹配，奔着结婚去的，喜欢背包客旅行，和你的旅行爱好很契合！\n- **周恒**（32岁）- 设计师背景，喜欢自驾游和徒步，还写小说，文艺气息和你很搭\n- **赵明**（30岁）- 算法工程师，奔着结婚去的，喜欢写作和阅读，知性稳重\n- **郝涛**（33岁）- 动画师，热爱旅行，和你有共同话题，虽然年龄稍超但很值得认识\n\n对哪位感兴趣？我可以帮你看看怎么开启话题 💬",
+      "intent": {
+        "type": "match_request",
+        "confidence": 0.9,
+        "source": "ui_component"
+      },
+      "generative_ui": {
+        "component_type": "MatchCardList",
+        "props": {
+          "matches": [
+            {
+              "display_id": "candidate_009",
+              "name": "施林",
+              "age": 29,
+              "location": "上海",
+              "interests": [
+                "背包客",
+                "山区避暑",
+                "品酒",
+                "园艺",
+                "跆拳道"
+              ],
+              "bio": "从事幼儿园老师工作，平时喜欢背包客, 山区避暑, 品酒。逻辑清晰，做事有条理 追求稳定安逸的生活 感性浪漫，注重情感体验。希望找到热爱生活的 TA。",
+              "relationship_goal": "marriage",
+              "confidence_level": "medium"
+            },
+            {
+              "display_id": "candidate_012",
+              "name": "周恒",
+              "age": 32,
+              "location": "上海",
+              "interests": [
+                "自驾游",
+                "徒步",
+                "历史",
+                "写作"
+              ],
+              "bio": "在上海打拼的设计师，喜欢尝试新鲜事物 注重实际，相信数据胜过感觉。最近迷上写小说，希望能遇见有责任感的 TA。",
+              "relationship_goal": "serious",
+              "confidence_level": "medium"
+            },
+            {
+              "display_id": "candidate_030",
+              "name": "赵明",
+              "age": 30,
+              "location": "上海",
+              "interests": [
+                "开源项目",
+                "编程",
+                "写作",
+                "阅读",
+                "CrossFit"
+              ],
+              "bio": "典型的ESFJ，从事算法工程师工作。喜欢开源项目, 编程, 写作，期待与知性优雅的你相识。",
+              "relationship_goal": "marriage",
+              "confidence_level": "medium"
+            },
+            {
+              "display_id": "candidate_013",
+              "name": "郝涛",
+              "age": 33,
+              "location": "上海",
+              "interests": [
+                "旅行",
+                "温泉养生",
+                "听书",
+                "演唱会",
+                "音乐"
+              ],
+              "bio": "理性又稳重的动画师，热爱旅行, 温泉养生, 听书。相信有上进心的人值得相遇。",
+              "relationship_goal": "marriage",
+              "confidence_level": "medium"
+            },
+            {
+              "display_id": "candidate_009",
+              "name": "施林",
+              "age": 29,
+              "location": "上海",
+              "interests": [
+                "背包客",
+                "山区避暑",
+                "品酒",
+                "园艺",
+                "跆拳道"
+              ],
+              "bio": "从事幼儿园老师工作，平时喜欢背包客, 山区避暑, 品酒。逻辑清晰，做事有条理 追求稳定安逸的生活 感性浪漫，注重情感体验。希望找到热爱生活的 TA。",
+              "relationship_goal": "marriage",
+              "confidence_level": "medium"
+            },
+            {
+              "display_id": "candidate_012",
+              "name": "周恒",
+              "age": 32,
+              "location": "上海",
+              "interests": [
+                "自驾游",
+                "徒步",
+                "历史",
+                "写作"
+              ],
+              "bio": "在上海打拼的设计师，喜欢尝试新鲜事物 注重实际，相信数据胜过感觉。最近迷上写小说，希望能遇见有责任感的 TA。",
+              "relationship_goal": "serious",
+              "confidence_level": "medium"
+            },
+            {
+              "display_id": "candidate_030",
+              "name": "赵明",
+              "age": 30,
+              "location": "上海",
+              "interests": [
+                "开源项目",
+                "编程",
+                "写作",
+                "阅读",
+                "CrossFit"
+              ],
+              "bio": "典型的ESFJ，从事算法工程师工作。喜欢开源项目, 编程, 写作，期待与知性优雅的你相识。",
+              "relationship_goal": "marriage",
+              "confidence_level": "medium"
+            },
+            {
+              "display_id": "candidate_013",
+              "name": "郝涛",
+              "age": 33,
+              "location": "上海",
+              "interests": [
+                "旅行",
+                "温泉养生",
+                "听书",
+                "演唱会",
+                "音乐"
+              ],
+              "bio": "理性又稳重的动画师，热爱旅行, 温泉养生, 听书。相信有上进心的人值得相遇。",
+              "relationship_goal": "marriage",
+              "confidence_level": "medium"
+            }
+          ],
+          "total": 8,
+          "filter_applied": {
+            "hard_constraints": [
+              "排除封禁用户",
+              "排除测试账号",
+              "性别过滤（male）",
+              "地点过滤（同城：上海）"
+            ],
+            "soft_constraints": "由 Agent 自行判断"
+          },
+          "query_request_id": "0fb4f35e-1437-4d84-aa85-4cb0be667bbc"
+        }
+      },
+      "tool_calls": [
+        {
+          "intent_type": "match_request",
+          "intent_source": "ui_component",
+          "ui_component_type": "MatchCardList",
+          "ui_matches_count": 8,
+          "query_request_id": "0fb4f35e-1437-4d84-aa85-4cb0be667bbc"
+        },
+        {
+          "tool_data": {
+            "candidates": [
+              {
+                "display_id": "candidate_001",
+                "user_id": "3b9c3f31-f53e-42bf-988e-16b0505d302a",
+                "name": "吴杰",
+                "age": 33,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "3D 打印",
+                  "机器人",
+                  "播客"
+                ],
+                "bio": "朋友说我注重实际，相信数据胜过感觉 说走就走的旅行说干就干 重视安全感和确定性，其实我也大度。喜欢3D 打印, 机器人, 播客，期待温柔体贴的缘分。",
+                "relationship_goal": "dating",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_002",
+                "user_id": "b8281602-3082-498f-b3e4-beee7a8e9ced",
+                "name": "陆辉",
+                "age": 39,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "开源项目",
+                  "无人机",
+                  "社团活动",
+                  "读书会"
+                ],
+                "bio": "朋友眼中的我性格开朗，喜欢结交新朋友 有自己的主见和判断 理性分析派，不轻易冲动。热爱开源项目, 无人机, 社团活动，最近在读一本好书。期待真诚善良。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_003",
+                "user_id": "388f4972-2ee9-473e-be55-3f96ec071b4b",
+                "name": "罗德",
+                "age": 31,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "冥想",
+                  "保健品",
+                  "派对",
+                  "读书会"
+                ],
+                "bio": "用三个词形容自己：乐观、知性、理性。平时喜欢冥想, 保健品, 派对，期待认识新朋友。",
+                "relationship_goal": "dating",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_004",
+                "user_id": "374f0d5d-c059-4f25-9d80-6c769c309be3",
+                "name": "孔晨",
+                "age": 31,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "区块链",
+                  "3D 打印",
+                  "普拉提"
+                ],
+                "bio": "决策前会充分收集信息 感性浪漫，注重情感体验。对区块链有着独特的热爱期待遇见一个知性优雅的人。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_005",
+                "user_id": "c417e6c5-3ada-4d8a-a590-74b56a3fea1f",
+                "name": "白烨",
+                "age": 30,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "药膳",
+                  "气功",
+                  "志愿者",
+                  "聚会"
+                ],
+                "bio": "朋友说我热情 active，享受人群中的感觉 更喜欢一对一的交流 追求稳定安逸的生活，其实我也善良。喜欢药膳, 气功, 志愿者，期待孝顺父母的缘分。",
+                "relationship_goal": "casual",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_006",
+                "user_id": "ca8dd455-16ce-40a3-90bc-f65823a26412",
+                "name": "徐军",
+                "age": 33,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "行业交流",
+                  "徒步组织",
+                  "吉他",
+                  "话剧",
+                  "针灸"
+                ],
+                "bio": "有趣又可靠的记者，热爱行业交流, 徒步组织, 吉他。相信踏实可靠的人值得相遇。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_007",
+                "user_id": "30b94f7e-022f-4489-8e27-c379dffbbd42",
+                "name": "杜泉",
+                "age": 34,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "打卡网红店",
+                  "整理收纳",
+                  "硬件 DIY",
+                  "无人机",
+                  "冥想"
+                ],
+                "bio": "从事设计师工作，平时喜欢打卡网红店, 整理收纳, 硬件 DIY。愿意跳出舒适区探索未知 更喜欢一对一的交流 社交达人，朋友眼中的开心果。希望找到有上进心的 TA。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_008",
+                "user_id": "7161771b-b44f-4f6c-957a-576bff788214",
+                "name": "胡斌",
+                "age": 37,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "装机",
+                  "区块链",
+                  "读书会"
+                ],
+                "bio": "用三个词形容自己：自信、贴心、有趣。平时喜欢装机, 区块链, 读书会，期待认识新朋友。",
+                "relationship_goal": "casual",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_009",
+                "user_id": "244921c8-aaec-4daa-9ec8-19a6fae56be2",
+                "name": "施林",
+                "age": 29,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "背包客",
+                  "山区避暑",
+                  "品酒",
+                  "园艺",
+                  "跆拳道"
+                ],
+                "bio": "从事幼儿园老师工作，平时喜欢背包客, 山区避暑, 品酒。逻辑清晰，做事有条理 追求稳定安逸的生活 感性浪漫，注重情感体验。希望找到热爱生活的 TA。",
+                "relationship_goal": "marriage",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_010",
+                "user_id": "a4b571bd-edae-46b7-b0d4-38509c5e2715",
+                "name": "樊石",
+                "age": 31,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "塑形",
+                  "按摩",
+                  "徒步组织"
+                ],
+                "bio": "用三个词形容自己：乐观、坚韧、有趣。平时喜欢塑形, 按摩, 徒步组织，期待认识新朋友。",
+                "relationship_goal": "dating",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_011",
+                "user_id": "70cb0418-9f99-4362-a4da-ed6dd9b837a5",
+                "name": "张明",
+                "age": 29,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "纪录片",
+                  "心理学",
+                  "交友"
+                ],
+                "bio": "翻译，坐标上海。重视情感连接和共鸣 是朋友眼中靠谱的人，喜欢纪录片, 心理学, 交友。如果你也喜欢看电影，也许我们可以聊聊。",
+                "relationship_goal": "dating",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_012",
+                "user_id": "84b77829-cad8-4ca4-a20d-79f07c8b1261",
+                "name": "周恒",
+                "age": 32,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "自驾游",
+                  "徒步",
+                  "历史",
+                  "写作"
+                ],
+                "bio": "在上海打拼的设计师，喜欢尝试新鲜事物 注重实际，相信数据胜过感觉。最近迷上写小说，希望能遇见有责任感的 TA。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_013",
+                "user_id": "a36bf5a6-5761-4cec-ba9f-54935435c12b",
+                "name": "郝涛",
+                "age": 33,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "旅行",
+                  "温泉养生",
+                  "听书",
+                  "演唱会",
+                  "音乐"
+                ],
+                "bio": "理性又稳重的动画师，热爱旅行, 温泉养生, 听书。相信有上进心的人值得相遇。",
+                "relationship_goal": "marriage",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_014",
+                "user_id": "ae0267cf-8997-4db4-b21b-9e2cb5f68779",
+                "name": "贺明",
+                "age": 34,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "旅行",
+                  "拍照打卡",
+                  "区块链",
+                  "手机评测",
+                  "音乐会"
+                ],
+                "bio": "在上海打拼的直播带货主播，喜欢熟悉的环境和节奏 愿意为集体付出 愿意跳出舒适区探索未知。最近迷上规划下一次旅行，希望能遇见孝顺父母的 TA。",
+                "relationship_goal": "casual",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_015",
+                "user_id": "ac4a1eb9-6f83-46ad-9406-4846d0b63230",
+                "name": "赵林",
+                "age": 33,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "辩论",
+                  "在线课程",
+                  "水彩",
+                  "绘画",
+                  "烘焙"
+                ],
+                "bio": "愿意跳出舒适区探索未知 决策前会充分收集信息。热爱辩论, 在线课程, 水彩期待遇见一个独立自信的人。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_016",
+                "user_id": "3b0c9d6a-5a47-43df-96f6-de2ef6b7d908",
+                "name": "汤硕",
+                "age": 34,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "区块链",
+                  "手机评测",
+                  "素描",
+                  "音乐",
+                  "写作"
+                ],
+                "bio": "在上海打拼的空乘人员，有自己的主见和判断 社交达人，朋友眼中的开心果 直觉型，相信第一印象。最近迷上追一部好剧，希望能遇见知性优雅的 TA。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_017",
+                "user_id": "4b1dddf7-2f88-4412-afdb-5ae338b9a186",
+                "name": "易森",
+                "age": 28,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "追星",
+                  "播客",
+                  "烹饪",
+                  "购物"
+                ],
+                "bio": "说走就走的旅行说干就干 喜欢熟悉的环境和节奏。热爱追星, 播客, 烹饪期待遇见一个活泼可爱的人。",
+                "relationship_goal": "marriage",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_018",
+                "user_id": "0df627bc-3d74-4dcb-8c07-48bc3751e0b3",
+                "name": "邹柏",
+                "age": 35,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "骑行",
+                  "瑜伽",
+                  "区块链",
+                  "加密货币",
+                  "历史"
+                ],
+                "bio": "从事自媒体人工作，平时喜欢骑行, 瑜伽, 区块链。心思敏感，容易被小事打动 愿意为集体付出 有自己的主见和判断。希望找到有爱心的 TA。",
+                "relationship_goal": "dating",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_019",
+                "user_id": "7dbc9a09-fba1-4fca-a71d-b9536ba9ab94",
+                "name": "祁强",
+                "age": 30,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "听书",
+                  "追星",
+                  "拳击",
+                  "羽毛球"
+                ],
+                "bio": "舞者，坐标上海。内敛温和，心思细腻 理性分析派，不轻易冲动 有自己的主见和判断，喜欢听书, 追星, 拳击。如果你也也恐高，也许我们可以聊聊。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_020",
+                "user_id": "3c68ef6f-3e9e-4581-8cc9-b08e3fe521f1",
+                "name": "马博",
+                "age": 32,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "游泳",
+                  "跑步",
+                  "livehouse",
+                  "演唱会",
+                  "时间管理"
+                ],
+                "bio": "典型的ESFJ，从事市场专员工作。喜欢游泳, 跑步, livehouse，期待与三观相合的你相识。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_021",
+                "user_id": "161c4718-08a7-4b0f-810f-83beb3fa8344",
+                "name": "戴电",
+                "age": 28,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "艾灸",
+                  "药膳",
+                  "剧本杀"
+                ],
+                "bio": "用三个词形容自己：稳重、知性、聪明。平时喜欢艾灸, 药膳, 剧本杀，期待认识新朋友。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_022",
+                "user_id": "6e153047-1587-4729-b0ff-8ea40a3baa2c",
+                "name": "余电",
+                "age": 35,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "海边度假",
+                  "民宿体验",
+                  "调酒",
+                  "烘焙",
+                  "太极"
+                ],
+                "bio": "在上海生活的国企员工，愿意跳出舒适区探索未知 逻辑清晰，做事有条理。闲暇时热爱海边度假, 民宿体验, 调酒，希望遇到热爱生活的你。",
+                "relationship_goal": "dating",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_023",
+                "user_id": "75d4aa3d-e8ca-47f4-8d5c-a3ed333b0656",
+                "name": "谢森",
+                "age": 35,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "冥想",
+                  "保健品",
+                  "剧本杀",
+                  "电影"
+                ],
+                "bio": "在上海打拼的调酒师，更喜欢一对一的交流 感性浪漫，注重情感体验。最近迷上健身减肥，希望能遇见有共同话题的 TA。",
+                "relationship_goal": "dating",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_024",
+                "user_id": "c25b23aa-986b-4144-8cfa-1109a440b17a",
+                "name": "龚波",
+                "age": 31,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "极光观测",
+                  "民宿体验",
+                  "演讲",
+                  "科技",
+                  "网球"
+                ],
+                "bio": "活泼又有趣的银行职员，热爱极光观测, 民宿体验, 演讲。相信活泼可爱的人值得相遇。",
+                "relationship_goal": "dating",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_025",
+                "user_id": "558edf8c-1052-4f81-a8d2-5f63bfcad26b",
+                "name": "金山",
+                "age": 37,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "创业沙龙",
+                  "公益义工",
+                  "收集手办"
+                ],
+                "bio": "用三个词形容自己：感性、努力、可靠。平时喜欢创业沙龙, 公益义工, 收集手办，期待认识新朋友。",
+                "relationship_goal": "dating",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_026",
+                "user_id": "b50359c5-d9b0-4525-b8de-524a0acd9b36",
+                "name": "谢飞",
+                "age": 32,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "硬件 DIY",
+                  "开源项目",
+                  "时间管理"
+                ],
+                "bio": "朋友眼中的我善于协调人际关系 注重实际，相信数据胜过感觉。热爱硬件 DIY, 开源项目, 时间管理，最近在写小说。期待阳光开朗。",
+                "relationship_goal": "dating",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_027",
+                "user_id": "9271655f-316a-41c9-aac8-7b2d4df80401",
+                "name": "白刚",
+                "age": 30,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "加密货币",
+                  "3D 打印",
+                  "有机食品"
+                ],
+                "bio": "朋友眼中的我重视安全感和确定性 重视情感连接和共鸣。热爱加密货币, 3D 打印, 有机食品，最近在准备换工作。期待孝顺父母。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_028",
+                "user_id": "b27e2c9c-813c-4c89-a694-33d17d6fe21e",
+                "name": "易明",
+                "age": 31,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "插花",
+                  "舞蹈",
+                  "VR/AR",
+                  "区块链",
+                  "冥想"
+                ],
+                "bio": "在上海打拼的前端工程师，很少被情绪左右判断 生活需要刺激和变化 健谈，善于倾听也乐于分享。最近迷上规划下一次旅行，希望能遇见有共同话题的 TA。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_029",
+                "user_id": "f362e461-3f21-47c5-9bed-270b501e1ec5",
+                "name": "范辉",
+                "age": 35,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "徒步组织",
+                  "户外活动",
+                  "智能家居"
+                ],
+                "bio": "在上海生活的商务拓展，心思敏感，容易被小事打动 注重实际，相信数据胜过感觉 喜欢和大家在一起。闲暇时热爱徒步组织, 户外活动, 智能家居，希望遇到独立自信的你。",
+                "relationship_goal": "serious",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              },
+              {
+                "display_id": "candidate_030",
+                "user_id": "ae7a0259-394b-47d1-ab94-a2e71502ed3a",
+                "name": "赵明",
+                "age": 30,
+                "gender": "male",
+                "location": "上海",
+                "interests": [
+                  "开源项目",
+                  "编程",
+                  "写作",
+                  "阅读",
+                  "CrossFit"
+                ],
+                "bio": "典型的ESFJ，从事算法工程师工作。喜欢开源项目, 编程, 写作，期待与知性优雅的你相识。",
+                "relationship_goal": "marriage",
+                "want_children": null,
+                "confidence_level": "medium",
+                "confidence_score": 40
+              }
+            ],
+            "query_request_id": "0fb4f35e-1437-4d84-aa85-4cb0be667bbc",
+            "user_preferences": {
+              "preferred_age_min": 26,
+              "preferred_age_max": 32,
+              "preferred_location": "上海",
+              "accept_remote": "no",
+              "relationship_goal": "serious",
+              "user_gender": "female",
+              "user_location": "上海",
+              "target_gender": "male"
+            },
+            "filter_applied": {
+              "hard_constraints": [
+                "排除封禁用户",
+                "排除测试账号",
+                "性别过滤（male）",
+                "地点过滤（同城：上海）"
+              ],
+              "soft_constraints": "由 Agent 自行判断"
+            },
+            "truncated": true,
+            "truncation_hint": "结果已截断（显示前 30 条，共有 31 条记录）。\n\n如需更精确的结果，你可以：\n1. 根据年龄范围筛选（user_preferences.preferred_age_min ~ preferred_age_max）\n2. 根据地点筛选（只看 user_location 同城的候选人）\n3. 根据关系目标筛选（只看 relationship_goal 匹配的候选人）\n\n建议：优先推荐前 5-10 位候选人，让用户选择后再深入分析。"
+          }
+        }
+      ],
+      "latency_ms": 39039.74723815918,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T23:31:08.410954"
+    },
+    {
+      "round_id": 2,
+      "user_input": "周恒看起来不错诶，他也做设计，应该有很多共同话题～能帮我看看怎么跟他打招呼吗？",
+      "agent_response": "API 调用失败: HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=60)",
+      "intent": null,
+      "generative_ui": null,
+      "tool_calls": [],
+      "latency_ms": 60002.34389305115,
+      "error": "HTTPConnectionPool(host='localhost', port=8002): Read timed out. (read timeout=60)",
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T23:32:17.677609"
+    },
+    {
+      "round_id": 3,
+      "user_input": "哎呀，系统好像出问题了～能再帮我看看周恒的资料吗？我想知道怎么跟他打招呼比较好 🥺",
+      "agent_response": "没问题！我帮你重新看看周恒的资料～\n\n---\n\n**周恒的资料**\n\n| 项目 | 信息 |\n|------|------|\n| 年龄 | 32岁 |\n| 地点 | 上海 |\n| 职业 | 设计师 |\n| 兴趣爱好 | 自驾游、徒步、历史、写作 |\n| 关系目标 | 认真恋爱 |\n| 简介 | 在上海打拼的设计师，喜欢尝试新鲜事物，注重实际，相信数据胜过感觉。最近迷上写小说，希望能遇见有责任感的 TA。 |\n\n---\n\n**你们的匹配亮点：**\n\n- 🎨 **同行设计师** - 职业相同，话题天然多\n- 📍 **同城上海** - 他偏好上海，你也在上海，完美匹配\n- ✈️ **旅行爱好者** - 你喜欢旅行摄影，他喜欢自驾游徒步\n- ✍️ **创作兴趣** - 他在写小说，你热爱艺术，创作话题很搭\n- 💕 **目标一致** - 都在找认真恋爱\n\n---\n\n**开场白建议：**\n\n**自然亲切型**\n> \"Hi 周恒～看到你也是设计师，好巧！最近在忙什么项目呀？\"\n\n**兴趣切入型**\n> \"嗨！看到你喜欢自驾游，有没有推荐的上海周边路线？最近想出去走走 🚗\"\n\n**创作话题型**\n> \"你好呀～看到你在写小说，好厉害！是什么类型的呀？我也很喜欢艺术创作 ✨\"\n\n**直接真诚型**\n> \"Hi 周恒，看到你的资料觉得我们挺有缘的——都是设计师，又都喜欢旅行。想认识一下你 😊\"\n\n---\n\n你喜欢哪种风格？或者想让我帮你调整一下？祝你聊得开心 💬",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 16784.96503829956,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T23:32:40.924558"
+    },
+    {
+      "round_id": 4,
+      "user_input": "我喜欢直接真诚型的开场白！感觉比较自然不做作～能帮我发给他吗？或者我该怎么发起匹配请求呀？😊",
+      "agent_response": "哈哈，直接真诚型确实很自然不做作，很适合你！\n\n不过很抱歉，我目前没有帮你直接发送消息或发起匹配请求的能力 😅 \n\n**你可以这样操作：**\n\n1. 在 App 里找到周恒的资料页\n2. 点击\"发起匹配\"或\"发送消息\"按钮\n3. 把这句开场白发给他：\n\n> \"Hi 周恒，看到你的资料觉得我们挺有缘的——都是设计师，又都喜欢旅行。想认识一下你 😊\"\n\n---\n\n**小贴士：**\n- 发送后如果对方回复了，可以再来找我，我帮你分析对话、推荐话题 💬\n- 如果想调整开场白，随时告诉我～\n\n祝你匹配成功！加油 💕",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 22633.209705352783,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T23:33:23.170653"
+    },
+    {
+      "round_id": 5,
+      "user_input": "好的谢谢你的建议！开场白很棒，我这就去试试～如果聊上了再来找你帮忙分析 💕",
+      "agent_response": "太好了！祝你顺利 💕\n\n记住，发完消息后：\n- 如果他回复了，可以来找我帮你分析对话、推荐话题\n- 如果不知道怎么接话，也可以来问我\n- 想了解他的更多兴趣点，我也能帮你分析\n\n加油，期待你们聊起来！✨",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 9162.121772766113,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T23:33:40.635918"
+    },
+    {
+      "round_id": 6,
+      "user_input": "好嘞！谢谢你的帮助，感觉今天收获很大～希望能顺利聊起来！先这样啦，拜拜 👋",
+      "agent_response": "不客气！今天帮你找到了心仪的对象，我也很开心～\n\n祝你跟周恒聊得顺利，期待你们的好消息！有任何问题随时来找我 💕\n\n拜拜，下次见 👋✨",
+      "intent": {
+        "type": "conversation",
+        "confidence": 0.5,
+        "source": "default"
+      },
+      "generative_ui": null,
+      "tool_calls": [
+        {
+          "intent_type": "conversation",
+          "intent_source": "default",
+          "ui_component_type": null,
+          "ui_matches_count": null,
+          "query_request_id": null
+        }
+      ],
+      "latency_ms": 7956.027030944824,
+      "error": null,
+      "context_before": {},
+      "context_after": {},
+      "timestamp": "2026-04-18T23:34:04.181974"
+    }
+  ],
+  "total_latency_ms": 155578.4146785736,
+  "evaluation": {
+    "goal_achieved": true,
+    "total_rounds": 6,
+    "avg_latency_ms": 25929.735779762268,
+    "errors_count": 1,
+    "ui_components_used": [
+      "MatchCardList"
+    ],
+    "intent_types_seen": [
+      "match_request",
+      "conversation",
+      "conversation",
+      "conversation",
+      "conversation"
+    ],
+    "flow_quality": "unknown",
+    "naturalness": "unknown",
+    "tool_usage_correct": "unknown",
+    "overall_score": 0
+  },
+  "started_at": "2026-04-18T23:30:28.997356",
+  "ended_at": "2026-04-18T23:34:13.412452",
+  "total_rounds": 6
+}

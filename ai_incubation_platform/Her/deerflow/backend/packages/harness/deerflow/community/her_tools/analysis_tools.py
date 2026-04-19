@@ -28,17 +28,29 @@ logger = logging.getLogger(__name__)
 # ==================== Her Analyze Compatibility Tool ====================
 
 class HerAnalyzeCompatibilityTool(BaseTool):
-    """Her 兼容性分析工具 - 查询用户画像对比"""
+    """Her 兼容性分析工具 - 获取用户画像对比数据"""
 
     name: str = "her_analyze_compatibility"
     description: str = """
-【触发条件】用户说"合适吗"、"匹配度"、"我们配吗"、"分析一下我们"时调用。
+获取两个用户的画像对比数据。
+
+【能力】
+返回双方年龄、地点、兴趣、关系目标等对比数据，供你分析匹配度。
 
 【参数】
-- user_id: 用户 ID（可选）
-- target_user_id: 目标用户 ID（必须）
+- user_id: 用户 ID（可选，默认当前用户）
+- target_user_id: 目标用户 ID
 
-【返回】双方画像对比 JSON，Agent 根据此生成匹配度分析。
+【返回】
+- user_a: 用户 A 画像
+- user_b: 用户 B 画像
+- comparison_factors: 对比因素列表
+
+【使用场景】
+当用户想知道匹配度、合适程度时调用此工具。
+
+【注意】
+此工具只返回原始对比数据，你需要自主分析匹配度并给出结论。
 """
     args_schema: Type[BaseModel] = HerAnalyzeCompatibilityInput
 
@@ -58,7 +70,7 @@ class HerAnalyzeCompatibilityTool(BaseTool):
         user_b = get_db_user(target_user_id)
 
         if not user_a or not user_b:
-            return ToolResult(success=False, error="用户不存在", summary="查询失败")
+            return ToolResult(success=False, error="用户不存在")
 
         # 简单的对比因素（让 Agent 自己解读）
         comparison_factors = []
@@ -105,8 +117,7 @@ class HerAnalyzeCompatibilityTool(BaseTool):
                 "user_a": user_a,
                 "user_b": user_b,
                 "comparison_factors": comparison_factors,
-            },
-            summary=f"对比 {user_a.get('name')} 和 {user_b.get('name')} 的画像"
+            }
         )
 
 
@@ -140,7 +151,7 @@ class HerAnalyzeRelationshipTool(BaseTool):
         user_b = get_db_user(match_id)
 
         if not user_a or not user_b:
-            return ToolResult(success=False, error="用户不存在", summary="查询失败")
+            return ToolResult(success=False, error="用户不存在")
 
         # 查询匹配记录（如果有）
         ensure_her_in_path()
@@ -167,8 +178,7 @@ class HerAnalyzeRelationshipTool(BaseTool):
                 "user_a": user_a,
                 "user_b": user_b,
                 "match_info": match_info,
-            },
-            summary=f"分析 {user_a.get('name')} 和 {user_b.get('name')} 的关系"
+            }
         )
 
 

@@ -272,9 +272,198 @@
     animation: loadingRotate 1.5s linear infinite;
   }
 
+  // 动态进度动画（三个点依次显示）
+  .loading-dots {
+    display: inline-flex;
+    margin-left: 4px;
+
+    span {
+      animation: loadingDot 1.4s infinite;
+      opacity: 0;
+
+      &:nth-child(1) { animation-delay: 0s; }
+      &:nth-child(2) { animation-delay: 0.2s; }
+      &:nth-child(3) { animation-delay: 0.4s; }
+    }
+  }
+
+  @keyframes loadingDot {
+    0%, 80%, 100% { opacity: 0; }
+    40% { opacity: 1; }
+  }
+
   @keyframes loadingRotate {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+  }
+}
+
+// ==================== 骨架屏预览 ====================
+
+.match-skeleton-preview {
+  margin-top: @space-4;
+  padding: @space-4;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: @radius-xl;
+  border: 1px solid @border-light;
+  animation: skeletonFadeIn 0.3s ease-out;
+
+  .skeleton-preview-title {
+    text-align: center;
+    margin-bottom: @space-3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: skeletonPulse 2s infinite;
+
+    .skeleton-progress-dots {
+      display: inline-flex;
+      margin-left: 4px;
+
+      span {
+        animation: loadingDot 1.4s infinite;
+        opacity: 0;
+        font-weight: bold;
+        color: @color-primary;
+
+        &:nth-child(1) { animation-delay: 0s; }
+        &:nth-child(2) { animation-delay: 0.2s; }
+        &:nth-child(3) { animation-delay: 0.4s; }
+      }
+    }
+  }
+
+  // 🚀 [改进] 进度步骤可视化
+  .skeleton-progress-steps {
+    display: flex;
+    justify-content: center;
+    gap: @space-4;
+    margin-bottom: @space-4;
+    padding: @space-2 @space-3;
+    background: linear-gradient(135deg, @color-primary-light 0%, rgba(255, 255, 255, 0.8) 100%);
+    border-radius: @radius-lg;
+
+    .progress-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: @space-1;
+      opacity: 0.7;
+      animation: stepFadeIn 0.5s ease-out backwards;
+
+      &:nth-child(1) { animation-delay: 0.1s; }
+      &:nth-child(2) { animation-delay: 0.3s; }
+      &:nth-child(3) { animation-delay: 0.5s; }
+
+      .step-icon {
+        font-size: 20px;
+        animation: stepIconPulse 2s infinite;
+      }
+
+      .step-label {
+        font-size: @font-size-xs;
+        color: @text-tertiary;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  @keyframes stepFadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 0.7; transform: translateY(0); }
+  }
+
+  @keyframes stepIconPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
+  .skeleton-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: @space-3;
+  }
+
+  .skeleton-match-card {
+    display: flex;
+    gap: @space-3;
+    padding: @space-3;
+    background: rgba(250, 250, 250, 0.8);
+    border-radius: @radius-lg;
+    border: 1px solid @border-light;
+    animation: skeletonPulse 2s infinite;
+
+    .skeleton-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: @radius-lg;
+      background: linear-gradient(135deg, @color-primary-light 0%, @color-primary-medium 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+        animation: skeletonShimmer 1.5s infinite;
+      }
+
+      .ant-spin-dot {
+        color: @color-primary;
+      }
+    }
+
+    .skeleton-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: @space-2;
+
+      .skeleton-name {
+        height: 18px;
+        width: 60%;
+        background: linear-gradient(135deg, @border-light 0%, rgba(0, 0, 0, 0.02) 100%);
+        border-radius: @radius-sm;
+        animation: skeletonShimmer 1.5s infinite;
+      }
+
+      .skeleton-meta {
+        height: 14px;
+        width: 80%;
+        background: linear-gradient(135deg, @border-light 0%, rgba(0, 0, 0, 0.02) 100%);
+        border-radius: @radius-sm;
+        animation: skeletonShimmer 1.5s infinite 0.2s;
+      }
+
+      .skeleton-tags {
+        height: 12px;
+        width: 90%;
+        background: linear-gradient(135deg, @border-light 0%, rgba(0, 0, 0, 0.02) 100%);
+        border-radius: @radius-sm;
+        animation: skeletonShimmer 1.5s infinite 0.4s;
+      }
+    }
+  }
+
+  @keyframes skeletonFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes skeletonPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  @keyframes skeletonShimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
   }
 }
 
