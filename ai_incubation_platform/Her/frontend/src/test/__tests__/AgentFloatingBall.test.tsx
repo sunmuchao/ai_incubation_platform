@@ -5,6 +5,30 @@
 import React from 'react'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
+
+jest.mock('../../api/deerflowClient', () => ({
+  deerflowClient: {
+    chat: jest.fn().mockResolvedValue({
+      success: true,
+      ai_message: '测试回复',
+    }),
+  },
+}))
+
+jest.mock('../../utils/storage', () => ({
+  authStorage: {
+    getUser: jest.fn().mockReturnValue({
+      id: 'test-user',
+      name: '测试用户',
+      age: 25,
+      gender: 'male',
+      location: '北京',
+    }),
+    getUserId: jest.fn().mockReturnValue('test-user'),
+    getToken: jest.fn().mockReturnValue('token'),
+  },
+}))
+
 import AgentFloatingBall from '../../components/AgentFloatingBall'
 
 // Mock window 对象
@@ -64,19 +88,17 @@ jest.mock('antd', () => {
   }
 })
 
-// Mock QuickChatPanel
-jest.mock('../../components/QuickChatPanel', () => ({
-  __esModule: true,
-  default: ({ chatContext }: any) => (
-    <div data-testid="quick-chat-panel">
-      QuickChatPanel {chatContext?.partnerName || ''}
-    </div>
-  ),
-}))
-
 // 从组件导入常量
 const BALL_SIZE = 56
 const PADDING = 16
+
+/** 组件用 mousedown + window mouseup 切换展开，单纯 click(avatar) 不会挂上 window 监听 */
+function expandFloatingBallPanel() {
+  const root = document.querySelector('.agent-floating-ball') as HTMLElement
+  expect(root).toBeTruthy()
+  fireEvent.mouseDown(root, { clientX: 100, clientY: 100, bubbles: true })
+  fireEvent.mouseUp(window, { clientX: 100, clientY: 100, bubbles: true })
+}
 
 describe('AgentFloatingBall Component', () => {
   const defaultProps = {
@@ -107,9 +129,7 @@ describe('AgentFloatingBall Component', () => {
     it('显示在线状态', async () => {
       render(<AgentFloatingBall {...defaultProps} hasNewMessage={false} />)
 
-      // 展开面板
-      const avatar = screen.getByTestId('avatar')
-      fireEvent.click(avatar)
+      expandFloatingBallPanel()
 
       await waitFor(() => {
         expect(screen.getByText('在线')).toBeInTheDocument()
@@ -119,9 +139,7 @@ describe('AgentFloatingBall Component', () => {
     it('显示新消息状态', async () => {
       render(<AgentFloatingBall {...defaultProps} hasNewMessage={true} />)
 
-      // 展开面板
-      const avatar = screen.getByTestId('avatar')
-      fireEvent.click(avatar)
+      expandFloatingBallPanel()
 
       await waitFor(() => {
         expect(screen.getByText('有新消息')).toBeInTheDocument()
@@ -133,8 +151,7 @@ describe('AgentFloatingBall Component', () => {
     it('点击悬浮球展开面板', async () => {
       render(<AgentFloatingBall {...defaultProps} />)
 
-      const avatar = screen.getByTestId('avatar')
-      fireEvent.click(avatar)
+      expandFloatingBallPanel()
 
       // 等待面板展开
       await waitFor(() => {
@@ -145,9 +162,7 @@ describe('AgentFloatingBall Component', () => {
     it('点击关闭按钮收起面板', async () => {
       render(<AgentFloatingBall {...defaultProps} />)
 
-      // 展开
-      const avatar = screen.getByTestId('avatar')
-      fireEvent.click(avatar)
+      expandFloatingBallPanel()
 
       await waitFor(() => {
         expect(screen.getByText('Her')).toBeInTheDocument()
@@ -212,8 +227,7 @@ describe('AgentFloatingBall Component', () => {
     it('按钮应该可访问', async () => {
       render(<AgentFloatingBall {...defaultProps} />)
 
-      // 展开面板
-      fireEvent.click(screen.getByTestId('avatar'))
+      expandFloatingBallPanel()
 
       await waitFor(() => {
         const buttons = screen.getAllByTestId('button')

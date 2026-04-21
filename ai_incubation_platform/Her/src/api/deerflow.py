@@ -131,6 +131,14 @@ try:
                 except Exception as e:
                     logger.warning(f"[DeerFlow] 加载 .env 文件失败: {e}")
 
+            # config.yaml 里 glm 用 $OPENAI_API_KEY，方舟条目用 $ARK_API_KEY；Her 常只配 LLM_API_KEY，此处对齐以免解析 YAML 时报缺环境变量
+            _api_key = (os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("ARK_API_KEY") or "").strip()
+            if _api_key:
+                if not (os.environ.get("OPENAI_API_KEY") or "").strip():
+                    os.environ["OPENAI_API_KEY"] = _api_key
+                if not (os.environ.get("ARK_API_KEY") or "").strip():
+                    os.environ["ARK_API_KEY"] = _api_key
+
             reload_app_config(config_path)
 
             # 🔧 [关键修复] 获取 checkpointer，让对话历史能持久化
@@ -234,6 +242,16 @@ class MemorySyncResponse(BaseModel):
     success: bool
     facts_count: int
     message: str
+
+
+class MatchReasonStatusResponse(BaseModel):
+    """异步推荐理由查询响应"""
+    success: bool
+    query_request_id: str
+    status: str
+    updated_at: Optional[int] = None
+    elapsed_ms: Optional[int] = None
+    reasons_by_user_id: Dict[str, List[str]] = {}
 
 
 # ==================== Helper Functions ====================
@@ -893,12 +911,76 @@ def _coerce_interests_to_str_list(val: Any) -> List[str]:
 
 
 def _sanitize_interests_in_match_card_props(props: Dict[str, Any]) -> None:
-    matches = props.get("matches")
-    if not isinstance(matches, list):
+    for key in ("matches", "candidates"):
+        matches = props.get(key)
+        if not isinstance(matches, list):
+            continue
+        for m in matches:
+            if isinstance(m, dict):
+                m["interests"] = _coerce_interests_to_str_list(m.get("interests"))
+
+
+def _match_row_user_id(row: Dict[str, Any]) -> Optional[str]:
+    """从 MatchCardList 单行 props 解析用户 id（兼容嵌套 user）。"""
+    uid = row.get("user_id") or row.get("id")
+    if uid is None and isinstance(row.get("user"), dict):
+        uid = row["user"].get("id") or row["user"].get("user_id")
+    if uid is None:
+        return None
+    return str(uid)
+
+
+def _merge_her_find_candidates_into_match_cards(props: Dict[str, Any], tool_data: Dict[str, Any]) -> None:
+    """
+    将 her_find_candidates 工具返回的候选行（含 match_reasons / is_same_city 等）
+    按 user_id 合并进 Agent 输出的 MatchCardList.props.matches。
+
+    根因：Agent 用 GENERATIVE_UI 拼 UserProfileCard → matches 时，常不带工具侧算好的推荐理由；
+    详情弹窗与列表一致且缺少「为什么推荐」。
+    """
+    candidates = tool_data.get("candidates")
+    if not isinstance(candidates, list) or not candidates:
         return
-    for m in matches:
-        if isinstance(m, dict):
-            m["interests"] = _coerce_interests_to_str_list(m.get("interests"))
+
+    by_id: Dict[str, Dict[str, Any]] = {}
+    for c in candidates:
+        if isinstance(c, dict):
+            uid = _match_row_user_id(c)
+            if uid:
+                by_id[uid] = c
+
+    if not by_id:
+        return
+
+    for key in ("matches", "candidates"):
+        rows = props.get(key)
+        if not isinstance(rows, list):
+            continue
+        for m in rows:
+            if not isinstance(m, dict):
+                continue
+            uid = _match_row_user_id(m)
+            if not uid or uid not in by_id:
+                continue
+            src = by_id[uid]
+            reasons = src.get("match_reasons")
+            if isinstance(reasons, list) and reasons:
+                existing = m.get("match_reasons")
+                if not isinstance(existing, list) or len(existing) == 0:
+                    m["match_reasons"] = list(reasons)
+            if m.get("is_same_city") is None and src.get("is_same_city") is not None:
+                m["is_same_city"] = bool(src.get("is_same_city"))
+            if not (m.get("bio") or "").strip() and (src.get("bio") or "").strip():
+                m["bio"] = src.get("bio")
+            # 工具侧数据库性别/头像为单一真相：合并进卡片，避免 Agent 臆造 URL 导致裂图
+            src_gender = (src.get("gender") or "").strip()
+            if src_gender:
+                m["gender"] = src_gender
+            src_avatar = (src.get("avatar_url") or "").strip()
+            if src_avatar:
+                m["avatar_url"] = src_avatar
+            else:
+                m["avatar_url"] = ""
 
 
 def _finalize_match_generative_ui(
@@ -925,17 +1007,27 @@ def _finalize_match_generative_ui(
     if not isinstance(props, dict):
         return "", generative_ui
 
-    # 合并工具返回的元数据（filter_applied、query_request_id）
+    # 合并工具返回的元数据（filter_applied、query_request_id、filter_options、user_preferences）
     data = (tool_result or {}).get("data") or {}
     if isinstance(data.get("filter_applied"), dict):
         prev = props.get("filter_applied") if isinstance(props.get("filter_applied"), dict) else {}
         props["filter_applied"] = {**prev, **data["filter_applied"]}
+    if isinstance(data.get("filter_options"), dict):
+        prev_options = props.get("filter_options") if isinstance(props.get("filter_options"), dict) else {}
+        props["filter_options"] = {**prev_options, **data["filter_options"]}
+    if isinstance(data.get("user_preferences"), dict):
+        prev_preferences = props.get("user_preferences") if isinstance(props.get("user_preferences"), dict) else {}
+        props["user_preferences"] = {**prev_preferences, **data["user_preferences"]}
     if data.get("query_request_id"):
         props.setdefault("query_request_id", data["query_request_id"])
     props.setdefault("query_request_id", str(uuid.uuid4()))
 
     # 字段规范化（interests）
     _sanitize_interests_in_match_card_props(props)
+
+    # 合并工具候选池中的推荐理由等（与 Agent 输出的精选列表对齐）
+    if isinstance(data, dict) and data.get("candidates"):
+        _merge_her_find_candidates_into_match_cards(props, data)
 
     return "", generative_ui
 
@@ -1145,6 +1237,69 @@ def _enrich_tool_result_with_observability(
     return base
 
 
+def _is_direct_match_fast_path_request(message: str) -> bool:
+    """仅对明确的找对象短指令走直连匹配快路径。"""
+    text = (message or "").strip()
+    if not text:
+        return False
+    if text.startswith("筛选候选人"):
+        return False
+    normalized = re.sub(r"[，。！？!?,\s]+", "", text)
+    return normalized in {"帮我找对象", "找对象", "帮我匹配", "我要找对象", "匹配对象"}
+
+
+async def _run_direct_match_fast_path(request: ChatRequest) -> Optional[DeerFlowResponse]:
+    """
+    直连匹配快路径：跳过 Agent 前置推理，直接调用 her_find_candidates。
+    目标：降低“帮我找对象”端到端首包延迟。
+    """
+    if not request.user_id:
+        return None
+    if not _is_direct_match_fast_path_request(request.message):
+        return None
+    try:
+        from deerflow.community.her_tools.match_tools import HerFindCandidatesTool
+
+        tool = HerFindCandidatesTool()
+        tool_result_model = await tool._arun(
+            user_id=request.user_id,
+            retrieval_mode="db_only",
+            retrieval_reason="直连快路径：明确找对象短指令",
+        )
+        if not tool_result_model.success:
+            return None
+        data = tool_result_model.data if isinstance(tool_result_model.data, dict) else {}
+        matches = data.get("matches") if isinstance(data.get("matches"), list) else data.get("candidates", [])
+        if not isinstance(matches, list):
+            matches = []
+        generative_ui = {
+            "component_type": "MatchCardList",
+            "props": {
+                "matches": matches,
+                "total": data.get("total", len(matches)),
+            },
+        }
+        _, generative_ui = _finalize_match_generative_ui(generative_ui, {"success": True, "data": data})
+        intent = {"type": "match_request", "confidence": 0.95, "source": "fast_path"}
+        observability_trace = _build_observability_trace(request, intent, generative_ui)
+        tool_result = _enrich_tool_result_with_observability(
+            {"success": True, "error": "", "data": {"query_request_id": data.get("query_request_id")}},
+            observability_trace,
+        )
+        logger.info("[DEERFLOW_FAST_PATH] 直连匹配快路径命中，跳过 Agent 前置流程")
+        return DeerFlowResponse(
+            success=True,
+            ai_message="已为你快速筛选候选人，看看这些匹配对象。",
+            intent=intent,
+            deerflow_used=True,
+            generative_ui=generative_ui,
+            tool_result=tool_result,
+        )
+    except Exception as e:
+        logger.warning(f"[DEERFLOW_FAST_PATH] 快路径失败，回退常规链路: {e}")
+        return None
+
+
 async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
     """使用 DeerFlow Agent 处理"""
     start_time = time.time()
@@ -1165,6 +1320,11 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
             intent={"type": "security_reject", "confidence": 1.0, "source": "security_check"},
             deerflow_used=False,
         )
+
+    # 明确短指令优先走直连快路径，避免 Agent 前置推理耗时。
+    fast_path_result = await _run_direct_match_fast_path(request)
+    if fast_path_result is not None:
+        return fast_path_result
 
     client = get_deerflow_client()
     if not client:
@@ -1200,6 +1360,12 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
         MAX_TIMEOUT = 45.0  # 🔧 [修复] 减少超时时间，45秒足够处理大多数请求
         response_text = ""
         tool_results_list = []  # 收集所有工具调用结果
+        early_tool_exit = False
+        normalized_message = (request.message or "").strip()
+        expected_match_request = any(
+            keyword in normalized_message
+            for keyword in ["找对象", "匹配", "match", "聊得来", "三观", "对象"]
+        )
 
         try:
             logger.info(f"[DEERFLOW_TRACE] 开始 stream 调用，超时={MAX_TIMEOUT}s")
@@ -1207,7 +1373,7 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
 
             # 使用 asyncio.wait_for 包装整个 stream 处理
             async def process_stream():
-                nonlocal response_text, tool_results_list
+                nonlocal response_text, tool_results_list, early_tool_exit
                 # stream 是同步生成器，需要在线程中运行
                 stream_gen = client.stream(request.message, thread_id=thread_id, user_id=request.user_id)
 
@@ -1225,13 +1391,29 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
                                 if tool_json.get("success") and tool_json.get("data"):
                                     tool_results_list.append(tool_json)
                                     logger.info(f"[DEERFLOW_TRACE] 提取工具结果: {tool_json.get('data', {}).get('component_type', 'unknown')}")
+                                    tool_data = tool_json.get("data", {})
+                                    looks_like_match_result = (
+                                        isinstance(tool_data, dict)
+                                        and (
+                                            isinstance(tool_data.get("candidates"), list)
+                                            or isinstance(tool_data.get("matches"), list)
+                                            or "query_request_id" in tool_data
+                                            or isinstance(tool_data.get("filter_options"), dict)
+                                        )
+                                    )
+                                    if expected_match_request and looks_like_match_result:
+                                        early_tool_exit = True
+                                        logger.info("[DEERFLOW_TRACE] 匹配工具结果已就绪，提前结束 stream 以降低端到端延迟")
+                                        break
                             except json.JSONDecodeError:
                                 pass
                     elif event.type == "end":
                         break
 
             await asyncio.wait_for(process_stream(), timeout=MAX_TIMEOUT)
-            logger.info(f"[DEERFLOW_TRACE] stream 处理完成")
+            logger.info(
+                f"[DEERFLOW_TRACE] stream 处理完成 (early_tool_exit={early_tool_exit}, tool_results={len(tool_results_list)})"
+            )
 
         except asyncio.TimeoutError:
             logger.warning(f"[DEERFLOW_TRACE] ⏱️ Timeout after {MAX_TIMEOUT}s for message: {request.message[:50]}...")
@@ -1344,6 +1526,21 @@ async def _handle_with_deerflow(request: ChatRequest) -> DeerFlowResponse:
                         if ui and ui.get("component_type") != "SimpleResponse":
                             generative_ui = ui
                             logger.info(f"[DEERFLOW] 从工具结果构建 generative_ui（降级）: {ui.get('component_type')}")
+                    # 🚀 匹配请求快速路径：提前结束 stream 时，直接用工具结果构建 MatchCardList
+                    if not generative_ui and expected_match_request:
+                        data = tool_result.get("data", {})
+                        matches = data.get("matches")
+                        if not isinstance(matches, list):
+                            matches = data.get("candidates")
+                        if isinstance(matches, list) and matches:
+                            generative_ui = {
+                                "component_type": "MatchCardList",
+                                "props": {
+                                    "matches": matches,
+                                    "total": data.get("total", len(matches)),
+                                },
+                            }
+                            logger.info("[DEERFLOW] 匹配快速路径：从工具结果直接构建 MatchCardList")
                     data = tool_result.get("data", {})
                     output_hint = tool_result.get("output_hint", "")
                     if output_hint:
@@ -1742,6 +1939,31 @@ def build_generative_ui_from_tool_result(tool_result: Dict[str, Any]) -> Dict[st
     return _build_ui_response("SimpleResponse", {"content": tool_result.get("summary", "")})
 
 
+@router.get("/match-reasons/{query_request_id}", response_model=MatchReasonStatusResponse)
+async def get_match_reasons_status(query_request_id: str):
+    """查询异步推荐理由生成状态。"""
+    try:
+        from deerflow.community.her_tools.match_tools import get_async_reason_result
+
+        result = get_async_reason_result(query_request_id)
+        return MatchReasonStatusResponse(
+            success=result.get("status") != "not_found",
+            query_request_id=query_request_id,
+            status=result.get("status", "not_found"),
+            updated_at=result.get("updated_at"),
+            elapsed_ms=result.get("elapsed_ms"),
+            reasons_by_user_id=result.get("reasons_by_user_id") or {},
+        )
+    except Exception as e:
+        logger.error(f"[DEERFLOW_MATCH_REASON] 查询异步推荐理由失败: {e}")
+        return MatchReasonStatusResponse(
+            success=False,
+            query_request_id=query_request_id,
+            status="error",
+            reasons_by_user_id={},
+        )
+
+
 def _build_chat_initiation_fallback(
     tool_result: Optional[Dict[str, Any]],
     tool_data: Optional[Dict[str, Any]],
@@ -1846,6 +2068,61 @@ async def stream(request: StreamRequest):
             yield f"data: {json.dumps({'type': 'end', 'data': {'error': 'DeerFlow not available'}})}\n\n"
         return StreamingResponse(error_stream(), media_type="text/event-stream")
 
+    def _parse_filter_message(message: str) -> Optional[Dict[str, str]]:
+        text = (message or "").strip()
+        if not text.startswith("筛选候选人"):
+            return None
+        result: Dict[str, str] = {}
+        location_match = re.search(r"地区\s*=\s*([^\s]+)", text)
+        age_match = re.search(r"年龄\s*=\s*([^\s]+)", text)
+        goal_match = re.search(r"目标\s*=\s*([^\s]+)", text)
+        if location_match:
+            result["location"] = location_match.group(1).strip()
+        if age_match:
+            result["age_range"] = age_match.group(1).strip()
+        if goal_match:
+            result["relationship_goal"] = goal_match.group(1).strip()
+        return result
+
+    # 筛选操作走实时查询快路径：避免再走一轮 Agent 解析
+    filter_overrides = _parse_filter_message(request.message)
+    if filter_overrides is not None and request.user_id:
+        async def filter_stream():
+            try:
+                from deerflow.community.her_tools.match_tools import HerFindCandidatesTool
+
+                tool = HerFindCandidatesTool()
+                tool_result = await tool._arun(
+                    user_id=request.user_id,
+                    retrieval_mode="db_only",
+                    retrieval_reason="前端筛选实时查询",
+                    filter_overrides=filter_overrides,
+                )
+                if not tool_result.success:
+                    yield f"data: {json.dumps({'type': 'end', 'data': {'error': tool_result.error}}, ensure_ascii=False)}\n\n"
+                    return
+
+                data = tool_result.data if isinstance(tool_result.data, dict) else {}
+                matches = data.get("matches") if isinstance(data.get("matches"), list) else data.get("candidates", [])
+                generative_ui = {
+                    "component_type": "MatchCardList",
+                    "props": {
+                        "matches": matches if isinstance(matches, list) else [],
+                        "total": data.get("total", len(matches) if isinstance(matches, list) else 0),
+                        "filter_options": data.get("filter_options", {}),
+                        "user_preferences": data.get("user_preferences", {}),
+                        "filter_applied": data.get("filter_applied", {}),
+                        "query_request_id": data.get("query_request_id"),
+                    },
+                }
+                yield f"data: {json.dumps({'type': 'custom', 'data': {'generative_ui': generative_ui}}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'type': 'end', 'data': {'ai_message': '已按筛选条件重新查询候选人'}}, ensure_ascii=False)}\n\n"
+            except Exception as e:
+                logger.error(f"DeerFlow filter stream error: {e}")
+                yield f"data: {json.dumps({'type': 'end', 'data': {'error': str(e)}}, ensure_ascii=False)}\n\n"
+
+        return StreamingResponse(filter_stream(), media_type="text/event-stream")
+
     client = get_deerflow_client()
     if not client:
         async def error_stream():
@@ -1856,10 +2133,69 @@ async def stream(request: StreamRequest):
     if request.user_id:
         sync_user_memory_to_deerflow(request.user_id)
 
+    def _merge_user_profile_cards_in_text(text: str) -> str:
+        """将文本中的多个 UserProfileCard 标签合并为一个 MatchCardList 标签。"""
+        if not text or "[GENERATIVE_UI]" not in text:
+            return text
+
+        tag_regex = re.compile(r"\[GENERATIVE_UI\]\s*([\s\S]*?)\s*\[/GENERATIVE_UI\]")
+        matches = list(tag_regex.finditer(text))
+        if not matches:
+            return text
+
+        cards: List[Dict[str, Any]] = []
+        for m in matches:
+            try:
+                card = json.loads(m.group(1).strip())
+                if isinstance(card, dict) and card.get("component_type") and isinstance(card.get("props"), dict):
+                    cards.append(card)
+            except Exception:
+                continue
+
+        user_profile_cards = [c for c in cards if c.get("component_type") == "UserProfileCard"]
+        if len(user_profile_cards) <= 1:
+            return text
+
+        merged_ui = {
+            "component_type": "MatchCardList",
+            "props": {
+                "matches": [c.get("props", {}) for c in user_profile_cards],
+                "total": len(user_profile_cards),
+            },
+        }
+        merged_tag = f"[GENERATIVE_UI]{json.dumps(merged_ui, ensure_ascii=False)}[/GENERATIVE_UI]"
+
+        # 移除所有原始 GENERATIVE_UI 标签，追加一个合并后的标签
+        without_tags = tag_regex.sub("", text).strip()
+        if without_tags:
+            return f"{without_tags}\n\n{merged_tag}"
+        return merged_tag
+
     async def generate_stream():
+        ai_text_buffer = ""
         try:
             for event in client.stream(request.message, thread_id=request.thread_id, user_id=request.user_id):
-                yield f"data: {json.dumps({'type': event.type, 'data': event.data})}\n\n"
+                payload = {"type": event.type, "data": event.data}
+
+                # /chat 会把多个 UserProfileCard 合并为 MatchCardList，
+                # /stream 这里做同样归一化，避免前端收到多条单人卡。
+                if event.type == "messages-tuple" and isinstance(event.data, dict):
+                    data = dict(event.data)
+                    if data.get("type") == "ai" and isinstance(data.get("content"), str):
+                        ai_text_buffer += data.get("content", "")
+                        # 不向前端透传原始 AI 片段，避免前端重复按原始多卡拆分。
+                        data["content"] = ""
+                    payload["data"] = data
+
+                if event.type == "end" and isinstance(event.data, dict):
+                    data = dict(event.data)
+                    full_text = ai_text_buffer or data.get("ai_message", "")
+                    merged_text = _merge_user_profile_cards_in_text(full_text)
+                    if merged_text:
+                        data["ai_message"] = merged_text
+                    payload["data"] = data
+
+                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
         except Exception as e:
             logger.error(f"DeerFlow stream error: {e}")
             yield f"data: {json.dumps({'type': 'end', 'data': {'error': str(e)}})}\n\n"

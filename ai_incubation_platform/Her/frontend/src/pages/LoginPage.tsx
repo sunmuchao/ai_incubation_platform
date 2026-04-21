@@ -253,12 +253,36 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
         interests: interestsArray,
       })
 
+      // 🔧 [优化] 注册后直接返回 token，不再二次登录（减少 ~0.5s bcrypt 时间）
+      if (response.access_token) {
+        // 保存完整的用户信息
+        const fullUserInfo = {
+          id: response.user?.id || response.id,
+          username: values.username,
+          name: values.name,
+          email: values.email,
+          age: values.age,
+          gender: values.gender,
+          location: values.location,
+          ...(response.user || {}),
+        }
+
+        authStorage.saveAuth({
+          access_token: response.access_token,
+          refresh_token: response.refresh_token || '',
+          user: fullUserInfo
+        })
+        registrationStorage.reset()
+        message.success('注册成功！')
+        onLoginSuccess?.()
+        return
+      }
+
+      // 兼容旧格式：如果没有 token，尝试自动登录
       if (response.id || response.email) {
-        // 注册成功后自动登录（使用哈希后的密码）
         try {
           const loginResponse = await userApi.login(values.email, passwordHash)
           if (loginResponse.access_token) {
-            // 保存完整的用户信息（包含注册时填写的数据）
             const fullUserInfo = {
               id: response.id,
               username: values.username,
@@ -268,7 +292,6 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
               gender: values.gender,
               location: values.location,
             }
-            // 🔧 [修复] 存储 access_token + refresh_token
             authStorage.saveAuth({
               access_token: loginResponse.access_token,
               refresh_token: loginResponse.refresh_token,
@@ -281,7 +304,6 @@ const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = ({ onLoginSuccess }
           }
         } catch (loginError) {
           console.warn('Auto-login after registration failed:', loginError)
-          // 自动登录失败，提示用户手动登录
         }
 
         // 如果自动登录失败，保存完整用户信息并提示手动登录

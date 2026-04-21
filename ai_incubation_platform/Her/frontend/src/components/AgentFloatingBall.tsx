@@ -9,6 +9,7 @@
  *
  * 🚀 [改进点3] 悬浮球面板支持直接向 Her 提问，不跳转页面
  * 🚀 [改进点5] Her 使用临时上下文（用户信息 + 匹配对象信息 + 最近聊天），不依赖主页 Her 对话历史
+ * 🚀 [场景5方案3] 确保不输出内部指令（过滤工具调用描述、JSON等）
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
@@ -20,6 +21,66 @@ import { deerflowClient } from '../api/deerflowClient'
 import './AgentFloatingBall.less'
 
 const { Text } = Typography
+
+/**
+ * 🚀 [场景5方案3] 过滤内部指令 - 确保用户只看到自然语言响应
+ * Agent Native 架构：内部过程不应该暴露给用户
+ * - 过滤工具调用描述（如 "调用 her_find_candidates"）
+ * - 过滤 JSON 数据（如 {"success": true, ...}）
+ * - 过滤 GENERATIVE_UI 标签
+ * - 过滤思考过程描述
+ */
+const filterInternalInstructions = (content: string): string => {
+  if (!content) return ''
+
+  let cleanContent = content
+
+  // 1. 移除工具调用描述
+  const toolCallPatterns = [
+    /调用\s+\w+_?\w*\s+工具/g,  // "调用 her_find_candidates 工具"
+    /正在调用\s+\w+/g,  // "正在调用 her_find_candidates"
+    /工具返回：[\s\S]*?(?=\n\n|\n[A-Z]|$)/g,  // "工具返回：..."
+    /Tool\s+call:\s+\w+/gi,  // "Tool call: her_find_candidates"
+  ]
+  for (const pattern of toolCallPatterns) {
+    cleanContent = cleanContent.replace(pattern, '')
+  }
+
+  // 2. 移除工具返回的 JSON
+  const toolJsonRegex = /\{"success":\s*(true|false)[^}]*\}/g
+  cleanContent = cleanContent.replace(toolJsonRegex, '')
+
+  // 3. 移除 GENERATIVE_UI 标签
+  const generativeUiRegex = /\[GENERATIVE_UI\][\s\S]*?\[\/GENERATIVE_UI\]/g
+  cleanContent = cleanContent.replace(generativeUiRegex, '')
+
+  // 4. 移除思考过程描述
+  const thinkingPatterns = [
+    /【思考】[\s\S]*?(?=\n\n|\n[A-Z]|$)/g,
+    /\[思考\][\s\S]*?(?=\n\n|\n[A-Z]|$)/g,
+    /Thinking:[\s\S]*?(?=\n\n|\n[A-Z]|$)/gi,
+  ]
+  for (const pattern of thinkingPatterns) {
+    cleanContent = cleanContent.replace(pattern, '')
+  }
+
+  // 5. 移除 markdown JSON 代码块
+  const jsonBlockRegex = /```json[\s\S]*?```/g
+  cleanContent = cleanContent.replace(jsonBlockRegex, '')
+
+  // 6. 清理多余空行和空格
+  cleanContent = cleanContent
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+
+  // 7. 如果清理后内容过短（< 10 字符），可能是纯内部指令，返回友好提示
+  if (cleanContent.length < 10) {
+    return '好的，我来帮你处理这个问题~'
+  }
+
+  return cleanContent
+}
 
 interface ChatContext {
   partnerId: string
@@ -178,13 +239,45 @@ const AgentFloatingBall: React.FC<AgentFloatingBallProps> = ({
   // 🚀 [改进点3] Her 响应状态 - 单次问答，不保留对话历史
   const [herResponse, setHerResponse] = useState<string | null>(null)
   const [isLoadingHer, setIsLoadingHer] = useState(false)
+  // 🚀 [场景5方案1] 预加载常见问题的答案缓存
+  const [preloadedAnswersCache, setPreloadedAnswersCache] = useState<Map<string, string>>(new Map())
+  // 🚀 [场景5方案1] 思考动画显示状态（显示"正在思考..."动画）
+  const [showThinkingAnimation, setShowThinkingAnimation] = useState(false)
 
   // 🚀 [新增] 长按检测相关状态
   const longPressTimerRef = useRef<number | null>(null)
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
   const isLongPressRef = useRef(false)
-  const LONG_PRESS_THRESHOLD = 300  // 长按阈值（毫秒）
-  const MOVE_THRESHOLD = 10  // 移动阈值（像素），超过则取消长按
+  const LONG_PRESS_THRESHOLD = 200  // 🚀 [修复] 长按阈值从 300ms 改为 200ms，更容易触发
+  const MOVE_THRESHOLD = 30  // 🚀 [修复] 移动阈值从 10px 改为 30px，容忍更多移动
+
+  /** 鼠标：按下后先进入「待判定」，超过移动阈值才算拖拽；否则 mouseup 视为点击展开 */
+  const mousePendingRef = useRef<{
+    startX: number
+    startY: number
+    time: number
+    dragStarted: boolean
+    /** mousedown 时的指针与球位，用于计算拖拽 offset（与「立即按下即拖」行为一致） */
+    anchorClientX: number
+    anchorClientY: number
+    ballX: number
+    ballY: number
+  } | null>(null)
+  const mousePendingMoveRef = useRef<(e: MouseEvent) => void>(() => {})
+  const mousePendingUpRef = useRef<() => void>(() => {})
+  const onMousePendingMoveWrapper = useCallback((e: Event) => {
+    mousePendingMoveRef.current(e as MouseEvent)
+  }, [])
+  const onMousePendingUpWrapper = useCallback(() => {
+    mousePendingUpRef.current()
+  }, [])
+
+  // 🚀 [性能优化] 移除组件挂载时的预加载请求（阻塞主线程）
+  // 原方案：preloadCommonAnswers 发起 5 个 API 请求，阻塞 UI 渲染
+  // 优化后：首次使用时再请求，缓存结果供后续使用
+  // useEffect(() => {
+  //   preloadCommonAnswers 不再在组件挂载时执行
+  // }, [])
 
   const ballRef = useRef<HTMLDivElement>(null)
 
@@ -208,19 +301,18 @@ const AgentFloatingBall: React.FC<AgentFloatingBallProps> = ({
     }
   }, [position.x])
 
-  // 贴边吸附（只在收起状态执行）
+  // 贴边吸附（只在收起状态执行）；必须用函数式更新读取「当前」x，避免 setTimeout 闭包拿到拖拽前的旧 position.x
   const snapToEdge = useCallback(() => {
     if (isExpanded) return
 
     const screenWidth = window.innerWidth
     const halfWidth = screenWidth / 2
 
-    if (position.x < halfWidth) {
-      setPosition(prev => ({ ...prev, x: PADDING }))
-    } else {
-      setPosition(prev => ({ ...prev, x: screenWidth - BALL_SIZE - PADDING }))
-    }
-  }, [position.x, isExpanded])
+    setPosition(prev => ({
+      ...prev,
+      x: prev.x < halfWidth ? PADDING : screenWidth - BALL_SIZE - PADDING,
+    }))
+  }, [isExpanded])
 
   // 点击展开/收起（提前定义，供 handleTouchEndCheck 使用）
   const handleToggleExpand = useCallback(() => {
@@ -246,9 +338,84 @@ const AgentFloatingBall: React.FC<AgentFloatingBallProps> = ({
     }, LONG_PRESS_THRESHOLD)
   }, [position.x, position.y])
 
+  const pointerToBallPosition = useCallback((clientX: number, clientY: number, startX: number, startY: number) => {
+    const screenBounds = {
+      minX: PADDING,
+      maxX: window.innerWidth - BALL_SIZE - PADDING,
+      minY: PADDING,
+      maxY: window.innerHeight - BALL_SIZE - PADDING,
+    }
+    const newX = clientX - startX
+    const newY = clientY - startY
+    return {
+      x: Math.max(screenBounds.minX, Math.min(screenBounds.maxX, newX)),
+      y: Math.max(screenBounds.minY, Math.min(screenBounds.maxY, newY)),
+    }
+  }, [])
+
+  // 🚀 [新增] 开始鼠标拖拽；可选传入按下时的球位，避免 pending→drag 切换时闭包/阈值点与锚点不一致
+  const handleMouseDragStart = useCallback(
+    (clientX: number, clientY: number, ball?: { x: number; y: number }) => {
+      const bx = ball?.x ?? position.x
+      const by = ball?.y ?? position.y
+      setIsDragging(true)
+      setDragState({
+        isDragging: true,
+        startX: clientX - bx,
+        startY: clientY - by,
+        currentX: bx,
+        currentY: by,
+      })
+    },
+    [position.x, position.y]
+  )
+
+  // 🚀 [新增] 鼠标拖拽结束
+  const handleMouseDragEnd = useCallback(() => {
+    setDragState(prev => ({ ...prev, isDragging: false }))
+    setIsDragging(false)
+    setTimeout(() => snapToEdge(), 150)
+  }, [snapToEdge])
+
+  mousePendingMoveRef.current = (e: MouseEvent) => {
+    const pending = mousePendingRef.current
+    if (!pending || pending.dragStarted) return
+    const dx = Math.abs(e.clientX - pending.startX)
+    const dy = Math.abs(e.clientY - pending.startY)
+    if (dx <= MOVE_THRESHOLD && dy <= MOVE_THRESHOLD) return
+    pending.dragStarted = true
+    window.removeEventListener('mousemove', onMousePendingMoveWrapper)
+    window.removeEventListener('mouseup', onMousePendingUpWrapper)
+    const startX = pending.anchorClientX - pending.ballX
+    const startY = pending.anchorClientY - pending.ballY
+    handleMouseDragStart(pending.anchorClientX, pending.anchorClientY, { x: pending.ballX, y: pending.ballY })
+    setPosition(pointerToBallPosition(e.clientX, e.clientY, startX, startY))
+  }
+  mousePendingUpRef.current = () => {
+    window.removeEventListener('mousemove', onMousePendingMoveWrapper)
+    window.removeEventListener('mouseup', onMousePendingUpWrapper)
+    const pending = mousePendingRef.current
+    mousePendingRef.current = null
+    if (!pending) return
+    if (pending.dragStarted) {
+      handleMouseDragEnd()
+      return
+    }
+    handleToggleExpand()
+  }
+
+  useEffect(() => {
+    return () => {
+      window.removeEventListener('mousemove', onMousePendingMoveWrapper)
+      window.removeEventListener('mouseup', onMousePendingUpWrapper)
+    }
+  }, [onMousePendingMoveWrapper, onMousePendingUpWrapper])
+
   // 🚀 [改进] 触摸移动检测
   const handleTouchMoveCheck = useCallback((clientX: number, clientY: number) => {
-    if (!touchStartRef.current || isLongPressRef.current) return
+    // 🚀 [修复] 如果已经开始长按拖拽，不再检查移动阈值
+    if (isLongPressRef.current) return
+    if (!touchStartRef.current) return
 
     const deltaX = Math.abs(clientX - touchStartRef.current.x)
     const deltaY = Math.abs(clientY - touchStartRef.current.y)
@@ -289,44 +456,34 @@ const AgentFloatingBall: React.FC<AgentFloatingBallProps> = ({
   }, [dragState.isDragging, snapToEdge, handleToggleExpand])
 
   // 🚀 [改进] 处理拖拽移动 - 使用 useCallback 稳定引用
-  const handleDragMove = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!dragState.isDragging) return
+  const handleDragMove = useCallback(
+    (e: MouseEvent | TouchEvent) => {
+      if (!dragState.isDragging) return
 
-    const clientX = 'clientX' in e ? e.clientX : e.touches[0].clientX
-    const clientY = 'clientY' in e ? e.clientY : e.touches[0].clientY
+      const clientX = 'clientX' in e ? e.clientX : e.touches[0].clientX
+      const clientY = 'clientY' in e ? e.clientY : e.touches[0].clientY
 
-    const newX = clientX - dragState.startX
-    const newY = clientY - dragState.startY
+      setPosition(pointerToBallPosition(clientX, clientY, dragState.startX, dragState.startY))
+    },
+    [dragState.isDragging, dragState.startX, dragState.startY, pointerToBallPosition]
+  )
 
-    const screenBounds = {
-      minX: PADDING,
-      maxX: window.innerWidth - BALL_SIZE - PADDING,
-      minY: PADDING,
-      maxY: window.innerHeight - BALL_SIZE - PADDING,
-    }
-
-    setPosition({
-      x: Math.max(screenBounds.minX, Math.min(screenBounds.maxX, newX)),
-      y: Math.max(screenBounds.minY, Math.min(screenBounds.maxY, newY)),
-    })
-  }, [dragState.isDragging, dragState.startX, dragState.startY])
-
-  // 绑定全局拖拽事件
+  // 绑定全局拖拽事件（鼠标用 mouseup → 结束拖拽；触摸仍走 touchend → handleTouchEndCheck）
   useEffect(() => {
     if (dragState.isDragging) {
       window.addEventListener('mousemove', handleDragMove)
-      window.addEventListener('mouseup', handleTouchEndCheck)
+      window.addEventListener('mouseup', handleMouseDragEnd)
       window.addEventListener('touchmove', handleDragMove as any, { passive: false })
       window.addEventListener('touchend', handleTouchEndCheck)
     }
 
     return () => {
       window.removeEventListener('mousemove', handleDragMove)
-      window.removeEventListener('mouseup', handleTouchEndCheck)
+      window.removeEventListener('mouseup', handleMouseDragEnd)
       window.removeEventListener('touchmove', handleDragMove as any)
       window.removeEventListener('touchend', handleTouchEndCheck)
     }
-  }, [dragState.isDragging, handleDragMove, handleTouchEndCheck])
+  }, [dragState.isDragging, handleDragMove, handleMouseDragEnd, handleTouchEndCheck])
 
   // 关闭悬浮球
   const handleClose = useCallback(() => {
@@ -336,7 +493,7 @@ const AgentFloatingBall: React.FC<AgentFloatingBallProps> = ({
     setQuickInput('')
   }, [])
 
-  // 🚀 [改进点3 + 改进点5] 直接调用 Her API，不跳转页面
+  // 🚀 [场景5方案1] 直接调用 Her API，支持预加载缓存 + 思考动画
   // 使用临时上下文，不依赖主页 Her 的对话历史
   const callHerAPI = useCallback(async (question: string) => {
     if (!question.trim()) {
@@ -345,7 +502,32 @@ const AgentFloatingBall: React.FC<AgentFloatingBallProps> = ({
     }
 
     setIsLoadingHer(true)
+    setShowThinkingAnimation(true)  // 🚀 [场景5方案1] 显示思考动画
     setHerResponse(null)
+
+    // 🚀 [场景5方案1] 先检查预加载缓存（快速响应）
+    let cacheKey = ''
+    if (question.includes('找对象') || question.includes('匹配')) {
+      cacheKey = 'find_match'
+    } else if (question.includes('资料') || question.includes('完善')) {
+      cacheKey = 'profile_check'
+    } else if (question.includes('建议') && question.includes('匹配')) {
+      cacheKey = 'improve_match'
+    } else if (question.includes('破冰') || question.includes('话题')) {
+      cacheKey = 'icebreaker'
+    } else if (question.includes('约会')) {
+      cacheKey = 'date_idea'
+    }
+
+    if (cacheKey && preloadedAnswersCache.has(cacheKey)) {
+      console.log(`[AgentFloatingBall] 使用预加载缓存: ${cacheKey}`)
+      // 延迟 300ms 显示，让用户看到思考动画（更自然的体验）
+      await new Promise(resolve => setTimeout(resolve, 300))
+      setHerResponse(preloadedAnswersCache.get(cacheKey) || '')
+      setShowThinkingAnimation(false)
+      setIsLoadingHer(false)
+      return
+    }
 
     try {
       // 构建临时上下文
@@ -369,7 +551,17 @@ ${question}`
       const response = await deerflowClient.chat(contextMessage, tempThreadId)
 
       if (response.success && response.ai_message) {
-        setHerResponse(response.ai_message)
+        // 🚀 [场景5方案3] 过滤内部指令，确保用户只看到自然语言响应
+        const filteredResponse = filterInternalInstructions(response.ai_message)
+        setHerResponse(filteredResponse)
+        // 🚀 [场景5方案1] 缓存答案供下次使用（使用过滤后的响应）
+        if (cacheKey && filteredResponse.length > 10) {
+          setPreloadedAnswersCache(prev => {
+            const newCache = new Map(prev)
+            newCache.set(cacheKey, filteredResponse)
+            return newCache
+          })
+        }
       } else {
         setHerResponse('抱歉，我暂时无法回答这个问题，请稍后再试~')
       }
@@ -377,9 +569,10 @@ ${question}`
       console.error('[AgentFloatingBall] Her API error:', error)
       setHerResponse('网络出现问题，请稍后再试~')
     } finally {
+      setShowThinkingAnimation(false)
       setIsLoadingHer(false)
     }
-  }, [chatContext])
+  }, [chatContext, preloadedAnswersCache])
 
   // 发送快速对话 - 🚀 [改进点3] 直接调用 Her，不跳转
   const handleQuickSend = useCallback(() => {
@@ -397,13 +590,13 @@ ${question}`
 
   // 计算面板位置
   const panelStyle: React.CSSProperties = isExpanded ? {
-    position: 'fixed',
+    position: 'fixed' as const,
     top: position.y,
     left: panelSide === 'left'
       ? position.x - PANEL_WIDTH - 12 // 面板在左侧，距离悬浮球 12px
       : position.x + BALL_SIZE + 12, // 面板在右侧，距离悬浮球 12px
     zIndex: 10000,
-  } : undefined
+  } : {}
 
   return (
     <>
@@ -417,12 +610,23 @@ ${question}`
         }}
         onMouseDown={(e) => {
           e.preventDefault()
-          handleLongPressStart(e.clientX, e.clientY)
+          if (isExpanded) {
+            handleToggleExpand()
+            return
+          }
+          mousePendingRef.current = {
+            startX: e.clientX,
+            startY: e.clientY,
+            time: Date.now(),
+            dragStarted: false,
+            anchorClientX: e.clientX,
+            anchorClientY: e.clientY,
+            ballX: position.x,
+            ballY: position.y,
+          }
+          window.addEventListener('mousemove', onMousePendingMoveWrapper)
+          window.addEventListener('mouseup', onMousePendingUpWrapper)
         }}
-        onMouseMove={(e) => {
-          handleTouchMoveCheck(e.clientX, e.clientY)
-        }}
-        onMouseUp={handleTouchEndCheck}
         onTouchStart={(e) => {
           const touch = e.touches[0]
           handleLongPressStart(touch.clientX, touch.clientY)
@@ -432,7 +636,7 @@ ${question}`
           handleTouchMoveCheck(touch.clientX, touch.clientY)
           // 如果正在拖拽，也处理拖拽移动
           if (dragState.isDragging) {
-            handleDragMove(e as any)
+            handleDragMove(e.nativeEvent)
           }
         }}
         onTouchEnd={handleTouchEndCheck}
@@ -498,13 +702,19 @@ ${question}`
               </Space>
             </div>
 
-            {/* 🚀 [改进点3] Her 响应显示区域 - 单次问答，不显示历史对话 */}
-            {(isLoadingHer || herResponse) && (
+            {/* 🚀 [改进点3 + 场景5方案1] Her 响应显示区域 - 单次问答，思考动画 */}
+            {(showThinkingAnimation || isLoadingHer || herResponse) && (
               <div className="her-response-area">
-                {isLoadingHer ? (
+                {showThinkingAnimation || isLoadingHer ? (
                   <div className="her-loading">
+                    {/* 🚀 [场景5方案1] 思考动画 - 动态脉冲效果 */}
                     <Spin indicator={<LoadingOutlined style={{ fontSize: 16, color: '#C88B8B' }} spin />} />
-                    <Text type="secondary" style={{ marginLeft: 8 }}>正在思考...</Text>
+                    <Text type="secondary" style={{ marginLeft: 8 }}>
+                      <span className="thinking-text">正在思考</span>
+                      <span className="thinking-dots">
+                        <span>.</span><span>.</span><span>.</span>
+                      </span>
+                    </Text>
                   </div>
                 ) : (
                   <div className="her-response-bubble">

@@ -127,10 +127,10 @@ apiClient.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   } else if (process.env.NODE_ENV === 'development') {
-    // 开发环境：使用默认测试用户
-    const testUserId = devStorage.getTestUserId() || 'user-test-001'
-    devStorage.setTestUserId(testUserId)
-    config.headers['X-Dev-User-Id'] = testUserId
+    // 开发环境：无 token 时走测试用户，优先沿用当前会话用户 ID，避免历史会话“换人”
+    const resolvedDevUserId = devStorage.getTestUserId() || authStorage.getUserId() || 'user-test-001'
+    devStorage.setTestUserId(resolvedDevUserId)
+    config.headers['X-Dev-User-Id'] = resolvedDevUserId
   }
   return config
 })

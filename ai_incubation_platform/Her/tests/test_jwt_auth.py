@@ -306,6 +306,26 @@ class TestTokenDecoding:
         result = decode_access_token(tampered_token)
         assert result is None
 
+    def test_decode_token_with_portal_secret_fallback(self):
+        """当主密钥不匹配时，应尝试 portal_jwt_secret 进行解码"""
+        token = jwt.encode(
+            {
+                "user_id": "portal_user",
+                "exp": datetime.utcnow() + timedelta(hours=1),
+                "token_type": "access",
+                "jti": "portal_jti_001",
+            },
+            "portal_secret_for_test",
+            algorithm=ALGORITHM,
+        )
+
+        with patch("auth.jwt.settings") as mock_settings:
+            mock_settings.jwt_secret_key = "primary_secret_for_test"
+            mock_settings.portal_jwt_secret = "portal_secret_for_test"
+            result = decode_access_token(token)
+
+        assert result == "portal_user"
+
     def test_decode_malformed_token_returns_none(self):
         """测试格式错误的令牌解码返回 None"""
         malformed_tokens = [
@@ -656,6 +676,37 @@ class TestGetCurrentUserOptional:
             # 令牌用户应优先
             assert result["user_id"] == user_id
             assert result["is_anonymous"] is False
+
+    @pytest.mark.asyncio
+    async def test_dev_environment_uses_unverified_claims_when_signature_mismatch(self):
+        """开发环境签名不一致时，optional 认证可回退到未验签 claims"""
+        wrong_secret_token = jwt.encode(
+            {
+                "user_id": "dev_fallback_user",
+                "exp": datetime.utcnow() + timedelta(hours=1),
+                "token_type": "access",
+                "jti": "dev_fallback_jti",
+            },
+            "another_secret",
+            algorithm=ALGORITHM,
+        )
+
+        with patch("auth.jwt.settings") as mock_settings, patch("config.settings") as mock_config:
+            mock_settings.environment = "development"
+            mock_settings.jwt_secret_key = "primary_secret_for_test"
+            mock_settings.portal_jwt_secret = ""
+            mock_config.environment = "development"
+
+            credentials = MagicMock(spec=HTTPAuthorizationCredentials)
+            credentials.credentials = wrong_secret_token
+
+            request = MagicMock(spec=Request)
+            request.headers = {}
+
+            result = await get_current_user_optional(request, credentials)
+
+        assert result["user_id"] == "dev_fallback_user"
+        assert result["is_anonymous"] is True
 
 
 # ============= 第八部分：边界条件与异常测试 =============

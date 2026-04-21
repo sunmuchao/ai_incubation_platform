@@ -4,13 +4,13 @@
 
 红娘 Agent 是一个 **AI 驱动的深度婚恋匹配平台**，旨在通过智能算法和数据分析帮助用户找到真正匹配的伴侣或合作伙伴。
 
-**当前版本**: v1.30.0 (AI Native + DeerFlow 集成版 - 架构清理完成)
+**当前版本**: v1.30.0 (AI Native + DeerFlow 集成版)
 
 ## 架构说明（AI Native）
 
 Her 采用 **AI Native 架构**，集成 DeerFlow Agent 运行时：
 
-> **重要**: v1.30.0 完成了大规模架构清理，删除了 48 个废弃文件，明确了 AI Native 架构边界。
+> **重要（2026-04-20）**：按 `CLEANUP_CANDIDATES.md` 执行了一轮**可验证清理**：移除未接线的后端「逻辑孤岛」与前端 Knip 未引用模块；`frontend build`、`frontend` Jest、`main` 导入及抽样 `pytest` 已通过。历史文件以 Git 为准，不再维护 `deprecated_archive` 目录。
 
 ### 核心架构
 
@@ -20,7 +20,9 @@ Her 采用 **AI Native 架构**，集成 DeerFlow Agent 运行时：
 │  - 对话式交互（HomePage, ChatInterface）                         │
 │  - 滑动匹配（SwipeMatchPage）                                    │
 │  - 置信度管理（ConfidenceManagementPage）                        │
-│  - API: deerflowClient, herAdvisorApi, confidenceClient          │
+│  - Generative UI（生产路径）：`ChatInterface` lazy →              │
+│    `generative-ui/MatchComponents` + `ChatComponents` + `types`   │
+│  - API: deerflowClient, herAdvisorApi, confidenceClient 等      │
 └─────────────────────────────────────────────────────────────────┘
                            ↓ API 调用
 ┌─────────────────────────────────────────────────────────────────┐
@@ -28,7 +30,11 @@ Her 采用 **AI Native 架构**，集成 DeerFlow Agent 运行时：
 │  - /api/her/chat → HerAdvisorService                            │
 │  - /api/matching → ConversationMatchService                     │
 │  - /api/deerflow → DeerFlow Agent 路由                          │
-│  - 50 个 API 路由（自动扫描注册）                                 │
+│  - 路由：`main.py` → `routers.register_all_routers` → 扫描       │
+│    `src/api/*.py` 中所有 `router*` 并 `include_router`（50+ 条）   │
+│  - 画像置信度：`api/profile_confidence` + `profile_confidence_service` │
+│  - 反馈闭环：`api/confidence_feedback` → `confidence.feedback_loop` │
+│    （已移除未接线的综合编排 / 扩展校验 / LLM 深度 / 实时更新子模块）   │
 └─────────────────────────────────────────────────────────────────┘
                            ↓ 调用 DeerFlow
 ┌─────────────────────────────────────────────────────────────────┐
@@ -51,8 +57,8 @@ Her 采用 **AI Native 架构**，集成 DeerFlow Agent 运行时：
 | 层 | 模块 | 状态 |
 |---|------|------|
 | **前端** | apiClient, deerflowClient, herAdvisorApi | ✅ 活跃 |
-| **前端** | HomePage, LoginPage, SwipeMatchPage, RegistrationConversationPage | ✅ 活跃 |
-| **后端 API** | matching, users, chat, deerflow, her_advisor（50 个路由） | ✅ 活跃（自动注册） |
+| **前端** | HomePage, LoginPage, SwipeMatchPage 等（注册引导页已自代码库移除，仅存 Git 历史） | ✅ 活跃 |
+| **后端 API** | matching, users, chat, deerflow, her_advisor 等（`src/api/*`，自动注册） | ✅ 活跃 |
 | **后端 Service** | her_advisor_service, user_profile_service, conversation_match_service | ✅ 活跃 |
 | **Skills** | 26 个 Skills（registry.py 统一管理） | ✅ 活跃 |
 | **DeerFlow** | her_tools（12 个 LangChain BaseTool） | ✅ 活跃 |
@@ -76,7 +82,9 @@ Her 采用 **AI Native 架构**，集成 DeerFlow Agent 运行时：
 | `quick_start_service` | `/api/profile/quickstart` 直接操作数据库 | ❌ 已删除 |
 | `vector_adjustment_service` | DeerFlow her_feedback_learning_tool | ❌ 已删除 |
 | `behavior_lab_types` | 概念设计，从未落地 | ❌ 已删除 |
-| Generative UI 组件 | DeerFlow 动态生成 | ❌ 部分保留 |
+| Generative UI 未使用子组件 | 生产仅 `MatchComponents` / `ChatComponents` / `types` | ❌ 已删除（2026-04-20） |
+| `services.confidence` 综合编排（扩展校验 / LLM 深度 / 实时更新） | `profile_confidence_service` + `feedback_loop` API | ❌ 已删除（2026-04-20） |
+| `report_service`（未接线举报 API） | 模型 `UserReportDB` 仍在 `db.models`；业务需时新建路由 | ❌ 已删除（2026-04-20） |
 | 废弃页面（QuickStart, Games 等） | DeerFlow Skills | ❌ 已删除 |
 | 废弃测试目录 `tests/_deprecated` | 功能已迁移 | ❌ 已删除 |
 
@@ -102,8 +110,10 @@ make dev
 |------|------|------|
 | DeerFlow LangGraph | 2024 | Agent 核心运行时 |
 | DeerFlow Gateway | 8001 | Agent HTTP API |
-| Her Backend | 8000 | 业务 API + DeerFlow 路由 |
+| Her Backend | 8002 | 业务 API + DeerFlow 路由 |
 | Her Frontend | 3005 | 前端页面 |
+
+**端口约定**：`./start.sh` 与 `make dev-her` 默认将 Her 后端绑定在 **8002**（与上表一致）。Makefile 使用变量 **`HER_BACKEND_PORT`**（默认 8002），本地可执行 `make dev-her HER_BACKEND_PORT=8000` 覆盖。应用内 `settings.server_port` 仍以环境变量 **`SERVER_PORT`** 为准，用于日志与自检；**实际监听端口以启动命令传入为准**。
 
 ### 其他命令
 
@@ -184,7 +194,7 @@ make dev
 
 # 启动 Her 后端（新窗口）
 cd src
-PYTHONPATH=. uvicorn main:app --port 8000
+PYTHONPATH=. uvicorn main:app --port 8002
 
 # 启动前端（新窗口）
 cd frontend
@@ -193,8 +203,8 @@ npm run dev
 
 访问应用：
 - 前端应用：http://localhost:3005/
-- API 文档：http://localhost:8000/docs
-- DeerFlow 状态：http://localhost:8000/api/deerflow/status
+- API 文档：http://localhost:8002/docs
+- DeerFlow 状态：http://localhost:8002/api/deerflow/status
 
 ### 运行测试
 
@@ -353,7 +363,7 @@ overall_confidence = base_score (0.3)
 | `GET /api/share/stats` | 获取分享统计 (P9) |
 | `GET /api/share/invite-stats` | 获取邀请统计 (P9) |
 
-详细 API 文档请查看：http://localhost:8000/docs
+详细 API 文档请查看：http://localhost:8002/docs
 
 ## 项目结构
 

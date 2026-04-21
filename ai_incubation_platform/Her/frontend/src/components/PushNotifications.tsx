@@ -12,9 +12,27 @@ import { Badge, Drawer, List, Avatar, Typography, Button, Space, Empty, Spin } f
 import { BellOutlined, UserOutlined, MessageOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import type { MatchCandidate } from '../types'
+import { getCurrentUserId } from '../hooks/useCurrentUserId'
 import './PushNotifications.less'
 
 const { Text } = Typography
+const MAX_RECENT_CONVERSATIONS = 30
+const UUID_REGEX = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
+
+const isInvalidDisplayName = (value?: string): boolean => {
+  const name = (value || '').trim()
+  if (!name) return true
+  if (name === 'user-anonymous-dev') return true
+  return UUID_REGEX.test(name)
+}
+
+const normalizeDisplayName = (...candidates: Array<string | undefined>): string => {
+  for (const raw of candidates) {
+    if (isInvalidDisplayName(raw)) continue
+    return (raw || '').trim()
+  }
+  return 'TA'
+}
 
 interface ConversationMessage {
   id: string
@@ -22,6 +40,9 @@ interface ConversationMessage {
   user_id_2: string
   last_message_preview?: string
   last_message_at?: string
+  partner_id?: string
+  partner_name?: string
+  partner_avatar_url?: string
   unread_count: number
 }
 
@@ -44,22 +65,38 @@ const PushNotifications: React.FC<PushNotificationsProps> = ({
 
   // 从会话中获取当前用户 ID
   const currentUserId = React.useMemo(() => {
-    const userInfoStr = localStorage.getItem('user_info')
-    if (userInfoStr) {
-      try {
-        const userInfo = JSON.parse(userInfoStr)
-        return userInfo.id || userInfo.username
-      } catch {
-        return 'user-anonymous-dev'
-      }
-    }
-    return 'user-anonymous-dev'
+    return getCurrentUserId()
   }, [])
 
-  // 筛选有未读消息的会话
-  const unreadConversations = React.useMemo(() => {
-    return conversations.filter(conv => conv.unread_count > 0)
+  // 微信式：按最近消息时间排序，未读/已读都提供快速入口
+  const sortedConversations = React.useMemo(() => {
+    return [...conversations]
+      .filter((conv) => {
+        const partnerId = conv.partner_id || (conv.user_id_1 === currentUserId ? conv.user_id_2 : conv.user_id_1)
+        // 过滤脏数据/占位会话：匿名用户、自己和自己、无最近消息时间
+        if (!partnerId || partnerId === 'user-anonymous-dev' || partnerId === currentUserId) {
+          return false
+        }
+        if (!conv.last_message_at) {
+          return false
+        }
+        return true
+      })
+      .sort((a, b) => {
+        const ta = new Date(a.last_message_at || 0).getTime()
+        const tb = new Date(b.last_message_at || 0).getTime()
+        return tb - ta
+      })
+      .slice(0, MAX_RECENT_CONVERSATIONS)
   }, [conversations])
+
+  const unreadConversations = React.useMemo(() => {
+    return sortedConversations.filter(conv => conv.unread_count > 0)
+  }, [sortedConversations])
+
+  const readConversations = React.useMemo(() => {
+    return sortedConversations.filter(conv => conv.unread_count <= 0)
+  }, [sortedConversations])
 
   // 打开通知面板
   const handleOpenDrawer = () => {
@@ -74,10 +111,19 @@ const PushNotifications: React.FC<PushNotificationsProps> = ({
   // 点击消息，跳转到聊天室
   const handleConversationClick = (conv: ConversationMessage) => {
     // 获取对方 ID
-    const partnerId = conv.user_id_1 === currentUserId ? conv.user_id_2 : conv.user_id_1
+    const partnerId = conv.partner_id || (conv.user_id_1 === currentUserId ? conv.user_id_2 : conv.user_id_1)
     // 从缓存获取对方信息
     const cachedMatch = matchesCache[partnerId]
-    const partnerName = cachedMatch?.user?.name || partnerId
+    const partnerName = normalizeDisplayName(
+      conv.partner_name,
+      cachedMatch?.user?.name,
+      partnerId
+    )
+
+    // 预清零：点击会话后先本地更新未读状态，避免等待轮询导致的“已读仍显示未读”
+    window.dispatchEvent(new CustomEvent('conversation-read', {
+      detail: { partnerId }
+    }))
 
     // 调用回调打开聊天室
     onOpenChatRoom?.(partnerId, partnerName)
@@ -137,58 +183,117 @@ const PushNotifications: React.FC<PushNotificationsProps> = ({
                 <div style={{ padding: 20 }} />
               </Spin>
             </div>
-          ) : unreadConversations.length === 0 ? (
+          ) : sortedConversations.length === 0 ? (
             <Empty description={t('notification.noNewMessages')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
           ) : (
-            <List
-              dataSource={unreadConversations}
-              renderItem={(conv) => {
-                const partnerId = conv.user_id_1 === currentUserId ? conv.user_id_2 : conv.user_id_1
-                const cachedMatch = matchesCache[partnerId]
-                const partnerName = cachedMatch?.user?.name || partnerId
-                const partnerAvatar = cachedMatch?.user?.avatar || cachedMatch?.user?.avatar_url
+            <>
+              {unreadConversations.length > 0 && (
+                <div className="notification-section">
+                  <Text className="notification-section-title">未读消息</Text>
+                  <List
+                    dataSource={unreadConversations}
+                    renderItem={(conv) => {
+                      const partnerId = conv.partner_id || (conv.user_id_1 === currentUserId ? conv.user_id_2 : conv.user_id_1)
+                      const cachedMatch = matchesCache[partnerId]
+                      const partnerName = normalizeDisplayName(
+                        conv.partner_name,
+                        cachedMatch?.user?.name,
+                        partnerId
+                      )
+                      const partnerAvatar = conv.partner_avatar_url || cachedMatch?.user?.avatar || cachedMatch?.user?.avatar_url
 
-                return (
-                  <List.Item
-                    className="notification-item unread"
-                    onClick={() => handleConversationClick(conv)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <List.Item.Meta
-                      avatar={
-                        <Avatar
-                          size={48}
-                          src={partnerAvatar}
-                          icon={<UserOutlined />}
-                        />
-                      }
-                      title={
-                        <div className="notification-title">
-                          <Space>
-                            <Text strong>{partnerName}</Text>
-                            <Text type="secondary" style={{ fontSize: 11 }}>
-                              {formatTime(conv.last_message_at || '')}
-                            </Text>
-                          </Space>
-                        </div>
-                      }
-                      description={
-                        <div className="notification-content">
-                          <Text style={{ fontSize: 13 }}>
-                            {conv.last_message_preview || t('conversation.sentMessage')}
-                          </Text>
-                          {conv.unread_count > 1 && (
-                            <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
-                              ({conv.unread_count}条)
-                            </Text>
-                          )}
-                        </div>
-                      }
-                    />
-                  </List.Item>
-                )
-              }}
-            />
+                      return (
+                        <List.Item
+                          className="notification-item unread"
+                          onClick={() => handleConversationClick(conv)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <List.Item.Meta
+                            avatar={
+                              <Avatar
+                                size={48}
+                                src={partnerAvatar}
+                                icon={<UserOutlined />}
+                              />
+                            }
+                            title={
+                              <div className="notification-title">
+                                <Space>
+                                  <Text strong>{partnerName}</Text>
+                                  <Text type="secondary" style={{ fontSize: 11 }}>
+                                    {formatTime(conv.last_message_at || '')}
+                                  </Text>
+                                </Space>
+                              </div>
+                            }
+                            description={
+                              <div className="notification-content">
+                                <Text style={{ fontSize: 13 }}>
+                                  {conv.last_message_preview || t('conversation.sentMessage')}
+                                </Text>
+                                {conv.unread_count > 1 && (
+                                  <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
+                                    ({conv.unread_count}条)
+                                  </Text>
+                                )}
+                              </div>
+                            }
+                          />
+                        </List.Item>
+                      )
+                    }}
+                  />
+                </div>
+              )}
+
+              {readConversations.length > 0 && (
+                <div className="notification-section">
+                  <Text className="notification-section-title">最近聊天</Text>
+                  <List
+                    dataSource={readConversations}
+                    renderItem={(conv) => {
+                      const partnerId = conv.partner_id || (conv.user_id_1 === currentUserId ? conv.user_id_2 : conv.user_id_1)
+                      const cachedMatch = matchesCache[partnerId]
+                      const partnerName = normalizeDisplayName(
+                        conv.partner_name,
+                        cachedMatch?.user?.name,
+                        partnerId
+                      )
+                      const partnerAvatar = conv.partner_avatar_url || cachedMatch?.user?.avatar || cachedMatch?.user?.avatar_url
+
+                      return (
+                        <List.Item
+                          className="notification-item"
+                          onClick={() => handleConversationClick(conv)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <List.Item.Meta
+                            avatar={<Avatar size={48} src={partnerAvatar} icon={<UserOutlined />} />}
+                            title={
+                              <div className="notification-title">
+                                <Space>
+                                  <Text strong>{partnerName}</Text>
+                                  <Text type="secondary" style={{ fontSize: 11 }}>
+                                    {formatTime(conv.last_message_at || '')}
+                                  </Text>
+                                </Space>
+                              </div>
+                            }
+                            description={
+                              <div className="notification-content">
+                                <Text style={{ fontSize: 13 }}>
+                                  {conv.last_message_preview || t('conversation.sentMessage')}
+                                </Text>
+                              </div>
+                            }
+                          />
+                        </List.Item>
+                      )
+                    }}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       </Drawer>

@@ -143,8 +143,7 @@ frontend/
 │   │   ├── LoveLanguageProfile.less
 │   │   ├── MatchCard.tsx             # 匹配卡片
 │   │   ├── MatchCard.less
-│   │   ├── RelationshipTimeline.tsx  # 关系时间线
-│   │   ├── RelationshipTimeline.less
+│   │   ├── generative-ui/            # MatchComponents + ChatComponents（生产 lazy）
 │   │   └── index.ts
 │   ├── pages/
 │   │   ├── HomePage.tsx          # AI Native 主页面
@@ -218,15 +217,11 @@ import GenerativeUIContainer from './components/GenerativeUI'
 - 动画效果
 - 行动按钮
 
-### 6.4 RelationshipTimeline - 关系里程碑
+### 6.4 RelationshipTimeline（已移除）
 
-```tsx
-import RelationshipTimeline from './components/RelationshipTimeline'
+该组件已于 2026-04-20 从主代码树删除（无生产入口）。若需恢复请查 Git 历史。
 
-<RelationshipTimeline userId1="user-1" userId2="user-2" />
-```
-
-**功能**:
+**原功能（归档说明）**:
 - 里程碑时间线
 - 统计数据展示
 - AI 分析卡片

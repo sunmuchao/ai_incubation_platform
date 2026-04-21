@@ -21,7 +21,7 @@ from collections import OrderedDict
 from utils.logger import logger
 from utils.db_session_manager import db_session, db_session_readonly
 from db.models import UserDB
-from services.her_advisor_service import SelfProfile, DesireProfile
+from services.profile_dataclasses import DesireProfile, SelfProfile
 
 
 # 性能优化：内存缓存配置
@@ -175,6 +175,16 @@ class UserProfileService:
             except json.JSONDecodeError:
                 dynamic_data = {}
 
+        vector_dimensions = dynamic_data.get("vector_dimensions", {})
+
+        interests_list: List[Any] = []
+        raw_interests = getattr(user, "interests", None)
+        if isinstance(raw_interests, str) and raw_interests:
+            try:
+                interests_list = json.loads(raw_interests)
+            except json.JSONDecodeError:
+                interests_list = []
+
         return SelfProfile(
             # 基础信息（来自 UserDB 字段，单一数据源）
             age=user.age or 0,
@@ -183,7 +193,7 @@ class UserProfileService:
             occupation=user.occupation or "",
             education=user.education or "",
             relationship_goal=user.relationship_goal or "",
-            interests=json.loads(user.interests) if user.interests else [],
+            interests=interests_list,
             # 动态画像（来自 JSON，行为推断）
             actual_personality=dynamic_data.get("actual_personality", ""),
             communication_style=dynamic_data.get("communication_style", ""),
@@ -202,6 +212,43 @@ class UserProfileService:
                 "communication": 0.0,
                 "emotional_needs": 0.0,
             }),
+            # 向量维度化画像（优先读 dynamic_data，缺失则从 UserDB 基础字段补齐）
+            demographics=vector_dimensions.get("demographics", {
+                "age": user.age or 0,
+                "preferred_age_min": user.preferred_age_min,
+                "preferred_age_max": user.preferred_age_max,
+                "gender": user.gender or "",
+                "sexual_orientation": getattr(user, "sexual_orientation", "") or "",
+                "preferred_gender": user.preferred_gender or "",
+                "location": user.location or "",
+                "accept_remote": getattr(user, "accept_remote", None),
+                "education": user.education or "",
+                "height": getattr(user, "height", None),
+                "income": getattr(user, "income", None),
+                "occupation": user.occupation or "",
+                "has_car": getattr(user, "has_car", None),
+                "housing": getattr(user, "housing", None),
+            }),
+            values_profile=vector_dimensions.get("values", {
+                "relationship_goal": user.relationship_goal or "",
+                "family_importance": getattr(user, "family_importance", None),
+                "want_children": getattr(user, "want_children", None),
+                "work_life_balance": getattr(user, "work_life_balance", None),
+                "spending_style": getattr(user, "spending_style", None),
+            }),
+            big_five_profile=vector_dimensions.get("big_five", {}),
+            attachment_profile=vector_dimensions.get("attachment", {}),
+            growth_profile=vector_dimensions.get("growth", {}),
+            lifestyle_profile=vector_dimensions.get("lifestyle", {
+                "sleep_type": getattr(user, "sleep_type", None),
+                "lifestyle_text": user.lifestyle if getattr(user, "lifestyle", None) else None,
+            }),
+            behavior_profile=vector_dimensions.get("behavior", {}),
+            communication_profile=vector_dimensions.get("communication", {
+                "style": dynamic_data.get("communication_style", ""),
+                "response_pattern": dynamic_data.get("response_pattern", ""),
+            }),
+            implicit_traits=vector_dimensions.get("implicit", {}),
         )
 
     def _build_desire_profile(self, user: UserDB) -> DesireProfile:
@@ -234,6 +281,16 @@ class UserProfileService:
             except json.JSONDecodeError:
                 dynamic_data = {}
 
+        vector_dimensions = dynamic_data.get("vector_dimensions", {})
+
+        declared_interests: List[Any] = []
+        raw_interests = getattr(user, "interests", None)
+        if isinstance(raw_interests, str) and raw_interests:
+            try:
+                declared_interests = json.loads(raw_interests)
+            except json.JSONDecodeError:
+                declared_interests = []
+
         return DesireProfile(
             # 表面偏好（来自 UserDB 字段）
             surface_preference=ideal_type_data.get("description", ""),
@@ -248,6 +305,22 @@ class UserProfileService:
             dislike_feedback=dynamic_data.get("dislike_feedback", []),
             # 置信度
             preference_confidence=user.profile_confidence or 0.3,
+            # 向量维度化偏好画像
+            interest_profile=vector_dimensions.get("interests", {
+                "declared_interests": declared_interests,
+                "clicked_types": dynamic_data.get("clicked_types", []),
+            }),
+            value_preferences=vector_dimensions.get("value_preferences", {
+                "relationship_goal": user.relationship_goal or "",
+                "want_children": getattr(user, "want_children", None),
+                "spending_style": getattr(user, "spending_style", None),
+            }),
+            communication_preferences=vector_dimensions.get("communication_preferences", {}),
+            hard_constraints=vector_dimensions.get("hard_constraints", {
+                "deal_breakers": deal_breakers,
+                "age_range": [user.preferred_age_min, user.preferred_age_max],
+                "preferred_gender": user.preferred_gender or "",
+            }),
         )
 
     async def get_profiles_batch(
@@ -429,6 +502,15 @@ class UserProfileService:
                 "reputation_score": profile.reputation_score,
                 "like_rate": profile.like_rate,
             },
+            "demographics": profile.demographics,
+            "values_profile": profile.values_profile,
+            "big_five_profile": profile.big_five_profile,
+            "attachment_profile": profile.attachment_profile,
+            "growth_profile": profile.growth_profile,
+            "lifestyle_profile": profile.lifestyle_profile,
+            "behavior_profile": profile.behavior_profile,
+            "communication_profile": profile.communication_profile,
+            "implicit_traits": profile.implicit_traits,
         }
         return dimension_mapping.get(dimension, "")
 
@@ -447,6 +529,15 @@ class UserProfileService:
             "actual_personality": lambda v: setattr(profile, "actual_personality", v),
             "emotional_needs": lambda v: setattr(profile, "emotional_needs", v if isinstance(v, list) else [v]),
             "attachment_style": lambda v: setattr(profile, "attachment_style", v),
+            "demographics": lambda v: setattr(profile, "demographics", v if isinstance(v, dict) else {}),
+            "values_profile": lambda v: setattr(profile, "values_profile", v if isinstance(v, dict) else {}),
+            "big_five_profile": lambda v: setattr(profile, "big_five_profile", v if isinstance(v, dict) else {}),
+            "attachment_profile": lambda v: setattr(profile, "attachment_profile", v if isinstance(v, dict) else {}),
+            "growth_profile": lambda v: setattr(profile, "growth_profile", v if isinstance(v, dict) else {}),
+            "lifestyle_profile": lambda v: setattr(profile, "lifestyle_profile", v if isinstance(v, dict) else {}),
+            "behavior_profile": lambda v: setattr(profile, "behavior_profile", v if isinstance(v, dict) else {}),
+            "communication_profile": lambda v: setattr(profile, "communication_profile", v if isinstance(v, dict) else {}),
+            "implicit_traits": lambda v: setattr(profile, "implicit_traits", v if isinstance(v, dict) else {}),
         }
 
         if dimension in dimension_mapping:
@@ -473,6 +564,10 @@ class UserProfileService:
             "swipe_patterns": profile.swipe_patterns,
             "like_feedback": profile.like_feedback,
             "dislike_feedback": profile.dislike_feedback,
+            "interest_profile": profile.interest_profile,
+            "value_preferences": profile.value_preferences,
+            "communication_preferences": profile.communication_preferences,
+            "hard_constraints": profile.hard_constraints,
         }
         return dimension_mapping.get(dimension, "")
 
@@ -491,6 +586,10 @@ class UserProfileService:
             "swipe_patterns": lambda v: setattr(profile, "swipe_patterns", v if isinstance(v, dict) else {}),
             "like_feedback": lambda v: setattr(profile, "like_feedback", v if isinstance(v, list) else [v]),
             "dislike_feedback": lambda v: setattr(profile, "dislike_feedback", v if isinstance(v, list) else [v]),
+            "interest_profile": lambda v: setattr(profile, "interest_profile", v if isinstance(v, dict) else {}),
+            "value_preferences": lambda v: setattr(profile, "value_preferences", v if isinstance(v, dict) else {}),
+            "communication_preferences": lambda v: setattr(profile, "communication_preferences", v if isinstance(v, dict) else {}),
+            "hard_constraints": lambda v: setattr(profile, "hard_constraints", v if isinstance(v, dict) else {}),
         }
 
         if dimension in dimension_mapping:
@@ -556,6 +655,17 @@ class UserProfileService:
                     "reputation_score": self_profile.reputation_score,
                     "like_rate": self_profile.like_rate,
                     "dimension_confidences": self_profile.dimension_confidences,
+                    "vector_dimensions": {
+                        "demographics": self_profile.demographics,
+                        "values": self_profile.values_profile,
+                        "big_five": self_profile.big_five_profile,
+                        "attachment": self_profile.attachment_profile,
+                        "growth": self_profile.growth_profile,
+                        "lifestyle": self_profile.lifestyle_profile,
+                        "behavior": self_profile.behavior_profile,
+                        "communication": self_profile.communication_profile,
+                        "implicit": self_profile.implicit_traits,
+                    },
                 }
 
                 dynamic_desire_profile = {
@@ -565,6 +675,12 @@ class UserProfileService:
                     "swipe_patterns": desire_profile.swipe_patterns,
                     "like_feedback": desire_profile.like_feedback,
                     "dislike_feedback": desire_profile.dislike_feedback,
+                    "vector_dimensions": {
+                        "interests": desire_profile.interest_profile,
+                        "value_preferences": desire_profile.value_preferences,
+                        "communication_preferences": desire_profile.communication_preferences,
+                        "hard_constraints": desire_profile.hard_constraints,
+                    },
                 }
 
                 # 更新 UserDB 的 JSON 字段

@@ -19,12 +19,15 @@ MatchExecutor - 匹配执行器
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 import asyncio
+import json
 
 from utils.logger import logger
 from utils.db_session_manager import db_session
 from db.models import UserDB
+from agent.tools.geo_tool import GeoService
 from services.user_profile_service import get_user_profile_service
-from services.her_advisor_service import HerAdvisorService, SelfProfile, DesireProfile
+from services.her_advisor_service import HerAdvisorService
+from services.profile_dataclasses import DesireProfile, SelfProfile
 
 
 @dataclass
@@ -54,6 +57,26 @@ class MatchExecutor:
     ):
         self._profile_service = profile_service or get_user_profile_service()
         self._her_advisor = her_advisor or HerAdvisorService()
+
+    def _extract_vector_highlights(self, profile_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        生成可直接展示的向量维度摘要，避免前端重复解析完整画像。
+        """
+        vector_dimensions = profile_dict.get("vector_dimensions", {}) or {}
+        values = vector_dimensions.get("values", {}) or {}
+        attachment = vector_dimensions.get("attachment", {}) or {}
+        communication = vector_dimensions.get("communication", {}) or {}
+        implicit = vector_dimensions.get("implicit", {}) or {}
+
+        return {
+            "relationship_goal": values.get("relationship_goal"),
+            "want_children": values.get("want_children"),
+            "spending_style": values.get("spending_style"),
+            "attachment_style": attachment.get("primary_style") or profile_dict.get("emotional_needs", {}).get("attachment_style"),
+            "conflict_style": communication.get("conflict_style"),
+            "repair_willingness": communication.get("repair_willingness"),
+            "implicit_preference_confidence": implicit.get("confidence"),
+        }
 
     async def execute_matching(
         self,
@@ -109,7 +132,8 @@ class MatchExecutor:
                 user_b_profile=(candidate_self, candidate_desire),
                 compatibility_score=0.5
             )
-            llm_tasks.append((candidate_id, candidate_self, task))
+            # 🔧 [修复] 保留原始候选人数据，用于组装最终结果
+            llm_tasks.append((candidate_id, candidate_self, task, candidate))
 
         # 并行执行所有 LLM 调用
         advice_results = await asyncio.gather(
@@ -119,7 +143,7 @@ class MatchExecutor:
 
         # 组装结果
         matches = []
-        for i, (candidate_id, candidate_self, _) in enumerate(llm_tasks):
+        for i, (candidate_id, candidate_self, _, original_candidate) in enumerate(llm_tasks):
             advice = advice_results[i]
 
             # 处理异常情况
@@ -130,10 +154,30 @@ class MatchExecutor:
             else:
                 score = advice.compatibility_score if advice else 0.5
 
+            # 🔧 [修复] 合并原始数据和画像数据
+            profile_dict = candidate_self.to_dict()
+            basic = profile_dict.get("basic", {})
+            vector_highlights = self._extract_vector_highlights(profile_dict)
+            # 用原始数据填充缺失的字段（name, bio, avatar_url 等）
+            merged_profile = {
+                **profile_dict,
+                "name": original_candidate.get("name"),
+                "age": original_candidate.get("age") or basic.get("age"),
+                "gender": original_candidate.get("gender") or basic.get("gender"),
+                "location": original_candidate.get("location") or basic.get("location"),
+                "bio": original_candidate.get("bio"),
+                "avatar_url": original_candidate.get("avatar_url"),
+                "interests": original_candidate.get("interests") or basic.get("interests", []),
+                "relationship_goal": original_candidate.get("relationship_goal") or basic.get("relationship_goal"),
+                "vector_dimensions": profile_dict.get("vector_dimensions", {}),
+                "vector_match_highlights": vector_highlights,
+            }
+
             matches.append({
                 "user_id": candidate_id,
                 "score": score,
-                "candidate_profile": candidate_self.to_dict(),
+                "candidate_profile": merged_profile,
+                "vector_match_highlights": vector_highlights,
                 "her_advice": advice,
             })
 
@@ -197,7 +241,34 @@ class MatchExecutor:
             # 按创建时间排序
             query = query.order_by(UserDB.created_at.desc())
 
-            users = query.limit(limit).all()
+            fetch_limit = max(limit * 12, 60)
+            users = query.limit(fetch_limit).all()
+
+            # 距离：API 可传 max_distance_km；未传但本人有常住地时默认约省内/邻近圈，避免只按注册时间取到很远的人
+            max_km = extracted_conditions.get("max_distance_km")
+            if max_km is None and (self_profile.location or "").strip():
+                max_km = 350
+
+            db_self = db.query(UserDB).filter(UserDB.id == user_id).first()
+            anchor = ""
+            if db_self and getattr(db_self, "location", None):
+                anchor = (db_self.location or "").strip()
+            elif (self_profile.location or "").strip():
+                anchor = self_profile.location.strip()
+
+            if max_km and anchor and users:
+                filtered: List[UserDB] = []
+                for u in users:
+                    bl = (u.location or "").strip()
+                    dist = GeoService.calculate_distance(anchor, bl) if bl else None
+                    if dist is not None and dist <= float(max_km):
+                        filtered.append(u)
+                    elif dist is None and bl and (anchor in bl or bl in anchor):
+                        filtered.append(u)
+                if filtered:
+                    users = filtered
+
+            users = users[:limit]
 
             for u in users:
                 candidates.append({
@@ -206,11 +277,15 @@ class MatchExecutor:
                     "age": u.age,
                     "gender": u.gender,
                     "location": u.location,
+                    "bio": getattr(u, "bio", None) or "",
+                    "avatar_url": getattr(u, "avatar_url", None),
                     "interests": u.interests,  # 新增：返回兴趣字段
                     "relationship_goal": u.relationship_goal,
                     "education": getattr(u, "education", None),
                     "occupation": getattr(u, "occupation", None),
                     "income": getattr(u, "income", None),
+                    "self_profile_json": getattr(u, "self_profile_json", "{}") or "{}",
+                    "desire_profile_json": getattr(u, "desire_profile_json", "{}") or "{}",
                 })
 
         return candidates

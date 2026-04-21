@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from db.database import engine, Base
 from services.behavior_log_service import UserBehaviorEventDB, UserBehaviorDailyStatsDB
-from services.report_service import UserReportDB
+from db.models import UserReportDB
 from utils.logger import logger
 
 

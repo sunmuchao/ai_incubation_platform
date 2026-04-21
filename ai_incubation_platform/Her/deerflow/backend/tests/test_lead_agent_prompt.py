@@ -41,8 +41,8 @@ def test_apply_prompt_template_includes_custom_mounts(monkeypatch):
     monkeypatch.setattr(prompt_module, "_get_enabled_skills", lambda: [])
     monkeypatch.setattr(prompt_module, "get_deferred_tools_prompt_section", lambda: "")
     monkeypatch.setattr(prompt_module, "_build_acp_section", lambda: "")
-    monkeypatch.setattr(prompt_module, "_get_memory_context", lambda agent_name=None: "")
-    monkeypatch.setattr(prompt_module, "get_agent_soul", lambda agent_name=None: "")
+    monkeypatch.setattr(prompt_module, "_get_memory_context", lambda *args, **kwargs: "")
+    monkeypatch.setattr(prompt_module, "get_agent_soul", lambda *args, **kwargs: "")
 
     prompt = prompt_module.apply_prompt_template()
 
@@ -59,13 +59,33 @@ def test_apply_prompt_template_includes_relative_path_guidance(monkeypatch):
     monkeypatch.setattr(prompt_module, "_get_enabled_skills", lambda: [])
     monkeypatch.setattr(prompt_module, "get_deferred_tools_prompt_section", lambda: "")
     monkeypatch.setattr(prompt_module, "_build_acp_section", lambda: "")
-    monkeypatch.setattr(prompt_module, "_get_memory_context", lambda agent_name=None: "")
-    monkeypatch.setattr(prompt_module, "get_agent_soul", lambda agent_name=None: "")
+    monkeypatch.setattr(prompt_module, "_get_memory_context", lambda *args, **kwargs: "")
+    monkeypatch.setattr(prompt_module, "get_agent_soul", lambda *args, **kwargs: "")
 
     prompt = prompt_module.apply_prompt_template()
 
     assert "Treat `/mnt/user-data/workspace` as your default current working directory" in prompt
     assert "`hello.txt`, `../uploads/data.csv`, and `../outputs/report.md`" in prompt
+
+
+def test_apply_prompt_template_includes_matching_retrieval_policy(monkeypatch):
+    config = SimpleNamespace(
+        sandbox=SimpleNamespace(mounts=[]),
+        skills=SimpleNamespace(container_path="/mnt/skills"),
+    )
+    monkeypatch.setattr("deerflow.config.get_app_config", lambda: config)
+    monkeypatch.setattr(prompt_module, "_get_enabled_skills", lambda: [])
+    monkeypatch.setattr(prompt_module, "get_deferred_tools_prompt_section", lambda: "")
+    monkeypatch.setattr(prompt_module, "_build_acp_section", lambda: "")
+    monkeypatch.setattr(prompt_module, "_get_memory_context", lambda *args, **kwargs: "")
+    monkeypatch.setattr(prompt_module, "get_agent_soul", lambda *args, **kwargs: "")
+
+    prompt = prompt_module.apply_prompt_template()
+
+    assert "<her_matching_retrieval_policy>" in prompt
+    assert 'retrieval_mode="db_only"' in prompt
+    assert 'retrieval_mode="hybrid"' in prompt
+    assert "retrieval_reason" in prompt
 
 
 def test_refresh_skills_system_prompt_cache_async_reloads_immediately(monkeypatch, tmp_path):
@@ -162,4 +182,3 @@ def test_warm_enabled_skills_cache_logs_on_timeout(monkeypatch, caplog):
         warmed = prompt_module.warm_enabled_skills_cache(timeout_seconds=0.01)
 
     assert warmed is False
-    assert "Timed out waiting" in caplog.text

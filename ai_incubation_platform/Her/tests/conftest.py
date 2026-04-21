@@ -187,12 +187,3 @@ def test_cold_start_user():
         "values": {},
         "goal": "serious"
     }
-
-
-# ============= pytest-xdist 工作器隔离钩子 =============
-
-def pytest_configure_node(node):
-    """为每个 xdist worker 配置独立环境"""
-    # 每个 worker 有独立的内存数据库
-    worker_id = getattr(node, "workerinput", {}).get("workerid", "gw0")
-    os.environ["PYTEST_XDIST_WORKER"] = worker_id

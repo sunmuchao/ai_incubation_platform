@@ -54,6 +54,16 @@ export const chatApi = {
     const response = await apiClient.post(`/api/chat/read/message/${messageId}`)
     return response.data
   },
+
+  /**
+   * 标记整个会话已读
+   */
+  async markConversationRead(partnerId: string) {
+    const response = await apiClient.post('/api/chat/read/conversation', {
+      partner_id: partnerId,
+    })
+    return response.data
+  },
 }
 
 // ==================== 快聊 API（合并自 quick_chat）====================

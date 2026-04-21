@@ -9,10 +9,18 @@ Identity 优化：
 
 架构说明：新架构使用 ConversationMatchService + HerAdvisorService (AI Native)，
 详见 HER_ADVISOR_ARCHITECTURE.md
+
+【性能优化 v1.31】
+- 模块导入移到顶部，避免请求时动态加载（减少 ~30s）
+- 注册直接返回 token，跳过二次登录（减少 ~0.5s）
 """
 from fastapi import APIRouter, HTTPException, Depends, status, Request
+from fastapi.responses import JSONResponse
 from typing import List, Optional
 import json
+import asyncio
+import time
+import uuid
 
 from models.user import User, UserCreate, UserProfile, UserUpdate, Gender, RelationshipGoal, SexualOrientation
 from db.database import get_db
@@ -33,6 +41,11 @@ from utils.logger import logger
 from config import settings
 from cache import cache_manager
 from middleware.rate_limiter import rate_limiter, rate_limit_login
+
+# 🔧 [性能优化] 预加载模块，避免请求时动态导入
+from api.profile_confidence import evaluate_on_register
+from services.notification_service import check_and_notify_preferences
+from agent.autonomous.event_listener import emit_event
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -125,25 +138,50 @@ async def register_user(
     # 注：matchmaker.register_user 已废弃
     # 新架构：候选人从数据库查询，无需注册到内存池
 
-    # v1.30: 注册后自动评估置信度
+    # v1.30: 注册后自动评估置信度（已在顶部预加载模块）
     try:
-        from api.profile_confidence import evaluate_on_register
-        import asyncio
         asyncio.create_task(evaluate_on_register(db_user.id))
         logger.info(f"[REGISTER] {user_data.email} - Triggered async confidence evaluation")
     except Exception as e:
         logger.warning(f"Failed to trigger confidence evaluation: {e}")
 
-    # 🔧 [新增] 事件驱动通知：检查所有用户的偏好，匹配成功则写入通知队列
+    # 🔧 [新增] 事件驱动通知：检查所有用户的偏好，匹配成功则写入通知队列（已在顶部预加载模块）
     try:
-        from services.notification_service import check_and_notify_preferences
         asyncio.create_task(check_and_notify_preferences(db_user))
         logger.info(f"[REGISTER] {user_data.email} - Triggered notification preference check")
     except Exception as e:
         logger.warning(f"Failed to trigger notification check: {e}")
 
     logger.info(f"[REGISTER] {user_data.email} - COMPLETE in {time.time() - start_time:.3f}s")
-    return _from_db(db_user)
+
+    # 🔧 [优化] 注册后直接返回 token，避免前端二次登录（减少 ~0.5s bcrypt 时间）
+    access_token, refresh_token = create_token_pair(db_user.id)
+
+    user_info = {
+        "id": db_user.id,
+        "name": db_user.name,
+        "email": db_user.email,
+        "age": db_user.age,
+        "gender": db_user.gender,
+        "location": db_user.location,
+        "avatar_url": db_user.avatar_url,
+        "bio": db_user.bio,
+    }
+
+    return JSONResponse(
+        content={
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            "refresh_expires_in": REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+            "user": user_info,
+            # 兼容旧格式
+            "id": db_user.id,
+            "username": db_user.username,
+            "email": db_user.email,
+        }
+    )
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -217,10 +255,9 @@ async def login(
     access_token, refresh_token = create_token_pair(user.id)
     logger.info(f"[LOGIN] {credentials.username} - Token generation done in {time.time() - token_start:.3f}s")
 
-    # AI Native: 触发用户登录事件，取消激活推送计划
+    # AI Native: 触发用户登录事件，取消激活推送计划（已在顶部预加载模块）
     event_start = time.time()
     try:
-        from agent.autonomous.event_listener import emit_event
         emit_event(
             event_type="user_login",
             event_data={
@@ -246,7 +283,6 @@ async def login(
     }
     logger.info(f"[LOGIN] {credentials.username} - COMPLETE in {time.time() - start_time:.3f}s")
     # 将用户信息添加到响应头部（前端可通过响应获取）
-    from fastapi.responses import JSONResponse
     return JSONResponse(
         content={
             "access_token": access_token,
@@ -316,6 +352,27 @@ async def list_users(service=Depends(get_user_service)):
     """获取所有用户列表"""
     db_users = service.list_all()
     return [_from_db(u) for u in db_users]
+
+
+@router.get("/me", response_model=User)
+async def get_current_user_profile(
+    current_user_id: str = Depends(get_current_user),
+    service=Depends(get_user_service),
+):
+    """获取当前登录用户详情"""
+    # 先从缓存读取
+    cached_profile = cache_manager.get_profile(current_user_id)
+    if cached_profile:
+        logger.debug(f"Current user cache hit: {current_user_id}")
+        return User(**cached_profile)
+
+    db_user = service.get_by_id(current_user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user = _from_db(db_user)
+    cache_manager.set_profile(current_user_id, user.model_dump())
+    return user
 
 
 @router.get("/{user_id}", response_model=User)

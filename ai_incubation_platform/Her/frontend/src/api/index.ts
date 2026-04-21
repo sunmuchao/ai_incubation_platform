@@ -18,7 +18,39 @@ import type {
   CompatibilityAnalysis,
   MatchCandidate,
   StreamChunk,
+  User,
 } from '../types'
+
+/** 将 /api/matching/recommend 返回的扁平结构转为 MatchCandidate（含 user.avatar_url） */
+function normalizeRecommendationRow(raw: Record<string, unknown>): MatchCandidate {
+  const r = raw as Record<string, any>
+  if (r?.user?.id) {
+    return r as MatchCandidate
+  }
+  const id = (r.id ?? r.user_id) as string
+  const interests = Array.isArray(r.interests) ? r.interests : []
+  const user: User = {
+    id,
+    name: r.name || r.username || '用户',
+    age: typeof r.age === 'number' ? r.age : Number(r.age) || 0,
+    gender: r.gender || '',
+    location: r.location || '',
+    avatar: r.avatar,
+    avatar_url: r.avatar_url,
+    bio: r.bio || '',
+    interests,
+    goal: r.goal || r.relationship_goal || '',
+    verified: !!r.verified,
+  }
+  return {
+    user,
+    compatibility_score: typeof r.compatibility_score === 'number' ? r.compatibility_score : Number(r.score) || 0,
+    score_breakdown: (r.score_breakdown as MatchCandidate['score_breakdown']) || {},
+    common_interests: (r.common_interests as string[]) || [],
+    reasoning: (r.match_reason || r.compatibility_reason || r.reasoning || 'AI 综合评估推荐') as string,
+    vector_match_highlights: (r.vector_match_highlights as MatchCandidate['vector_match_highlights']) || undefined,
+  }
+}
 
 // conversation_matching API - 使用 ConversationMatchService（Her 顾问服务）
 // 不要跳过这个 API 直接调用 DeerFlow！
@@ -312,6 +344,16 @@ export const aiAwarenessApi = {
     )
     return response.data
   },
+
+  /**
+   * 触发 LLM 对近期行为做选择性摘要（结果写入服务端 behavior_digest.jsonl）
+   */
+  async runBehaviorDigest(userId: string, limit = 150) {
+    const response = await apiClient.post(
+      `/api/ai/awareness/behavior-digest?user_id=${encodeURIComponent(userId)}&limit=${limit}`
+    )
+    return response.data
+  },
 }
 
 export const matchingApi = {
@@ -328,7 +370,9 @@ export const matchingApi = {
     if (filters?.distance) params.append('distance', filters.distance.toString())
 
     const response = await apiClient.get(`/api/matching/recommend`, { params })
-    return response.data
+    const data = response.data
+    if (!Array.isArray(data)) return []
+    return data.map((row: Record<string, unknown>) => normalizeRecommendationRow(row))
   },
 
   /**
@@ -411,7 +455,40 @@ export const userApi = {
    * 获取当前用户信息
    */
   async getCurrentUser() {
-    const response = await apiClient.get('/api/users/me')
+    try {
+      const response = await apiClient.get('/api/users/me')
+      return response.data
+    } catch (error: any) {
+      // 兼容部分环境中尚未提供 /me 端点，回退到按 userId 查询
+      if (error?.status === 404) {
+        const fallbackUserId = authStorage.getUserId()
+        if (fallbackUserId && fallbackUserId !== 'anonymous') {
+          const fallback = await apiClient.get(`/api/users/${encodeURIComponent(fallbackUserId)}`)
+          return fallback.data
+        }
+
+        const cachedUser = authStorage.getUser()
+        if (cachedUser) {
+          return cachedUser
+        }
+      }
+      throw error
+    }
+  },
+
+  /**
+   * 按用户 ID 获取用户信息
+   */
+  async getUserById(userId: string) {
+    const response = await apiClient.get(`/api/users/${encodeURIComponent(userId)}`)
+    return response.data
+  },
+
+  /**
+   * 更新当前用户信息
+   */
+  async updateCurrentUser(userId: string, data: Record<string, any>) {
+    const response = await apiClient.put(`/api/users/${encodeURIComponent(userId)}`, data)
     return response.data
   },
 

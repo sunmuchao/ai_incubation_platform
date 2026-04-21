@@ -16,8 +16,10 @@ import { SendOutlined, LeftOutlined, PictureOutlined, SmileOutlined, MoreOutline
 import type { MatchCandidate } from '../types'
 import { chatApi, yourTurnApi } from '../api'
 import { websocketService } from '../services/websocket'
-import { authStorage, herStorage } from '../utils/storage'
+import { authStorage, herStorage, conversationSummaryStorage } from '../utils/storage'
+import { getCurrentUserId } from '../hooks/useCurrentUserId'
 import { isIOS, optimizeIOSScroll, optimizeIOSInput } from '../utils/iosUtils'
+import { deerflowClient } from '../api/deerflowClient'  // 🚀 [场景4方案2] 导入 DeerFlow 客户端
 import HerAvatar from '../assets/her-avatar.svg'
 import type { MenuProps } from 'antd'
 import './ChatRoom.less'
@@ -33,6 +35,69 @@ interface Message {
   is_read: boolean
   created_at: string
   status?: 'sent' | 'delivered' | 'read' | 'failed'
+}
+
+const CHAT_ROOM_CACHE_PREFIX = 'chat_room_messages'
+const CHAT_ROOM_CACHE_LIMIT = 80
+
+const getChatRoomCacheKey = (userId: string, partnerId: string): string =>
+  `${CHAT_ROOM_CACHE_PREFIX}_${userId}_${partnerId}`
+
+const loadChatRoomCachedMessages = (userId: string, partnerId: string): Message[] => {
+  if (!userId || !partnerId) return []
+  try {
+    const raw = localStorage.getItem(getChatRoomCacheKey(userId, partnerId))
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as Message[]
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((msg) => msg && typeof msg.id === 'string' && typeof msg.content === 'string')
+      .slice(-CHAT_ROOM_CACHE_LIMIT)
+  } catch {
+    return []
+  }
+}
+
+const saveChatRoomCachedMessages = (userId: string, partnerId: string, messages: Message[]): void => {
+  if (!userId || !partnerId) return
+  try {
+    localStorage.setItem(
+      getChatRoomCacheKey(userId, partnerId),
+      JSON.stringify(messages.slice(-CHAT_ROOM_CACHE_LIMIT))
+    )
+  } catch {
+    // localStorage 超限时静默降级，不影响聊天
+  }
+}
+
+const messageSort = (a: Message, b: Message): number =>
+  new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+
+const getMessageMergeKey = (msg: Message): string => {
+  if (msg.id && !msg.id.startsWith('temp-')) return msg.id
+  return `${msg.sender_id}|${msg.receiver_id}|${msg.message_type}|${msg.content}|${msg.created_at}`
+}
+
+/**
+ * 微信式合并：本地消息与服务端消息做增量去重合并，不做“整包覆盖”。
+ */
+const mergeMessages = (localMessages: Message[], serverMessages: Message[]): Message[] => {
+  const map = new Map<string, Message>()
+  ;[...localMessages, ...serverMessages].forEach((msg) => {
+    const key = getMessageMergeKey(msg)
+    const prev = map.get(key)
+    if (!prev) {
+      map.set(key, msg)
+      return
+    }
+    // 同 key 时优先保留状态更完整的消息
+    const prevRank = prev.status === 'read' ? 3 : prev.status === 'delivered' ? 2 : prev.status === 'sent' ? 1 : 0
+    const nextRank = msg.status === 'read' ? 3 : msg.status === 'delivered' ? 2 : msg.status === 'sent' ? 1 : 0
+    if (nextRank >= prevRank) {
+      map.set(key, { ...prev, ...msg })
+    }
+  })
+  return Array.from(map.values()).sort(messageSort).slice(-CHAT_ROOM_CACHE_LIMIT)
 }
 
 interface ChatRoomProps {
@@ -59,7 +124,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
   const actualPartnerName = partnerName || match?.user?.name || 'TA'
   const actualPartnerAvatar = partnerAvatar || match?.user?.avatar || match?.user?.avatar_url
 
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Message[]>(() =>
+    actualPartnerId ? loadChatRoomCachedMessages(authStorage.getUserId(), actualPartnerId) : []
+  )
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isYourTurn, setIsYourTurn] = useState(false) // Your Turn 提醒状态
@@ -100,25 +167,92 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
   }
   const [herAdvice, setHerAdvice] = useState<HerAdvice | null>(null)
   const [herAdviceLoading, setHerAdviceLoading] = useState(false)
+  // 🚀 [场景4方案3] 预加载常见场景建议（减少首次触发时的等待时间）
+  const [preloadedAdviceCache, setPreloadedAdviceCache] = useState<Map<string, string>>(new Map())
+
+  // 🚀 [场景4方案3] 预加载常见场景建议（组件挂载时）
+  useEffect(() => {
+    const preloadCommonScenarios = async () => {
+      const userId = getCurrentUserId()
+      const scenarios = [
+        { key: 'travel', topic: '对方聊旅行/旅游话题' },
+        { key: 'food', topic: '对方聊美食/吃货话题' },
+        { key: 'movie', topic: '对方聊电影/看书话题' },
+        { key: 'work', topic: '对方聊工作/职业话题' },
+        { key: 'hobby', topic: '对方聊兴趣爱好' },
+      ]
+
+      const cache = new Map<string, string>()
+
+      // 预加载每个场景的建议
+      for (const scenario of scenarios) {
+        try {
+          const result = await deerflowClient.chat(
+            `预生成聊天建议：${scenario.topic}，用户应该怎么回复？给出一个简短（50字内）自然的具体建议。只输出建议内容。`,
+            `her-preload-${userId}-${scenario.key}`
+          )
+          const advice = result.ai_message || ''
+          if (advice.length > 5) {
+            cache.set(scenario.key, advice)
+          }
+        } catch (error) {
+          console.warn(`[预加载] 场景 ${scenario.key} 加载失败`)
+        }
+      }
+
+      setPreloadedAdviceCache(cache)
+      console.log(`[预加载] 已缓存 ${cache.size} 个常见场景建议`)
+    }
+
+    // 异步预加载，不阻塞 UI
+    preloadCommonScenarios().catch(() => {})
+  }, [])
 
   // 犹豫检测状态
   const [lastPartnerMessageTime, setLastPartnerMessageTime] = useState<Date | null>(null)  // 对方最后发消息时间
+  const [lastPartnerMessageId, setLastPartnerMessageId] = useState<string | null>(null)  // 对方最后一条消息 ID（用于 no_reply 去重）
   const [userLastSendTime, setUserLastSendTime] = useState<Date | null>(null)  // 用户最后发送时间
   const [inputStartTime, setInputStartTime] = useState<Date | null>(null)  // 输入开始时间
   const [emojiOpenCount, setEmojiOpenCount] = useState(0)  // 表情面板打开次数
   const hesitationDetectedRef = useRef(false)  // 是否已触发犹豫检测（避免重复触发）
+  const noReplyTriggeredMessageIdRef = useRef<string | null>(null)  // no_reply 已触发的消息 ID（同一条消息只触发一次）
+  const inputHesitateTriggeredSignatureRef = useRef<string | null>(null) // 同一轮输入只触发一次
+  const lastAdviceTriggerAtRef = useRef<number>(0) // 全局冷却，避免高频打扰
+  const adviceShownSinceLastSendRef = useRef(false) // 本轮未发送期间是否已提示过
+  const triggerHerAdviceRef = useRef<(triggerType: string, context: string) => void>(() => {})
+  const [isChatPageActive, setIsChatPageActive] = useState<boolean>(() => !document.hidden)
 
-  // 犹豫检测配置
+  // 🚀 [场景4方案1] 犹豫检测配置（阈值调整：更合理的触发时机）
   const HESITATION_CONFIG = {
-    NO_REPLY_THRESHOLD: 30000,      // 对方发消息后，用户多久没回复触发（30秒）
-    INPUT_HESITATE_THRESHOLD: 20000, // 输入框有内容但没发送触发（20秒）
+    NO_REPLY_THRESHOLD: 45000,      // 🚀 [改进] 对方发消息后，45秒没回复触发（原30秒太短，用户可能在思考）
+    INPUT_HESITATE_THRESHOLD: 30000, // 🚀 [改进] 输入框有内容但30秒没发送触发（原20秒太短，用户可能在编辑）
     EMOJI_OPEN_THRESHOLD: 3,        // 表情面板打开次数触发（3次）
-    ADVICE_DISPLAY_DURATION: 8000,  // 建议显示时长（8秒）
+    TRIGGER_COOLDOWN: 180000,       // 提示触发冷却 3 分钟，避免连续打扰
   }
+
+  // 仅在页面可见且窗口聚焦时，才进行“犹豫”提示
+  useEffect(() => {
+    const updateActiveState = () => {
+      setIsChatPageActive(!document.hidden && document.hasFocus())
+    }
+
+    updateActiveState()
+    window.addEventListener('focus', updateActiveState)
+    window.addEventListener('blur', updateActiveState)
+    document.addEventListener('visibilitychange', updateActiveState)
+
+    return () => {
+      window.removeEventListener('focus', updateActiveState)
+      window.removeEventListener('blur', updateActiveState)
+      document.removeEventListener('visibilitychange', updateActiveState)
+    }
+  }, [])
 
   // 🔧 [改进点4] 检测 1：对方发消息后，用户多久没回复
   useEffect(() => {
-    if (!lastPartnerMessageTime || herSleepingLocal || hesitationDetectedRef.current) return
+    if (!isChatPageActive || !lastPartnerMessageTime || !lastPartnerMessageId || herSleepingLocal || hesitationDetectedRef.current) return
+    // 同一条对方消息，no_reply 只触发一次，避免用户暂离时重复弹出
+    if (noReplyTriggeredMessageIdRef.current === lastPartnerMessageId) return
 
     const checkInterval = setInterval(() => {
       const now = new Date()
@@ -127,15 +261,18 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
       // 超过阈值没回复 → 触发犹豫检测
       if (elapsed > HESITATION_CONFIG.NO_REPLY_THRESHOLD && !hesitationDetectedRef.current) {
         hesitationDetectedRef.current = true
-        triggerHerAdvice('no_reply', '对方发消息了，用户犹豫怎么回复')
+        noReplyTriggeredMessageIdRef.current = lastPartnerMessageId
+        triggerHerAdviceRef.current('no_reply', '对方发消息了，用户犹豫怎么回复')
       }
     }, 5000)  // 每 5 秒检查一次
 
     return () => clearInterval(checkInterval)
-  }, [lastPartnerMessageTime, herSleepingLocal])
+  }, [isChatPageActive, lastPartnerMessageTime, lastPartnerMessageId, herSleepingLocal])
 
   // 🔧 [改进点4] 检测 2：输入框有内容但没发送
   useEffect(() => {
+    if (!isChatPageActive || herSleepingLocal) return
+
     // 用户刚发送消息，重置犹豫检测
     if (userLastSendTime) {
       const elapsed = new Date().getTime() - userLastSendTime.getTime()
@@ -147,6 +284,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
     if (!inputValue.trim()) {
       // 输入框清空，重置输入开始时间
       setInputStartTime(null)
+      inputHesitateTriggeredSignatureRef.current = null
+      hesitationDetectedRef.current = false
       return
     }
 
@@ -155,84 +294,169 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
       setInputStartTime(new Date())
     }
 
+    const inputSignature = `${inputStartTime?.getTime() || 0}-${inputValue.trim()}`
+    if (inputHesitateTriggeredSignatureRef.current === inputSignature) return
+
     // 检测犹豫：输入框有内容超过阈值时间
     const inputHesitateTimer = setTimeout(() => {
       if (inputValue.trim() && !hesitationDetectedRef.current && !herSleepingLocal) {
         hesitationDetectedRef.current = true
-        triggerHerAdvice('input_hesitate', '用户在输入但犹豫发送')
+        inputHesitateTriggeredSignatureRef.current = inputSignature
+        triggerHerAdviceRef.current('input_hesitate', '用户在输入但犹豫发送')
       }
     }, HESITATION_CONFIG.INPUT_HESITATE_THRESHOLD)
 
     return () => clearTimeout(inputHesitateTimer)
-  }, [inputValue, inputStartTime, userLastSendTime, herSleepingLocal])
+  }, [isChatPageActive, inputValue, inputStartTime, userLastSendTime, herSleepingLocal])
 
-  // 🔧 [改进点4] 触发 Her 建议（直接显示建议气泡）
-  const triggerHerAdvice = useCallback((triggerType: string, context: string) => {
-    if (herSleepingLocal) return
+  // 🚀 [场景4方案2] 触发 Her 建议（AI生成 + 加载双方完整画像）
+  const triggerHerAdvice = useCallback(async (triggerType: string, context: string) => {
+    if (herSleepingLocal || !isChatPageActive) return
+    // 一次发送周期内只提示一次；用户发送消息后才允许下一次提示
+    if (adviceShownSinceLastSendRef.current) return
+
+    const now = Date.now()
+    // 冷却期间直接跳过，避免频繁提示影响体验
+    if (now - lastAdviceTriggerAtRef.current < HESITATION_CONFIG.TRIGGER_COOLDOWN) return
+    lastAdviceTriggerAtRef.current = now
+    adviceShownSinceLastSendRef.current = true
 
     console.log(`[犹豫检测] 触发类型: ${triggerType}, 上下文: ${context}`)
 
-    // 🔧 [临时方案] 根据触发类型生成预设建议
-    // 后续改进点5实施后，改为调用 Her API 获取建议
-    let adviceMessage = ''
+    // 显示加载状态
+    setHerAdviceLoading(true)
 
-    // 获取当前用户 ID（直接从 storage 获取，避免依赖顺序）
-    const userId = authStorage.getUser()?.id || authStorage.getUser()?.username || 'anonymous'
+    // 获取当前用户 ID
+    const userId = getCurrentUserId()
 
-    // 获取最近一条对方消息的内容（用于生成针对性建议）
+    // 获取最近对话上下文（最近 5 条消息）
+    const recentMessages = messages.slice(-5).map(m => ({
+      sender: m.sender_id === userId ? 'user' : 'partner',
+      content: m.content,
+      type: m.message_type,
+    }))
+
+    // 获取最近一条对方消息的内容
     const lastPartnerMessage = messages.filter(m => m.sender_id !== userId).pop()
     const lastPartnerContent = lastPartnerMessage?.content || ''
 
-    switch (triggerType) {
-      case 'no_reply':
-        // 对方发消息后用户没回复
-        if (lastPartnerContent.includes('旅行') || lastPartnerContent.includes('旅游')) {
-          adviceMessage = '可以分享你的旅行经历，或者问她去过最难忘的地方'
-        } else if (lastPartnerContent.includes('电影') || lastPartnerContent.includes('看书')) {
-          adviceMessage = '可以聊聊最近看的电影或书籍，问问她的推荐'
-        } else if (lastPartnerContent.includes('吃') || lastPartnerContent.includes('美食')) {
-          adviceMessage = '可以聊聊你喜欢的美食，或者问她有什么餐厅推荐'
-        } else {
-          adviceMessage = '可以先回应她的话题，再延伸到你的经历'
-        }
-        break
-
-      case 'input_hesitate':
-        // 用户在输入但犹豫发送
-        adviceMessage = '不确定怎么表达？可以试着发送，对方会理解的'
-        break
-
-      case 'emoji_hesitate':
-        // 用户犹豫发表情
-        adviceMessage = '发个 😊 笑脸或 ❤️ 爱心，简单又温暖'
-        break
-
-      default:
-        adviceMessage = '点击详细对话，让 Her 帮你想想'
+    // 🚀 [场景4方案3] 先检查预加载缓存（快速响应）
+    let cachedAdvice = ''
+    if (triggerType === 'no_reply') {
+      // 根据对方消息内容匹配预加载场景
+      if (lastPartnerContent.includes('旅行') || lastPartnerContent.includes('旅游')) {
+        cachedAdvice = preloadedAdviceCache.get('travel') || ''
+      } else if (lastPartnerContent.includes('吃') || lastPartnerContent.includes('美食')) {
+        cachedAdvice = preloadedAdviceCache.get('food') || ''
+      } else if (lastPartnerContent.includes('电影') || lastPartnerContent.includes('看书')) {
+        cachedAdvice = preloadedAdviceCache.get('movie') || ''
+      } else if (lastPartnerContent.includes('工作') || lastPartnerContent.includes('职业')) {
+        cachedAdvice = preloadedAdviceCache.get('work') || ''
+      } else if (lastPartnerContent.includes('兴趣') || lastPartnerContent.includes('爱好')) {
+        cachedAdvice = preloadedAdviceCache.get('hobby') || ''
+      }
     }
 
-    // 设置建议状态
-    setHerAdvice({
-      message: adviceMessage,
-      triggerType,
-      timestamp: new Date(),
-    })
-    setHerAdviceLoading(false)
+    // 如果有预加载缓存，直接使用（无需等待 API）
+    if (cachedAdvice) {
+      console.log(`[犹豫检测] 使用预加载缓存建议`)
+      setHerAdvice({
+        message: cachedAdvice,
+        triggerType,
+        timestamp: new Date(),
+      })
+      setHerAdviceLoading(false)
+      return
+    }
 
-    // 8 秒后自动消失
-    setTimeout(() => {
-      setHerAdvice(null)
-      hesitationDetectedRef.current = false
-    }, HESITATION_CONFIG.ADVICE_DISPLAY_DURATION)
-  }, [herSleepingLocal, messages])
+    // 🚀 [场景4方案2] 调用 DeerFlow API，让 AI 分析对话上下文 + 双方画像生成建议
+    try {
+      const prompt = `用户在聊天室犹豫了（触发类型：${triggerType}）。
+对方最后说的话："${lastPartnerContent}"
+最近对话：${JSON.stringify(recentMessages)}
+对方用户ID：${actualPartnerId}
+
+请根据对话上下文和双方画像，给出一个简短、自然、具体的回复建议。
+建议应该：
+1. 针对对方最后的话题
+2. 适合用户当前的情况（犹豫怎么回复）
+3. 简短（不超过50字）
+4. 自然（像朋友聊天一样）
+
+只输出建议内容，不要输出其他内容。`
+
+      const result = await deerflowClient.chat(prompt, `her-advice-${userId}`)
+
+      // 提取 AI 生成的建议
+      const aiAdvice = result.ai_message || result.tool_result?.data?.suggestion || ''
+
+      if (aiAdvice && aiAdvice.length > 5) {
+        setHerAdvice({
+          message: aiAdvice,
+          triggerType,
+          timestamp: new Date(),
+        })
+      } else {
+        // AI 返回空或太短，降级到预设建议
+        const fallbackAdvice = getFallbackAdvice(triggerType, lastPartnerContent)
+        setHerAdvice({
+          message: fallbackAdvice,
+          triggerType,
+          timestamp: new Date(),
+        })
+      }
+    } catch (error) {
+      console.error('[犹豫检测] DeerFlow API 调用失败:', error)
+      // 降级到预设建议
+      const fallbackAdvice = getFallbackAdvice(triggerType, lastPartnerContent)
+      setHerAdvice({
+        message: fallbackAdvice,
+        triggerType,
+        timestamp: new Date(),
+      })
+    }
+
+    setHerAdviceLoading(false)
+  }, [herSleepingLocal, isChatPageActive, messages, actualPartnerId, preloadedAdviceCache])
+
+  useEffect(() => {
+    triggerHerAdviceRef.current = (triggerType: string, context: string) => {
+      void triggerHerAdvice(triggerType, context)
+    }
+  }, [triggerHerAdvice])
+
+  // 🚀 [场景4方案2] 降级预设建议（API 失败时使用）
+  const getFallbackAdvice = (triggerType: string, lastPartnerContent: string): string => {
+    switch (triggerType) {
+      case 'no_reply':
+        if (lastPartnerContent.includes('旅行') || lastPartnerContent.includes('旅游')) {
+          return '可以分享你的旅行经历，或者问她去过最难忘的地方'
+        } else if (lastPartnerContent.includes('电影') || lastPartnerContent.includes('看书')) {
+          return '可以聊聊最近看的电影或书籍，问问她的推荐'
+        } else if (lastPartnerContent.includes('吃') || lastPartnerContent.includes('美食')) {
+          return '可以聊聊你喜欢的美食，或者问她有什么餐厅推荐'
+        } else {
+          return '可以先回应她的话题，再延伸到你的经历'
+        }
+      case 'input_hesitate':
+        return '不确定怎么表达？可以试着发送，对方会理解的'
+      case 'emoji_hesitate':
+        return '发个 😊 笑脸或 ❤️ 爱心，简单又温暖'
+      default:
+        return '点击详细对话，让 Her 帮你想想'
+    }
+  }
 
   // 🔧 [改进点4] 重置犹豫检测状态（用户发送消息后）
   const resetHesitationDetection = useCallback(() => {
     hesitationDetectedRef.current = false
     setLastPartnerMessageTime(null)
+    setLastPartnerMessageId(null)
     setInputStartTime(null)
     setEmojiOpenCount(0)
     setHerAdvice(null)
+    inputHesitateTriggeredSignatureRef.current = null
+    adviceShownSinceLastSendRef.current = false
   }, [])
 
   // 🔧 [改进点4] 关闭建议气泡
@@ -271,9 +495,24 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
 
   // 获取当前用户 ID - 必须在其他 useCallback 之前定义
   const currentUserId = useMemo(() => {
-    const user = authStorage.getUser()
-    return user?.id || user?.username || 'user-anonymous-dev'
+    return getCurrentUserId()
   }, [])
+
+  const upsertConversationSummary = useCallback((msg: Message, unreadCount: number = 0) => {
+    if (!actualPartnerId) return
+    const preview = msg.message_type === 'image'
+      ? '[图片]'
+      : msg.content
+    const localConversationId = `local-${[currentUserId, actualPartnerId].sort().join('-')}`
+    conversationSummaryStorage.upsertConversation(currentUserId, {
+      id: localConversationId,
+      user_id_1: currentUserId,
+      user_id_2: actualPartnerId,
+      last_message_preview: preview,
+      last_message_at: msg.created_at,
+      unread_count: unreadCount,
+    })
+  }, [currentUserId, actualPartnerId])
 
   // 常用表情列表
   const EMOJI_LIST = [
@@ -403,10 +642,10 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
       // 超过阈值 → 触发犹豫检测
       if (emojiOpenCount + 1 >= HESITATION_CONFIG.EMOJI_OPEN_THRESHOLD && !hesitationDetectedRef.current && !herSleepingLocal) {
         hesitationDetectedRef.current = true
-        triggerHerAdvice('emoji_hesitate', '用户犹豫发表情')
+        triggerHerAdviceRef.current('emoji_hesitate', '用户犹豫发表情')
       }
     }
-  }, [showEmojiPicker, emojiOpenCount, herSleepingLocal, triggerHerAdvice])
+  }, [showEmojiPicker, emojiOpenCount, herSleepingLocal])
 
   const handleEmojiSelect = useCallback(async (emoji: string) => {
     setShowEmojiPicker(false)
@@ -504,11 +743,13 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
               status: 'delivered'
             }
             console.log('[ChatRoom] New message created:', newMessage.id)
+            upsertConversationSummary(newMessage, 0)
             return [...prev, newMessage]
           })
 
           // 🔧 [改进点4] 收到对方消息，记录时间用于犹豫检测
           setLastPartnerMessageTime(new Date())
+          setLastPartnerMessageId(payload.id || null)
           // 重置犹豫检测状态，允许新的犹豫检测
           hesitationDetectedRef.current = false
         } else {
@@ -525,7 +766,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
       // 注意：不调用 unsubscribe() 和 disconnect()，避免 Strict Mode 问题
       // WebSocket 服务是单例，会保持连接直到用户离开页面
     }
-  }, [currentUserId]) // 只依赖 currentUserId，不依赖 actualPartnerId（避免切换聊天对象时重连）
+  }, [currentUserId, upsertConversationSummary]) // 只依赖 currentUserId，不依赖 actualPartnerId（避免切换聊天对象时重连）
 
   // 滚动到底部 - 优化性能
   const scrollToBottom = () => {
@@ -577,20 +818,52 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
 
   // 加载历史消息
   useEffect(() => {
-    if (actualPartnerId) {
-      loadHistoryMessages()
-    }
-  }, [actualPartnerId])
+    if (!actualPartnerId) return
+    const cached = loadChatRoomCachedMessages(currentUserId, actualPartnerId)
+    // 先秒开缓存，避免页面挂起恢复后出现“空白会话”
+    setMessages(cached)
+    void loadHistoryMessages(cached.length > 0)
+  }, [actualPartnerId, currentUserId])
 
-  const loadHistoryMessages = async () => {
+  // 消息变化时持久化，防止切后台/系统回收后丢失
+  useEffect(() => {
+    if (!actualPartnerId) return
+    saveChatRoomCachedMessages(currentUserId, actualPartnerId, messages)
+  }, [messages, currentUserId, actualPartnerId])
+
+  // 参考微信：页面从后台回前台时主动做一次增量同步
+  useEffect(() => {
+    if (!actualPartnerId) return
+    const syncWhenActive = () => {
+      if (!document.hidden) {
+        const hasCached = loadChatRoomCachedMessages(currentUserId, actualPartnerId).length > 0
+        void loadHistoryMessages(hasCached)
+      }
+    }
+    window.addEventListener('focus', syncWhenActive)
+    document.addEventListener('visibilitychange', syncWhenActive)
+    return () => {
+      window.removeEventListener('focus', syncWhenActive)
+      document.removeEventListener('visibilitychange', syncWhenActive)
+    }
+  }, [actualPartnerId, currentUserId])
+
+  const loadHistoryMessages = async (hasCachedMessages: boolean = false) => {
     if (!actualPartnerId) return
 
     try {
+      // 进入聊天室即标记整段会话已读（先做，避免 UI 长时间显示旧未读）
+      await chatApi.markConversationRead(actualPartnerId).catch(() => {})
+      // 通知主页即时清零该会话未读（不等待轮询）
+      window.dispatchEvent(new CustomEvent('conversation-read', {
+        detail: { partnerId: actualPartnerId }
+      }))
+
       // 使用新的 REST API 加载消息历史
       const history = await chatApi.getHistory(actualPartnerId)
 
-      if (Array.isArray(history)) {
-        setMessages(history.map((msg) => ({
+      if (Array.isArray(history) && history.length > 0) {
+        const normalized = history.map((msg) => ({
           id: msg.id,
           sender_id: msg.sender_id,
           receiver_id: msg.receiver_id,
@@ -599,7 +872,19 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
           is_read: msg.is_read,
           created_at: msg.created_at,
           status: msg.status
-        })))
+        }))
+        setMessages((prev) => {
+          const merged = mergeMessages(prev, normalized)
+          saveChatRoomCachedMessages(currentUserId, actualPartnerId, merged)
+          const last = merged[merged.length - 1]
+          if (last) {
+            upsertConversationSummary(last, 0)
+          }
+          return merged
+        })
+      } else if (!hasCachedMessages) {
+        // 仅在没有缓存时才清空，避免接口抖动把已有会话清掉
+        setMessages([])
       }
 
       // 检查 Your Turn 提醒
@@ -618,7 +903,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
         }
       }
     } catch (error) {
-      // 加载失败时也继续，可以发送新消息
+      // 加载失败时保留本地缓存，避免用户看到会话“消失”
     }
   }
 
@@ -641,6 +926,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
 
     // 立即显示消息 (乐观更新)
     setMessages(prev => [...prev, userMessage])
+    upsertConversationSummary(userMessage, 0)
     const messageContent = inputValue
     setInputValue('')
     setIsLoading(true)
@@ -680,7 +966,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
     } finally {
       setIsLoading(false)
     }
-  }, [inputValue, isLoading, actualPartnerId, currentUserId, resetHesitationDetection])
+  }, [inputValue, isLoading, actualPartnerId, currentUserId, resetHesitationDetection, upsertConversationSummary])
 
   // 模拟对方回复 (开发环境)
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {

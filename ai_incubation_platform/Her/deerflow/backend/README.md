@@ -110,6 +110,32 @@ LLM-powered persistent context retention across conversations:
 | **MCP** | Any Model Context Protocol server (stdio, SSE, HTTP transports) |
 | **Skills** | Domain-specific workflows injected via system prompt |
 
+### Her Match Hybrid Retrieval
+
+`deerflow.community.her_tools.match_tools:HerFindCandidatesTool` now supports a hybrid retrieval mode for candidate ordering:
+
+- Stage 1: DB hard constraints (safety boundary + baseline eligibility)
+- Stage 2: vector recall (`VectorRecallService`) with Qdrant-first and local fallback
+- Stage 3: rerank (`MatchRerankService`) to prioritize top candidates
+
+Runtime controls (environment variables):
+
+- `HER_MATCH_RETRIEVAL_MODE=legacy|hybrid` (default: `legacy`)
+- `HER_MATCH_VECTOR_TOPK` (default: `50`)
+- `HER_MATCH_RERANK_PRE_N` (default: `15`)
+- `HER_MATCH_RERANK_TOPN` (default: `3`)
+- `HER_MATCH_QDRANT_ENABLED=true|false` (default: `false`)
+- `HER_MATCH_QDRANT_COLLECTION` (default: `her_match_candidates`)
+- `HER_MATCH_QDRANT_PATH` (default: `.deer-flow/qdrant_match`)
+- `HER_MATCH_INDEX_CACHE_TTL_SECONDS` (default: `900`)
+
+When hybrid mode is enabled, tool output includes retrieval diagnostics in `data.retrieval`:
+
+- `mode`, `before_recall`, `after_recall`, `after_rerank`
+- `recall_source` (`qdrant` or `local`)
+- `recall_metrics` (cache hit/miss/hit_rate, fallback_count, sync stats)
+- `hybrid_latency_ms`
+
 ### Gateway API
 
 FastAPI application providing REST endpoints for frontend integration:

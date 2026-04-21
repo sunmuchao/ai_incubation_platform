@@ -48,6 +48,8 @@ class UIBuilder:
                 "reasoning": match.get("match_reasoning"),
                 "her_advice": match.get("her_advice").to_dict() if hasattr(match.get("her_advice"), 'to_dict') else None,
                 "risk_warnings": match.get("risk_warnings"),
+                "vector_match_highlights": match.get("vector_match_highlights", {}),
+                "candidate_profile": match.get("candidate_profile", {}),
             }
             match_cards.append(card)
 

@@ -61,10 +61,21 @@ export interface SwipeFeedbackOverlay {
  */
 export interface MatchCandidate {
   user: User
+  /** 部分接口使用 0–1 概率分，与 compatibility_score 二选一或并存 */
+  score?: number
   compatibility_score: number
   score_breakdown: Record<string, number>
   common_interests: string[]
   reasoning: string
+  vector_match_highlights?: {
+    relationship_goal?: string
+    want_children?: string
+    spending_style?: string
+    attachment_style?: string
+    conflict_style?: string
+    repair_willingness?: string
+    implicit_preference_confidence?: number
+  }
 }
 
 export interface ConversationMatchRequest {

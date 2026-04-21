@@ -16,6 +16,7 @@ from db.models import UserDB
 from utils.logger import logger
 from services.ai_awareness_service import get_ai_awareness_service, AIAwarenessService
 from services.behavior_event_emitter import event_emitter, EVENT_PROFILE_VIEWED
+from services.behavior_digest_service import run_behavior_digest
 
 router = APIRouter(prefix="/api/ai/awareness", tags=["ai-awareness"])
 
@@ -265,3 +266,23 @@ async def track_chat_message(
         event_data={"content_length": content_length}
     )
     return {"success": True}
+
+
+@router.post("/behavior-digest")
+def post_behavior_digest(
+    user_id: str = Query(..., description="用户 ID"),
+    limit: int = Query(150, ge=10, le=500, description="参与摘要的最近行为条数"),
+    db: Session = Depends(get_db),
+):
+    """
+    用 LLM 对近期行为做选择性整理，结果追加写入 logs/behavior_digest.jsonl。
+    原始全量行为见 logs/behavior_raw.jsonl 与 behavior_events 表。
+    """
+    user = db.query(UserDB).filter(UserDB.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    try:
+        return run_behavior_digest(db, user_id, limit)
+    except Exception as e:
+        logger.error(f"[behavior-digest] failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

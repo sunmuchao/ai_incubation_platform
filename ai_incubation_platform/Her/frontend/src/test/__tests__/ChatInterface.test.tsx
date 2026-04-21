@@ -1291,9 +1291,11 @@ describe('ChatInterface Component', () => {
         await userEvent.type(input, '推荐几个{enter}')
       })
 
-      // 应该显示骨架屏标题
+      // 骨架标题：优先显示 loadingSteps 轮播，与 ChatInterface 中 setLoadingStep 一致
       await waitFor(() => {
-        expect(screen.getByText(/为你精选匹配对象/)).toBeInTheDocument()
+        expect(
+          screen.getByText(/正在(理解你的需求|查询候选人|分析匹配度|生成推荐|为你精选匹配对象)/)
+        ).toBeInTheDocument()
       }, { timeout: 2000 })
     })
 

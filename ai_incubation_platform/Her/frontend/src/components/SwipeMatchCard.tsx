@@ -1,7 +1,7 @@
 // SwipeMatchCard - Tinder 风格滑动卡片组件
 // 支持手势滑动：左滑 Pass / 右滑 Like / 上滑 SuperLike
 
-import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react'
+import React, { useRef, useState, useCallback, useEffect } from 'react'
 import { Avatar, Tag, Typography } from 'antd'
 import {
   CheckCircleOutlined,
@@ -13,10 +13,12 @@ import {
   ThunderboltFilled,
 } from '@ant-design/icons'
 import type { MatchCandidate, SwipeAction } from '../types'
+import { getMatchAvatarSrc } from '../utils/matchAvatar'
 import { aiAwarenessApi, matchingApi } from '../api'
 import RoseButton from './RoseButton'
 import VerificationBadge from './VerificationBadge'
 import { useCurrentUserId } from '../hooks/useCurrentUserId'
+import { useMatchCompatibilityDisplay } from '../hooks/useMatchCompatibilityDisplay'
 import './SwipeMatchCard.less'
 
 const { Text, Paragraph } = Typography
@@ -71,12 +73,9 @@ const SwipeMatchCard: React.FC<SwipeMatchCardProps> = ({
   // 使用统一的 userId hook
   const currentUserId = useCurrentUserId()
 
-  // 兼容性分数
-  const compatibilityPercent = useMemo(() => {
-    return match.score || match.compatibility_score
-      ? Math.round((match.score || match.compatibility_score) * 100)
-      : 0
-  }, [match.score, match.compatibility_score])
+  const { compatibilityPercent, getCompatibilityColor } = useMatchCompatibilityDisplay(match)
+
+  const vectorHighlights = match.vector_match_highlights
 
   // 计算滑动反馈样式
   const getFeedbackStyle = useCallback(() => {
@@ -405,13 +404,6 @@ const SwipeMatchCard: React.FC<SwipeMatchCardProps> = ({
     ...getFeedbackStyle(),
   }
 
-  // 兼容性颜色
-  const getCompatibilityColor = (score: number) => {
-    if (score >= 85) return '#95de64'
-    if (score >= 70) return '#D4A59A'
-    return '#faad14'
-  }
-
   return (
     <div
       ref={cardRef}
@@ -438,7 +430,12 @@ const SwipeMatchCard: React.FC<SwipeMatchCardProps> = ({
           <div className="avatar-container">
             <Avatar
               size={120}
-              src={match.user?.avatar || match.user?.avatar_url}
+              src={getMatchAvatarSrc(
+                match.user?.name || '用户',
+                match.user?.gender,
+                match.user?.avatar,
+                match.user?.avatar_url
+              )}
               icon={<UserOutlined />}
               className="swipe-avatar"
             />
@@ -476,7 +473,7 @@ const SwipeMatchCard: React.FC<SwipeMatchCardProps> = ({
           </div>
 
           {/* 🚀 [新增] Her 推荐理由 - 显示关键匹配点 */}
-          {(match.reasoning || (match.common_interests && match.common_interests.length > 0) || compatibilityPercent >= 70) && (
+          {(match.reasoning || (match.common_interests && match.common_interests.length > 0) || compatibilityPercent >= 70 || vectorHighlights) && (
             <div className="her-recommendation">
               <div className="her-badge">
                 <span className="her-icon">💫</span>
@@ -506,6 +503,21 @@ const SwipeMatchCard: React.FC<SwipeMatchCardProps> = ({
                     {match.user?.location && (
                       <Text className="reason-item">
                         📍 都在{match.user.location}
+                      </Text>
+                    )}
+                    {vectorHighlights?.relationship_goal && (
+                      <Text className="reason-item">
+                        🎯 关系目标：{vectorHighlights.relationship_goal}
+                      </Text>
+                    )}
+                    {vectorHighlights?.want_children && (
+                      <Text className="reason-item">
+                        👶 生育观：{vectorHighlights.want_children}
+                      </Text>
+                    )}
+                    {vectorHighlights?.spending_style && (
+                      <Text className="reason-item">
+                        💰 消费观：{vectorHighlights.spending_style}
                       </Text>
                     )}
                   </>

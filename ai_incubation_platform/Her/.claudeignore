@@ -1,11 +1,9 @@
 # Claude Code 忽略规则
 # 这些文件/目录已废弃或不应被参考
 
-# ==================== 前端废弃代码 ====================
-# Generative UI 组件库 - 设计了但前端实际只使用部分组件
-# 注：MatchComponents.tsx 和 ChatComponents.tsx 被 ChatInterface.tsx 懒加载使用
-# 其余组件可能未被动态渲染，需谨慎参考
-frontend/src/components/generative-ui/
+# ==================== 前端 generative-ui ====================
+# 仅 MatchComponents / ChatComponents / types 为活跃实现（ChatInterface lazy）
+# 勿再忽略整个 generative-ui，以免无法参考当前生产路径
 
 # ==================== 测试文件（保留但不参考）====================
 # 测试文件是必要的，但不应作为实现参考

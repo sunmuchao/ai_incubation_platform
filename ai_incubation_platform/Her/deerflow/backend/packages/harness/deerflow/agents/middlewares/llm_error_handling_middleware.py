@@ -154,7 +154,7 @@ class LLMErrorHandlingMiddleware(AgentMiddleware[AgentState]):
                         attempt,
                         self.retry_max_attempts,
                         wait_ms,
-                        _extract_error_detail(exc),
+                        _format_llm_exc_context(exc, reason),
                     )
                     self._emit_retry_event(attempt, wait_ms, reason)
                     time.sleep(wait_ms / 1000)
@@ -163,7 +163,7 @@ class LLMErrorHandlingMiddleware(AgentMiddleware[AgentState]):
                 logger.warning(
                     "LLM call failed after %d attempt(s): %s",
                     attempt,
-                    _extract_error_detail(exc),
+                    _format_llm_exc_context(exc, reason),
                     exc_info=exc,
                 )
                 return AIMessage(content=self._build_user_message(exc, reason))
@@ -190,7 +190,7 @@ class LLMErrorHandlingMiddleware(AgentMiddleware[AgentState]):
                         attempt,
                         self.retry_max_attempts,
                         wait_ms,
-                        _extract_error_detail(exc),
+                        _format_llm_exc_context(exc, reason),
                     )
                     self._emit_retry_event(attempt, wait_ms, reason)
                     await asyncio.sleep(wait_ms / 1000)
@@ -199,7 +199,7 @@ class LLMErrorHandlingMiddleware(AgentMiddleware[AgentState]):
                 logger.warning(
                     "LLM call failed after %d attempt(s): %s",
                     attempt,
-                    _extract_error_detail(exc),
+                    _format_llm_exc_context(exc, reason),
                     exc_info=exc,
                 )
                 return AIMessage(content=self._build_user_message(exc, reason))
@@ -273,3 +273,18 @@ def _extract_error_detail(exc: BaseException) -> str:
     if isinstance(message, str) and message.strip():
         return message.strip()
     return exc.__class__.__name__
+
+
+def _format_llm_exc_context(exc: BaseException, reason: str) -> str:
+    """单行可检索上下文，写入 Her server.log（与 matchmaker-agent 共用 Handler 时便于 grep）。"""
+    parts: list[str] = [f"classify={reason}", f"exc_type={exc.__class__.__name__}"]
+    sc = _extract_status_code(exc)
+    if sc is not None:
+        parts.append(f"http_status={sc}")
+    code = _extract_error_code(exc)
+    if code not in (None, ""):
+        parts.append(f"provider_code={code}")
+    detail = _extract_error_detail(exc)
+    if detail:
+        parts.append(f"detail={detail[:800]}")
+    return " | ".join(parts)

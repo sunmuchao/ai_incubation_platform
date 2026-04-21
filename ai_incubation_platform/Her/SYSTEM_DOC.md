@@ -1,788 +1,838 @@
-# Her 系统文档
+# Her 系统文档（代码扫描版）
 
-> **AI Native 婚恋匹配平台** - Agent Native 架构实践
-> 
-> 文档版本：2.0 | 更新日期：2026-04-19
+> 生成方式：基于当前代码库扫描（重点覆盖 `src/`、`frontend/src/`、`deerflow/` 配置与核心实现），不依赖既有 Markdown 文档。
 
----
+**相关文档**：
 
-## 目录
+- [主路径收敛完整方案（IMP-001）](docs/GOLDEN_PATH_SOLUTION.md) — 产品叙事、交互分层、工程契约与分期排期，便于执行与验收。  
+- [Her 顾问链 → DeerFlow 替代路线图](docs/HER_TO_DEERFLOW_MIGRATION_ROADMAP.md) — 分阶段迁移、工具补齐、编排下沉与 API 废弃顺序。
 
-1. [愿景与背景](#愿景与背景)
-2. [系统架构](#系统架构)
-3. [核心功能模块](#核心功能模块)
-4. [技术栈概览](#技术栈概览)
-5. [数据模型设计](#数据模型设计)
-6. [Agent Native 架构详解](#agent-native-架构详解)
-7. [前端架构](#前端架构)
-8. [API 层设计](#api-层设计)
-9. [匹配系统设计](#匹配系统设计)
-10. [产品规划建议](#产品规划建议)
+## 1. 系统愿景（Vision）与核心痛点
 
----
+## 1.1 愿景推断
 
-## 愿景与背景
+从当前代码实现看，Her 正在从“传统婚恋匹配系统”进化为“AI Native 关系经营平台”，核心特征是：
 
-### 核心愿景
+- 以对话为主入口，弱化传统菜单驱动操作；
+- 让 AI（Her Advisor + DeerFlow Agent）承担决策与解释，而非仅做文案生成；
+- 将“匹配前推荐”延展到“匹配后聊天、关系推进、安全验证、会员变现、长期关系运营”全生命周期。
 
-**Her** 是一个 **AI Native 婚恋匹配平台**，以 AI Agent 作为核心决策引擎，实现从"被动工具"到"主动顾问"的范式跃迁。
+简化定义：**Her 的目标是做一个可持续学习、可解释、可运营的 AI 红娘与关系协同系统。**
 
-核心理念：**AI 是决策大脑，不是规则执行器**。
+## 1.2 当前在解决的核心痛点
 
-### 解决的核心痛点
-
-| 痛点 | 传统解决方案 | Her 的解决方案 |
-|------|-------------|---------------|
-| **用户不知道自己想要什么** | 让用户填写问卷，依赖规则匹配 | Her 顾问服务：认知偏差识别，帮助用户发现真实需求 |
-| **表面偏好 ≠ 实际适合** | 简单的关键词匹配 | SelfProfile + DesireProfile 双画像系统，行为推断实际偏好 |
-| **匹配结果缺乏解释** | 只展示分数，无建议 | MatchAdvice：每条匹配都有专业建议和风险提示 |
-| **交互门槛高** | 表单 + 列表，功能分散 | Chat-first 设计：一切通过对话，Generative UI 动态生成界面 |
-| **信息收集枯燥** | 长问卷，用户放弃 | QuickStart：对话式逐步收集，AI 自主感知缺失字段 |
-
-### 目标用户
-
-- **核心用户**：25-40 岁单身人群，寻求认真恋爱关系
-- **价值主张**：专业婚恋顾问 Her 全程陪伴，从画像收集到匹配建议到关系经营
-- **差异化**：AI 作为决策引擎而非工具，主动感知、主动建议、主动推送
+- 传统匹配平台“只推荐不陪跑”，用户在聊前、聊中、聊后缺少持续指导；
+- 用户自述偏好与真实适配常常错位，导致“想要的”和“适合的”不一致；
+- 聊天与关系推进效率低，缺少可操作建议（话题、节奏、风险提醒）；
+- 用户信任难建立（认证、风险控制、行为可信度）；
+- AI 功能碎片化常见，难以统一到一个对话体验与数据闭环中。
 
 ---
 
-## 系统架构
+## 2. 总体架构概览
 
-### 整体架构图
+## 2.1 架构分层
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              前端层 (React + TypeScript)                      │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ ChatInterface│  │ HomePage    │  │ SwipeMatch   │  │ Generative UI    │  │
-│  │ (对话入口)   │  │ (主页面)    │  │ (滑动匹配)   │  │ (动态组件渲染)   │  │
-│  └─────────────┘  └──────────────┘  └──────────────┘  └──────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      ↓ HTTP/SSE (DeerFlow API)
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           DeerFlow Agent Runtime (LangGraph)                  │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────────┐  │
-│  │  Lead Agent      │  │  SOUL.md         │  │  her_tools (7 Tools)     │  │
-│  │  (决策引擎)      │  │  (角色定义)      │  │  (纯数据查询)            │  │
-│  │  - 意图理解      │  │  - 核心原则      │  │  - her_get_profile       │  │
-│  │  - 工具编排      │  │  - 安全边界      │  │  - her_find_candidates   │  │
-│  │  - 输出决策      │  │  - 工具指南      │  │  - her_update_preference │  │
-│  └──────────────────┘  └──────────────────┘  └──────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │  Memory System (用户画像持久化)                                        │   │
-│  │  - 用户独立 memory 文件：{user_id}/memory.json                         │   │
-│  │  - 对话历史持久化：checkpointer                                        │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      ↓ 数据访问
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Her Backend (FastAPI + SQLAlchemy)                  │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────────┐  │
-│  │  REST API 层     │  │  Service 层      │  │  Skills (30+)            │  │
-│  │  - /api/deerflow │  │  - HerAdvisor    │  │  - date_coach_skill      │  │
-│  │  - /api/matching │  │  - UserProfile   │  │  - relationship_coach    │  │
-│  │  - /api/chat     │  │  - Conversation  │  │  - preference_learner    │  │
-│  └──────────────────┘  └──────────────────┘  └──────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │  ConversationMatchService (降级路径)                                   │   │
-│  │  - IntentAnalyzer: 意图理解                                            │   │
-│  │  - QueryQualityChecker: 查询质量校验                                   │   │
-│  │  - MatchExecutor: 匹配执行                                             │   │
-│  │  - AdviceGenerator: 建议生成                                           │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      ↓ 数据存储
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           数据层 (SQLite + 向量存储)                          │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────────┐  │
-│  │  UserDB          │  │  Matching Models │  │  Profile Models          │  │
-│  │  (125 字段)      │  │  - MatchHistory  │  │  - UserVectorProfile     │  │
-│  │  - 基础信息      │  │  - SwipeAction   │  │  - ProfileConfidence     │  │
-│  │  - 偏好设置      │  │  - UserPreference│  │  - ImplicitInference     │  │
-│  └──────────────────┘  └──────────────────┘  └──────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │  Extended Models (高级功能)                                            │   │
-│  │  - VideoDateDB: 视频约会                                               │   │
-│  │  - AICompanionSessionDB: AI 预沟通                                     │   │
-│  │  - RelationshipProgressDB: 关系进展                                    │   │
-│  │  - SafetyZoneDB: 安全区域                                              │   │
-│  └──────────────────────────────────────────────────────────────────────┐   │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+系统主要由四层组成：
 
-### 技术栈概览
+- **接入层**：FastAPI 路由（`src/api/`）+ 前端 React/Vite（`frontend/src/`）；
+- **领域服务层**：匹配、画像、聊天、会员、支付、通知、安全、AI 感知等服务（`src/services/`）；
+- **AI/Agent 层**：Her Advisor（推理与建议）+ DeerFlow Agent Runtime（工具编排、记忆、流式响应）；
+- **数据与基础设施层**：SQLAlchemy 模型、Repository、JWT、缓存、限流、日志、审计与指标。
 
-| 层级 | 技术选型 | 说明 |
-|------|---------|------|
-| **前端** | React 18 + TypeScript + Vite + Ant Design | SPA 应用，Generative UI 动态渲染 |
-| **Agent Runtime** | DeerFlow (LangGraph) | Agent 执行引擎，工具编排，状态管理 |
-| **后端** | FastAPI + SQLAlchemy + Pydantic | REST API + 服务层 |
-| **数据库** | SQLite (开发) / PostgreSQL (生产) | 关系型数据库，125+ 字段用户模型 |
-| **向量存储** | Qdrant (计划中) | 语义匹配，相似度计算 |
-| **缓存** | Redis | 会话缓存，用户画像缓存 |
-| **LLM** | Claude / GLM-5 (可配置) | 意图理解，匹配建议，对话生成 |
+## 2.2 后端运行与生命周期
+
+- 入口：`src/main.py`；
+- 启动流程包含：数据库初始化、缓存初始化、审计系统初始化、自主代理表初始化、Her Advisor 初始化、Skills 注册、心跳调度器启动；
+- 路由采用自动发现与注册（`src/routers/__init__.py`），按 `src/api/*.py` 中 `router*` 自动挂载；
+- 暴露基础治理端点：`/health`、`/metrics`、`/`（系统能力摘要）。
+
+## 2.3 前端运行形态
+
+- 技术栈：React 18 + TypeScript + Ant Design + Vite；
+- 应用入口 `frontend/src/App.tsx`，登录后直接进入 `HomePage`；
+- 交互以聊天与推荐为中心，叠加抽屉/懒加载页面承载高级功能；
+- API 统一走 `apiClient`（Axios 拦截器 + JWT 自动刷新 + 开发态 fallback 身份）。
+
+## 2.4 AI 双引擎架构
+
+- **Her Advisor 路径**：`/api/her/chat` 等接口驱动 `ConversationMatchService + HerAdvisorService`，重点解决匹配建议、认知偏差、可解释输出；
+- **DeerFlow 路径**：`/api/deerflow/*` 驱动 Agent Runtime（工具调用、记忆注入、流式 SSE/事件、线程上下文）；
+- 两条路径在前端并存：同步能力与流式能力按场景调用。
 
 ---
 
-## 核心功能模块
+## 3. 关键配置与基础能力
 
-### 1. 对话式匹配入口（Chat-first）
+## 3.1 配置中心（`src/config.py`）
 
-**核心文件**: `frontend/src/components/ChatInterface.tsx`
+主要配置域：
 
-**功能描述**:
-- 纯对话式交互，无固定菜单
-- 用户消息 → DeerFlow Agent → 工具调用 → Generative UI 渲染
-- 支持流式输出（SSE），实时进度提示
-- QuickStart 信息收集流程：对话式逐步收集用户画像
+- 运行环境：`ENVIRONMENT/DEBUG/HOST/PORT`；
+- LLM：供应商、模型、温度、token、超时、重试、降级模式；
+- 聊天自动画像更新阈值：冷却时间、确认窗口、字段阈值；
+- 外部服务：地图、天气、预订、推送、短信、支付；
+- 安全：JWT、CORS、敏感字段；
+- 数据：数据库 URL、连接池、Redis；
+- 日志治理：保留/备份策略。
 
-**交互流程**:
-```
-用户输入 "帮我找对象"
-    ↓
-DeerFlow Agent 意图理解
-    ↓
-调用 her_find_candidates 工具
-    ↓
-返回候选人数据（30+ 位）
-    ↓
-Agent 筛选推荐 1-3 位
-    ↓
-输出 GENERATIVE_UI 标签
-    ↓
-前端渲染 UserProfileCard 组件
-```
+配置设计特征：
 
-### 2. 智能匹配系统
+- 以 `Her/` 项目根为路径锚点；
+- 生产环境做强校验（如 DEBUG、CORS、JWT、关键密钥）；
+- 非生产环境支持自动生成并持久化 JWT Secret。
 
-**核心文件**:
-- `deerflow/community/her_tools/match_tools.py` - 候选人查询工具
-- `src/services/her_advisor_service.py` - 顾问建议服务
+## 3.2 数据库与会话（`src/db/database.py`）
 
-**匹配流程**:
+- SQLAlchemy 同步引擎；
+- SQLite 与 PostgreSQL 双模式；
+- 连接池参数可配置；
+- `get_db()` 统一依赖注入，包含 trace 级别日志；
+- `init_db()` 在启动时建表。
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     硬约束过滤（代码执行）                        │
-│  - 性别过滤（异性恋/同性恋/双性恋）                               │
-│  - 地点过滤（不接受异地 → 只查同城）                              │
-│  - 安全边界（排除封禁用户、测试账号）                              │
-│  - 最大扫描上限：30 位候选人                                      │
-└─────────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                     软约束筛选（Agent 决策）                      │
-│  - 年龄范围匹配                                                   │
-│  - 关系目标匹配                                                   │
-│  - 置信度排序                                                     │
-│  - Agent 根据上下文自主判断                                       │
-└─────────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                     Her 建议生成（LLM 分析）                      │
-│  - CognitiveBiasDetector: 认知偏差识别                            │
-│  - MatchAdvisor: 匹配建议生成                                     │
-│  - ProactiveSuggestionGenerator: 主动建议                         │
-└─────────────────────────────────────────────────────────────────┘
-```
+## 3.3 认证与会话安全（`src/auth/jwt.py`）
 
-**返回数据结构**:
-```json
-{
-  "success": true,
-  "data": {
-    "candidates": [
-      {
-        "display_id": "candidate_001",
-        "user_id": "uuid-xxx",
-        "name": "李雪",
-        "age": 26,
-        "location": "上海",
-        "interests": ["阅读", "瑜伽"],
-        "confidence_score": 85,
-        "avatar_url": "https://..."
-      }
-    ],
-    "user_preferences": {
-      "preferred_age_min": 25,
-      "preferred_age_max": 30,
-      "accept_remote": "yes"
-    },
-    "missing_fields": [],
-    "missing_preferences": []
-  }
-}
-```
+- 双 Token 机制：`access_token + refresh_token`；
+- `token_type` 区分访问与刷新；
+- 支持前端 SHA-256 后密码再 bcrypt 校验；
+- 提供可选认证策略：开发环境支持 `X-Dev-User-Id` 与匿名 fallback。
 
-### 3. 用户画像系统
+## 3.4 平台治理能力
 
-**核心文件**: `src/services/user_profile_service.py`
-
-**双画像架构**:
-
-| 画像类型 | 用途 | 数据来源 |
-|---------|------|---------|
-| **SelfProfile** | "这个人是什么样的" | 注册表单 + QuickStart + 行为推断 |
-| **DesireProfile** | "这个人想要什么" | 用户表达 + 点击行为 + 匹配反馈 |
-
-**SelfProfile 维度**:
-- 基础属性：年龄、性别、地点、收入、职业、学历
-- 动态画像：实际性格 vs 自称性格（性格认知偏差）
-- 情感需求：依恋类型、情感需求列表
-- 权力动态：控制型/顺从型/平等型
-- 置信度：整体置信度 + 各维度置信度
-
-**DesireProfile 维度**:
-- 表面偏好：用户自称想要的
-- 实际偏好：行为推断（点击、搜索、匹配反馈）
-- 偏好差距：surface_preference vs actual_preference
-- 一票否决：deal_breakers 列表
-
-### 4. QuickStart 信息收集
-
-**核心文件**: `frontend/src/components/ChatInterface.tsx` (generateQuickStartQuestionCard)
-
-**收集字段**:
-
-| 类别 | 字段 | 收集方式 |
-|------|------|---------|
-| **注册基础** | 姓名、年龄、性别、所在地 | 输入/单选 |
-| **属性字段** | 身高、学历、职业、收入、房产、车 | 单选 |
-| **一票否决** | 生育意愿、消费观念 | 单选（提示重要性） |
-| **核心价值观** | 家庭重要度、工作生活平衡 | 单选 |
-| **迁移能力** | 迁移意愿、异地接受度 | 单选 |
-| **生活方式** | 作息类型 | 单选 |
-
-**流程设计**:
-- 检查缺失字段 → 生成问题卡片 → 用户选择 → 写入画像 → 继续下一字段
-- 完成后同步到 DeerFlow Memory
-
-### 5. Generative UI 系统
-
-**核心文件**:
-- `frontend/src/types/generativeUI.ts` - 组件映射
-- `backend/src/generative_ui_schema.py` - 后端 Schema
-
-**已注册组件**:
-
-| 组件类型 | 前端渲染 | 用途 |
-|---------|---------|------|
-| `UserProfileCard` | UserProfileCard | 单个候选人详情卡片 |
-| `MatchCardList` | MatchCardList | 候选人列表 |
-| `ProfileQuestionCard` | ProfileQuestionCard | 信息收集问题卡片 |
-| `ChatInitiationCard` | ChatInitiationCard | 发起聊天确认卡片 |
-| `DatePlanCard` | DatePlanCard | 约会方案推荐 |
-| `IcebreakerCard` | IcebreakerCard | 破冰建议卡片 |
-| `CompatibilityChart` | CompatibilityChart | 兼容性分析图表 |
-| `TopicsCard` | TopicsCard | 话题推荐卡片 |
-| `RelationshipHealthCard` | RelationshipHealthCard | 关系健康度卡片 |
-| `SimpleResponse` | 纯文本 | 无卡片，纯文字回复 |
-
-**输出格式**:
-```
-[GENERATIVE_UI]
-{"component_type": "UserProfileCard", "props": {"name": "李雪", "age": 26, ...}}
-[/GENERATIVE_UI]
-```
-
-### 6. 滑动匹配页面
-
-**核心文件**: `frontend/src/pages/SwipeMatchPage.tsx`
-
-**功能**:
-- Tinder 风格滑动匹配
-- 支持 SuperLike（超级喜欢）
-- 每日匹配限制（会员功能）
-- 匹配成功后直接进入聊天室
-
-### 7. 视频约会系统
-
-**核心文件**: `src/api/video_date.py`
-
-**功能**:
-- 视频约会预约
-- 约会报告生成
-- 破冰问题库（IcebreakerQuestionDB）
-- 虚拟背景支持
-
-### 8. AI 预沟通
-
-**核心文件**: `src/models/precomm.py`
-
-**功能**:
-- AI 代表用户与候选人预沟通
-- 分析对话内容，提取关键信息
-- 生成对话摘要，供用户决策
-
-### 9. 关系进展追踪
-
-**核心文件**: `src/db/models/relationship.py`
-
-**功能**:
-- 记录关系进展里程碑
-- 关系健康度评估
-- 冲突事件记录
-- 关系建议推送
-
-### 10. 安全与认证
-
-**核心文件**:
-- `src/api/identity_verification.py` - 身份认证
-- `src/api/verification_badges.py` - 认证徽章
-- `src/db/models/safety.py` - 安全模型
-
-**功能**:
-- 人脸认证（FaceVerificationPage）
-- 学历认证、职业认证
-- 安全区域（SafetyZone）
-- 信任联系人（TrustedContact）
-- 用户举报与封禁
+- 限流中间件：保护核心接口；
+- 缓存管理：匹配结果、互赞结果、部分服务缓存；
+- 健康检查与指标：数据库/缓存/限流/性能统计；
+- 审计与日志：异常保护、敏感信息避免直出、链路日志强化。
 
 ---
 
-## Agent Native 架构详解
+## 4. 数据模型与领域边界
 
-### 三层分离架构
+## 4.1 模型组织方式
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     System Prompt Layer (SOUL.md)               │
-│                                                                 │
-│  ✅ 职责：                                                      │
-│  - 角色定义：智能红娘助手                                        │
-│  - 核心原则：理解意图、诚实原则、主动补齐、自主处理              │
-│  - 安全边界：拒绝违规请求                                        │
-│  - 工具使用指南：何时调用、如何处理                              │
-│                                                                 │
-│  ❌ 不应包含：                                                   │
-│  - 触发词映射表（关键词 → 工具）                                 │
-│  - 输出格式规则（由 Agent 自主决定）                             │
-│  - 流程步骤（由 Agent 自主判断）                                 │
-│  - 业务逻辑规则（在 Prompt 中表达，而非硬编码）                  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                           ↓ 调用
-┌─────────────────────────────────────────────────────────────────┐
-│                     Tools Layer (her_tools)                     │
-│                                                                 │
-│  ✅ 职责（7 个工具）：                                           │
-│  - her_get_profile: 获取用户画像                                │
-│  - her_find_candidates: 查询候选匹配对象池                       │
-│  - her_get_conversation_history: 获取对话历史                   │
-│  - her_update_preference: 更新用户偏好                          │
-│  - her_create_profile: 创建用户档案                             │
-│  - her_record_feedback: 记录用户反馈                            │
-│  - her_get_feedback_history: 获取反馈历史                       │
-│                                                                 │
-│  ✅ 设计原则：                                                   │
-│  - 只做硬约束过滤（安全边界）                                    │
-│  - 只返回原始数据（JSON）                                        │
-│  - 不包含业务逻辑（筛选、排序、评分）                            │
-│  - 不返回 instruction/output_hint                               │
-│                                                                 │
-│  ❌ 禁止行为：                                                   │
-│  - if-else 业务判断                                              │
-│  - 预设模板列表直接返回                                          │
-│  - 置信度计算、匹配度计算                                        │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                           ↓ 依赖
-┌─────────────────────────────────────────────────────────────────┐
-│                     Data Layer                                   │
-│                                                                 │
-│  ✅ 职责：                                                      │
-│  - 数据存储（SQLite/PostgreSQL）                                │
-│  - 基础查询（无业务逻辑）                                        │
-│                                                                 │
-│  ❌ 不应包含：                                                   │
-│  - 任何业务逻辑                                                  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+数据模型从单文件重构为领域拆分（`src/db/models/`），统一由 `__init__.py` 导出。领域包含：
 
-### 执行循环
+- 用户核心、匹配、对话、聊天、照片；
+- 认证验证、会员订阅、视频约会；
+- AI 集成、预沟通、安全域；
+- 用户画像、灰度实验、关系进展；
+- 通知与候选反馈。
 
-```
-用户消息 → Agent 思考(LLM) → 选择工具 → 执行工具(纯数据) → 返回数据
-                                                        ↓
-                         Agent 再思考(LLM) ← 解读数据决定下一步
-                                                        ↓
-                         继续执行 或 输出回复 → 完成
-```
+## 4.2 业务数据主线
 
-### 硬约束 vs 软约束分层
-
-| 类型 | 执行位置 | 示例 |
-|------|---------|------|
-| **硬约束（代码）** | Tool 层 | 安全边界、封禁用户过滤、性别过滤 |
-| **软约束（Prompt）** | Agent 层 | 年龄范围筛选、同城优先、置信度排序 |
-
-### DeerFlow 配置
-
-**核心配置文件**: `deerflow/extensions_config.json`
-
-```json
-{
-  "skills": {
-    "her_matchmaking": { "enabled": true },
-    "her_relationship_coach": { "enabled": true },
-    "her_date_planning": { "enabled": true },
-    "her_chat_assistant": { "enabled": true },
-    "her_matching_flow": { "enabled": true },
-    "autonomous_test": { "enabled": true }
-  }
-}
-```
+- **用户主档**：基础信息、偏好、关系目标、认证状态；
+- **匹配行为**：推荐结果、滑动动作、匹配历史、反馈学习；
+- **聊天关系**：会话、消息、已读与摘要；
+- **AI 衍生数据**：语义分析、画像更新、认知偏差、LLM 指标；
+- **商业化**：会员、订单、功能使用额度。
 
 ---
 
-## 数据模型设计
+## 5. 已实现功能清单（含交互逻辑）
 
-### 核心用户模型（UserDB）
+## 5.1 用户与认证域
 
-**文件**: `src/db/models/user.py`
+- 用户注册/登录/刷新令牌/登出；
+- 当前用户信息查询与更新；
+- 微信登录链路（前后端均有接口/页面支撑）；
+- 密码安全策略（前端哈希 + 后端 bcrypt）。
 
-**字段分类**:
+典型交互：
 
-| 类别 | 字段 | 说明 |
+1. 前端登录页提交用户名与 SHA-256 密码摘要；
+2. 后端验证并返回 access/refresh；
+3. 前端拦截器在 401 时自动刷新并重放请求；
+4. 刷新失败触发全局 `auth:expired` 回到登录态。
+
+## 5.2 匹配与推荐域
+
+- 推荐匹配列表（支持缓存）；
+- 双向匹配查询；
+- 兼容性计算；
+- 滑动操作（like/pass/super_like）与撤销；
+- 匹配偏好管理（年龄、地点、关系目标等）。
+
+核心逻辑：
+
+- `matching API` 不再依赖旧内存池，统一由 `ConversationMatchService` 和 AI 评估驱动；
+- 结果中包含兼容度、分项分数、共同兴趣、推荐理由；
+- 会员服务参与每日额度与权限控制。
+
+## 5.3 聊天与会话域
+
+- 会话列表、历史消息、发送消息、已读管理；
+- WebSocket 实时通信（心跳、重连、消息队列）；
+- 快聊能力（快速提问、回复建议、话题画像）；
+- 模拟回复与聊天分析能力。
+
+关键升级点：
+
+- 聊天过程中支持“无感画像更新”：规则抽取 + 小模型兜底提取；
+- 更新行为有证据记录（`UserProfileUpdateDB`）与阈值控制，避免误写入。
+
+## 5.4 Her Advisor（顾问脑）
+
+- 用户意图分析（匹配请求、咨询、反馈、偏好更新等）；
+- 查询质量校验（是否信息充分、是否需要追问）；
+- 认知偏差分析（想要 vs 适配）；
+- 匹配建议生成（推荐等级、风险提示、建议动作）；
+- 主动建议（Proactive Suggestion）生成。
+
+产品价值：
+
+- 输出不止“给谁”，还包含“为什么”“风险是什么”“下一步怎么做”；
+- 将心理学/关系学框架体现在可执行建议里。
+
+## 5.5 DeerFlow Agent 集成域
+
+- `/api/deerflow/chat`、`/stream`、`/status`、`/memory/sync`；
+- 线程化会话与 checkpointer 持久化；
+- Memory 注入与用户画像同步缓存；
+- 工具生态通过 `deerflow/config.yaml` 管理，当前注册 5 个 Her 核心工具；
+- 支持模型切换（GLM、豆包、Kimi 等）及流式事件。
+
+交互链路（流式）：
+
+1. 前端发起 DeerFlow stream；
+2. Agent 调用 her_tools（画像/候选/历史/偏好更新/建档）；
+3. 流式返回消息块与结构化结果；
+4. 前端解析并渲染聊天与动态组件。
+
+## 5.6 AI 感知与行为学习域
+
+- 行为跟踪（查看资料、滑动、聊天行为）；
+- 主动洞察与建议；
+- 行为摘要与学习结果处理；
+- 信心度/置信度反馈闭环。
+
+## 5.7 安全与信任域
+
+- 身份认证、人脸认证、认证徽章；
+- 黑名单/举报/安全区/可信联系人等安全模型；
+- who-likes-me、关系偏好、风险识别等信任构件。
+
+## 5.8 商业化与增值域
+
+- 会员订阅、订单、额度使用；
+- 支付接口（微信/支付宝配置入口）；
+- 礼物、玫瑰、视频约会、里程碑、生活融合能力（如成长计划、关系压力测试、数字小家等）。
+
+## 5.9 前端产品形态
+
+- 登录页：账号体系 + 安全密码策略 + 微信扫码；
+- 首页：聊天中枢 + 会话摘要 + 推荐缓存；
+- 核心组件：`ChatInterface`、`ChatRoom`、`MatchCard`、`AgentFloatingBall`；
+- 功能抽屉：Who Likes Me、置信度管理、人脸认证、滑动匹配等；
+- 多语言：中英日韩；
+- 测试覆盖：核心组件与 API 适配层已有 Jest 用例。
+
+---
+
+## 6. 关键业务流程（端到端）
+
+## 6.1 对话式匹配流程（主链路）
+
+1. 用户在首页输入自然语言诉求；
+2. 前端优先通过 `herAdvisorApi` 进入 Her 顾问链路；
+3. `ConversationMatchService` 执行：意图分析 -> 查询质量校验 -> 候选执行 -> 建议生成 -> UI 结构构建；
+4. 返回：AI 文案 + 匹配列表 + 偏差分析 + 主动建议；
+5. 前端渲染匹配卡片，并可继续进入聊天或二次咨询。
+
+## 6.2 实时聊天与画像更新流程
+
+1. 用户进入 ChatRoom，WebSocket 建链；
+2. 消息写入会话与历史；
+3. 后端从文本提取地点/职业/兴趣等画像信号；
+4. 满足证据阈值后更新画像并同步向量维度；
+5. 后续推荐与建议基于更新后的画像生效。
+
+## 6.3 DeerFlow Agent 对话流程
+
+1. 前端按 thread_id 发起 chat/stream；
+2. DeerFlow 载入模型、记忆、工具；
+3. 工具执行返回结构化 `ToolResult`；
+4. Agent 解释并输出最终回复；
+5. 记忆系统异步提炼事实用于下轮注入。
+
+---
+
+## 7. 当前成熟度评估
+
+## 7.1 优势
+
+- 功能广度高：覆盖从匹配到关系经营再到商业化闭环；
+- AI 架构明确：Her Advisor（业务决策）+ DeerFlow（Agent runtime）；
+- 工程治理基础较完整：路由自动注册、健康检查、指标、缓存、限流、测试基础；
+- 数据域拆分清晰，模型组织较规范。
+
+## 7.2 主要风险与技术债
+
+- 功能面过宽，部分模块成熟度不均，存在“能力存在但体验深度不足”的风险；
+- 单体内模块较多，跨域依赖复杂，后续演进成本高；
+- DeerFlow 与主后端双引擎并存，长期需更强统一契约与观测；
+- 若持续叠加功能，需防止“路由增长快于领域收敛”。
+
+---
+
+## 8. 未来 3-6 个月规划建议（产品 + 架构）
+
+## 8.1 0-2 个月：能力收敛与体验稳定（优先级 P0）
+
+- 收敛核心北极星链路：`登录 -> 对话匹配 -> 聊天推进 -> 关系建议`；
+- 统一前端 API 适配层返回契约，减少场景分叉；
+- 把关键转化漏斗埋点标准化（推荐曝光、开聊率、回复率、留存）；
+- 强化线上观测：按 `trace_id/user_id/thread_id` 贯穿日志与指标。
+
+技术动作：
+
+- 建立统一 `response envelope`（success/error/data/meta）；
+- 将高频核心接口做基准性能压测；
+- 对聊天画像更新增加可解释回显（可确认/可撤销）。
+
+## 8.2 2-4 个月：中台化与策略升级（优先级 P1）
+
+- 建立“匹配策略中台”：规则、模型、实验参数统一管理；
+- 将候选召回与重排（含向量召回）沉淀为可配置流水线；
+- 推进 A/B 框架与灰度体系联动（已具备模型基础，可提升运营效率）；
+- 形成“安全信任评分 + 商业权益”联动机制。
+
+技术动作：
+
+- 抽象 `Match Pipeline`（召回、过滤、重排、解释）；
+- 拆分服务边界（匹配域、聊天域、会员域、安全域）；
+- 对 DeerFlow 工具层定义版本化 schema，避免前后端漂移。
+
+## 8.3 4-6 个月：智能化闭环与平台化（优先级 P1/P2）
+
+- 构建长期关系运营引擎：阶段识别、风险预警、干预策略；
+- 打通“用户目标 -> AI 策略 -> 行为反馈 -> 策略更新”闭环；
+- 引入多目标优化（匹配质量、活跃、付费、风险）；
+- 支持多端与生态接入（IM/第三方渠道）的一致智能体验。
+
+技术动作：
+
+- 建立“画像版本 + 策略版本 + 模型版本”三版本追踪；
+- 构建在线评估体系（回复质量、建议采纳率、关系进展成功率）；
+- 推进关键域服务化/可插拔化，降低单体耦合。
+
+---
+
+## 9. 架构优化建议（面向可持续演进）
+
+## 9.1 统一 AI 决策入口
+
+- 现状是 Her Advisor 与 DeerFlow 并行；
+- 建议中期收敛为“统一决策总线 + 场景化执行器”，减少重复编排。
+
+## 9.2 建立领域边界与反腐层
+
+- 将 `api -> service -> repo/model` 的边界进一步固化；
+- 前端/Agent 与后端之间引入稳定 DTO 契约，避免隐式耦合。
+
+## 9.3 全链路可观测性升级
+
+- 必须统一日志维度：`trace_id, user_id, thread_id, tool_name, latency_ms`；
+- 针对“推荐失败、工具超时、画像误更新”建立专项告警。
+
+## 9.4 数据与策略治理
+
+- 画像字段需要分层管理（用户声明/行为推断/模型推断）；
+- 对自动更新加“证据来源 + 置信度 + 可回滚”机制（当前已具雏形，建议平台化）。
+
+---
+
+## 10. 建议的产品北极星指标
+
+- 匹配链路：推荐点击率、开聊率、7日互聊率；
+- 关系链路：建议采纳率、冲突修复成功率、关系阶段推进率；
+- AI 质量：对话满意度、建议可解释性评分、工具调用成功率；
+- 商业化：会员转化率、权益使用率、续费率；
+- 安全：风险识别命中率、误报率、严重事件率。
+
+---
+
+## 11. 结论
+
+Her 当前已具备“AI 红娘平台”的完整雏形：能力覆盖广、AI 架构清晰、工程基础较扎实。下一阶段应从“功能扩张”转为“核心链路深耕 + 架构收敛 + 数据策略治理”，把分散能力打磨成稳定增长飞轮。
+
+# Her / Matchmaker Agent — 系统文档
+
+> **文档性质**：基于当前代码库（`src/`、`config.py`、`.env.example`、`requirements.txt`、`frontend/package.json` 与 `src/api/*` 路由扫描）整理，**不依赖**仓库内其他 Markdown 说明文件，以避免与实现脱节。  
+> **应用标识**：后端 `FastAPI` 标题为 *Matchmaker Agent*，`config.Settings.app_version` 当前为 **1.30.0**（部分端点返回的 `version` 字段与注释存在历史版本号，以 `config.py` 为准）。
+
+---
+
+## 1. 补充信息（推断）
+
+| 项 | 说明 |
+|----|------|
+| **本项目的核心目标** | 构建以 **LLM + Agent 运行时（DeerFlow）** 为决策核心的 **AI 红娘 / 婚恋匹配与关系陪伴平台**：覆盖「发现对象 → 对话破冰 → 关系维护 → 约会与生活场景」全链路，并辅以会员、认证、风控与可观测性。 |
+| **主要目标用户** | **严肃婚恋/社交关系诉求的 C 端用户**（需要匹配、聊天、约会建议、关系教练与安全感）；同时代码中包含 **企业向风控/绩效/分享增长** 等 Skill，表明存在 **B 端或运营后台扩展** 的设计空间。 |
+
+---
+
+## 2. 愿景与背景（从实现反推）
+
+### 2.1 产品愿景（Vision）
+
+从架构命名与核心服务可归纳为：
+
+- **从「规则引擎 + 模板」演进为「AI 作为决策引擎 + 工具执行」**：`Her` 顾问（`HerAdvisorService`）承担「专业红娘」角色，结合心理学/社会学等知识框架，通过 LLM 做 **认知偏差识别、匹配建议、主动建议**，而非仅靠硬编码规则。
+- **双轨智能入口，统一业务真相**：
+  - **对话式匹配主路径**：`POST /api/her/chat` → `ConversationMatchService` → `HerAdvisorService` + `MatchExecutor`（数据库候选人池 + 并行 LLM 评估）。
+  - **通用 Agent 运行时**：`POST /api/deerflow/*` 对接本地 **DeerFlow**（`deerflow/` + `deerflow-integration`），承载流式对话、工具编排、记忆同步（与 `mem0ai` / `qdrant-client` 依赖一致）。
+- **关系全生命周期**：除匹配外，实现聊天、照片、视频约会、礼物、玫瑰、里程碑、约会提醒、部落/数字小家/压力测试等 **关系运营与增值能力**。
+- **工程化与合规意识**：JWT、CORS 生产约束、限流、缓存（Redis/内存）、审计日志、性能监控、日志轮转、门户 JWT 可选集成（`PORTAL_*`）。
+
+### 2.2 解决的核心痛点
+
+| 痛点 | 代码层面的对应能力 |
+|------|-------------------|
+| 传统婚恋产品「填表 + 规则过滤」难以理解自然语言诉求 | `IntentAnalyzer` + `ConversationMatchService` 解析意图与条件；`/api/her/chat` 对话为入口。 |
+| 用户「想要的」与「适合的」不一致 | `CognitiveBiasDetector` + `MatchAdvice`（Her 自主判断，非纯关键词规则）。 |
+| 候选人来源与 AI 判断耦合混乱 | `MatchExecutor`：**DB 候选人池** → 批量画像 → **asyncio 并行 LLM** 打分；`/api/matching` 走同一套编排并带缓存。 |
+| 单一聊天机器人无法编排复杂工具链 | DeerFlow 集成 + `agent/skills` 注册表，大量领域 Skill（关系教练、约会策划、安全守护、礼物建议等）。 |
+| 匹配后「冷启动」与长期沉默 | **自主代理引擎**：`agent/autonomous` 心跳调度 + `HeartbeatExecutor` 调 DeerFlow 决策，经 WebSocket **主动推送到对话界面**（非仅系统通知文案）。 |
+| 商业化与信任 | 会员、支付（微信/支付宝开关）、身份/人脸/徽章验证、行为信用、置信度反馈闭环（`/api/profile/confidence`、`/api/confidence/feedback`）。 |
+
+---
+
+## 3. 系统架构
+
+### 3.1 逻辑分层
+
+```mermaid
+flowchart TB
+  subgraph client [客户端]
+    FE[React + Vite + Ant Design]
+  end
+
+  subgraph gateway [Her 后端 FastAPI]
+    R[routers: 自动扫描 api/*.py]
+    MW[中间件: CORS / RateLimit]
+    AUTH[JWT: auth/jwt]
+    CACHE[cache_manager: Redis 或内存]
+  end
+
+  subgraph domain [领域服务层 services/]
+    CMS[ConversationMatchService 编排]
+    HAS[HerAdvisorService]
+    ME[MatchExecutor]
+    UPS[UserProfileService]
+    CHAT[ChatService]
+    PAY[Payment / Membership / ...]
+  end
+
+  subgraph agent [Agent 层 agent/]
+    SK[SkillRegistry + Skills]
+    AUTO[Autonomous: scheduler / executor / push]
+    TOOLS[Tools: geo / safety / interest / ...]
+  end
+
+  subgraph runtime [外部运行时]
+    DF[DeerFlow Client + config.yaml]
+    LLM[Dashscope / Volces / OpenAI 兼容 API]
+  end
+
+  subgraph data [数据层]
+    DB[(SQLAlchemy: SQLite / PostgreSQL)]
+    REDIS[(可选 Redis)]
+  end
+
+  FE --> R
+  R --> MW --> AUTH
+  R --> CMS
+  CMS --> HAS
+  CMS --> ME
+  ME --> UPS
+  ME --> DB
+  R --> CHAT
+  R --> DF
+  DF --> LLM
+  DF --> SK
+  SK --> TOOLS
+  AUTO --> DF
+  R --> CACHE
+  CACHE --> REDIS
+```
+
+### 3.2 路由注册机制
+
+- **入口**：`src/main.py` 创建 `FastAPI` 应用，挂载静态目录 `static/`、`CORSMiddleware`、`RateLimitMiddleware`，`startup` 中初始化 DB、缓存、审计、自主代理表、Her 顾问迁移、Skill 注册表、心跳调度器等。
+- **路由**：`src/routers/__init__.py` **自动扫描** `src/api/*.py`，导入所有以 `router` 开头的 `APIRouter` 并 `include_router`，避免手工维护长导入列表。
+
+### 3.3 AI 与匹配主链路（摘要）
+
+1. **对话匹配（推荐主路径）**  
+   前端 `conversationMatchingApi.match` → `POST /api/her/chat` → `ConversationMatchService`：意图分析 → 查询质量检查 → `MatchExecutor.execute_matching`（DB 池 + 批量画像 + 并行 LLM）→ `AdviceGenerator` / `UIBuilder` → 返回 `ai_message`、`matches`、`bias_analysis`、`generative_ui` 等。
+
+2. **列表型匹配 API**  
+   `GET /api/matching/{user_id}/matches`：缓存命中则直接返回；否则同样调用 `ConversationMatchService.execute_matching`，与对话入口共享编排内核。
+
+3. **DeerFlow**  
+   `src/api/deerflow.py`：在进程内加载 `deerflow/backend/packages/harness`，使用 `deerflow/config.yaml` 与可选 `deerflow/backend/.env`；提供 chat/stream/status/memory sync 等；注释中明确 **弱模型下可选意图预分类**（`ENABLE_INTENT_ROUTER`）为与「Agent Native」原则的折中。
+
+4. **主动性**  
+   `agent/autonomous/scheduler.py` 定时触发 → `HeartbeatExecutor` 组装上下文 → DeerFlow 返回 `HEARTBEAT_OK` 或自然语言行动 → 经 WebSocket 推送用户。
+
+### 3.4 前端技术栈（简要）
+
+- **React 18 + TypeScript + Vite 5 + Ant Design 5**，HTTP 客户端 **axios**，路由 **react-router-dom**，**PWA**（`vite-plugin-pwa`），国际化 **i18next**。
+- `frontend/src/api/index.ts` 明确约束：**对话匹配应走 `/api/her/chat`**，流式场景可走 DeerFlow SSE；避免前端绕过编排直接打 DeerFlow 导致丢失偏差分析等能力。
+
+### 3.5 外部依赖与集成（来自 `config.py` / `requirements.txt`）
+
+- **数据库**：SQLAlchemy 2，默认 SQLite 文件于项目根；生产建议使用 PostgreSQL；连接池参数可配。
+- **缓存**：可选 `REDIS_URL`；无 Redis 时回退内存缓存（生产会告警）。
+- **LLM**：`LLM_PROVIDER`（dashscope / volces / openai 等）、`LLM_API_KEY`、`LLM_MODEL` 等；支持降级 `LLM_FALLBACK_*` 与 `LLM_CACHE_*`。
+- **地图 / 天气 / 预订 / 短信 / 推送 / 支付**：均以 **feature flag + 密钥** 控制，缺省多为关闭或 mock。
+- **孵化器门户**：`PORTAL_ENABLED` 等 JWT 对接可选。
+- **DeerFlow**：`-e ./deerflow-integration` 本地可编辑安装；运行时仍依赖 `deerflow/` 树内 harness 与配置。
+
+---
+
+## 4. 系统现有完整功能总览
+
+本节基于 **`src/api/*.py` 路由装饰器扫描**（2026-04 代码快照）与 **`agent/skills/registry.py`** 默认注册表整理，用于「已实现能力」的完整盘点。  
+当前 `src/api` 下约 **45** 个 Python 文件；其中 **`errors.py` 无 Router**；**`confidence_feedback.py`** 仅转发 `feedback_loop` 中的 `router`；其余模块通过 `routers/__init__.py` 自动挂载 **50+ 个 `APIRouter` 实例**（单文件多 router 时计数大于文件数）。  
+**说明**：**`/api/notifications`** 同时出现在 `notifications.py` 与 `notification_share_apis.py` 中，实际路由以 **OpenAPI（`/docs`）** 为准，合并时需注意路径是否冲突。
+
+### 4.1 全局与基础设施（非业务域）
+
+| 能力 | 路径或位置 | 说明 |
+|------|------------|------|
+| 根信息 | `GET /` | 服务状态、版本、特性标签列表、`get_api_endpoints_summary()` |
+| 健康检查 | `GET /health` | DB、缓存、限流、性能子检查 |
+| 指标 | `GET /metrics` | 缓存、限流、匹配侧活跃用户数、性能统计 |
+| OpenAPI | `GET /docs`、`GET /openapi.json` | 自动文档（限流中间件对 `/docs` 等通常排除） |
+| 静态资源 | `GET /static/*` | 头像等资源目录挂载 |
+| 全局 WebSocket | `WS /ws/{user_id}`、`GET /ws/status`、`GET /ws/online/{user_id}` | 自主推送、在线状态（`websocket.py`，**无前缀**） |
+| 启动期逻辑 | `main.py` `startup` | DB 初始化、缓存、审计、自主代理表、Her 顾问迁移、Skill 注册、心跳调度器 |
+
+### 4.2 用户、认证与画像
+
+**前缀 `/api/users`**（`users.py`）
+
+| 方法 | 路径 | 说明 |
 |------|------|------|
-| **基础信息** | id, name, age, gender, location | 注册表单收集 |
-| **偏好设置** | preferred_age_min/max, preferred_location, accept_remote | QuickStart 收集 |
-| **生活方式** | want_children, spending_style, sleep_type | 一票否决维度 |
-| **价值观** | family_importance, work_life_balance, migration_willingness | 核心价值观 |
-| **动态画像** | actual_personality, claimed_personality, personality_gap | 行为推断 |
-| **情感需求** | attachment_style, emotional_needs | 行为推断 |
-| **安全状态** | is_active, is_permanently_banned, verification_status | 安全控制 |
+| POST | `/api/users/register` | 注册 |
+| POST | `/api/users/login` | 登录 / Token |
+| POST | `/api/users/refresh` | 刷新 Token |
+| GET | `/api/users/` | 用户列表 |
+| GET | `/api/users/{user_id}` | 用户详情 |
+| PUT | `/api/users/{user_id}` | 更新用户 |
+| DELETE | `/api/users/{user_id}` | 删除用户 |
+| GET | `/api/users/{user_id}/profile` | 用户 Profile |
+| POST | `/api/users/forgot-password` | 忘记密码 |
+| POST | `/api/users/reset-password` | 重置密码 |
+| POST | `/api/users/logout` | 登出 |
 
-### 匹配相关模型
+**前缀 `/api/wechat`**（`wechat_login.py`）：`GET /qrcode`、`/status`、`/callback`、`/config` — 微信扫码登录流程。
 
-| 模型 | 用途 |
-|------|------|
-| `MatchHistoryDB` | 匹配历史记录 |
-| `SwipeActionDB` | 滑动行为记录 |
-| `UserPreferenceDB` | 用户偏好存储 |
-| `MatchInteractionDB` | 匹配互动记录 |
-| `ImplicitInferenceDB` | 隐性推断结果 |
+**前缀 `/api/profile`**（`profile.py`）：画像问答流 — `POST /question`、`/answer`、`/follow-up`，`GET /gaps/{user_id}`，`POST /quickstart/submit`。
 
-### 对话相关模型
+**前缀 `/api/profile/confidence`**（`profile_confidence.py`）：`GET /`、`/summary`、`/user/{user_id}/summary`，`POST /refresh`、`/batch`，`GET /recommendations`、`/explain`。
 
-| 模型 | 用途 |
-|------|------|
-| `ConversationDB` | 对话历史 |
-| `BehaviorEventDB` | 行为事件 |
-| `ConversationSessionDB` | 对话会话 |
-| `ChatMessageDB` | 实时聊天消息 |
-| `AIPreCommunicationSessionDB` | AI 预沟通会话 |
+**前缀 `/api/confidence/feedback`**（`services/confidence/feedback_loop.py` 挂载）：`POST /match`，`GET /stats`，`POST /optimize-rules`、`/compensate`。
 
-### 画像与置信度模型
+### 4.3 Her 顾问与对话式匹配（核心）
 
-| 模型 | 用途 |
-|------|------|
-| `UserVectorProfileDB` | 用户向量画像 |
-| `ProfileConfidenceDetailDB` | 置信度详情 |
-| `ProfileInferenceRecordDB` | 推断记录 |
+**前缀 `/api/her`**（`her_advisor.py`）
 
-### 安全与认证模型
-
-| 模型 | 用途 |
-|------|------|
-| `IdentityVerificationDB` | 身份认证 |
-| `VerificationBadgeDB` | 认证徽章 |
-| `SafetyZoneDB` | 安全区域 |
-| `UserBlockDB` | 用户屏蔽 |
-| `UserReportDB` | 用户举报 |
-
----
-
-## 前端架构
-
-### 组件层级
-
-```
-App.tsx (入口)
-    ↓
-HomePage.tsx (主页面)
-    ├── ChatInterface.tsx (对话界面)
-    │   ├── MessageList (消息列表)
-    │   ├── GenerativeUI (动态组件渲染)
-    │   │   ├── UserProfileCard
-    │   │   ├── MatchCardList
-    │   │   ├── ProfileQuestionCard
-    │   │   ├── ChatInitiationCard
-    │   │   └── ...
-    │   └── InputArea (输入区域)
-    ├── SwipeMatchPage.tsx (滑动匹配)
-    ├── WhoLikesMePage.tsx (谁喜欢我)
-    ├── ConfidenceManagementPage.tsx (置信度管理)
-    ├── FaceVerificationPage.tsx (人脸认证)
-    └── ChatRoom.tsx (聊天室)
-```
-
-### Generative UI 渲染流程
-
-```
-Agent 输出 [GENERATIVE_UI] 标签
-    ↓
-ChatInterface 解析标签
-    ↓
-提取 component_type 和 props
-    ↓
-mapComponentTypeToGenerativeCard 映射
-    ↓
-Suspense 懒加载对应组件
-    ↓
-渲染组件（传递 props）
-```
-
-### 懒加载优化
-
-```tsx
-// 大型组件懒加载
-const MatchCard = lazy(() => import('./MatchCard'))
-const MatchCardList = lazy(() => import('./generative-ui/MatchComponents'))
-const UserProfileCard = lazy(() => import('./UserProfileCard'))
-
-// Suspense 包裹 + 骨架屏 fallback
-<Suspense fallback={<SkeletonComponents.matchCard />}>
-  <UserProfileCard {...props} />
-</Suspense>
-```
-
-### 国际化支持
-
-**文件**: `frontend/src/locales/`
-
-支持语言：
-- 中文（zh）
-- 英文（en）
-- 日文（ja）
-- 韩文（ko）
-
----
-
-## API 层设计
-
-### DeerFlow API（核心入口）
-
-**文件**: `src/api/deerflow.py`
-
-| 路由 | 用途 |
-|------|------|
-| `POST /api/deerflow/chat` | 发送消息（唯一入口） |
-| `POST /api/deerflow/stream` | 流式发送消息（SSE） |
-| `GET /api/deerflow/status` | DeerFlow 状态 |
-| `POST /api/deerflow/memory/sync` | 同步用户画像到 Memory |
-| `POST /api/deerflow/reset` | 重置 DeerFlow 客户端 |
-
-### 其他 API 路由
-
-| 文件 | 路由 | 用途 |
+| 方法 | 路径 | 说明 |
 |------|------|------|
-| `activities.py` | `/api/activities` | 活动推荐 |
-| `ai_companion.py` | `/api/ai-companion` | AI 陪伴 |
-| `digital_twin.py` | `/api/digital-twin` | 数字孪生 |
-| `gift_integration.py` | `/api/gift` | 礼物集成 |
-| `milestone_apis.py` | `/api/milestone` | 里程碑 |
-| `payment.py` | `/api/payment` | 会员支付 |
-| `relationship.py` | `/api/relationship` | 关系管理 |
-| `video_date.py` | `/api/video-date` | 视频约会 |
-| `identity_verification.py` | `/api/verification` | 身份认证 |
+| POST | `/api/her/chat` | **对话匹配主入口** → `ConversationMatchService` |
+| POST | `/api/her/analyze-bias` | 认知偏差分析 |
+| POST | `/api/her/match-advice` | 双人匹配建议 |
+| GET | `/api/her/profile/{user_id}` | 用户画像（自评/期望等） |
+| POST | `/api/her/behavior-event` | 行为事件上报 |
+| GET | `/api/her/knowledge-cases` | 顾问知识案例 |
+| GET | `/api/her/health` | Her 子系统健康 |
+
+### 4.4 匹配算法、滑动与周边工具
+
+**前缀 `/api/matching`**（`matching.py`）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/matching/{user_id}/matches` | AI Native 推荐列表（缓存 + `ConversationMatchService`） |
+| GET | `/api/matching/{user_id}/mutual-matches` | 双向匹配 |
+| POST | `/api/matching/calculate` | 匹配度计算 |
+| POST | `/api/matching/icebreaker` | 破冰 |
+| GET | `/api/matching/distance/{user_id}/{target_user_id}` | 距离 |
+| POST | `/api/matching/personality/questions` | 性格问卷 |
+| POST | `/api/matching/personality/submit` | 提交问卷 |
+| GET | `/api/matching/personality/compatibility/{user_id}/{target_user_id}` | 性格兼容 |
+| GET | `/api/matching/nearby/{user_id}` | 附近的人 |
+| POST | `/api/matching/safety/report` | 安全举报 |
+| GET | `/api/matching/safety/score/{user_id}` | 安全分 |
+| POST | `/api/matching/safety/detect-content` | 内容安全检测 |
+| GET | `/api/matching/safety/status/{user_id}` | 安全状态 |
+| GET | `/api/matching/interest/match/{user_id}/{target_user_id}` | 兴趣匹配 |
+| GET | `/api/matching/interest/communities/{user_id}` | 兴趣社群 |
+| POST | `/api/matching/interest/topics` | 兴趣话题 |
+| GET | `/api/matching/interest/tags/{user_id}` | 兴趣标签 |
+| GET | `/api/matching/recommend` | 推荐（扁平结构等） |
+| POST | `/api/matching/swipe` | 滑动操作 |
+| POST | `/api/matching/swipe/{swipe_id}/undo` | 撤销滑动 |
+
+**前缀 `/api/matching-preferences`**：`GET /schema`，`POST /save`，`GET /get/{user_id}`，`POST /score`，`GET /suggestions/{user_id}`，`GET /options/{dimension}`。
+
+**前缀 `/api/relationship-preferences`**：`GET /types`、`/statuses`、`/preferences`，`PUT /preferences`，`GET /compatibility/{target_user_id}`，`GET /stats`，`POST /batch-check-compatibility`。
+
+**前缀 `/api/who-likes-me`**：`GET /{user_id}`，`/count/{user_id}`，`/new-count/{user_id}`，`POST /like-back`。
+
+**前缀 `/api/rose`**：余额、赠送、Standout、购买、套餐、流水等（`/balance`、`/send`、`/standout`、`/purchase`、`/packages`、`/transactions` 等）。
+
+### 4.5 实时聊天与聊天增强
+
+**前缀 `/api/chat`**（含 **WebSocket** `WS /api/chat/ws/{user_id}`）
+
+| 类型 | 路径 | 说明 |
+|------|------|------|
+| WS | `/api/chat/ws/{user_id}` | 聊天长连接 |
+| POST | `/api/chat/send` | 发消息 |
+| GET | `/api/chat/conversations` | 会话列表 |
+| GET | `/api/chat/history/{other_user_id}` | 历史消息 |
+| POST | `/api/chat/read/message/{message_id}`、`/read/conversation` | 已读 |
+| POST | `/api/chat/recall/{message_id}` | 撤回 |
+| DELETE | `/api/chat/message/{message_id}` | 删除 |
+| POST | `/api/chat/archive/{other_user_id}`、`/block/{other_user_id}` | 归档、屏蔽 |
+| GET | `/api/chat/unread/count`、`/search` | 未读、搜索 |
+| POST | `/api/chat/simulate-reply` | 模拟回复（偏开发/测试） |
+| GET | `/api/chat/tags`、`/quick-tags` | 快捷标签 |
+| POST | `/api/chat/quick-ask`、`/suggest-reply`、`/suggestion-feedback` | 悬浮球快问、回复建议与反馈 |
+| POST | `/api/chat/analyze-message`、`/save-with-analysis` | 单条分析与落库 |
+| GET | `/api/chat/topic-profile/{user_id}`、`/profile-suggestions/{user_id}` | 话题画像与画像更新建议 |
+
+### 4.6 DeerFlow Agent 运行时
+
+**前缀 `/api/deerflow`**（`deerflow.py`，文件内尚有大量辅助逻辑）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/deerflow/memory/sync` | 用户画像 / Memory 同步 |
+| POST | `/api/deerflow/chat` | 非流式对话 |
+| POST | `/api/deerflow/stream` | 流式对话（SSE 等） |
+| POST | `/api/deerflow/learning/confirm` | 学习结果确认 |
+| GET | `/api/deerflow/status` | 运行时状态 |
+| POST | `/api/deerflow/reset` | 重置会话/状态（以实现为准） |
+
+### 4.7 Skills 注册与执行 API
+
+**前缀 `/api/skills`**（`skills.py`）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/skills/list` | Skill 列表 |
+| GET | `/api/skills/{skill_name}/info` | 元数据 |
+| POST | `/api/skills/{skill_name}/execute` | 执行指定 Skill |
+| POST | `/api/skills/{skill_name}/execute/stream` | 流式执行 |
+| POST | `/api/skills/execute` | 批量或统一执行入口（见实现） |
+| POST | `/api/skills/filter/sensitive` | 敏感过滤 |
+| POST | `/api/skills/autonomous/trigger`、`/context/trigger` | 自主与上下文触发 |
+
+**启动时默认注册的 Skill（共 31 个，`initialize_default_skills`）**  
+
+| # | 工厂函数（代码中注册名） | 典型标签 |
+|---|-------------------------|----------|
+| 1–2 | `get_precommunication_skill`、`get_omniscient_insight_skill` | 预沟通、觉察 |
+| 3–4 | `get_relationship_coach_skill`、`get_date_planning_skill` | 关系教练、约会策划 |
+| 5–6 | `get_bill_analysis_skill`、`get_gift_suggestion_skill` | 消费/礼物 |
+| 7–8 | `get_emotion_analysis_skill`、`get_safety_guardian_skill` | 情绪、安全 |
+| 9–10 | `get_silence_breaker_skill`、`get_emotion_mediator_skill` | 沉默破冰、调解 |
+| 11–12 | `get_love_language_translator_skill`、`get_relationship_prophet_skill` | 爱之语、关系预测 |
+| 13 | `get_relationship_curator_skill` | 关系策展 |
+| 14–16 | `get_risk_control_skill`、`get_share_growth_skill`、`get_performance_coach_skill` | 企业风控、分享增长、绩效教练 |
+| 17–18 | `get_activity_director_skill`、`get_video_date_coach_skill` | 活动、视频约会教练 |
+| 19–21 | `get_trust_analyzer_skill`、`get_subconscious_analyzer_skill`、`get_values_inferencer_skill` | 信任/潜意识/价值观 |
+| 22–24 | `get_conflict_compatibility_analyzer_skill`、`get_values_drift_detector_skill`、`get_twin_simulator_skill` | 冲突兼容、价值观漂移、双子模拟 |
+| 25–28 | `get_context_detector_skill`、`get_ui_renderer_skill`、`get_preference_learner_skill`、`get_pattern_learner_skill` | 上下文、UI、偏好/模式学习 |
+| 29 | `get_profile_collection_skill` | 画像收集 |
+| 30 | `get_chat_assistant_skill` | 聊天助手 |
+
+*已注释未注册：`get_intent_router_skill`（意图路由 Skill 废弃）。匹配主链路以 `ConversationMatchService` + DeerFlow `her_tools` 为准。*
+
+### 4.8 自主代理与 AI 觉察
+
+**前缀 `/api/autonomous`**：`GET/PUT /push-preferences`，`GET /heartbeat/status`、`/heartbeat/rules`，`GET /push-history`，`POST /push-history/{push_id}/response`，`GET /proactive-levels`。
+
+**前缀 `/api/ai/awareness`**：`GET /`、`/insights`、`/suggestion`、`/patterns`、`/commentary`；`POST /track`、`/track/profile-view`、`/track/swipe`、`/track/chat-message`。
+
+### 4.9 身份、验证、安全与场景
+
+| 前缀 | 端点概要 |
+|------|-----------|
+| `/api/identity` | 信任分、徽章、学历/职业/收入/房产/无犯罪记录等提交与查询、外部 API、管理员审核、信任等级 |
+| `/api/verification` | 徽章列表、信任分、教育/职业提交与状态、审批、统计、按用户查徽章 |
+| `/api/face-verification` | 状态、`start`/`submit`/`retry`、记录、徽章、按用户校验、`/methods` |
+| `/api/scene` | `POST /detect`，`GET /history/{user_id}`、`/rules` |
+| `/api/agent/intervention` | 介入等级设置、检查、执行、历史、等级枚举 |
+
+### 4.10 照片、短视频、活动与礼物
+
+| 前缀 | 端点概要 |
+|------|-----------|
+| `/api/photos` | 上传/文件上传、我的/详情/用户列表、排序、删除、审核、验证姿势、点赞、浏览、统计、AI 审核 |
+| `/api/photo-comments` | 创建、建议、按照片/收件箱、回复、已读、未读数、类型 |
+| `/api/video-clips` | 上传、用户列表、主视频、设主、删除、浏览、介绍建议、配置 |
+| `/api/activities` | 推荐、`locations` 保存/列表/删除/附近 |
+| `/api/gift` | 商店、详情、赠送、收发列表、统计、已读、未读数 |
+| `/api/gifts` | AI 建议、场合/预算参考、下单、物流跟踪、佣金统计、反馈、效果、即将到来的事件、提醒 |
+
+### 4.11 关系进展、里程碑、约会与游戏
+
+| 前缀 | 端点概要 |
+|------|-----------|
+| `/api/relationship` | `POST /progress/record`，`GET /timeline/{user_id_1}/{user_id_2}`、`/health-score/...`、`/visualization/...` |
+| `/api/milestones` | 记录、时间线、详情、更新、庆祝、统计、洞察生成/查询/已读 |
+| `/api/date-suggestions` | 生成、列表、响应、场地列表与新增 |
+| `/api/couple-games` | 创建、列表、详情、回合、开始、完成、洞察 |
+| `/api/date-reminder` | 创建计划、即将到来、提醒列表、准备、状态、反馈 |
+
+### 4.12 视频约会与通话
+
+**前缀 `/api/video-date`**：`WS /api/video-date/ws/{user_id}`；约会 `schedule`/`list`/`{id}`/`start`/`complete`/`cancel`；`reminders/upcoming`、`icebreaker`、`backgrounds` 与设置；安全 `block`/`report`/`emergency`；`games`；通话 `create`/`accept`/`reject`/`end`/`{call_id}`、`history`、`active`、`stats`。
+
+### 4.13 数字分身与 AI 陪伴
+
+| 前缀 | 端点概要 |
+|------|-----------|
+| `/api/digital-twin` | 分身资料 CRUD、模拟开始/运行/查询、报告生成/查询、我的模拟列表、性格特质参考 |
+| `/api/companion` | 人设列表、会话类型、创建会话、发消息、结束会话、活跃会话、历史、消息列表、统计、聊天教练分析 |
+
+### 4.14 生活整合（约会策划、部落、小家、压力与信任）
+
+| 前缀 | 方法 | 路径 | 说明 |
+|------|------|------|------|
+| `/api/autonomous-dating` | POST | `/create` | 自主约会计划 |
+| `/api/relationship-albums` | POST | `/create` | 情感纪念册 |
+| `/api/social-tribes` | POST | `/compatibility` | 部落兼容性 |
+| `/api/digital-homes` | POST | `/create`、`/goal/create` | 数字小家与共同目标 |
+| `/api/family-meeting-simulation` | POST | `/role/create` | 见家长模拟角色 |
+| `/api/relationship-stress-tests` | POST | `/start`、`/{test_id}/complete` | 关系压力测试 |
+| `/api/growth-plans` | POST | `/plan/create` | 成长计划 |
+| `/api/trust-endorsements` | POST | `/score/calculate`、`/endorse` | 信任分与背书 |
+
+### 4.15 会员、支付、通知与分享
+
+**`/api/membership`**：方案、权益、状态、下单、支付回调、功能检查/限额/使用、取消订阅、统计、方案对比、按用户每日用量。
+
+**`/api/payment`**：优惠券 list/create/claim/my/apply；退款 create/my/approve/reject；发票 create/my/issue/send；试用 start/status；订阅 status/cancel；统计 stats、coupons、trials。
+
+**`/api/notifications`**（两处 router 合并视图）：  
+- `notifications.py`：`/pending`，标记送达/已读，偏好增删。  
+- `notification_share_apis.py`：`/unread-count`、列表、`read`、`read-all`、删除、`push-token`、偏好等。
+
+**`/api/share`**：邀请码创建/列表/校验/使用、分享记录、统计、海报列表等。
+
+### 4.16 运营、灰度、性能与 LLM 缓存
+
+| 前缀 | 端点概要 |
+|------|-----------|
+| `/api/grayscale` | 功能检查、实验变体、quick-start 开关、flags CRUD、实验、初始化默认、健康 |
+| `/api/performance` | 仪表板、慢查询、API 统计、慢端点、优化建议、缓存统计/预热/清理、uptime、健康、LLM 统计/按端点成本/最近调用/重置 |
+| `/api/llm/cache` | stats、test、clear、config get/post |
+| `/api/checker` | `skills-sync`、`backend-skills`、`frontend-skills` |
+
+### 4.17 其他体验类 API
+
+**`/api/your-turn`**：`GET /pending/{user_id}`、`/stats/{user_id}`，`POST /shown`、`/dismiss`，`GET /should-show/{user_id}/{conversation_id}` — 聊天轮次提醒。
+
+### 4.18 Generative UI（后端已注册组件类型）
+
+`src/generative_ui_schema.py` 中 **`GENERATIVE_UI_SCHEMA`** 当前注册的 `backend_type` 包括（与前端 `generativeCard` 映射）：  
+`MatchCardList`、`DailyRecommendCard`、`UserProfileCard`、`ProfileQuestionCard`、`QuickStartCard`、`PreCommunicationPanel`、`PreCommunicationDialog`、`DatePlanCard`、`DateSuggestionCard`、`CompatibilityChart`、`RelationshipHealthCard`、`RelationshipReportCard`、`CapabilityCard`、`TopicsCard`、`IcebreakerCard`、`SimpleResponse`、`AIResponseCard`、`ConversationGuideCard`、`ChatConfirmCard`、`NotificationStatusCard`、`ChatInitiationCard`、`LearningConfirmationCard`。  
+辅助函数：`get_frontend_card`、`validate_props`、`list_all_components`。
+
+### 4.19 根路径特性标签（`GET /` 中的 `features` 数组）
+
+`main.py` 中 `GET /` 仍返回一长串 **产品特性中文标签**（涵盖 JWT、匹配、聊天、会员、视频、安全、DeerFlow、自主匹配、关系健康、数字分身、穿搭与场所策略、行为信用等），与真实已实现子集可能不完全一一对应；**以本章各节 API 与代码为准**，根列表可作为「产品愿景/宣传口径」参考。
 
 ---
 
-## 匹配系统设计
+## 5. 数据模型（领域划分）
 
-### 匹配执行流程
+`db/models` 按领域拆分（见 `db/models/__init__.py` 注释），主要包括：
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     IntentAnalyzer                               │
-│  分析用户意图：match_request / preference_update / inquiry       │
-│  提取匹配条件：interests, age_range, location, gender            │
-└─────────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                     QueryQualityChecker                          │
-│  校验查询质量：是否清晰、是否完整                                 │
-│  生成追问：缺失信息时生成 follow_up_questions                     │
-└─────────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                     HerAdvisorService                            │
-│  CognitiveBiasDetector: 识别认知偏差                              │
-│  MatchAdvisor: 生成匹配建议                                       │
-│  ProactiveSuggestionGenerator: 生成主动建议                       │
-└─────────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                     MatchExecutor                                │
-│  执行数据库查询                                                   │
-│  应用硬约束过滤                                                   │
-│  返回原始候选池                                                   │
-└─────────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                     AdviceGenerator                              │
-│  为每个匹配生成专业建议                                           │
-│  生成风险提示                                                     │
-│  生成回复消息                                                     │
-└─────────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                     UIBuilder                                    │
-│  构建 Generative UI                                              │
-│  构建建议操作按钮                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+- **用户**：`UserDB`
+- **匹配**：`MatchHistoryDB`、`SwipeActionDB`、偏好与交互、隐式推断等
+- **对话与行为**：`ConversationDB`、`BehaviorEventDB`、`ConversationSessionDB` 等
+- **聊天**：`ChatMessageDB`、`ChatConversationDB`
+- **照片**：`PhotoDB`
+- **验证**：身份、教育、职业、徽章等
+- **会员与订单**：订阅、订单、用量
+- **视频**：通话、视频约会及报告
+- **AI 集成 / 预沟通 / 安全 / 画像 / 灰度 / 关系** 等独立模块表
 
-### Her 知识框架
+**自主代理**：`db/autonomous_models.py`（启动时 `init_autonomous_tables()`）维护推送偏好、心跳规则状态、推送历史等。
 
-```python
-HER_KNOWLEDGE_FRAMEWORK = {
-    "心理学": {
-        "依恋理论": ["安全型", "焦虑型", "回避型", "混乱型"],
-        "人格类型": ["外向/内向", "理性/感性", "控制/顺从"],
-        "权力动态": ["控制型", "顺从型", "平等型", "竞争型"],
-        "情感需求": ["需要被照顾", "需要被尊重", "需要被理解"]
-    },
-    "社会学": {
-        "人生阶段": ["单身探索期", "稳定恋爱期", "婚姻准备期", "育儿期"],
-        "价值观差异": ["家庭观念", "金钱观念", "事业观念"]
-    },
-    "人际关系学": {
-        "沟通风格": ["直接型", "间接型", "情感型", "逻辑型"],
-        "冲突处理": ["回避型", "竞争型", "妥协型", "合作型"]
-    }
-}
-```
+**Her 顾问知识/案例**：`models/her_advisor_models.py` 与迁移脚本 `scripts/migrate_her_advisor.py` 在启动时执行。
 
 ---
 
-## 产品规划建议
+## 6. 横切能力
 
-### 当前代码成熟度评估
+| 能力 | 实现要点 |
+|------|-----------|
+| **认证** | JWT，`jwt_secret_key` 生产强校验；开发可从 `.jwt_secret` 持久化。 |
+| **限流** | `RateLimitMiddleware`，匹配接口额外装饰器 `rate_limit_match`。 |
+| **缓存** | `cache_manager`：匹配结果 TTL、DeerFlow memory/profile 同步缓存（见 `deerflow.py`）。 |
+| **可观测性** | `utils/logger` + trace_id；`performance_service`；`/metrics` 与 `/health`；日志启动备份。 |
+| **审计** | `db.audit.init_audit()`。 |
 
-| 模块 | 成熟度 | 说明 |
-|------|--------|------|
-| **Agent Native 架构** | ⭐⭐⭐⭐ | 三层分离清晰，工具职责明确 |
-| **对话式匹配** | ⭐⭐⭐⭐ | 流式输出 + Generative UI 完整实现 |
-| **用户画像系统** | ⭐⭐⭐ | 双画像设计完善，行为推断待加强 |
-| **匹配算法** | ⭐⭐⭐ | 硬约束过滤完整，软约束依赖 Agent |
-| **前端交互** | ⭐⭐⭐⭐ | 懒加载 + 骨架屏 + 国际化完善 |
-| **安全认证** | ⭐⭐⭐ | 人脸认证、身份认证基础完成 |
-| **视频约会** | ⭐⭐ | 基础框架完成，功能待完善 |
-| **AI 预沟通** | ⭐⭐ | 基础模型完成，流程待完善 |
+---
 
-### 未来 3-6 个月迭代方向
+## 7. 产品与技术规划建议（未来 3–6 个月）
 
-#### Phase 1: 基础能力完善（1-2 个月）
+### 7.1 产品迭代方向
 
-| 任务 | 优先级 | 说明 |
-|------|--------|------|
-| **向量匹配增强** | P0 | 引入 Qdrant，实现语义相似度匹配 |
-| **行为推断强化** | P0 | 点击行为、搜索行为、匹配反馈 → DesireProfile |
-| **置信度系统完善** | P1 | 各维度置信度计算 + 置信度可视化 |
-| **视频约会流程完善** | P1 | 预约、提醒、报告生成完整流程 |
-| **AI 预沟通上线** | P2 | AI 代表用户预沟通，生成摘要 |
+1. **收敛「唯一用户心智模型」**  
+   在运营与 UI 上明确：**日常对话主入口**（Her chat + DeerFlow）与 **列表浏览**（matching API）的关系，减少用户与前端开发对「该打哪个 API」的认知成本（代码已在 `frontend/src/api/index.ts` 注释中强调正确路径）。
 
-#### Phase 2: 智能化提升（2-3 个月）
+2. **把「关系全链路」做成可度量漏斗**  
+   从注册 → 画像置信度 → 首次匹配 → 首条聊天 → 视频约会 → 会员转化，埋点与看板与现有 `performance`、审计能力对齐。
 
-| 任务 | 优先级 | 说明 |
-|------|--------|------|
-| **认知偏差识别增强** | P0 | 更多心理学模型，更精准的偏差识别 |
-| **关系进展追踪** | P1 | 里程碑追踪、关系健康度评估 |
-| **主动推送系统** | P1 | 事件驱动推送（新人匹配、沉默提醒） |
-| **智能约会策划** | P2 | 根据双方画像生成约会方案 |
-| **关系教练上线** | P2 | 冲突调解、沟通建议 |
+3. **主动性默认体验调优**  
+   心跳 + DeerFlow 生成文案质量与频次高度依赖模型与规则；建议结合推送偏好做 **A/B 与骚扰率指标**（退订、静音、投诉）。
 
-#### Phase 3: 生态扩展（3-6 个月）
+4. **信任与合规产品化**  
+   身份/人脸/徽章与 `confidence` 反馈闭环已形成 API 层；可强化 **用户可解释展示**（为何可信/不可信），与 `SafetyTool`、安全类 Skill 叙事一致。
 
-| 任务 | 优先级 | 说明 |
-|------|--------|------|
-| **会员体系完善** | P1 | 分级会员、权益差异化 |
-| **社交功能** | P2 | 用户动态、社交圈子 |
-| **线下活动** | P2 | 活动匹配、活动报名 |
-| **第三方认证集成** | P3 | 学历认证、职业认证第三方对接 |
+5. **B 端/运营能力取舍**  
+   Skill 中存在企业风控、绩效看板等能力，需决策是 **垂直行业 SKU** 还是 **内部运营工具**；避免 C 端界面暴露未完成的企业模块。
 
-### 技术优化建议
+### 7.2 技术优化建议
 
-| 方向 | 建议 |
+| 方向 | 说明 |
 |------|------|
-| **性能优化** | Memory 同步异步化（已实现）、用户画像缓存（已实现）、候选人批量查询优化（已实现） |
-| **架构优化** | 保持 Agent Native 设计原则，避免回退到硬编码规则 |
-| **测试覆盖** | 增加 Agent 行为测试、匹配流程测试、端到端测试 |
-| **监控告警** | 关键路径耗时监控、Agent 决策日志、匹配成功率追踪 |
+| **版本与契约统一** | `main.py` 根路径 `version`、OpenAPI `version`、`settings.app_version` 与前端展示对齐；OpenAPI 作为对前端/测试的单一真相。 |
+| **弱模型与 Agent Native 张力** | `deerflow.py` 中意图预分类为技术债；规划 **模型升级** 或 **将预分类限制在极少数 tool 失败兜底路径**，并记录开关策略。 |
+| **数据库与缓存** | 生产默认 PostgreSQL + Redis（`config.py` 已在生产环境对 SQLite/无 Redis 发出警告）；匹配高并发时关注 SQLite 锁问题。 |
+| **清理运行产物** | 仓库若在本地产生大量 `:memory:*` 或测试 DB 文件，应用 `.gitignore` 与启动脚本隔离工作目录，避免污染根目录。 |
+| **DeerFlow 配置与密钥** | 统一 `LLM_API_KEY` → `OPENAI_API_KEY`/`ARK_API_KEY` 的注入逻辑已有；建议文档化 **单一配置源**（Her `.env` vs `deerflow/backend/.env` 优先级）。 |
+| **路由重复前缀** | 自动扫描可能导入多个同名前缀 router，长期建议 **合并 router 模块** 或在注册中心去重，避免 OpenAPI 重复 tag/path。 |
+| **测试与 CI** | 依赖 `pytest` 齐全；对 `ConversationMatchService`、`MatchExecutor` 并行 LLM 与降级路径保持集成测试，防止回归。 |
 
 ---
 
-## 附录
+## 8. 附录：关键文件索引
 
-### A. 文件结构索引
-
-```
-Her/
-├── deerflow/
-│   ├── backend/
-│   │   ├── .deer-flow/
-│   │   │   └── SOUL.md          # Agent System Prompt
-│   │   └── packages/harness/deerflow/community/her_tools/
-│   │       ├── __init__.py      # 工具注册
-│   │       ├── match_tools.py   # 匹配工具
-│   │       ├── profile_tools.py # 画像工具
-│   │       ├── user_tools.py    # 用户工具
-│   │       └── schemas.py       # 数据结构
-│   └── extensions_config.json   # Skills 配置
-├── frontend/
-│   └── src/
-│       ├── components/
-│       │   ├── ChatInterface.tsx    # 对话界面
-│       │   ├── generative-ui/       # Generative UI 组件
-│       │   └── skeletons.tsx        # 骨架屏
-│       ├── pages/
-│       │   ├── HomePage.tsx         # 主页面
-│       │   ├── SwipeMatchPage.tsx   # 滑动匹配
-│       │   └── ChatRoom.tsx         # 聊天室
-│       └── api/
-│           └── deerflowClient.ts    # DeerFlow API 客户端
-├── src/
-│   ├── api/
-│   │   ├── deerflow.py          # DeerFlow API
-│   │   └── matching.py          # 匹配 API
-│   ├── services/
-│   │   ├── her_advisor_service.py       # Her 顾问服务
-│   │   ├── conversation_match_service.py # 对话匹配服务
-│   │   └ user_profile_service.py        # 用户画像服务
-│   ├── agent/
-│   │   └ skills/                # 30+ Skills
-│   │   └── deerflow_client.py   # DeerFlow 客户端封装
-│   └── db/
-│       └ models/                # 数据模型（15+ 文件）
-│       └ database.py            # 数据库连接
-└── tests/
-    ├── eval/                    # 评估测试
-    └── agent/                   # Agent 测试
-```
-
-### B. 关键日志追踪点
-
-| 日志标签 | 用途 |
-|---------|------|
-| `[DEERFLOW_TRACE]` | DeerFlow API 调用追踪 |
-| `[HER_SERVICE_TRACE]` | Her Service 降级处理追踪 |
-| `[her_find_candidates]` | 候选人查询耗时 |
-| `[IntentAnalyzer]` | 意图分析结果 |
-| `[QueryQualityChecker]` | 查询质量校验 |
-| `[Memory同步]` | 用户画像同步到 DeerFlow |
+| 路径 | 作用 |
+|------|------|
+| `src/main.py` | FastAPI 应用入口、生命周期、全局中间件与异常处理 |
+| `src/config.py` | 全部环境变量与生产安全校验 |
+| `src/routers/__init__.py` | API 自动发现与注册 |
+| `src/services/conversation_match_service.py` | 对话匹配编排总线 |
+| `src/services/her_advisor_service.py` | Her 顾问核心 LLM 逻辑 |
+| `src/services/conversation_match/match_executor.py` | DB 候选人池 + 并行匹配 |
+| `src/api/deerflow.py` | DeerFlow 集成网关 |
+| `src/api/her_advisor.py` | Her 对外 REST 契约 |
+| `src/agent/skills/registry.py` | Skill 注册与默认列表 |
+| `src/agent/autonomous/executor.py` | 心跳 → DeerFlow → 主动消息 |
+| `src/generative_ui_schema.py` | Generative UI 组件注册表 |
+| `frontend/src/api/index.ts` | 前端对 AI Native 接口的封装与注释约束 |
 
 ---
 
-> **文档维护说明**
-> 
-> 本文档基于代码扫描生成，不依赖现有 MD 文件。
-> 更新日期：2026-04-19
-> 
-> 维护原则：
-> 1. 代码变更后同步更新此文档
-> 2. 保持架构描述与实际代码一致
-> 3. 产品规划每季度更新
+*文档生成说明：若代码变更导致本文与实际行为不一致，以 `src/` 与 OpenAPI (`/docs`) 为准，并建议更新本文件而非依赖零散 README。*

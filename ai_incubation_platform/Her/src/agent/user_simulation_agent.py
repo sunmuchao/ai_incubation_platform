@@ -94,13 +94,14 @@ class UserSimulationAgent:
         # 1. 年龄因素
         if self.age and isinstance(self.age, int):
             if self.age < 25:
-                # 年轻人更活跃
+                # 年轻人更活跃 - 🚀 [修复] 确保延迟时间不为负数
                 config["reply_probability"] += 0.1
-                config["reply_time_max_seconds"] -= 30
+                config["reply_time_max_seconds"] = max(3, config["reply_time_max_seconds"] - 3)
                 config["emoji_usage"] = "frequent"
             elif self.age > 35:
-                # 年长些的人更稳重
-                config["reply_time_min_seconds"] += 30
+                # 年长些的人更稳重 - 🚀 [修复] 同时调整 max_seconds 保持合理范围
+                config["reply_time_min_seconds"] = min(60, config["reply_time_min_seconds"] + 10)
+                config["reply_time_max_seconds"] = config["reply_time_min_seconds"] + 20  # 确保 max > min
                 config["tone"] = "mature"
 
         # 2. 兴趣数量
@@ -261,11 +262,13 @@ class UserSimulationAgent:
         return will_reply
 
     def get_reply_delay(self) -> int:
-        """获取回复延迟时间（秒）"""
-        return random.randint(
-            self.reply_config["reply_time_min_seconds"],
-            self.reply_config["reply_time_max_seconds"]
-        )
+        """获取回复延迟时间（秒）- 🚀 [修复] 确保 min <= max"""
+        min_seconds = self.reply_config["reply_time_min_seconds"]
+        max_seconds = self.reply_config["reply_time_max_seconds"]
+        # 确保 max >= min，避免 ValueError
+        if max_seconds < min_seconds:
+            max_seconds = min_seconds
+        return random.randint(min_seconds, max_seconds)
 
     def generate_reply(self, message_content: str, sender_name: str = "用户") -> str:
         """

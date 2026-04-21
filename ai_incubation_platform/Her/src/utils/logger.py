@@ -191,6 +191,36 @@ class TraceContextFilter(logging.Filter):
         return True
 
 
+_deerflow_log_bridge_done = False
+
+
+def _bridge_deerflow_to_matchmaker_handlers(agent_logger: logging.Logger) -> None:
+    """把 DeerFlow 包内 logger（deerflow.*）接到与 matchmaker-agent 相同的 Handler，写入 server.log。
+
+    DeerFlow 使用 logging.getLogger(__name__)，默认不进 Her 的 FileHandler；LLM 重试/失败
+    只在子 logger 上打 WARNING，主日志里看不到。桥接后可在同一份日志里排查 Transient LLM / LLM call failed。
+    """
+    global _deerflow_log_bridge_done
+    if _deerflow_log_bridge_done:
+        return
+    if not agent_logger.handlers:
+        return
+
+    df_root = logging.getLogger("deerflow")
+    df_root.setLevel(logging.DEBUG)
+    df_root.propagate = False
+    existing = {id(h) for h in df_root.handlers}
+    for h in agent_logger.handlers:
+        if id(h) not in existing:
+            df_root.addHandler(h)
+            existing.add(id(h))
+
+    _deerflow_log_bridge_done = True
+    agent_logger.debug(
+        "DeerFlow logging bridged: deerflow.* -> same handlers as matchmaker-agent (see server.log)"
+    )
+
+
 def setup_logger() -> logging.Logger:
     """配置并返回日志记录器"""
     logger = logging.getLogger("matchmaker-agent")
@@ -198,6 +228,7 @@ def setup_logger() -> logging.Logger:
 
     # 避免重复添加处理器
     if logger.handlers:
+        _bridge_deerflow_to_matchmaker_handlers(logger)
         return logger
 
     # 添加敏感数据过滤器
@@ -253,6 +284,7 @@ def setup_logger() -> logging.Logger:
 
     logger.info(f"Logger initialized, log file: {os.path.join(log_dir, 'server.log')}")
 
+    _bridge_deerflow_to_matchmaker_handlers(logger)
     return logger
 
 

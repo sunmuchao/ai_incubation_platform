@@ -15,12 +15,8 @@ import json
 
 from utils.logger import logger
 from services.user_profile_service import get_user_profile_service
-from services.her_advisor_service import (
-    HerAdvisorService,
-    SelfProfile,
-    DesireProfile,
-    MatchAdvice,
-)
+from services.her_advisor_service import HerAdvisorService, MatchAdvice
+from services.profile_dataclasses import DesireProfile, SelfProfile
 
 
 class AdviceGenerator:
@@ -66,6 +62,14 @@ class AdviceGenerator:
             candidate_self, candidate_desire = candidate_profiles.get(
                 candidate_id, (SelfProfile(), DesireProfile())
             )
+            candidate_profile = match.get("candidate_profile") or candidate_self.to_dict()
+            vector_match_highlights = match.get("vector_match_highlights") or candidate_profile.get("vector_match_highlights", {})
+            candidate_name = (
+                candidate_profile.get("name")
+                or candidate_profile.get("basic", {}).get("name")
+                or candidate_self.gender
+                or "TA"
+            )
 
             # 如果已有 AI 判断结果，直接使用
             existing_advice = match.get("her_advice")
@@ -83,13 +87,14 @@ class AdviceGenerator:
 
             return {
                 "candidate_id": candidate_id,
-                "candidate_name": candidate_self.name or candidate_self.gender or "TA",
-                "candidate_profile": candidate_self.to_dict(),
+                "candidate_name": candidate_name,
+                "candidate_profile": candidate_profile,
                 "compatibility_score": match.get("score", 0.5),
                 "score_breakdown": {},
                 "her_advice": advice,
                 "match_reasoning": advice.advice_content if advice else "初步匹配",
                 "risk_warnings": advice.potential_issues if advice else [],
+                "vector_match_highlights": vector_match_highlights,
             }
 
         # 并行处理所有匹配
@@ -162,7 +167,8 @@ class AdviceGenerator:
                 "has_bias": bias_analysis.has_bias if bias_analysis and hasattr(bias_analysis, 'has_bias') else False,
                 "bias_description": bias_analysis.bias_description if bias_analysis and hasattr(bias_analysis, 'bias_description') else None,
             } if bias_analysis else None,
-            "hint": "Agent 应根据数据自主生成个性化响应。要自然对话风格，禁止模板化。每个候选人介绍要因用户而异。",
+            "hint": "Agent 应根据数据自主生成个性化响应。要自然对话风格，禁止模板化。每个候选人介绍要因用户而异。"
+            "排版：段落之间必须空一行；列举多位时用 Markdown 列表，每人一条单独成行（- **姓名**（年龄）- 要点）。",
             "key_points": [
                 f"找到 {match_count} 个匹配对象",
                 f"其中 {high_confidence_count} 个高置信度用户（可信度高）",

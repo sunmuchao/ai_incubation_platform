@@ -761,6 +761,10 @@ async def get_recommendations(
         profile = candidate.get("candidate_profile", {})
         advice = candidate.get("her_advice")
 
+        # 🔧 [修复] profile 现在是扁平结构（match_executor 已合并原始数据）
+        # 但保留 basic 字段兼容性检查
+        basic = profile.get("basic", profile)  # 如果有 basic 则用它，否则用整个 profile
+
         # 从 her_advice 获取 reasoning
         reasoning = "AI 综合评估推荐"
         if advice and hasattr(advice, 'reasoning'):
@@ -770,19 +774,20 @@ async def get_recommendations(
 
         recommendations.append({
             "id": candidate.get("user_id"),
-            "name": profile.get("name"),
-            "username": profile.get("name"),
-            "age": profile.get("age"),
-            "gender": profile.get("gender"),
-            "location": profile.get("location"),
-            "avatar_url": profile.get("avatar_url"),
-            "bio": profile.get("bio"),
-            "interests": profile.get("interests", []),
-            "goal": profile.get("relationship_goal", "serious"),
+            "name": profile.get("name") or basic.get("name"),
+            "username": profile.get("name") or basic.get("name"),
+            "age": profile.get("age") or basic.get("age"),
+            "gender": profile.get("gender") or basic.get("gender"),
+            "location": profile.get("location") or basic.get("location"),
+            "avatar_url": profile.get("avatar_url") or basic.get("avatar_url"),
+            "bio": profile.get("bio") or basic.get("bio"),
+            "interests": profile.get("interests") or basic.get("interests", []),
+            "goal": profile.get("relationship_goal") or basic.get("relationship_goal", "serious"),
             "verified": candidate.get("user_id") in verified_user_ids,
             "compatibility_score": round(candidate.get("score", 0.5), 2),
             "match_reason": reasoning,
             "compatibility_reason": reasoning,
+            "vector_match_highlights": candidate.get("vector_match_highlights", {}) or profile.get("vector_match_highlights", {}),
         })
 
     # 按匹配度排序

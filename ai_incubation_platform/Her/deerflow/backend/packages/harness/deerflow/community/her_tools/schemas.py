@@ -77,6 +77,20 @@ class HerFindCandidatesInput(BaseModel):
         default="me",
         description="用户 ID，可选。不传或传 'me' 使用当前用户"
     )
+    retrieval_mode: str = Field(
+        default="auto",
+        description=(
+            "检索模式（由 Agent 自主决策）："
+            "auto=自动（使用系统默认），"
+            "db_only=仅结构化数据库筛选，"
+            "hybrid=启用向量召回+重排。"
+            "建议：按硬条件筛选用 db_only；按感觉找人用 hybrid。"
+        ),
+    )
+    retrieval_reason: str = Field(
+        default="",
+        description="检索模式选择理由（可选，建议一句中文，便于日志审计）",
+    )
 
 
 class HerGetConversationHistoryInput(BaseModel):

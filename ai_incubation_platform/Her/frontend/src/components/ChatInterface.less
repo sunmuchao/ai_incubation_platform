@@ -267,34 +267,18 @@
     font-size: @font-size-sm;
   }
 
+  // 🚀 [性能优化] 移除加载旋转动画，用静态 Spin 组件替代
   .ant-spin-dot {
     color: @color-primary;
-    animation: loadingRotate 1.5s linear infinite;
   }
 
-  // 动态进度动画（三个点依次显示）
+  // 🚀 [性能优化] 移除动态进度动画（三个点依次显示）
+  // 原动画：animation: loadingDot 1.4s infinite 消耗 GPU
   .loading-dots {
     display: inline-flex;
     margin-left: 4px;
-
-    span {
-      animation: loadingDot 1.4s infinite;
-      opacity: 0;
-
-      &:nth-child(1) { animation-delay: 0s; }
-      &:nth-child(2) { animation-delay: 0.2s; }
-      &:nth-child(3) { animation-delay: 0.4s; }
-    }
-  }
-
-  @keyframes loadingDot {
-    0%, 80%, 100% { opacity: 0; }
-    40% { opacity: 1; }
-  }
-
-  @keyframes loadingRotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    font-weight: bold;
+    color: @color-primary;
   }
 }
 
@@ -306,7 +290,7 @@
   background: rgba(255, 255, 255, 0.95);
   border-radius: @radius-xl;
   border: 1px solid @border-light;
-  animation: skeletonFadeIn 0.3s ease-out;
+  // 🚀 [性能优化] 移除 skeletonFadeIn 动画
 
   .skeleton-preview-title {
     text-align: center;
@@ -314,26 +298,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: skeletonPulse 2s infinite;
+    // 🚀 [性能优化] 移除 skeletonPulse 动画
 
     .skeleton-progress-dots {
       display: inline-flex;
       margin-left: 4px;
-
-      span {
-        animation: loadingDot 1.4s infinite;
-        opacity: 0;
-        font-weight: bold;
-        color: @color-primary;
-
-        &:nth-child(1) { animation-delay: 0s; }
-        &:nth-child(2) { animation-delay: 0.2s; }
-        &:nth-child(3) { animation-delay: 0.4s; }
-      }
+      font-weight: bold;
+      color: @color-primary;
+      // 🚀 [性能优化] 移除 loadingDot 动画
     }
   }
 
-  // 🚀 [改进] 进度步骤可视化
+  // 🚀 [改进] 进度步骤可视化（移除动画）
   .skeleton-progress-steps {
     display: flex;
     justify-content: center;
@@ -349,15 +325,11 @@
       align-items: center;
       gap: @space-1;
       opacity: 0.7;
-      animation: stepFadeIn 0.5s ease-out backwards;
-
-      &:nth-child(1) { animation-delay: 0.1s; }
-      &:nth-child(2) { animation-delay: 0.3s; }
-      &:nth-child(3) { animation-delay: 0.5s; }
+      // 🚀 [性能优化] 移除 stepFadeIn 动画
 
       .step-icon {
         font-size: 20px;
-        animation: stepIconPulse 2s infinite;
+        // 🚀 [性能优化] 移除 stepIconPulse 动画
       }
 
       .step-label {
@@ -365,17 +337,31 @@
         color: @text-tertiary;
         white-space: nowrap;
       }
+
+      // 🚀 [场景3方案3] 进度状态样式
+      &.completed {
+        opacity: 1;
+        .step-icon { color: @color-success; }
+        .step-label { color: @color-success; font-weight: @font-weight-semibold; }
+      }
+
+      &.active {
+        opacity: 1;
+        .step-icon { color: @color-primary; }
+        .step-label {
+          color: @color-primary;
+          font-weight: @font-weight-semibold;
+        }
+        .step-loading {
+          margin-top: 2px;
+          .ant-spin-dot { color: @color-primary; }
+        }
+      }
+
+      &.pending {
+        opacity: 0.5;
+      }
     }
-  }
-
-  @keyframes stepFadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 0.7; transform: translateY(0); }
-  }
-
-  @keyframes stepIconPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
   }
 
   .skeleton-cards-container {
@@ -391,7 +377,8 @@
     background: rgba(250, 250, 250, 0.8);
     border-radius: @radius-lg;
     border: 1px solid @border-light;
-    animation: skeletonPulse 2s infinite;
+    // 🚀 [性能优化] 移除 skeletonPulse 动画，改用静态透明度
+    opacity: 0.9;
 
     .skeleton-avatar {
       width: 60px;
@@ -403,16 +390,8 @@
       justify-content: center;
       position: relative;
 
-      &::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
-        animation: skeletonShimmer 1.5s infinite;
-      }
+      // 🚀 [性能优化] 移除 shimmer 动画
+      // 原动画：animation: skeletonShimmer 1.5s infinite 消耗 GPU
 
       .ant-spin-dot {
         color: @color-primary;
@@ -430,7 +409,6 @@
         width: 60%;
         background: linear-gradient(135deg, @border-light 0%, rgba(0, 0, 0, 0.02) 100%);
         border-radius: @radius-sm;
-        animation: skeletonShimmer 1.5s infinite;
       }
 
       .skeleton-meta {
@@ -438,7 +416,6 @@
         width: 80%;
         background: linear-gradient(135deg, @border-light 0%, rgba(0, 0, 0, 0.02) 100%);
         border-radius: @radius-sm;
-        animation: skeletonShimmer 1.5s infinite 0.2s;
       }
 
       .skeleton-tags {
@@ -446,25 +423,21 @@
         width: 90%;
         background: linear-gradient(135deg, @border-light 0%, rgba(0, 0, 0, 0.02) 100%);
         border-radius: @radius-sm;
-        animation: skeletonShimmer 1.5s infinite 0.4s;
       }
     }
   }
 
-  @keyframes skeletonFadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+  // 🚀 [性能优化] 移除 skeletonFadeIn 动画，改用静态样式
+  .match-skeleton-preview {
+    margin-top: @space-4;
+    padding: @space-4;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: @radius-xl;
+    border: 1px solid @border-light;
   }
 
-  @keyframes skeletonPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-  }
-
-  @keyframes skeletonShimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
+  // 🚀 [性能优化] 移除 skeletonPulse 动画定义
+  // 🚀 [性能优化] 移除 skeletonShimmer 动画定义
 }
 
 // ==================== 输入区域 ====================
@@ -686,21 +659,18 @@
 }
 
 // ==================== 打字机效果 ====================
-
+// 🚀 [性能优化] 移除打字机效果中的无限 blink 动画
+// 原动画：animation: blink 0.5s step-end infinite alternate 消耗 GPU
 .typing-effect {
   overflow: hidden;
   border-right: 2px solid @color-primary;
   white-space: nowrap;
-  animation: typing 2s steps(30, end), blink 0.5s step-end infinite alternate;
+  // 移除 infinite 动画，只保留 typing 动画
+  animation: typing 2s steps(30, end);
 
   @keyframes typing {
     from { width: 0; }
     to { width: 100%; }
-  }
-
-  @keyframes blink {
-    from { border-color: @color-primary; }
-    to { border-color: transparent; }
   }
 }
 
@@ -725,10 +695,10 @@
 .generative-card {
   border-radius: @radius-xl !important;
   overflow: hidden;
-  transition: all @transition-bounce;
+  // 🚀 [性能优化] 使用更简单的 transition，避免 bounce 动画开销
+  transition: transform @transition-base, box-shadow @transition-base;
   border: 1px solid @border-light !important;
   background: rgba(255, 255, 255, 0.98) !important;
-  // 🚀 [性能优化] 移除不必要的 blur
   box-shadow: @shadow-sm;
 
   &:hover {

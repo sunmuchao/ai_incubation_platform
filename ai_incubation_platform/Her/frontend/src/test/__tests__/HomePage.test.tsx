@@ -27,7 +27,6 @@ jest.mock('react-router-dom', () => ({
 jest.mock('../../components/ChatInterface', () => () => <div data-testid="chat-interface">Chat Interface</div>)
 jest.mock('../../components/ChatRoom', () => () => <div data-testid="chat-room">Chat Room</div>)
 jest.mock('../../components/MatchCard', () => () => <div data-testid="match-card">Match Card</div>)
-jest.mock('../../components/GenerativeUI', () => () => <div data-testid="generative-ui">Generative UI</div>)
 jest.mock('../../components/AgentFloatingBall', () => () => <div data-testid="floating-ball">Floating Ball</div>)
 
 // Mock localStorage
@@ -111,15 +110,17 @@ describe('HomePage', () => {
   // ============= 第二部分：导航测试 =============
 
   describe('Navigation', () => {
-    it('should navigate to profile page when profile button clicked', async () => {
-      renderWithRouter(<HomePage />)
+    it('should open profile drawer when profile button clicked', async () => {
+      const { container } = renderWithRouter(<HomePage />)
 
-      // 点击个人资料按钮
-      const profileButton = screen.queryByRole('button', { name: /profile/i })
-      if (profileButton) {
-        await userEvent.click(profileButton)
-        expect(mockNavigate).toHaveBeenCalled()
-      }
+      const profileButton = container.querySelector('.profile-entry') as HTMLButtonElement | null
+      expect(profileButton).toBeTruthy()
+      if (!profileButton) return
+      await userEvent.click(profileButton)
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
     })
 
     it('should navigate to settings page when settings button clicked', async () => {

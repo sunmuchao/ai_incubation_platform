@@ -5,6 +5,12 @@
 
 import type { WebSocketMessage, WebSocketStatus } from '../types'
 
+/** 与后端 `APIRouter(prefix="/api/chat")` + `@router.websocket("/ws/{user_id}")` 一致，且走 Vite `/api` 代理（ws: true） */
+export function buildChatWebSocketUrl(userId: string): string {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${protocol}//${window.location.host}/api/chat/ws/${userId}`
+}
+
 type MessageHandler = (message: WebSocketMessage) => void
 
 // 开发环境打印详细日志
@@ -97,12 +103,7 @@ class WebSocketService {
   }
 
   private buildDefaultUrl(userId: string): string {
-    // 使用 Vite WebSocket 代理（配置在 vite.config.ts）
-    // 代理配置：/api -> http://localhost:8002, ws: true
-    // 通过相对路径让 Vite 代理处理 WebSocket 连接
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    // 开发和生产环境统一使用同源路径，由 Vite/Nginx 代理转发
-    return `${protocol}//${window.location.host}/api/chat/ws/${userId}`
+    return buildChatWebSocketUrl(userId)
   }
 
   private attemptReconnect() {

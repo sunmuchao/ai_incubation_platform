@@ -22,6 +22,19 @@ ALGORITHM = settings.jwt_algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.jwt_expire_minutes
 REFRESH_TOKEN_EXPIRE_DAYS = getattr(settings, 'jwt_refresh_expire_days', 7)
 
+
+def _candidate_secret_keys() -> list[str]:
+    """
+    返回可用于 JWT 解码的候选密钥（去重、保序）。
+    兼容场景：部分入口可能使用 portal_jwt_secret 签发 token。
+    """
+    keys: list[str] = []
+    for key in [SECRET_KEY, getattr(settings, "jwt_secret_key", ""), getattr(settings, "portal_jwt_secret", "")]:
+        value = (key or "").strip()
+        if value and value not in keys:
+            keys.append(value)
+    return keys
+
 # HTTP Bearer 认证（可选）
 security = HTTPBearer(auto_error=False)
 
@@ -148,34 +161,66 @@ def decode_refresh_token(token: str) -> Optional[str]:
     return _decode_token(token, expected_type="refresh")
 
 
+def _decode_token_unverified_dev(token: str) -> Optional[str]:
+    """
+    开发环境兜底：在密钥不一致时尝试读取未验签 claims 的 user_id。
+    仅用于 get_current_user_optional，避免本地多服务密钥漂移导致频繁匿名。
+    """
+    if settings.environment != "development":
+        return None
+    try:
+        payload = jwt.get_unverified_claims(token)
+        user_id = payload.get("user_id")
+        if isinstance(user_id, str) and user_id.strip():
+            return user_id.strip()
+    except Exception:
+        return None
+    return None
+
+
 def _decode_token(token: str, expected_type: str = "access") -> Optional[str]:
     """解码 Token（内部方法）"""
+    last_error: Optional[JWTError] = None
+    candidate_keys = _candidate_secret_keys()
+    if not candidate_keys:
+        logger.warning("No JWT secret key configured for token decode")
+        return None
+
+    for secret in candidate_keys:
+        try:
+            payload = jwt.decode(token, secret, algorithms=[ALGORITHM])
+            user_id: str = payload.get("user_id")
+            token_type: str = payload.get("token_type", "access")
+
+            if user_id is None:
+                logger.warning("Token decoded but user_id is missing")
+                return None
+
+            if token_type != expected_type:
+                logger.warning(f"Token type mismatch: expected {expected_type}, got {token_type}")
+                return None
+
+            logger.debug(f"{expected_type} token decoded successfully for user: {user_id}")
+            return user_id
+        except JWTError as e:
+            last_error = e
+            continue
+
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("user_id")
-        token_type: str = payload.get("token_type", "access")
-
-        if user_id is None:
-            logger.warning("Token decoded but user_id is missing")
-            return None
-
-        if token_type != expected_type:
-            logger.warning(f"Token type mismatch: expected {expected_type}, got {token_type}")
-            return None
-
-        logger.debug(f"{expected_type} token decoded successfully for user: {user_id}")
-        return user_id
-    except JWTError as e:
         # 🔧 [增强日志] 记录具体的 JWTError 类型，便于排查问题
-        error_str = str(e)
+        error_str = str(last_error or "")
         if "Signature" in error_str or "signature" in error_str:
-            logger.warning(f"Failed to decode {expected_type} token: SIGNATURE_MISMATCH - SECRET_KEY 可能不一致")
+            log_fn = logger.info if settings.environment == "development" else logger.warning
+            log_fn(f"Failed to decode {expected_type} token: SIGNATURE_MISMATCH - SECRET_KEY 可能不一致")
         elif "Expired" in error_str or "expired" in error_str:
             logger.warning(f"Failed to decode {expected_type} token: TOKEN_EXPIRED - 需要刷新 token")
         elif "Invalid" in error_str or "invalid" in error_str:
             logger.warning(f"Failed to decode {expected_type} token: INVALID_TOKEN_FORMAT")
         else:
-            logger.warning(f"Failed to decode {expected_type} token: {type(e).__name__}")
+            logger.warning(f"Failed to decode {expected_type} token: {type(last_error).__name__ if last_error else 'UnknownError'}")
+        return None
+    except Exception:
+        logger.warning(f"Failed to decode {expected_type} token: UnknownError")
         return None
 
 
@@ -227,6 +272,10 @@ async def get_current_user_optional(
             logger.info(f"[get_current_user_optional] token decoded to user_id: {user_id}")
             if user_id:
                 return {"user_id": user_id, "is_anonymous": False}
+            dev_user_id = _decode_token_unverified_dev(token)
+            if dev_user_id:
+                logger.info("[get_current_user_optional] using unverified token claims in development mode")
+                return {"user_id": dev_user_id, "is_anonymous": True}
     except Exception as e:
         logger.warning(f"[get_current_user_optional] Token decode failed: {e}")
 

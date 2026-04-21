@@ -45,6 +45,7 @@ from api.deerflow import (
     _enrich_tool_result_with_observability,
     _build_ui_response,
     _handle_with_her_service,
+    _merge_her_find_candidates_into_match_cards,
 )
 from main import app
 
@@ -611,6 +612,51 @@ class TestGenerativeUIBuilder:
         }
         normalized = _normalize_generative_ui(ui)
         assert normalized["props"]["total"] == 3
+
+    def test_merge_find_candidates_gender_and_avatar_into_match_cards(self):
+        """工具返回的性别与数据库头像应合并进 MatchCardList，空头像时清空 Agent 臆造 URL"""
+        uid = str(uuid.uuid4())
+        props = {
+            "matches": [
+                {
+                    "user_id": uid,
+                    "name": "候选人A",
+                    "gender": "女",
+                    "avatar_url": "https://hallucinated.invalid/bad.jpg",
+                }
+            ]
+        }
+        tool_data = {
+            "candidates": [
+                {
+                    "user_id": uid,
+                    "name": "候选人A",
+                    "gender": "男",
+                    "avatar_url": "",
+                }
+            ]
+        }
+        _merge_her_find_candidates_into_match_cards(props, tool_data)
+        row = props["matches"][0]
+        assert row["gender"] == "男"
+        assert row["avatar_url"] == ""
+
+        uid_b = str(uuid.uuid4())
+        props_b = {
+            "matches": [{"user_id": uid_b, "name": "B", "avatar_url": ""}],
+        }
+        tool_b = {
+            "candidates": [
+                {
+                    "user_id": uid_b,
+                    "gender": "女",
+                    "avatar_url": "https://cdn.example/ok.png",
+                }
+            ]
+        }
+        _merge_her_find_candidates_into_match_cards(props_b, tool_b)
+        assert props_b["matches"][0]["avatar_url"] == "https://cdn.example/ok.png"
+        assert props_b["matches"][0]["gender"] == "女"
 
 
 class TestIntentInference:

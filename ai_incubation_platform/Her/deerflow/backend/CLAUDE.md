@@ -264,6 +264,17 @@ Proxied through nginx: `/api/langgraph/*` → LangGraph, all other `/api/*` → 
 - `tavily/` - Web search (5 results default) and web fetch (4KB limit)
 - `jina_ai/` - Web fetch via Jina reader API with readability extraction
 - `firecrawl/` - Web scraping via Firecrawl API
+- `her_tools/match_tools.py` - Her candidate retrieval tool with hybrid mode (`legacy` or `hybrid`)
+  - Hybrid path: DB hard filter -> vector recall -> rerank
+  - Vector recall: Qdrant-first with deterministic local fallback
+  - Candidate vector cache: in-process incremental sync with TTL
+  - Env controls:
+    - `HER_MATCH_RETRIEVAL_MODE=legacy|hybrid`
+    - `HER_MATCH_VECTOR_TOPK`, `HER_MATCH_RERANK_PRE_N`, `HER_MATCH_RERANK_TOPN`
+    - `HER_MATCH_QDRANT_ENABLED`, `HER_MATCH_QDRANT_COLLECTION`, `HER_MATCH_QDRANT_PATH`
+    - `HER_MATCH_INDEX_CACHE_TTL_SECONDS`
+  - Observability in tool output `data.retrieval`:
+    - `recall_source`, `recall_metrics`, `hybrid_latency_ms`
 
 **ACP agent tools**:
 - `invoke_acp_agent` - Invokes external ACP-compatible agents from `config.yaml`

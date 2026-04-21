@@ -29,7 +29,8 @@ import threading
 
 from db.database import SessionLocal
 from db.models import BehaviorEventDB
-from utils.logger import logger
+from utils.logger import logger, get_trace_id
+from utils.behavior_raw_log import append_behavior_raw_line
 
 
 class BehaviorEventEmitter:
@@ -117,6 +118,18 @@ class BehaviorEventEmitter:
             "event_data": event_data or {},
             "created_at": datetime.now()
         }
+
+        try:
+            append_behavior_raw_line(
+                event_id=event_id,
+                user_id=user_id,
+                event_type=event_type,
+                target_id=target_id,
+                event_data=event.get("event_data"),
+                trace_id=get_trace_id(),
+            )
+        except Exception:
+            pass
 
         if sync:
             # 同步写入

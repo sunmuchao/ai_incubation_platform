@@ -25,12 +25,11 @@ from services.her_advisor_service import (
     CognitiveBiasDetector,
     MatchAdvisor,
     ProactiveSuggestionGenerator,
-    SelfProfile,
-    DesireProfile,
     CognitiveBiasAnalysis,
     MatchAdvice,
     ProactiveSuggestion,
 )
+from services.profile_dataclasses import DesireProfile, SelfProfile
 from services.user_profile_service import (
     UserProfileService,
     ProfileUpdateEngine,
@@ -146,15 +145,15 @@ class IntentAnalyzer:
 
 【extracted_conditions 字段说明】
 从用户消息中提取匹配条件：
-- interests: 用户指定的兴趣偏好（如"喜欢户外运动的人" → interests=["户外运动"]）
-- age_range: 年龄范围（如"25-30岁" → age_range=[25, 30]）
-- location: 地点偏好（如"在北京" → location="北京"）
-- gender: 性别偏好（如"女生" → gender="female"）
-- relationship_goal: 关系目标（如"认真谈恋爱" → relationship_goal="serious"）
+- interests: 用户指定的兴趣偏好（如"喜欢户外运动的人"则interests为户外运动列表）
+- age_range: 年龄范围（如"25-30岁"则age_range为25到30）
+- location: 地点偏好（如"在北京"则location为北京）
+- gender: 性别偏好（如"女生"则gender为female）
+- relationship_goal: 关系目标（如"认真谈恋爱"则relationship_goal为serious）
 
 【输出格式】
 返回 JSON 格式：
-{{"intent_type": "意图类型", "extracted_conditions": {"interests": [...], "age_range": [...], "location": "..."}, "preference_mentioned": "", "emotional_state": "", "confidence": 0.5}}
+请返回一个JSON对象，包含intent_type、extracted_conditions（其中interests为兴趣列表、age_range为年龄范围数组、location为地点）、preference_mentioned、emotional_state、confidence字段。
 
 只返回 JSON。'''
 
@@ -277,7 +276,7 @@ class QueryQualityChecker:
 {conditions_str}
 
 【输出格式】
-返回 JSON：{{"is_clear": true/false, "is_complete": true/false, "overall_passed": true/false, "clarity_issues": [], "missing_info": [], "follow_up_questions": [], "confidence": 0.0-1.0}}
+返回 JSON：请返回包含is_clear、is_complete、overall_passed、clarity_issues数组、missing_info数组、follow_up_questions数组、confidence字段的JSON对象。
 
 只返回 JSON。'''
 

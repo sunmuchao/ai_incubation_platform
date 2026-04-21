@@ -64,6 +64,8 @@ const STORAGE_KEYS = {
   PWA_INSTALL_DISMISSED: 'pwa-install-dismissed',
   HER_SLEEPING_IN_CHAT: 'her_sleeping_in_chat', // 聊天室中 Her 休眠偏好
   CHAT_MESSAGES: 'chat_messages', // ChatInterface 消息持久化
+  CHAT_CONVERSATION_SUMMARY: 'chat_conversation_summary', // 微信式会话摘要缓存
+  CHAT_CONVERSATION_TTL_HOURS: 'chat_conversation_ttl_hours', // 会话摘要缓存 TTL（小时）
   FEATURE_GUIDE_SHOWN: 'feature_guide_shown', // 🔧 [问题17方案B] 首次功能引导已显示
 } as const
 
@@ -360,6 +362,110 @@ export const chatStorage = {
   },
 }
 
+// ==================== Chat 会话摘要缓存 ====================
+
+export interface ConversationSummary {
+  id: string
+  user_id_1: string
+  user_id_2: string
+  last_message_preview?: string
+  last_message_at?: string
+  unread_count: number
+  last_sync_at?: string
+}
+
+const MAX_STORED_CONVERSATIONS = 50
+const DEFAULT_CONVERSATION_CACHE_TTL_HOURS = 24
+const MIN_CONVERSATION_CACHE_TTL_HOURS = 1
+const MAX_CONVERSATION_CACHE_TTL_HOURS = 24 * 14 // 最多 14 天
+
+const getConversationCacheTtlHours = (): number => {
+  const raw = localStorage.getItem(STORAGE_KEYS.CHAT_CONVERSATION_TTL_HOURS)
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return DEFAULT_CONVERSATION_CACHE_TTL_HOURS
+  return Math.min(MAX_CONVERSATION_CACHE_TTL_HOURS, Math.max(MIN_CONVERSATION_CACHE_TTL_HOURS, Math.floor(n)))
+}
+
+const getConversationCacheTtlMs = (): number =>
+  getConversationCacheTtlHours() * 60 * 60 * 1000
+
+export const conversationSummaryStorage = {
+  getConversations(userId: string): ConversationSummary[] {
+    const key = `${STORAGE_KEYS.CHAT_CONVERSATION_SUMMARY}_${userId}`
+    const data = localStorage.getItem(key)
+    if (!data) return []
+    try {
+      const rows = JSON.parse(data) as ConversationSummary[]
+      if (!Array.isArray(rows)) return []
+      const now = Date.now()
+      const ttlMs = getConversationCacheTtlMs()
+      const filtered = rows.filter((row) => {
+        const ts = new Date(row.last_sync_at || row.last_message_at || 0).getTime()
+        return Number.isFinite(ts) && ts > 0 && now - ts <= ttlMs
+      })
+      // 读时清理过期数据，避免 localStorage 越积越大
+      if (filtered.length !== rows.length) {
+        this.setConversations(userId, filtered)
+      }
+      return filtered
+    } catch {
+      return []
+    }
+  },
+
+  setConversations(userId: string, conversations: ConversationSummary[]): void {
+    const key = `${STORAGE_KEYS.CHAT_CONVERSATION_SUMMARY}_${userId}`
+    const nowIso = new Date().toISOString()
+    const withSync = conversations.map((c) => ({
+      ...c,
+      last_sync_at: c.last_sync_at || nowIso,
+    }))
+    const sorted = [...withSync].sort((a, b) => {
+      const ta = new Date(a.last_message_at || 0).getTime()
+      const tb = new Date(b.last_message_at || 0).getTime()
+      return tb - ta
+    })
+    try {
+      localStorage.setItem(key, JSON.stringify(sorted.slice(0, MAX_STORED_CONVERSATIONS)))
+    } catch {
+      // 静默降级
+    }
+  },
+
+  upsertConversation(userId: string, conversation: ConversationSummary): void {
+    const current = this.getConversations(userId)
+    const next = [...current]
+    const withSync: ConversationSummary = {
+      ...conversation,
+      last_sync_at: new Date().toISOString(),
+    }
+    const idx = next.findIndex((c) => c.id === conversation.id)
+    if (idx >= 0) {
+      next[idx] = { ...next[idx], ...withSync }
+    } else {
+      next.push(withSync)
+    }
+    this.setConversations(userId, next)
+  },
+
+  clearConversations(userId: string): void {
+    const key = `${STORAGE_KEYS.CHAT_CONVERSATION_SUMMARY}_${userId}`
+    localStorage.removeItem(key)
+  },
+
+  getCacheTtlHours(): number {
+    return getConversationCacheTtlHours()
+  },
+
+  setCacheTtlHours(hours: number): void {
+    const safeHours = Math.min(
+      MAX_CONVERSATION_CACHE_TTL_HOURS,
+      Math.max(MIN_CONVERSATION_CACHE_TTL_HOURS, Math.floor(Number(hours) || DEFAULT_CONVERSATION_CACHE_TTL_HOURS))
+    )
+    localStorage.setItem(STORAGE_KEYS.CHAT_CONVERSATION_TTL_HOURS, String(safeHours))
+  },
+}
+
 // ==================== 通用存储工具 ====================
 
 export const storage = {
@@ -412,5 +518,6 @@ export default {
   her: herStorage,
   guide: guideStorage, // 🔧 [问题17方案B] 首次引导弹窗存储
   chat: chatStorage,
+  conversationSummary: conversationSummaryStorage,
   ...storage,
 }

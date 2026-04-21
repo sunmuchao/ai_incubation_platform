@@ -11,6 +11,8 @@ import { deerflowClient } from '../api/deerflowClient'
 import { authStorage, registrationStorage, chatStorage } from '../utils/storage'
 import type { UserInfo, StoredMessage } from '../utils/storage'
 import profileApi from '../api/profileApi'
+import { buildChatWebSocketUrl } from '../services/websocket'
+import { formatChatReplyReadability } from '../utils/formatChatReplyReadability'
 import HerAvatar from '../assets/her-avatar.svg'
 import type { Feature } from './FeaturesDrawer'
 import './ChatInterface.less'
@@ -33,6 +35,61 @@ const getSessionStatusText = (status: string, t: (key: string) => string): strin
     cancelled: t('conversation.sessionStatus.cancelled'),
   }
   return statusMap[status] || status
+}
+
+/**
+ * 🚀 [新增] 从流式累积内容中提取纯文本
+ * 过滤掉 JSON、工具调用描述等非自然语言内容
+ *
+ * Agent Native 架构：中间过程不应该暴露给用户
+ * - 过滤 {"success": ...} 格式的 JSON
+ * - 过滤 [GENERATIVE_UI] 标签
+ * - 过滤工具调用描述（如 "调用 her_find_candidates"）
+ * - 保留 AI 的自然语言输出（如"为你找到以下匹配对象"）
+ */
+const extractNaturalLanguageText = (content: string): string => {
+  if (!content) return ''
+
+  let cleanContent = content
+
+  // 1. 移除工具返回的 JSON（{"success": true/false, ...}）
+  const toolJsonRegex = /\{"success":\s*(true|false)[^}]*\}/g
+  cleanContent = cleanContent.replace(toolJsonRegex, '')
+
+  // 2. 移除 [GENERATIVE_UI] 标签及其内容
+  const generativeUiRegex = /\[GENERATIVE_UI\][\s\S]*?\[\/GENERATIVE_UI\]/g
+  cleanContent = cleanContent.replace(generativeUiRegex, '')
+
+  // 3. 移除工具调用描述（常见模式）
+  const toolCallPatterns = [
+    /调用\s+\w+_?\w*\s+工具/g,  // "调用 her_find_candidates 工具"
+    /正在调用\s+\w+/g,  // "正在调用 her_find_candidates"
+    /工具返回：[\s\S]*?(?=\n\n|\n[A-Z])/g,  // "工具返回：..."
+    /Tool\s+call:\s+\w+/gi,  // "Tool call: her_find_candidates"
+  ]
+  for (const pattern of toolCallPatterns) {
+    cleanContent = cleanContent.replace(pattern, '')
+  }
+
+  // 4. 移除 markdown JSON 代码块
+  const jsonBlockRegex = /```json[\s\S]*?```/g
+  cleanContent = cleanContent.replace(jsonBlockRegex, '')
+
+  // 5. 清理多余空行；只合并空格/制表符（不要用 \s，否则会吃掉模型输出的换行）
+  cleanContent = cleanContent
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim()
+
+  // 6. 可读性：在总起句、列表等处补换行（与气泡内 white-space: pre-wrap 配合）
+  cleanContent = formatChatReplyReadability(cleanContent)
+
+  // 7. 如果清理后内容过短（< 10 字符），可能是纯 JSON，返回空
+  if (cleanContent.length < 10) {
+    return ''
+  }
+
+  return cleanContent
 }
 
 // 🚀 [性能优化] 懒加载大型组件，减少初始 bundle 大小
@@ -71,6 +128,61 @@ const inferProgressStep = (event: any): string => {
 const { Text, Paragraph, Title } = Typography
 
 // 关系目标中英文映射
+/** 从列表卡片/嵌套 user 归一化详情弹窗所需字段（推荐理由、共同点等） */
+function normalizeMatchProfileForDetail(userData?: Record<string, any>) {
+  if (!userData || typeof userData !== 'object') return null
+  const nested = userData.user && typeof userData.user === 'object' ? userData.user : {}
+  const rawReasons = userData.match_reasons ?? nested.match_reasons
+  const match_reasons = Array.isArray(rawReasons)
+    ? rawReasons.filter((x: unknown) => typeof x === 'string' && (x as string).trim()).map((x: string) => (x as string).trim())
+    : []
+  const reasoning =
+    (typeof userData.reasoning === 'string' && userData.reasoning.trim()) ||
+    (typeof userData.ai_reasoning === 'string' && userData.ai_reasoning.trim()) ||
+    (typeof nested.reasoning === 'string' && nested.reasoning.trim()) ||
+    ''
+  const rawCommon = userData.common_interests ?? nested.common_interests
+  const common_interests = Array.isArray(rawCommon)
+    ? rawCommon.filter((x: unknown) => typeof x === 'string' && (x as string).trim()) as string[]
+    : []
+  const uid =
+    userData.user_id ||
+    nested.id ||
+    nested.user_id ||
+    userData.id ||
+    ''
+  let scoreRaw: unknown = userData.compatibility_score ?? userData.score ?? nested.compatibility_score
+  if (typeof scoreRaw === 'string' && scoreRaw.trim()) {
+    const p = parseFloat(scoreRaw)
+    scoreRaw = Number.isNaN(p) ? undefined : p
+  }
+  let compatibility_score: number | undefined
+  if (typeof scoreRaw === 'number' && !Number.isNaN(scoreRaw)) {
+    compatibility_score = scoreRaw > 0 && scoreRaw <= 1 ? Math.round(scoreRaw * 100) : Math.round(scoreRaw)
+  }
+  return {
+    userId: String(uid),
+    name: userData.name || nested.name || '匿名用户',
+    age: userData.age ?? nested.age ?? 0,
+    location: userData.location || nested.location || '',
+    avatar_url: userData.avatar_url || nested.avatar_url || nested.avatar,
+    interests: (Array.isArray(userData.interests) ? userData.interests : nested.interests) || [],
+    bio: userData.bio || nested.bio,
+    relationship_goal: userData.relationship_goal || nested.relationship_goal || nested.goal,
+    confidence_level: userData.confidence_level || nested.confidence_level,
+    confidence_score: userData.confidence_score ?? nested.confidence_score,
+    occupation: userData.occupation || nested.occupation,
+    education: userData.education || nested.education,
+    income: userData.income ?? nested.income,
+    income_range: userData.income_range || nested.income_range,
+    match_reasons,
+    is_same_city: userData.is_same_city ?? nested.is_same_city,
+    reasoning,
+    common_interests,
+    compatibility_score,
+  }
+}
+
 const RELATIONSHIP_GOAL_MAP: Record<string, string> = {
   serious: '认真恋爱',
   marriage: '奔着结婚',
@@ -202,40 +314,29 @@ const isNewUserNeedsInfo = (): boolean => {
 // 2. 重要匹配字段（无法行为推断，必须问卷）
 // 3. 一票否决维度（最高优先级）
 /**
- * 检查用户对象是否包含所有必填字段
- * 🔧 [新增] 用于 handleQuickStartAnswer 直接检查 updatedUser，避免 localStorage 读取时序问题
+ * 检查用户对象是否包含所有 QuickStart 必填字段
+ * 🔧 [修复] 只检查 QUICKSTART_REQUIRED_FIELDS（6 个核心字段），而非全部字段
+ * QuickStart 阶段只收集：name, age, gender, location, want_children, spending_style
+ * 其他字段（height, education, occupation 等）在后续对话中延迟收集
  */
 const checkUserFieldsComplete = (user: UserInfo | null | undefined): boolean => {
   if (!user) return false
 
-  // ===== 注册表单收集的基础字段 =====
+  // ===== QuickStart 核心必填字段（6 个）=====
+  // 注册表单收集：name, age, gender, location
   if (!user.name) return false
   if (!user.age) return false
   if (!user.gender) return false
   if (!user.location) return false
 
-  // ===== QuickStart 收集的属性字段 =====
-  if (!user.height) return false
-  if (!user.education) return false
-  if (!user.occupation) return false
-  if (!user.income) return false
-  if (!user.housing) return false
-  if (!user.has_car && user.has_car !== false) return false  // 注意：has_car 可以是 false
-
-  // ===== 一票否决维度 =====
+  // 一票否决维度（QuickStart 必须收集）
   if (!user.want_children) return false
   if (!user.spending_style) return false
 
-  // ===== 核心价值观维度 =====
-  if (!user.family_importance && user.family_importance !== 0) return false
-  if (!user.work_life_balance) return false
-
-  // ===== 迁移能力维度 =====
-  if (!user.migration_willingness && user.migration_willingness !== 0) return false
-  if (!user.accept_remote && user.accept_remote !== false) return false
-
-  // ===== 生活方式维度 =====
-  if (!user.sleep_type) return false
+  // ===== 延迟收集的字段不检查 =====
+  // 这些字段在后续对话中触发收集：
+  // - height, education, occupation, income, housing, has_car
+  // - family_importance, work_life_balance, migration_willingness, accept_remote, sleep_type
 
   return true
 }
@@ -394,6 +495,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [showMatchSkeleton, setShowMatchSkeleton] = useState(false)  // 骨架屏预览
   const [streamingMessage, setStreamingMessage] = useState<string>('')  // 流式输出内容
   const [quickTags, setQuickTags] = useState<QuickTag[]>([])  // 动态快捷标签
+  const [progressStepIndex, setProgressStepIndex] = useState<number>(0)  // 🚀 [场景3方案3] 当前进度步骤索引（0-查询/1-分析/2-推荐）
 
   // 用户详情弹窗状态
   const [userDetailVisible, setUserDetailVisible] = useState(false)
@@ -409,32 +511,71 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     confidence_level?: string
     confidence_score?: number
     occupation?: string
+    education?: string
+    income?: number
+    income_range?: string
+    match_reasons?: string[]
+    is_same_city?: boolean
+    /** Agent / 工具给出的自然语言推荐理由 */
+    reasoning?: string
+    /** 与当前用户的共同兴趣（若后端提供） */
+    common_interests?: string[]
+    /** 匹配度 0–100（已归一化） */
+    compatibility_score?: number
   } | null>(null)
 
   // 打开用户详情弹窗
   const handleViewUserProfile = useCallback((userId: string, userData?: any) => {
-    // 🔧 [修复] 如果 userId 无效，不打开弹窗并显示错误提示
-    if (!userId || userId === '' || userId === 'undefined' || userId === 'null') {
+    const normalized = normalizeMatchProfileForDetail(userData)
+    const resolvedId = (normalized?.userId || userId || '').trim()
+    if (!resolvedId || resolvedId === 'undefined' || resolvedId === 'null') {
       console.warn('[handleViewUserProfile] userId 无效:', userId, 'userData:', userData)
       antdMessage.warning('无法获取用户信息，请稍后重试')
       return
     }
 
-    console.log('[handleViewUserProfile] 打开用户详情弹窗, userId:', userId)
-
-    setSelectedUserDetail({
-      userId,
-      name: userData?.name || '匿名用户',
-      age: userData?.age || 0,
-      location: userData?.location || '',
-      avatar_url: userData?.avatar_url,
-      interests: userData?.interests || [],
-      bio: userData?.bio,
-      relationship_goal: userData?.relationship_goal,
-      confidence_level: userData?.confidence_level,
-      confidence_score: userData?.confidence_score,
-      occupation: userData?.occupation,
-    })
+    if (normalized) {
+      setSelectedUserDetail({
+        userId: resolvedId,
+        name: normalized.name,
+        age: normalized.age,
+        location: normalized.location,
+        avatar_url: normalized.avatar_url,
+        interests: normalized.interests,
+        bio: normalized.bio,
+        relationship_goal: normalized.relationship_goal,
+        confidence_level: normalized.confidence_level,
+        confidence_score: normalized.confidence_score,
+        occupation: normalized.occupation,
+        education: normalized.education,
+        income: normalized.income,
+        income_range: normalized.income_range,
+        match_reasons: normalized.match_reasons,
+        is_same_city: normalized.is_same_city,
+        reasoning: normalized.reasoning,
+        common_interests: normalized.common_interests,
+        compatibility_score: normalized.compatibility_score,
+      })
+    } else {
+      setSelectedUserDetail({
+        userId: resolvedId,
+        name: userData?.name || '匿名用户',
+        age: userData?.age || 0,
+        location: userData?.location || '',
+        avatar_url: userData?.avatar_url,
+        interests: userData?.interests || [],
+        bio: userData?.bio,
+        relationship_goal: userData?.relationship_goal,
+        confidence_level: userData?.confidence_level,
+        confidence_score: userData?.confidence_score,
+        occupation: userData?.occupation,
+        education: userData?.education,
+        income: userData?.income,
+        income_range: userData?.income_range,
+        match_reasons: userData?.match_reasons || [],
+        is_same_city: userData?.is_same_city,
+      })
+    }
     setUserDetailVisible(true)
   }, [])
 
@@ -450,6 +591,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return `her-${userId}-${Date.now()}`
   })
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  /** 异步推荐理由轮询：同一 query_request_id 只跑一轮，完成后清定时器并可用 sessionStorage 命中即停 */
+  const asyncReasonPollRef = useRef<
+    Map<string, { phase: 'polling' | 'done'; timeoutId?: ReturnType<typeof window.setTimeout> }>
+  >(new Map())
+
+  useEffect(() => {
+    return () => {
+      asyncReasonPollRef.current.forEach((v) => {
+        if (v.timeoutId) window.clearTimeout(v.timeoutId)
+      })
+      asyncReasonPollRef.current.clear()
+    }
+  }, [])
 
   // 新用户信息收集状态
   const [collectingStep, setCollectingStep] = useState<number>(() => {
@@ -1399,52 +1554,59 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       await deerflowClient.stream(contentToSend, `her-chat-${userId || 'anonymous'}`, (event) => {
         // 处理流式事件
         if (event.type === 'messages-tuple') {
-          // AI 文本增量输出
-          const delta = event.data?.content || ''
+          // 🔧 [修复] 流式过程中不显示中间文本（JSON等），只保持加载状态
+          // Agent Native 架构：中间过程不应该暴露给用户
+          // AI 的思考过程、工具调用描述等会在气泡里先显示，然后才变成卡片
+          // 修复方案：累积内容但不立即显示，等 generative_ui 事件后再渲染
 
-          // 🔧 [修复] 过滤工具返回的原始 JSON（以 {"success" 开头）
-          // Agent Native 架构：工具返回供 Agent 决策，不应直接展示给用户
+          // 过滤掉工具返回的原始 JSON（以 {"success" 开头）
+          const delta = event.data?.content || ''
           if (delta.startsWith('{"success') || delta.startsWith('{"error')) {
             console.log('[Stream] Filtered tool result:', delta.substring(0, 50))
             return  // 跳过工具返回的 JSON
           }
 
+          // 累积内容，但不更新 UI（保持加载状态）
           accumulatedContent += delta
+          console.log('[Stream] Accumulated (hidden):', delta.substring(0, 30))
 
-          // 🚀 [性能优化] 节流更新：每 500ms 更新一次 UI，减少重渲染
-          const now = Date.now()
-          if (now - lastUpdateTime >= UPDATE_INTERVAL) {
-            lastUpdateTime = now
-            // 批量更新所有状态
-            setStreamingMessage(accumulatedContent)
-            setMessages(prev => {
-              const idx = prev.findIndex(m => m.id === streamingMessageId)
-              if (idx !== -1) {
-                const newMessages = [...prev]
-                newMessages[idx] = {
-                  ...newMessages[idx],
-                  content: accumulatedContent,
-                }
-                return newMessages
-              }
-              return prev
-            })
-            // 同时更新骨架屏和进度
-            setShowMatchSkeleton(false)
-            const inferredStep = inferProgressStep(event)
-            if (inferredStep) {
-              setLoadingStep(inferredStep)
+          // 🚀 [改进] 流式过程中保持进度提示，不显示中间 JSON
+          // UI 显示 loadingStep（如"正在分析匹配度..."），而不是原始文本
+          const inferredStep = inferProgressStep(event)
+          if (inferredStep) {
+            setLoadingStep(inferredStep)
+            // 🚀 [场景3方案3] 根据进度文字更新进度步骤索引
+            if (inferredStep.includes('查询候选人')) {
+              setProgressStepIndex(0)
+            } else if (inferredStep.includes('分析匹配度') || inferredStep.includes('获取用户')) {
+              setProgressStepIndex(1)
+            } else if (inferredStep.includes('生成推荐')) {
+              setProgressStepIndex(2)
             }
           }
+
+          // 🚀 [关键] 不更新消息气泡内容，避免显示中间 JSON
+          // setStreamingMessage 和 setMessages 保持不变，只显示加载状态
         } else if (event.type === 'custom') {
-          // 自定义事件（如 generative_ui）- 不需要频繁更新
+          // 自定义事件（如 generative_ui）
+          // 🚀 [关键修复] 收到 generative_ui 时，立即关闭骨架屏并渲染卡片
           if (event.data?.generative_ui) {
+            // 🔧 [关键] 关闭骨架屏，显示卡片
+            setShowMatchSkeleton(false)
+            setIsLoading(false)  // 同时关闭加载状态
+
+            // 提取 AI 的文字描述（如果有）
+            // accumulatedContent 可能包含 AI 的自然语言输出（如"为你找到以下匹配对象"）
+            const aiTextContent = extractNaturalLanguageText(accumulatedContent)
+
             setMessages(prev => {
               const idx = prev.findIndex(m => m.id === streamingMessageId)
               if (idx !== -1) {
                 const newMessages = [...prev]
                 newMessages[idx] = {
                   ...newMessages[idx],
+                  // 🔧 [新增] 显示 AI 的文字描述（如果有）
+                  content: aiTextContent || '',
                   generativeCard: mapComponentTypeToGenerativeCard(event.data.generative_ui.component_type),
                   generativeData: event.data.generative_ui.props,
                 }
@@ -1452,6 +1614,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               }
               return prev
             })
+            pollAsyncMatchReasons(streamingMessageId, event.data.generative_ui?.props?.query_request_id)
+            console.log('[Stream] Rendered generative_ui:', event.data.generative_ui.component_type)
           }
 
           // 进度更新事件（直接设置）
@@ -1459,34 +1623,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             setLoadingStep(event.data.progress_step)
           }
         } else if (event.type === 'end') {
-          // 流式结束
-          // 🚀 [修复] 清理工具返回的 JSON + 解析 [GENERATIVE_UI] 标签
-          let finalContent = accumulatedContent || event.data?.ai_message || ''
+          // 流式结束：从原文解析卡片，展示文案走 extractNaturalLanguageText（含换行可读性修复）
+          const raw = accumulatedContent || event.data?.ai_message || ''
 
-          // 🔧 [修复] 移除工具返回的原始 JSON（{"success": true, ...} 格式）
-          // Agent Native 架构：工具返回供 Agent 决策，不应展示给用户
-          const toolJsonRegex = /\{"success":\s*(true|false).*?\}/g
-          finalContent = finalContent.replace(toolJsonRegex, '').replace(/\s+/g, ' ').trim()
-
-          // 从累积内容中解析 GENERATIVE_UI 标签
           const tagRegex = /\[GENERATIVE_UI\]\s*([\s\S]*?)\s*\[\/GENERATIVE_UI\]/g
           const cards: any[] = []
           let match
-          let cleanContent = finalContent
-
-          while ((match = tagRegex.exec(finalContent)) !== null) {
+          while ((match = tagRegex.exec(raw)) !== null) {
             try {
               const cardJson = JSON.parse(match[1].trim())
               cards.push({
                 component_type: cardJson.component_type || 'UserProfileCard',
                 props: cardJson.props || cardJson,
               })
-              cleanContent = cleanContent.replace(match[0], '')
             } catch (e) {
               console.warn('[Stream] Failed to parse GENERATIVE_UI:', match[1], e)
             }
           }
-          cleanContent = cleanContent.replace(/\n{3,}/g, '\n\n').trim()
+
+          const displayText = extractNaturalLanguageText(raw)
 
           // 更新消息
           setMessages(prev => {
@@ -1497,7 +1652,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               const firstCard = cards[0]
               newMessages[idx] = {
                 ...newMessages[idx],
-                content: cleanContent || finalContent,
+                content: displayText || raw.trim(),
                 generativeCard: firstCard
                   ? mapComponentTypeToGenerativeCard(firstCard.component_type)
                   : undefined,
@@ -1509,6 +1664,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             }
             return prev
           })
+          const firstCard = cards[0]
+          pollAsyncMatchReasons(streamingMessageId, firstCard?.props?.query_request_id)
 
           // 🚀 [新增] 如果有多个卡片，添加额外消息
           if (cards.length > 1) {
@@ -1545,7 +1702,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const aiMessage: Message = {
           id: `ai-${Date.now()}`,
           type: 'ai',
-          content: parsedUI.natural_message || result.ai_message,  // 使用解析后的纯文本
+          content: extractNaturalLanguageText(
+            parsedUI.natural_message || result.ai_message || '',
+          ),
           timestamp: new Date(),
           generativeCard: firstCard
             ? mapComponentTypeToGenerativeCard(firstCard.component_type)
@@ -1583,6 +1742,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setLoadingStep('')
       setShowMatchSkeleton(false)
       setStreamingMessage('')
+      // 🚀 [场景3方案3] 重置进度步骤索引
+      setProgressStepIndex(0)
     }
   }
 
@@ -1601,7 +1762,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const matchMessage: Message = {
         id: `ai-match-${Date.now()}`,
         type: 'ai',
-        content: response.ai_message || '为你找到以下匹配对象~',
+        content: extractNaturalLanguageText(
+          response.ai_message || '为你找到以下匹配对象~',
+        ),
         matches: parsedResult?.type === 'matches' ? parsedResult.data.matches : undefined,
         timestamp: new Date(),
       }
@@ -1698,6 +1861,132 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }
 
+  const pollAsyncMatchReasons = useCallback((messageId: string, queryRequestId?: string) => {
+    const reqId = (queryRequestId || '').trim()
+    if (!reqId) return
+
+    const bucket = asyncReasonPollRef.current.get(reqId)
+    if (bucket?.phase === 'done') return
+    if (bucket?.phase === 'polling') return
+
+    const maxAttempts = 10
+    const pollIntervalMs = 1200
+    const cacheKey = `her_match_reasons:${reqId}`
+
+    const finishDone = () => {
+      const cur = asyncReasonPollRef.current.get(reqId)
+      if (cur?.timeoutId) window.clearTimeout(cur.timeoutId)
+      asyncReasonPollRef.current.set(reqId, { phase: 'done' })
+    }
+
+    const applyReasonsMap = (reasonsByUserId: Record<string, string[]>) => {
+      setMessages((prev) => {
+        const idx = prev.findIndex((m) => m.id === messageId)
+        if (idx === -1) return prev
+        const current = prev[idx]
+        const data =
+          current.generativeData && typeof current.generativeData === 'object'
+            ? { ...current.generativeData }
+            : null
+        if (!data) return prev
+        const rows = Array.isArray(data.matches)
+          ? [...data.matches]
+          : Array.isArray(data.candidates)
+            ? [...data.candidates]
+            : null
+        if (!rows) return prev
+
+        let changed = false
+        const mergedRows = rows.map((row: any) => {
+          if (!row || typeof row !== 'object') return row
+          const uid = String(row.user_id || row.id || row?.user?.id || row?.user?.user_id || '')
+          if (!uid) return row
+          const reasons = reasonsByUserId[uid]
+          if (!Array.isArray(reasons) || reasons.length === 0) return row
+          changed = true
+          return {
+            ...row,
+            match_reasons: reasons,
+          }
+        })
+        if (!changed) return prev
+
+        if (Array.isArray(data.matches)) {
+          data.matches = mergedRows
+        } else if (Array.isArray(data.candidates)) {
+          data.candidates = mergedRows
+        }
+        const next = [...prev]
+        next[idx] = {
+          ...current,
+          generativeData: data,
+        }
+        return next
+      })
+    }
+
+    try {
+      const raw = sessionStorage.getItem(cacheKey)
+      if (raw) {
+        const parsed = JSON.parse(raw) as { reasons_by_user_id?: Record<string, string[]> }
+        const cached = parsed?.reasons_by_user_id
+        if (cached && typeof cached === 'object' && Object.keys(cached).length > 0) {
+          finishDone()
+          applyReasonsMap(cached)
+          return
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+
+    asyncReasonPollRef.current.set(reqId, { phase: 'polling' })
+
+    const scheduleNext = (attempt: number) => {
+      const cur = asyncReasonPollRef.current.get(reqId)
+      if (cur?.timeoutId) window.clearTimeout(cur.timeoutId)
+      const tid = window.setTimeout(() => {
+        runPoll(attempt + 1)
+      }, pollIntervalMs)
+      asyncReasonPollRef.current.set(reqId, { phase: 'polling', timeoutId: tid })
+    }
+
+    const runPoll = async (attempt: number) => {
+      if (asyncReasonPollRef.current.get(reqId)?.phase === 'done') return
+
+      const status = await deerflowClient.getMatchReasonsStatus(reqId)
+
+      if (status.status === 'completed' && status.reasons_by_user_id) {
+        const map = status.reasons_by_user_id
+        applyReasonsMap(map)
+        try {
+          sessionStorage.setItem(
+            cacheKey,
+            JSON.stringify({ reasons_by_user_id: map, updated_at: Date.now() }),
+          )
+        } catch {
+          /* ignore */
+        }
+        finishDone()
+        return
+      }
+
+      if (status.status === 'pending' && attempt < maxAttempts) {
+        scheduleNext(attempt)
+        return
+      }
+
+      if (status.status === 'not_found' && attempt < maxAttempts) {
+        scheduleNext(attempt)
+        return
+      }
+
+      finishDone()
+    }
+
+    runPoll(1)
+  }, [])
+
   // 🚀 [性能优化] 使用 useCallback 防止每次渲染重新创建函数
   const handleQuickAction = useCallback((action: string) => {
     // 🎯 [AI Native] 特殊意图拦截：流程入口不走 DeerFlow，直接触发本地流程
@@ -1719,6 +2008,55 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     // 普通意图：发送给 DeerFlow 处理
     handleSend(action)
   }, [handleSend, handleQuickStartStep, t])
+
+  /**
+   * 🚀 [新增] 处理匹配筛选回调
+   * 篮选点击 → 调用 DeerFlow API → 重新查询 → 返回新的精选结果
+   *
+   * @param messageId - 当前匹配卡片消息的 ID（用于替换数据）
+   * @param filters - 篮选条件（地区、年龄、关系目标）
+   */
+  const handleMatchFilter = useCallback(async (
+    messageId: string,
+    filters: { location?: string; ageRange?: string; relationshipGoal?: string }
+  ) => {
+    const userId = authStorage.getUserId()
+
+    // 构建筛选消息
+    let filterMessage = '筛选候选人：'
+    if (filters.location) {
+      filterMessage += ` 地区=${filters.location}`
+    }
+    if (filters.ageRange) {
+      filterMessage += ` 年龄=${filters.ageRange}`
+    }
+    if (filters.relationshipGoal) {
+      filterMessage += ` 目标=${filters.relationshipGoal}`
+    }
+
+    console.log('[handleMatchFilter] 篮选条件:', filterMessage)
+
+    // 调用 DeerFlow stream API（带筛选条件）
+    await deerflowClient.stream(filterMessage, `her-chat-${userId || 'anonymous'}`, (event) => {
+      if (event.type === 'custom' && event.data?.generative_ui) {
+        // 收到 generative_ui 时，替换当前消息的数据
+        setMessages(prev => {
+          const idx = prev.findIndex(m => m.id === messageId)
+          if (idx !== -1) {
+            const newMessages = [...prev]
+            newMessages[idx] = {
+              ...newMessages[idx],
+              generativeData: event.data.generative_ui.props,
+            }
+            return newMessages
+          }
+          return prev
+        })
+        pollAsyncMatchReasons(messageId, event.data.generative_ui?.props?.query_request_id)
+        console.log('[handleMatchFilter] 已更新匹配数据:', event.data.generative_ui.component_type)
+      }
+    })
+  }, [pollAsyncMatchReasons])
 
   // 查看预沟通对话消息（由 PreCommunicationSessionCard 组件调用）
   const handleViewPreCommunicationMessages = async (sessionId: string) => {
@@ -1804,13 +2142,99 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }, [])
 
+  // 🚀 [主动性重构 v2] WebSocket 连接 - 接收 Agent 主动消息
+  useEffect(() => {
+    const userId = authStorage.getUserId()
+    if (!userId) return
+
+    // 建立 WebSocket 连接（须走 /api/chat/ws，与 Vite /api 代理及后端 chat 路由一致）
+    const wsUrl = buildChatWebSocketUrl(userId)
+    let ws: WebSocket | null = null
+    let reconnectTimer: NodeJS.Timeout | null = null
+
+    const connectWebSocket = () => {
+      try {
+        ws = new WebSocket(wsUrl)
+
+        ws.onopen = () => {
+          console.log('[WebSocket] 连接成功，可以接收 Agent 主动消息')
+        }
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data)
+
+            if (data.type === 'agent_message' && data.data?.is_proactive) {
+              // 收到 Agent 主动推送的消息，添加到对话界面
+              console.log('[WebSocket] 收到 Agent 主动消息:', data.data.content)
+
+              const proactiveMessage: Message = {
+                id: `ai-proactive-${Date.now()}`,
+                type: 'ai',
+                content: data.data.content,
+                timestamp: new Date(),
+              }
+              setMessages(prev => [...prev, proactiveMessage])
+
+              // 发送确认
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'ack',
+                  message_id: proactiveMessage.id,
+                }))
+              }
+            } else if (data.type === 'pong') {
+              // 心跳响应，保持连接
+              console.log('[WebSocket] 心跳响应')
+            }
+          } catch (e) {
+            console.warn('[WebSocket] 解析消息失败:', e)
+          }
+        }
+
+        ws.onerror = (error) => {
+          console.warn('[WebSocket] 连接错误:', error)
+        }
+
+        ws.onclose = () => {
+          console.log('[WebSocket] 连接关闭，5秒后尝试重连')
+          // 5秒后重连
+          reconnectTimer = setTimeout(connectWebSocket, 5000)
+        }
+      } catch (e) {
+        console.warn('[WebSocket] 创建连接失败:', e)
+      }
+    }
+
+    // 开始连接
+    connectWebSocket()
+
+    // 心跳保活（每30秒发送 ping）
+    const pingInterval = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping' }))
+      }
+    }, 30000)
+
+    // 清理函数
+    return () => {
+      if (ws) {
+        ws.close()
+      }
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer)
+      }
+      clearInterval(pingInterval)
+    }
+  }, []) // userId 通过 authStorage.getUserId() 获取，不需要作为依赖
+
   // 渲染消息内容 - 使用 useMemo 缓存渲染结果
   const renderMessageContent = useCallback((message: Message) => {
     if (message.type === 'user') {
       return (
         <div className="user-message">
           <div className="message-bubble user-bubble">
-            <Text>{message.content}</Text>
+            <Text style={{ whiteSpace: 'pre-wrap' }}>{message.content}</Text>
           </div>
           <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
         </div>
@@ -1854,19 +2278,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           )}
 
           {/* Generative UI: 匹配卡片列表 */}
-          {/* 🚀 [改进] 支持筛选功能：传入 all_candidates 和 total_candidates */}
+          {/* 🚀 [改进 v2] 篮选改为实时查询（而非前端过滤已有数据） */}
           {/* Agent Native：支持 candidates（工具返回）和 matches（兼容旧版）两种字段名 */}
           {message.generativeCard === 'match' && message.generativeData && (
             <div className="generative-ui-container match-card-container">
               <Suspense fallback={<div style={{ padding: 24, textAlign: 'center' }}><Spin size="small" /></div>}>
                 <MatchCardList
-                  // 字段名兼容：后端返回 candidates，前端也支持 matches（兼容旧版）
-                  matches={(message.generativeData as any).matches || []}
-                  // 🚀 [新增] 全部候选池（供前端筛选）
-                  allCandidates={(message.generativeData as any).all_candidates || (message.generativeData as any).candidates || []}
-                  totalCandidates={(message.generativeData as any).total_candidates || (message.generativeData as any).candidates?.length || 0}
-                  // 🚀 [新增] 用户偏好（用于智能筛选）
+                  // 字段名兼容：后端/工具常用 candidates，旧版用 matches
+                  matches={(message.generativeData as any).matches ?? (message.generativeData as any).candidates ?? []}
+                  // 🚀 [改进 v2] 不再传入 all_candidates，筛选改为实时查询
                   userPreferences={(message.generativeData as any).user_preferences || {}}
+                  filterOptions={(message.generativeData as any).filter_options || {}}
                   onAction={(action) => {
                     if (action.type === 'view_profile') {
                       // 查看用户详情
@@ -1883,6 +2305,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                       }
                       onOpenChatRoom?.(partnerId, partnerName)
                     }
+                  }}
+                  onFilterChange={(filters) => {
+                    // 🚀 [改进 v2] 篮选触发实时查询
+                    handleMatchFilter(message.id, filters)
                   }}
                 />
               </Suspense>
@@ -1992,7 +2418,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                       const completionMessage: Message = {
                         id: `ai-${Date.now()}`,
                         type: 'ai',
-                        content: result.ai_message,
+                        content: formatChatReplyReadability(result.ai_message),
                         timestamp: new Date(),
                       }
                       setMessages(prev => [...prev, completionMessage])
@@ -2205,7 +2631,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       </div>
     )
-  }, [onMatchSelect, handleQuickAction, handleQuickStartAnswer, HerAvatar, onOpenChatRoom])
+  }, [onMatchSelect, handleQuickAction, handleQuickStartAnswer, HerAvatar, onOpenChatRoom, handleMatchFilter])
 
   return (
     <div className="chat-interface">
@@ -2214,7 +2640,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         {messages.map((message) => (
           <MessageWrapper key={message.id} message={message} renderContent={renderMessageContent} />
         ))}
-        {isLoading && (
+        {isLoading && !showMatchSkeleton && (
           <div className="loading-indicator">
             <Spin size="small" />
             <Text type="secondary" style={{ marginLeft: 8 }}>
@@ -2240,20 +2666,34 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <span>.</span><span>.</span><span>.</span>
               </span>
             </div>
-            {/* 🚀 [改进] 显示当前进度阶段 */}
+            {/* 🚀 [改进] 显示当前进度阶段（动态状态：已完成/进行中/等待中） */}
             <div className="skeleton-progress-steps">
-              <div className="progress-step">
-                <span className="step-icon">🔍</span>
-                <span className="step-label">查询候选人</span>
-              </div>
-              <div className="progress-step">
-                <span className="step-icon">📊</span>
-                <span className="step-label">分析匹配度</span>
-              </div>
-              <div className="progress-step">
-                <span className="step-icon">✨</span>
-                <span className="step-label">精选推荐</span>
-              </div>
+              {/* 🚀 [场景3方案3] 进度可视化：根据 progressStepIndex 显示状态 */}
+              {[
+                { icon: '🔍', label: '查询候选人', step: 0 },
+                { icon: '📊', label: '分析匹配度', step: 1 },
+                { icon: '✨', label: '精选推荐', step: 2 },
+              ].map((step, idx) => (
+                <div
+                  key={idx}
+                  className={`progress-step ${
+                    idx < progressStepIndex ? 'completed' :
+                    idx === progressStepIndex ? 'active' :
+                    'pending'
+                  }`}
+                >
+                  <span className="step-icon">
+                    {idx < progressStepIndex ? '✅' : step.icon}
+                  </span>
+                  <span className="step-label">{step.label}</span>
+                  {/* 🚀 [场景3方案3] 进行中显示动画 */}
+                  {idx === progressStepIndex && (
+                    <span className="step-loading">
+                      <Spin size="small" />
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
             <div className="skeleton-cards-container">
               {[1, 2, 3].map(i => (
@@ -2322,9 +2762,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         />
       </Suspense>
 
-      {/* 🚀 [新增] 用户详情弹窗 */}
+      {/* 推荐详情：与列表卡片区分，优先展示「为什么推荐」 */}
       <Drawer
-        title="用户详情"
+        title="推荐详情"
         placement="right"
         width={400}
         open={userDetailVisible}
@@ -2333,8 +2773,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       >
         {selectedUserDetail && (
           <div className="user-detail-content">
-            {/* 头像和基本信息 */}
-            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
               <Avatar
                 size={80}
                 src={selectedUserDetail.avatar_url}
@@ -2344,15 +2783,79 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <Title level={4} style={{ marginBottom: 4 }}>
                 {selectedUserDetail.name} · {selectedUserDetail.age}岁
               </Title>
-              <Space size={4}>
+              <Space size={4} wrap>
                 <EnvironmentOutlined />
                 <Text type="secondary">{selectedUserDetail.location}</Text>
+                {typeof selectedUserDetail.compatibility_score === 'number' && (
+                  <Tag color="magenta">匹配度 {selectedUserDetail.compatibility_score}%</Tag>
+                )}
+                {typeof selectedUserDetail.confidence_score === 'number' && (() => {
+                  const c = selectedUserDetail.confidence_score!
+                  const pct = c > 0 && c <= 1 ? Math.round(c * 100) : Math.min(100, Math.round(c))
+                  return <Tag>资料可信度 {pct}%</Tag>
+                })()}
               </Space>
             </div>
 
-            <Divider />
+            <div
+              style={{
+                marginBottom: 16,
+                padding: 12,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, rgba(200,139,139,0.12) 0%, rgba(255,182,193,0.15) 100%)',
+                border: '1px solid rgba(200,139,139,0.35)',
+              }}
+            >
+              <Text strong style={{ display: 'block', marginBottom: 8, color: '#8b4a4a' }}>
+                为什么推荐 TA
+              </Text>
+              {selectedUserDetail.reasoning ? (
+                <Paragraph style={{ marginBottom: 8, color: '#5c4a4a', whiteSpace: 'pre-wrap' }}>
+                  {selectedUserDetail.reasoning}
+                </Paragraph>
+              ) : null}
+              {selectedUserDetail.match_reasons && selectedUserDetail.match_reasons.length > 0 ? (
+                <Space wrap size={4}>
+                  {selectedUserDetail.match_reasons.map((reason, index) => (
+                    <Tag key={index} color="pink" style={{ borderRadius: 4 }}>
+                      {reason}
+                    </Tag>
+                  ))}
+                </Space>
+              ) : null}
+              {selectedUserDetail.common_interests && selectedUserDetail.common_interests.length > 0 ? (
+                <div style={{ marginTop: 10 }}>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
+                    共同点（兴趣）
+                  </Text>
+                  <Space wrap size={4}>
+                    {selectedUserDetail.common_interests.map((interest, index) => (
+                      <Tag key={`c-${index}`} color="blue">
+                        {interest}
+                      </Tag>
+                    ))}
+                  </Space>
+                </div>
+              ) : null}
+              {!selectedUserDetail.reasoning &&
+                (!selectedUserDetail.match_reasons || selectedUserDetail.match_reasons.length === 0) &&
+                (!selectedUserDetail.common_interests || selectedUserDetail.common_interests.length === 0) && (
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  当前推荐综合了你的资料与偏好；若希望看到更具体的理由，可以在对话里多说说你的择偶侧重点（例如城市、兴趣、相处方式）。
+                </Text>
+              )}
+            </div>
 
-            {/* 职业 */}
+            <Divider style={{ margin: '12px 0' }} />
+
+            {selectedUserDetail.is_same_city && (
+              <div style={{ marginBottom: 12 }}>
+                <Tag color="green" icon={<EnvironmentOutlined />}>
+                  同城用户
+                </Tag>
+              </div>
+            )}
+
             {selectedUserDetail.occupation && (
               <div style={{ marginBottom: 12 }}>
                 <Text strong>职业：</Text>
@@ -2360,7 +2863,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               </div>
             )}
 
-            {/* 关系目标 */}
             {selectedUserDetail.relationship_goal && (
               <div style={{ marginBottom: 12 }}>
                 <Text strong>关系目标：</Text>
@@ -2370,11 +2872,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               </div>
             )}
 
-            {/* 兴趣爱好 */}
             {selectedUserDetail.interests && selectedUserDetail.interests.length > 0 && (
               <div style={{ marginBottom: 12 }}>
                 <Text strong style={{ marginBottom: 4, display: 'block' }}>
-                  兴趣爱好：
+                  TA 的兴趣爱好
                 </Text>
                 <Space wrap size={4}>
                   {selectedUserDetail.interests.map((interest, index) => (
@@ -2384,20 +2885,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               </div>
             )}
 
-            {/* 简介 */}
             {selectedUserDetail.bio && (
               <div style={{ marginBottom: 12 }}>
                 <Text strong style={{ marginBottom: 4, display: 'block' }}>
-                  简介：
+                  简介
                 </Text>
                 <Paragraph style={{ color: '#666' }}>
                   {selectedUserDetail.bio}
                 </Paragraph>
               </div>
             )}
-
-            {/* 🔧 [修复] 移除 Drawer 内的"发起对话"按钮，避免重复操作路径 */}
-            {/* 用户可在候选人卡片上直接点击"发起对话"，无需在详情弹窗再次操作 */}
           </div>
         )}
       </Drawer>

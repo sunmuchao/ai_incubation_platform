@@ -12,7 +12,7 @@
   background: linear-gradient(135deg, #FDFBFD 0%, #F8F1F3 50%, #FDF6F6 100%);
 }
 
-// 背景装饰 - 柔和光晕
+// 背景装饰 - 柔和光晕（🚀 [性能优化] 移除持续浮动动画）
 .login-bg-decoration {
   position: absolute;
   inset: 0;
@@ -24,7 +24,8 @@
   position: absolute;
   border-radius: 50%;
   background: radial-gradient(circle, @color-primary-light 0%, transparent 70%);
-  animation: float 20s infinite ease-in-out;
+  // 🚀 [性能优化] 移除 animation: float 20s infinite
+  opacity: 0.6;
 }
 
 .circle-1 {
@@ -32,7 +33,6 @@
   height: 600px;
   top: -200px;
   left: -200px;
-  animation-delay: 0s;
 }
 
 .circle-2 {
@@ -40,7 +40,6 @@
   height: 400px;
   bottom: 5%;
   right: -5%;
-  animation-delay: 7s;
 }
 
 .circle-3 {
@@ -48,23 +47,9 @@
   height: 300px;
   top: 40%;
   right: 15%;
-  animation-delay: 14s;
 }
 
-@keyframes float {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.6;
-  }
-  33% {
-    transform: translate(30px, -20px) scale(1.05);
-    opacity: 0.8;
-  }
-  66% {
-    transform: translate(-20px, 15px) scale(0.95);
-    opacity: 0.5;
-  }
-}
+// 🚀 [性能优化] 移除 float keyframes 定义
 
 // 主容器
 .login-wrapper {
@@ -123,13 +108,10 @@
   font-size: 40px;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  animation: pulse 3s infinite ease-in-out;
+  // 🚀 [性能优化] 移除 pulse 3s infinite 动画
 }
 
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
+// 🚀 [性能优化] 移除 pulse keyframes 定义
 
 .brand-title {
   color: @text-inverse !important;

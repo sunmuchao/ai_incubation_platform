@@ -45,10 +45,20 @@ jest.mock('../../components/VerificationBadge', () => ({
   ),
 }))
 
+// Mock ConfidenceBadge component (avoid network requests in tests)
+jest.mock('../../components/ConfidenceBadge', () => ({
+  __esModule: true,
+  default: () => <span data-testid="confidence-badge">Confidence</span>,
+}))
+
 // Mock authStorage
 jest.mock('../../utils/storage', () => ({
   authStorage: {
     getUserId: jest.fn().mockReturnValue('test-user-id'),
+    getToken: jest.fn().mockReturnValue(null),
+  },
+  devStorage: {
+    getTestUserId: jest.fn().mockReturnValue(null),
   },
 }))
 

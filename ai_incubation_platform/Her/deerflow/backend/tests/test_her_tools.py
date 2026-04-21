@@ -18,6 +18,8 @@ import pytest
 import json
 import sys
 import os
+import types
+import asyncio
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 
@@ -48,6 +50,8 @@ from deerflow.community.her_tools import (
     HER_TOOLS,
     PRESET_DISLIKE_REASONS,
 )
+from deerflow.community.her_tools import match_tools
+from deerflow.community.her_tools.schemas import HerFindCandidatesInput
 
 
 # ==================== Part 1: 工具数量验证 ====================
@@ -220,6 +224,76 @@ class TestHerGetProfileTool:
 class TestHerFindCandidatesTool:
     """测试候选人查询工具"""
 
+    @staticmethod
+    def _install_fake_db_runtime(monkeypatch, rows):
+        class _DummyCol:
+            def __eq__(self, other):
+                return ("eq", other)
+
+            def __ne__(self, other):
+                return ("ne", other)
+
+            def contains(self, value):
+                return ("contains", value)
+
+            def in_(self, values):
+                return ("in", values)
+
+            def desc(self):
+                return self
+
+        class _FakeUserDB:
+            id = _DummyCol()
+            is_active = _DummyCol()
+            is_permanently_banned = _DummyCol()
+            gender = _DummyCol()
+            location = _DummyCol()
+            created_at = _DummyCol()
+            relationship_goal = _DummyCol()
+            age = _DummyCol()
+
+        class _FakeQuery:
+            def __init__(self, rows):
+                self._rows = rows
+
+            def filter(self, *args, **kwargs):
+                return self
+
+            def order_by(self, *args, **kwargs):
+                return self
+
+            def limit(self, *args, **kwargs):
+                return self
+
+            def all(self):
+                return list(self._rows)
+
+        class _FakeDB:
+            def __init__(self, rows):
+                self._rows = rows
+
+            def query(self, _model):
+                return _FakeQuery(self._rows)
+
+        class _FakeDbSessionCtx:
+            def __enter__(self):
+                return _FakeDB(rows)
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        def _fake_db_session():
+            return _FakeDbSessionCtx()
+
+        def _fake_cached_import(module_name, attr_name):
+            if module_name == "utils.db_session_manager" and attr_name == "db_session":
+                return _fake_db_session
+            if module_name == "db.models" and attr_name == "UserDB":
+                return _FakeUserDB
+            raise AssertionError(f"Unexpected import request: {module_name}:{attr_name}")
+
+        monkeypatch.setattr(match_tools, "_cached_import", _fake_cached_import)
+
     def test_returns_candidates_list(self):
         """返回候选人列表"""
         tool = HerFindCandidatesTool()
@@ -241,6 +315,158 @@ class TestHerFindCandidatesTool:
         parsed = json.loads(result)
         assert parsed["success"] == True
         assert "candidates" in parsed["data"]
+
+    def test_retrieval_mode_and_reason_are_passed(self):
+        """_run 应把 AI 决策的检索模式与理由传给 _arun"""
+        tool = HerFindCandidatesTool()
+
+        with patch.object(tool, "_arun") as mock_arun:
+            mock_arun.return_value = ToolResult(success=True, data={"candidates": []})
+
+            tool._run(
+                user_id="test-user",
+                retrieval_mode="hybrid",
+                retrieval_reason="用户强调聊得来，按感觉匹配",
+            )
+
+        called = mock_arun.call_args
+        assert called is not None
+        assert called.args[0] == "test-user"
+        assert called.args[1] == "hybrid"
+        assert called.args[2] == "用户强调聊得来，按感觉匹配"
+
+    def test_find_candidates_input_supports_retrieval_mode_and_reason(self):
+        """Schema 应支持 AI 可控分流参数"""
+        data = HerFindCandidatesInput(
+            user_id="u1",
+            retrieval_mode="db_only",
+            retrieval_reason="用户给了明确年龄和地区硬条件",
+        )
+        assert data.retrieval_mode == "db_only"
+        assert data.retrieval_reason.startswith("用户给了明确")
+
+    def test_arun_db_only_mode_exposes_retrieval_decision(self, monkeypatch):
+        """行为级：db_only 应输出 mode/source/reason，且不进入向量分支"""
+        tool = HerFindCandidatesTool()
+        candidate = types.SimpleNamespace(
+            id="cand-1",
+            name="候选A",
+            age=26,
+            gender="female",
+            location="无锡",
+            interests="[]",
+            bio="",
+            relationship_goal="serious",
+            want_children=None,
+            avatar_url="",
+            occupation="",
+            education="",
+            income=0,
+            self_profile_json="{}",
+            desire_profile_json="{}",
+            created_at=None,
+        )
+        self._install_fake_db_runtime(monkeypatch, [candidate])
+        monkeypatch.setattr(match_tools, "get_db_user", lambda _uid: {"id": "u1", "gender": "male", "location": ""})
+        monkeypatch.setattr(match_tools, "batch_get_user_confidence", lambda _ids: {"cand-1": {"confidence_level": "high", "confidence_score": 88}})
+        monkeypatch.setattr(tool, "_build_filter_options", lambda **kwargs: {"selected": {}, "locations": ["全部"], "age_ranges": ["全部"], "relationship_goals": ["全部"]})
+        monkeypatch.setattr(match_tools, "_reason_topn", lambda: 0)
+
+        result = asyncio.run(tool._arun("u1", retrieval_mode="db_only", retrieval_reason="硬条件优先"))
+        retrieval = result.data["retrieval"]
+        assert retrieval["mode"] == "db_only"
+        assert retrieval["mode_input"] == "db_only"
+        assert retrieval["mode_decision_source"] == "agent"
+        assert retrieval["mode_reason"] == "硬条件优先"
+
+    def test_arun_auto_mode_uses_system_default(self, monkeypatch):
+        """行为级：auto 模式应走系统默认，并标记 source=system_default"""
+        tool = HerFindCandidatesTool()
+        candidate = types.SimpleNamespace(
+            id="cand-2",
+            name="候选B",
+            age=27,
+            gender="female",
+            location="上海",
+            interests="[]",
+            bio="",
+            relationship_goal="dating",
+            want_children=None,
+            avatar_url="",
+            occupation="",
+            education="",
+            income=0,
+            self_profile_json="{}",
+            desire_profile_json="{}",
+            created_at=None,
+        )
+        self._install_fake_db_runtime(monkeypatch, [candidate])
+        monkeypatch.setattr(match_tools, "get_db_user", lambda _uid: {"id": "u2", "gender": "male", "location": ""})
+        monkeypatch.setattr(match_tools, "batch_get_user_confidence", lambda _ids: {"cand-2": {"confidence_level": "medium", "confidence_score": 60}})
+        monkeypatch.setattr(tool, "_build_filter_options", lambda **kwargs: {"selected": {}, "locations": ["全部"], "age_ranges": ["全部"], "relationship_goals": ["全部"]})
+        monkeypatch.setattr(match_tools, "_reason_topn", lambda: 0)
+        monkeypatch.setattr(match_tools, "_is_hybrid_enabled", lambda: False)
+
+        result = asyncio.run(tool._arun("u2", retrieval_mode="auto", retrieval_reason=""))
+        retrieval = result.data["retrieval"]
+        assert retrieval["mode"] == "db_only"
+        assert retrieval["mode_input"] == "auto"
+        assert retrieval["mode_decision_source"] == "system_default"
+        assert retrieval["mode_reason"] == ""
+
+    def test_arun_hybrid_mode_runs_vector_pipeline(self, monkeypatch):
+        """行为级：hybrid 模式应进入向量召回与重排，并暴露 recall 元数据"""
+        tool = HerFindCandidatesTool()
+        candidate = types.SimpleNamespace(
+            id="cand-3",
+            name="候选C",
+            age=25,
+            gender="female",
+            location="杭州",
+            interests="[]",
+            bio="",
+            relationship_goal="serious",
+            want_children=None,
+            avatar_url="",
+            occupation="",
+            education="",
+            income=0,
+            self_profile_json="{}",
+            desire_profile_json="{}",
+            created_at=None,
+        )
+        self._install_fake_db_runtime(monkeypatch, [candidate])
+        monkeypatch.setattr(match_tools, "get_db_user", lambda _uid: {"id": "u3", "gender": "male", "location": ""})
+        monkeypatch.setattr(match_tools, "batch_get_user_confidence", lambda _ids: {"cand-3": {"confidence_level": "high", "confidence_score": 90}})
+        monkeypatch.setattr(tool, "_build_filter_options", lambda **kwargs: {"selected": {}, "locations": ["全部"], "age_ranges": ["全部"], "relationship_goals": ["全部"]})
+        monkeypatch.setattr(match_tools, "_reason_topn", lambda: 0)
+
+        class _FakeRecallService:
+            def __init__(self, top_k):
+                self.last_source = "qdrant"
+                self.last_metrics = {"fallback_count": 0}
+
+            def recall(self, user_prefs, candidates):
+                return list(candidates)
+
+        class _FakeRerankService:
+            def __init__(self, pre_rank_n, final_top_n):
+                pass
+
+            def rerank(self, user_prefs, candidates):
+                return list(candidates[:1])
+
+        monkeypatch.setattr(match_tools, "VectorRecallService", _FakeRecallService)
+        monkeypatch.setattr(match_tools, "MatchRerankService", _FakeRerankService)
+
+        result = asyncio.run(tool._arun("u3", retrieval_mode="hybrid", retrieval_reason="按感觉匹配"))
+        retrieval = result.data["retrieval"]
+        assert retrieval["mode"] == "hybrid"
+        assert retrieval["mode_input"] == "hybrid"
+        assert retrieval["mode_decision_source"] == "agent"
+        assert retrieval["mode_reason"] == "按感觉匹配"
+        assert retrieval["recall_source"] == "qdrant"
+        assert retrieval["after_rerank"] == 1
 
     def test_returns_user_preferences(self):
         """返回 user_preferences 供 Agent 参考"""
@@ -282,6 +508,37 @@ class TestHerFindCandidatesTool:
         for pattern in forbidden_patterns:
             assert pattern not in source, \
                 f"候选人工具不应包含软约束筛选逻辑 '{pattern}'"
+
+    def test_match_reasons_generated_by_llm(self, monkeypatch):
+        """推荐理由由 LLM 生成（JSON reasons）"""
+        fake_module = types.SimpleNamespace(
+            call_llm=lambda **kwargs: json.dumps(
+                {"reasons": ["兴趣互补，聊天容易展开", "关系目标方向一致", "地理距离可接受"]},
+                ensure_ascii=False,
+            )
+        )
+        monkeypatch.setitem(sys.modules, "llm.client", fake_module)
+        monkeypatch.setattr(match_tools, "ensure_her_in_path", lambda: None)
+
+        reasons = match_tools._calculate_match_reasons(
+            user_prefs={"age": 27, "location": "上海", "interests": ["旅行", "电影"]},
+            candidate={"age": 26, "location": "上海", "interests": ["电影"], "relationship_goal": "serious"},
+        )
+        assert len(reasons) >= 2
+        assert "兴趣互补，聊天容易展开" in reasons
+
+    def test_match_reasons_fallback_when_llm_fails(self, monkeypatch):
+        """LLM 异常时返回兜底理由，避免前端空白"""
+        fake_module = types.SimpleNamespace(call_llm=lambda **kwargs: (_ for _ in ()).throw(RuntimeError("boom")))
+        monkeypatch.setitem(sys.modules, "llm.client", fake_module)
+        monkeypatch.setattr(match_tools, "ensure_her_in_path", lambda: None)
+
+        reasons = match_tools._calculate_match_reasons(
+            user_prefs={"location": "北京"},
+            candidate={"location": "北京", "relationship_goal": "serious", "confidence_level": "high"},
+        )
+        assert isinstance(reasons, list)
+        assert len(reasons) >= 1
 
 
 # ==================== Part 6: her_get_conversation_history 测试 ====================

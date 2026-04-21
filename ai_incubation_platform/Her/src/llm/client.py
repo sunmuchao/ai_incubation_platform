@@ -154,8 +154,8 @@ class LLMClientManager:
         return {
             "api_key": os.getenv("OPENAI_API_KEY", "") or os.getenv("LLM_API_KEY", ""),
             "api_base": os.getenv("OPENAI_API_BASE", "") or os.getenv("LLM_API_BASE", ""),
-            "model": os.getenv("OPENAI_MODEL", "") or os.getenv("LLM_MODEL", "doubao-1-5-pro-32k-250115"),
-            "provider": os.getenv("LLM_PROVIDER", "volces"),
+            "model": os.getenv("OPENAI_MODEL", "") or os.getenv("LLM_MODEL", "glm-5"),
+            "provider": os.getenv("LLM_PROVIDER", "dashscope"),
             "max_completion_tokens": int(os.getenv("LLM_MAX_COMPLETION_TOKENS", "65535")),
             "reasoning_effort": os.getenv("LLM_REASONING_EFFORT", "medium"),
             "temperature": float(os.getenv("LLM_TEMPERATURE", "0.7")),

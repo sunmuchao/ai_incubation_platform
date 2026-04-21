@@ -5,10 +5,24 @@
 """
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
+from contextlib import contextmanager
 from db.database import get_db
 from db.repositories import UserRepository
 from utils.logger import logger
 import json
+
+
+@contextmanager
+def _db_session():
+    """
+    统一管理工具层数据库会话，确保每次调用后都释放连接。
+    """
+    db_gen = get_db()
+    db = next(db_gen)
+    try:
+        yield db
+    finally:
+        db_gen.close()
 
 
 class CompatibilityAnalysisTool:
@@ -75,67 +89,67 @@ class CompatibilityAnalysisTool:
             dimensions = ["personality", "values", "lifestyle", "interests"]
 
         try:
-            db = next(get_db())
-            user_repo = UserRepository(db)
+            with _db_session() as db:
+                user_repo = UserRepository(db)
 
-            db_user1 = user_repo.get_by_id(user_id_1)
-            db_user2 = user_repo.get_by_id(user_id_2)
+                db_user1 = user_repo.get_by_id(user_id_1)
+                db_user2 = user_repo.get_by_id(user_id_2)
 
-            if not db_user1 or not db_user2:
-                return {"error": "User not found"}
+                if not db_user1 or not db_user2:
+                    return {"error": "User not found"}
 
-            from api.users import _from_db
-            user1 = _from_db(db_user1)
-            user2 = _from_db(db_user2)
+                from api.users import _from_db
+                user1 = _from_db(db_user1)
+                user2 = _from_db(db_user2)
 
-            # 多维度分析
-            analysis_results = {}
-            overall_score = 0.0
-            dimension_count = 0
+                # 多维度分析
+                analysis_results = {}
+                overall_score = 0.0
+                dimension_count = 0
 
-            for dimension in dimensions:
-                if dimension == "interests":
-                    score, details = CompatibilityAnalysisTool._analyze_interests(user1, user2)
-                elif dimension == "personality":
-                    score, details = CompatibilityAnalysisTool._analyze_personality(user1, user2)
-                elif dimension == "values":
-                    score, details = CompatibilityAnalysisTool._analyze_values(user1, user2)
-                elif dimension == "lifestyle":
-                    score, details = CompatibilityAnalysisTool._analyze_lifestyle(user1, user2)
-                elif dimension == "goals":
-                    score, details = CompatibilityAnalysisTool._analyze_goals(user1, user2)
-                else:
-                    continue
+                for dimension in dimensions:
+                    if dimension == "interests":
+                        score, details = CompatibilityAnalysisTool._analyze_interests(user1, user2)
+                    elif dimension == "personality":
+                        score, details = CompatibilityAnalysisTool._analyze_personality(user1, user2)
+                    elif dimension == "values":
+                        score, details = CompatibilityAnalysisTool._analyze_values(user1, user2)
+                    elif dimension == "lifestyle":
+                        score, details = CompatibilityAnalysisTool._analyze_lifestyle(user1, user2)
+                    elif dimension == "goals":
+                        score, details = CompatibilityAnalysisTool._analyze_goals(user1, user2)
+                    else:
+                        continue
 
-                analysis_results[dimension] = {
-                    "score": round(score, 2),
-                    "details": details
+                    analysis_results[dimension] = {
+                        "score": round(score, 2),
+                        "details": details
+                    }
+                    overall_score += score
+                    dimension_count += 1
+
+                # 计算总体兼容性
+                if dimension_count > 0:
+                    overall_score /= dimension_count
+
+                # 识别潜在冲突点
+                conflicts = CompatibilityAnalysisTool._identify_conflicts(user1, user2, analysis_results)
+
+                # 生成置信度评分
+                confidence = CompatibilityAnalysisTool._calculate_confidence(analysis_results)
+
+                logger.info(f"CompatibilityAnalysisTool: Overall score={overall_score:.2f}, confidence={confidence:.2f}")
+
+                return {
+                    "user_id_1": user_id_1,
+                    "user_id_2": user_id_2,
+                    "overall_score": round(overall_score, 2),
+                    "confidence": round(confidence, 2),
+                    "dimension_analysis": analysis_results,
+                    "potential_conflicts": conflicts,
+                    "recommendation": CompatibilityAnalysisTool._generate_recommendation(overall_score, conflicts),
+                    "analyzed_at": datetime.now().isoformat()
                 }
-                overall_score += score
-                dimension_count += 1
-
-            # 计算总体兼容性
-            if dimension_count > 0:
-                overall_score /= dimension_count
-
-            # 识别潜在冲突点
-            conflicts = CompatibilityAnalysisTool._identify_conflicts(user1, user2, analysis_results)
-
-            # 生成置信度评分
-            confidence = CompatibilityAnalysisTool._calculate_confidence(analysis_results)
-
-            logger.info(f"CompatibilityAnalysisTool: Overall score={overall_score:.2f}, confidence={confidence:.2f}")
-
-            return {
-                "user_id_1": user_id_1,
-                "user_id_2": user_id_2,
-                "overall_score": round(overall_score, 2),
-                "confidence": round(confidence, 2),
-                "dimension_analysis": analysis_results,
-                "potential_conflicts": conflicts,
-                "recommendation": CompatibilityAnalysisTool._generate_recommendation(overall_score, conflicts),
-                "analyzed_at": datetime.now().isoformat()
-            }
 
         except Exception as e:
             logger.error(f"CompatibilityAnalysisTool: Analysis failed: {e}")
@@ -176,9 +190,6 @@ class CompatibilityAnalysisTool:
         # 注意：当前数据库中没有存储性格数据 (personality_traits)
         # 使用基于兴趣和行为的推断方式
 
-        # 基于兴趣和行为模式推断
-        db = next(get_db())
-
         # 分析兴趣匹配作为性格代理
         interests1 = set(user1.interests) if user1.interests else set()
         interests2 = set(user2.interests) if user2.interests else set()
@@ -209,23 +220,21 @@ class CompatibilityAnalysisTool:
     @staticmethod
     def _infer_personality_from_behavior(user1, user2) -> tuple:
         """从行为推断性格匹配度"""
-        # 基于兴趣和行为模式推断
-        db = next(get_db())
+        with _db_session() as db:
+            # 分析活动参与模式
+            from db.models import BehaviorEventDB
+            from sqlalchemy import func
 
-        # 分析活动参与模式
-        from db.models import BehaviorEventDB
-        from sqlalchemy import func
+            behavior_patterns = db.query(
+                BehaviorEventDB.event_type, func.count().label('count')
+            ).filter(
+                BehaviorEventDB.user_id.in_([user1.id, user2.id])
+            ).group_by(
+                BehaviorEventDB.event_type
+            ).all()
 
-        behavior_patterns = db.query(
-            BehaviorEventDB.event_type, func.count().label('count')
-        ).filter(
-            BehaviorEventDB.user_id.in_([user1.id, user2.id])
-        ).group_by(
-            BehaviorEventDB.event_type
-        ).all()
-
-        if not behavior_patterns:
-            return 0.5, {"message": "行为数据不足", "has_personality_data": False}
+            if not behavior_patterns:
+                return 0.5, {"message": "行为数据不足", "has_personality_data": False}
 
         # 简单推断：活跃用户更外向
         details = {
@@ -480,81 +489,80 @@ class TopicSuggestionTool:
         logger.info(f"TopicSuggestionTool: Generating topics for {match_id}, context={context}")
 
         try:
-            db = next(get_db())
+            with _db_session() as db:
+                # 获取匹配记录
+                from db.models import MatchHistoryDB
+                match_record = db.query(MatchHistoryDB).filter(MatchHistoryDB.id == match_id).first()
 
-            # 获取匹配记录
-            from db.models import MatchHistoryDB
-            match_record = db.query(MatchHistoryDB).filter(MatchHistoryDB.id == match_id).first()
+                if not match_record:
+                    return {"error": "Match not found"}
 
-            if not match_record:
-                return {"error": "Match not found"}
+                user_id_1 = match_record.user_id_1
+                user_id_2 = match_record.user_id_2
+                common_interests_str = match_record.common_interests
+                relationship_stage = match_record.relationship_stage
 
-            user_id_1 = match_record.user_id_1
-            user_id_2 = match_record.user_id_2
-            common_interests_str = match_record.common_interests
-            relationship_stage = match_record.relationship_stage
+                # 获取用户信息
+                user_repo = UserRepository(db)
+                db_user1 = user_repo.get_by_id(user_id_1)
+                db_user2 = user_repo.get_by_id(user_id_2)
 
-            # 获取用户信息
-            user_repo = UserRepository(db)
-            db_user1 = user_repo.get_by_id(user_id_1)
-            db_user2 = user_repo.get_by_id(user_id_2)
+                if not db_user1 or not db_user2:
+                    return {"error": "User not found"}
 
-            if not db_user1 or not db_user2:
-                return {"error": "User not found"}
+                from api.users import _from_db
+                user1 = _from_db(db_user1)
+                user2 = _from_db(db_user2)
 
-            from api.users import _from_db
-            user1 = _from_db(db_user1)
-            user2 = _from_db(db_user2)
+                # 解析共同兴趣
+                common_interests = json.loads(common_interests_str) if common_interests_str else []
 
-            # 解析共同兴趣
-            common_interests = json.loads(common_interests_str) if common_interests_str else []
+                # 获取基础话题
+                base_topics = TopicSuggestionTool.TOPIC_CATEGORIES.get(context, [])
 
-            # 获取基础话题
-            base_topics = TopicSuggestionTool.TOPIC_CATEGORIES.get(context, [])
+                # 生成个性化话题
+                personalized_topics = []
 
-            # 生成个性化话题
-            personalized_topics = []
+                # 1. 基于共同兴趣的话题
+                for interest in common_interests[:3]:
+                    topic = TopicSuggestionTool._generate_interest_topic(interest, context)
+                    if topic:
+                        personalized_topics.append({
+                            "topic": topic,
+                            "type": "interest_based",
+                            "context": f"基于共同兴趣：{interest}",
+                            "confidence": 0.9
+                        })
 
-            # 1. 基于共同兴趣的话题
-            for interest in common_interests[:3]:
-                topic = TopicSuggestionTool._generate_interest_topic(interest, context)
-                if topic:
+                # 2. 基于用户画像的话题
+                profile_topics = TopicSuggestionTool._generate_profile_topics(user1, user2, context)
+                personalized_topics.extend(profile_topics)
+
+                # 3. 通用话题补充
+                while len(personalized_topics) < count and base_topics:
+                    topic = base_topics[len(personalized_topics) % len(base_topics)]
                     personalized_topics.append({
                         "topic": topic,
-                        "type": "interest_based",
-                        "context": f"基于共同兴趣：{interest}",
-                        "confidence": 0.9
+                        "type": "general",
+                        "context": f"{TopicSuggestionTool._get_context_name(context)}场景",
+                        "confidence": 0.6
                     })
 
-            # 2. 基于用户画像的话题
-            profile_topics = TopicSuggestionTool._generate_profile_topics(user1, user2, context)
-            personalized_topics.extend(profile_topics)
+                # 生成对话策略建议
+                tips = TopicSuggestionTool._generate_conversation_tips(
+                    user1, user2, common_interests, context
+                )
 
-            # 3. 通用话题补充
-            while len(personalized_topics) < count and base_topics:
-                topic = base_topics[len(personalized_topics) % len(base_topics)]
-                personalized_topics.append({
-                    "topic": topic,
-                    "type": "general",
-                    "context": f"{TopicSuggestionTool._get_context_name(context)}场景",
-                    "confidence": 0.6
-                })
+                logger.info(f"TopicSuggestionTool: Generated {len(personalized_topics)} topics")
 
-            # 生成对话策略建议
-            tips = TopicSuggestionTool._generate_conversation_tips(
-                user1, user2, common_interests, context
-            )
-
-            logger.info(f"TopicSuggestionTool: Generated {len(personalized_topics)} topics")
-
-            return {
-                "match_id": match_id,
-                "context": context,
-                "topics": personalized_topics[:count],
-                "conversation_tips": tips,
-                "common_interests": common_interests,
-                "relationship_stage": relationship_stage
-            }
+                return {
+                    "match_id": match_id,
+                    "context": context,
+                    "topics": personalized_topics[:count],
+                    "conversation_tips": tips,
+                    "common_interests": common_interests,
+                    "relationship_stage": relationship_stage
+                }
 
         except Exception as e:
             logger.error(f"TopicSuggestionTool: Failed to generate topics: {e}")
@@ -700,62 +708,61 @@ class RelationshipTrackingTool:
         logger.info(f"RelationshipTrackingTool: Tracking {match_id}, period={period}")
 
         try:
-            db = next(get_db())
+            with _db_session() as db:
+                # 获取匹配记录
+                from db.models import MatchHistoryDB
+                match_record = db.query(MatchHistoryDB).filter(MatchHistoryDB.id == match_id).first()
 
-            # 获取匹配记录
-            from db.models import MatchHistoryDB
-            match_record = db.query(MatchHistoryDB).filter(MatchHistoryDB.id == match_id).first()
+                if not match_record:
+                    return {"error": "Match not found"}
 
-            if not match_record:
-                return {"error": "Match not found"}
+                user_id_1 = match_record.user_id_1
+                user_id_2 = match_record.user_id_2
+                current_stage = match_record.relationship_stage
+                created_at = match_record.created_at
 
-            user_id_1 = match_record.user_id_1
-            user_id_2 = match_record.user_id_2
-            current_stage = match_record.relationship_stage
-            created_at = match_record.created_at
+                # 收集互动数据
+                interactions = RelationshipTrackingTool._collect_interactions(
+                    db, user_id_1, user_id_2, period
+                )
 
-            # 收集互动数据
-            interactions = RelationshipTrackingTool._collect_interactions(
-                db, user_id_1, user_id_2, period
-            )
+                # 分析互动质量
+                quality_analysis = RelationshipTrackingTool._analyze_interaction_quality(interactions)
 
-            # 分析互动质量
-            quality_analysis = RelationshipTrackingTool._analyze_interaction_quality(interactions)
+                # 识别当前关系阶段
+                identified_stage = RelationshipTrackingTool._identify_stage(
+                    current_stage, interactions, quality_analysis
+                )
 
-            # 识别当前关系阶段
-            identified_stage = RelationshipTrackingTool._identify_stage(
-                current_stage, interactions, quality_analysis
-            )
+                # 发现潜在问题
+                issues = RelationshipTrackingTool._detect_issues(interactions, quality_analysis)
 
-            # 发现潜在问题
-            issues = RelationshipTrackingTool._detect_issues(interactions, quality_analysis)
+                # 生成改进建议
+                advice = RelationshipTrackingTool._generate_advice(identified_stage, issues)
 
-            # 生成改进建议
-            advice = RelationshipTrackingTool._generate_advice(identified_stage, issues)
+                # 计算关系健康度
+                health_score = RelationshipTrackingTool._calculate_health_score(
+                    quality_analysis, issues
+                )
 
-            # 计算关系健康度
-            health_score = RelationshipTrackingTool._calculate_health_score(
-                quality_analysis, issues
-            )
+                logger.info(f"RelationshipTrackingTool: Health score={health_score:.2f}, stage={identified_stage}")
 
-            logger.info(f"RelationshipTrackingTool: Health score={health_score:.2f}, stage={identified_stage}")
-
-            return {
-                "match_id": match_id,
-                "user_ids": [user_id_1, user_id_2],
-                "period": period,
-                "current_stage": identified_stage,
-                "health_score": round(health_score, 2),
-                "interaction_summary": {
-                    "total_messages": interactions.get("message_count", 0),
-                    "avg_response_time_hours": interactions.get("avg_response_time_hours", None),
-                    "active_days": interactions.get("active_days", 0)
-                },
-                "quality_analysis": quality_analysis,
-                "potential_issues": issues,
-                "recommendations": advice,
-                "tracked_at": datetime.now().isoformat()
-            }
+                return {
+                    "match_id": match_id,
+                    "user_ids": [user_id_1, user_id_2],
+                    "period": period,
+                    "current_stage": identified_stage,
+                    "health_score": round(health_score, 2),
+                    "interaction_summary": {
+                        "total_messages": interactions.get("message_count", 0),
+                        "avg_response_time_hours": interactions.get("avg_response_time_hours", None),
+                        "active_days": interactions.get("active_days", 0)
+                    },
+                    "quality_analysis": quality_analysis,
+                    "potential_issues": issues,
+                    "recommendations": advice,
+                    "tracked_at": datetime.now().isoformat()
+                }
 
         except Exception as e:
             logger.error(f"RelationshipTrackingTool: Tracking failed: {e}")

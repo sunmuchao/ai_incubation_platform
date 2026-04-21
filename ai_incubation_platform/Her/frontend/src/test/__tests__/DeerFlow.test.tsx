@@ -9,6 +9,21 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
+
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'conversation.inputPlaceholder': '告诉我你想要什么...',
+        'conversation.herThinking': 'Her 正在思考...',
+        'conversation.sorryError': '抱歉，出现了一些问题',
+      }
+      return translations[key] || key
+    },
+    i18n: { changeLanguage: jest.fn() },
+  }),
+}))
+
 import ChatInterface from '../../components/ChatInterface'
 
 // 注：intentRouter 已删除，ChatInterface 直接调用 deerflowClient
@@ -30,7 +45,11 @@ jest.mock('../../api/deerflowClient', () => ({
       facts_count: 5,
       message: '已同步 5 条用户信息',
     }),
-    parseToolResult: jest.fn(),
+    parseToolResult: jest.fn().mockReturnValue(undefined),
+    parseGenerativeUITags: jest.fn().mockReturnValue({
+      natural_message: '',
+      generative_ui_cards: [],
+    }),
   },
 }))
 
@@ -48,7 +67,7 @@ jest.mock('../../api/profileApi', () => ({
   },
 }))
 
-// Mock authStorage
+// Mock authStorage + chatStorage（ChatInterface 初始化依赖）
 jest.mock('../../utils/storage', () => ({
   authStorage: {
     getToken: jest.fn().mockReturnValue('mock-token'),
@@ -69,6 +88,11 @@ jest.mock('../../utils/storage', () => ({
   registrationStorage: {
     markCompleted: jest.fn(),
     isCompleted: jest.fn().mockReturnValue(true),
+  },
+  chatStorage: {
+    getMessages: jest.fn().mockReturnValue([]),
+    setMessages: jest.fn(),
+    clearMessages: jest.fn(),
   },
 }))
 
@@ -96,7 +120,6 @@ const originalFetch = global.fetch
 
 // Import the mocked modules for use in tests
 import { deerflowClient } from '../../api/deerflowClient'
-import { intentRouter } from '../../api/intentRouter'
 import { authStorage } from '../../utils/storage'
 
 describe('DeerFlow Integration Tests', () => {
@@ -120,21 +143,33 @@ describe('DeerFlow Integration Tests', () => {
       return originalFetch(url)
     }) as any
 
-    // Default: IntentRouter fallback to DeerFlow
-    ;(intentRouter.route as jest.Mock).mockResolvedValue({
-      matched: false,
-      ai_message: '',
-      need_deerflow: true,
-      generative_ui: undefined,
-      suggested_actions: [],
-    })
-
-    // Default DeerFlow response
+    // Default DeerFlow response（非流式 mock）
     ;(deerflowClient.chat as jest.Mock).mockResolvedValue({
       success: true,
       ai_message: '你好，我是 Her AI',
       deerflow_used: true,
     })
+
+    // ChatInterface 主路径走 stream：用 chat 的返回值模拟流结束事件
+    ;(deerflowClient.stream as jest.Mock).mockImplementation(
+      async (content: string, threadId: string, onEvent: (e: { type: string; data?: Record<string, unknown> }) => void) => {
+        const r = await (deerflowClient.chat as jest.Mock)(content, threadId)
+        const rec = r as Record<string, unknown>
+        if (rec.generative_ui) {
+          onEvent({
+            type: 'custom',
+            data: { generative_ui: rec.generative_ui },
+          })
+        }
+        onEvent({
+          type: 'end',
+          data: {
+            ai_message: rec.ai_message,
+            suggested_actions: rec.suggested_actions,
+          },
+        })
+      }
+    )
   })
 
   afterEach(() => {
@@ -158,7 +193,7 @@ describe('DeerFlow Integration Tests', () => {
   // ============= 第一部分：DeerFlow 基础调用测试 =============
 
   describe('DeerFlow Basic Calls', () => {
-    it('should call deerflowClient.chat when IntentRouter returns need_deerflow', async () => {
+    it('should call deerflowClient.chat on user message (DeerFlow path)', async () => {
       const mockChat = deerflowClient.chat as jest.MockedFunction<typeof deerflowClient.chat>
       mockChat.mockResolvedValueOnce({
         success: true,
@@ -340,6 +375,8 @@ describe('DeerFlow Integration Tests', () => {
     })
 
     it('should handle network error gracefully', async () => {
+      // 流式失败会 catch 后降级调用 chat；两者都失败才走 addErrorMessage(sorryError)
+      ;(deerflowClient.stream as jest.Mock).mockRejectedValueOnce(new Error('Network Error'))
       const mockChat = deerflowClient.chat as jest.MockedFunction<typeof deerflowClient.chat>
       mockChat.mockRejectedValueOnce(new Error('Network Error'))
 

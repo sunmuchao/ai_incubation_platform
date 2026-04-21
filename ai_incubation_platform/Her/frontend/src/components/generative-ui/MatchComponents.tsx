@@ -1,9 +1,9 @@
 /**
  * 匹配相关组件
  *
- * 🚀 [改进] 添加筛选控件（地区、年龄、排序）+ 更多按钮
+ * 🚀 [改进 v2] 篮选改为实时查询（而非前端过滤已有数据）
  */
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   Card,
   Typography,
@@ -12,29 +12,48 @@ import {
   Avatar,
   Space,
   Empty,
-  Segmented,
-  message
+  Spin
 } from 'antd'
 import {
   HeartOutlined,
   EnvironmentOutlined,
   FilterOutlined,
   MessageOutlined,
-  PlusOutlined
+  UserOutlined
 } from '@ant-design/icons'
 import type { GenerativeAction } from './types'
 import ConfidenceBadge from '../ConfidenceBadge'
+import { getAvatarUrlForCandidate, getFallbackAvatarUrlForCandidate } from '../../utils/matchAvatar'
 import './MatchComponents.less'
 
 const { Title, Text, Paragraph } = Typography
 
-/**
- * 获取用户头像 URL，若为空则使用 DiceBear 生成随机头像
- */
-const getAvatarUrl = (name: string, avatarUrl?: string): string => {
-  if (avatarUrl && avatarUrl.trim()) return avatarUrl
-  // 使用 DiceBear 的 avataars 风格，根据名字生成头像
-  return `https://api.dicebear.com/7.x/avataars/svg?seed=${encodeURIComponent(name)}`
+/** 远程/臆造 URL 裂图时回退到本地性别占位图 */
+const MatchCandidateAvatar: React.FC<{
+  match: Record<string, any>
+  size: number
+  className?: string
+  style?: React.CSSProperties
+}> = ({ match, size, className, style }) => {
+  const primary = getAvatarUrlForCandidate(match)
+  const fallback = getFallbackAvatarUrlForCandidate(match)
+  const [useFallback, setUseFallback] = useState(false)
+  useEffect(() => {
+    setUseFallback(false)
+  }, [primary])
+  return (
+    <Avatar
+      size={size}
+      className={className}
+      style={style}
+      src={useFallback ? fallback : primary}
+      icon={<UserOutlined />}
+      onError={() => {
+        setUseFallback(true)
+        return false
+      }}
+    />
+  )
 }
 
 /**
@@ -65,7 +84,7 @@ export const MatchSpotlight: React.FC<{ match: any; onAction?: (action: Generati
   return (
     <div className="match-spotlight-card">
       <div className="match-avatar-section">
-        <Avatar size={120} src={getAvatarUrl(match.name, match.avatar_url)} />
+        <MatchCandidateAvatar match={match} size={120} />
         <div className="match-score-badge">{Math.round(match.score * 100)}%</div>
       </div>
       <div className="match-info-section">
@@ -100,105 +119,123 @@ export const MatchSpotlight: React.FC<{ match: any; onAction?: (action: Generati
 /**
  * 带筛选功能的匹配卡片列表
  *
- * 🚀 [改进] 添加筛选控件，用户可自主筛选（地区、年龄、排序）
+ * 🚀 [改进 v2] 篮选改为实时查询（而非前端过滤已有数据）
+ *
+ * 设计原则：
+ * - 篮选点击 → 调用后端 API → 重新查询 → 返回新的精选结果
+ * - 不再传入 all_candidates（全部候选池）
+ * - 每次筛选都是"实时查询"，数据新鲜
  *
  * Agent Native 设计原则：
  * - 只负责渲染 UI（卡片列表），不输出文字内容
- * - 篮选功能由组件本地执行，不重新调用 Agent
- * - "找到 X 位候选人"等文字由 Agent 自主生成，不在此组件显示
  * - 组件接收数据后静默渲染，不添加默认标题或描述
  */
 export const MatchCardList: React.FC<{
   matches: any[]
-  allCandidates?: any[]       // 🚀 [新增] 全部候选池（用于"显示更多"）
-  totalCandidates?: number    // 🚀 [新增] 候选池总数
-  userPreferences?: {         // 🚀 [新增] 用户偏好（用于智能筛选）
+  userPreferences?: {         // 用户偏好（显示当前筛选状态）
     preferred_location?: string
     preferred_age_min?: number
     preferred_age_max?: number
     user_location?: string
   }
+  filterOptions?: {           // 筛选项元数据（供前端渲染筛选控件）
+    locations?: string[]
+    age_ranges?: string[]
+    relationship_goals?: string[]
+    selected?: {
+      location?: string
+      age_range?: string
+      relationship_goal?: string
+    }
+  }
   onAction?: (action: GenerativeAction) => void
-  onFilterChange?: (filters: { region: string; ageRange: string; sort: string }) => void
+  onFilterChange?: (filters: { location?: string; ageRange?: string; relationshipGoal?: string }) => void  // 篮选回调（触发 API 查询）
 }> = ({
   matches,
-  allCandidates,
-  totalCandidates,
   userPreferences,
+  filterOptions,
   onAction,
   onFilterChange
 }) => {
   // ===== 篮选状态 =====
-  const [selectedRegion, setSelectedRegion] = useState<string>('全部')
+  const [selectedLocation, setSelectedLocation] = useState<string>('全部')
   const [selectedAgeRange, setSelectedAgeRange] = useState<string>('全部')
-  const [selectedSort, setSelectedSort] = useState<string>('匹配度')
-  const [showAll, setShowAll] = useState<boolean>(false)  // 是否显示全部候选人
+  const [selectedRelationshipGoal, setSelectedRelationshipGoal] = useState<string>('全部')
+  const [isFiltering, setIsFiltering] = useState<boolean>(false)  // 篮选中状态（显示骨架屏）
   const [showFilters, setShowFilters] = useState<boolean>(false)  // 是否展开筛选面板
 
-  // ===== 智能提取筛选选项 =====
-  // 从候选池中提取地区选项（如果没有全部候选池，使用默认配置）
-  const regionOptions = useMemo(() => {
-    if (allCandidates && allCandidates.length > 0) {
-      const regions = new Set<string>()
-      allCandidates.forEach(c => {
-        if (c.location) regions.add(c.location)
-      })
-      return ['全部', ...Array.from(regions)]
+  // 🚀 [改进] 监听 matches 变化，关闭筛选骨架屏
+  useEffect(() => {
+    if (isFiltering) {
+      setIsFiltering(false)
     }
-    // 使用默认配置
-    return DEFAULT_FILTER_CONFIG.regions
-  }, [allCandidates])
+  }, [matches, isFiltering])
 
-  // ===== 篮选逻辑 =====
-  const filteredMatches = useMemo(() => {
-    // 数据源：如果开启"显示更多"，使用全部候选池；否则使用 Agent 精选的 matches
-    const dataSource = showAll && allCandidates ? allCandidates : matches
+  // 后端返回 selected_filters / filter_options.selected 后，同步到 UI 选中态
+  useEffect(() => {
+    const selectedFromBackend = filterOptions?.selected || {}
+    const selectedFromPreferences = (userPreferences as any)?.selected_filters || {}
 
-    if (!dataSource || dataSource.length === 0) return []
+    const nextLocation =
+      selectedFromBackend.location ||
+      selectedFromPreferences.location ||
+      userPreferences?.preferred_location ||
+      userPreferences?.user_location ||
+      '全部'
+    const nextAgeRange =
+      selectedFromBackend.age_range ||
+      selectedFromPreferences.age_range ||
+      '全部'
+    const nextGoal =
+      selectedFromBackend.relationship_goal ||
+      selectedFromPreferences.relationship_goal ||
+      '全部'
 
-    // 1. 地区筛选
-    let filtered = dataSource
-    if (selectedRegion !== '全部') {
-      filtered = filtered.filter(c => c.location === selectedRegion)
-    }
+    setSelectedLocation(nextLocation)
+    setSelectedAgeRange(nextAgeRange)
+    setSelectedRelationshipGoal(nextGoal)
+  }, [filterOptions, userPreferences])
 
-    // 2. 年龄筛选
-    if (selectedAgeRange !== '全部') {
-      const [min, max] = selectedAgeRange.split('-').map(n => parseInt(n.replace('+', '')))
-      filtered = filtered.filter(c => {
-        const age = c.age || 0
-        if (selectedAgeRange.includes('+')) {
-          return age >= min
-        }
-        return age >= min && age <= max
-      })
-    }
+  // ===== 筛选选项（从 filterOptions 或默认配置）=====
+  const locationOptions = useMemo(() => {
+    const options = filterOptions?.locations?.length ? filterOptions.locations : DEFAULT_FILTER_CONFIG.regions
+    if (!options.includes(selectedLocation)) return [selectedLocation, ...options]
+    return options
+  }, [filterOptions, selectedLocation])
 
-    // 3. 排序
-    if (selectedSort === '匹配度') {
-      filtered.sort((a, b) => (b.confidence_score || b.score || 0) - (a.confidence_score || a.score || 0))
-    } else if (selectedSort === '年龄') {
-      filtered.sort((a, b) => (a.age || 0) - (b.age || 0))
-    } else if (selectedSort === '活跃度') {
-      // 活跃度暂无数据，使用置信度作为替代
-      filtered.sort((a, b) => (b.confidence_score || 0) - (a.confidence_score || 0))
-    }
+  const ageRangeOptions = useMemo(() => {
+    const options = filterOptions?.age_ranges?.length ? filterOptions.age_ranges : DEFAULT_FILTER_CONFIG.ageRanges
+    if (!options.includes(selectedAgeRange)) return [selectedAgeRange, ...options]
+    return options
+  }, [filterOptions, selectedAgeRange])
 
-    return filtered
-  }, [matches, allCandidates, showAll, selectedRegion, selectedAgeRange, selectedSort])
+  const relationshipGoalOptions = useMemo(() => {
+    const defaults = ['全部', '认真恋爱', '奔着结婚', '轻松交友', '随便聊聊']
+    const options = filterOptions?.relationship_goals?.length ? filterOptions.relationship_goals : defaults
+    if (!options.includes(selectedRelationshipGoal)) return [selectedRelationshipGoal, ...options]
+    return options
+  }, [filterOptions, selectedRelationshipGoal])
 
-  // ===== 篮选变化回调 =====
-  const handleFilterChange = useCallback((region: string, ageRange: string, sort: string) => {
-    setSelectedRegion(region)
+  // ===== 篮选变化回调（触发 API 查询）=====
+  const handleFilterChange = useCallback((location: string, ageRange: string, relationshipGoal: string) => {
+    setSelectedLocation(location)
     setSelectedAgeRange(ageRange)
-    setSelectedSort(sort)
-    onFilterChange?.({ region, ageRange, sort })
+    setSelectedRelationshipGoal(relationshipGoal)
+
+    // 🚀 [关键改动] 篮选触发 API 查询，而非前端过滤
+    if (onFilterChange) {
+      setIsFiltering(true)  // 显示骨架屏
+      onFilterChange({
+        location: location === '全部' ? undefined : location,
+        ageRange: ageRange === '全部' ? undefined : ageRange,
+        relationshipGoal: relationshipGoal === '全部' ? undefined : relationshipGoal,
+      })
+    }
   }, [onFilterChange])
 
   // Agent Native：组件只渲染数据，不添加默认文字
-  // 如果数据为空，显示简单的加载状态（等待 Agent 输出）
   if (!matches || matches.length === 0) {
-    return null  // 不显示"找到 0 位"等默认文字，让 Agent 决定输出内容
+    return null
   }
 
   // ===== 渲染单个候选人卡片 =====
@@ -214,9 +251,9 @@ export const MatchCardList: React.FC<{
       }}
     >
       <Space align="start" style={{ width: '100%' }}>
-        <Avatar
+        <MatchCandidateAvatar
+          match={match}
           size={56}
-          src={getAvatarUrl(match.name, match.avatar_url)}
           style={{ borderRadius: 12 }}
         />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -239,6 +276,34 @@ export const MatchCardList: React.FC<{
                   <Tag key={i} color="blue" style={{ fontSize: 12 }}>{interest}</Tag>
                 ))}
               </Space>
+            )}
+            {/* 🚀 [场景3方案1] 显示匹配原因 - 用户看懂"为什么推荐TA" */}
+            {match.match_reasons && match.match_reasons.length > 0 && (
+              <div style={{ marginTop: 6, marginBottom: 4 }}>
+                <Text type="secondary" style={{ fontSize: 12, marginRight: 4 }}>💡 为什么推荐：</Text>
+                <Space wrap size={2}>
+                  {match.match_reasons.map((reason: string, i: number) => (
+                    <Tag key={i} color="pink" style={{ fontSize: 11, borderRadius: 4 }}>
+                      {reason}
+                    </Tag>
+                  ))}
+                </Space>
+              </div>
+            )}
+            {match.vector_match_highlights && (
+              <div style={{ marginTop: 4 }}>
+                <Space wrap size={2}>
+                  {match.vector_match_highlights.relationship_goal && (
+                    <Tag style={{ fontSize: 11 }}>关系目标：{match.vector_match_highlights.relationship_goal}</Tag>
+                  )}
+                  {match.vector_match_highlights.want_children && (
+                    <Tag style={{ fontSize: 11 }}>生育观：{match.vector_match_highlights.want_children}</Tag>
+                  )}
+                  {match.vector_match_highlights.spending_style && (
+                    <Tag style={{ fontSize: 11 }}>消费观：{match.vector_match_highlights.spending_style}</Tag>
+                  )}
+                </Space>
+              </div>
             )}
           </Space>
         </div>
@@ -282,9 +347,9 @@ export const MatchCardList: React.FC<{
 
   return (
     <div className="match-card-list-filterable">
-      {/* ===== 篮选控件 ===== */}
+      {/* ===== 筛选控件 ===== */}
       <div className="filter-controls-container">
-        {/* 篛选入口按钮 */}
+        {/* 筛选入口按钮 */}
         <div className="filter-toggle-row">
           <Button
             type="text"
@@ -292,44 +357,24 @@ export const MatchCardList: React.FC<{
             onClick={() => setShowFilters(!showFilters)}
             style={{ color: showFilters ? '#C88B8B' : '#8c8c8c' }}
           >
-            篛选 {filteredMatches.length !== (showAll && allCandidates ? allCandidates.length : matches.length) && (
-              <Tag color="pink" style={{ marginLeft: 4 }}>
-                {filteredMatches.length}人
-              </Tag>
-            )}
+            筛选 {isFiltering && <Spin size="small" style={{ marginLeft: 4 }} />}
           </Button>
-          {/* 显示更多按钮 */}
-          {allCandidates && allCandidates.length > matches.length && (
-            <Button
-              type="text"
-              icon={<PlusOutlined />}
-              onClick={() => {
-                setShowAll(!showAll)
-                if (!showAll) {
-                  message.info(`已展开全部 ${allCandidates.length} 位候选人`)
-                }
-              }}
-              style={{ color: showAll ? '#C88B8B' : '#8c8c8c' }}
-            >
-              {showAll ? '只看精选' : `显示更多(${allCandidates.length - matches.length}人)`}
-            </Button>
-          )}
         </div>
 
-        {/* 篛选面板（可折叠） */}
+        {/* 筛选面板（可折叠） */}
         {showFilters && (
           <div className="filter-panel">
             {/* 地区筛选 */}
             <div className="filter-row">
               <Text type="secondary" style={{ fontSize: 13, minWidth: 60 }}>地区：</Text>
               <div className="filter-tags">
-                {regionOptions.slice(0, 8).map(region => (
+                {locationOptions.slice(0, 8).map(location => (
                   <Tag
-                    key={region}
-                    className={`filter-tag ${selectedRegion === region ? 'selected' : ''}`}
-                    onClick={() => handleFilterChange(region, selectedAgeRange, selectedSort)}
+                    key={location}
+                    className={`filter-tag ${selectedLocation === location ? 'selected' : ''}`}
+                    onClick={() => handleFilterChange(location, selectedAgeRange, selectedRelationshipGoal)}
                   >
-                    {region}
+                    {location}
                   </Tag>
                 ))}
               </div>
@@ -338,56 +383,66 @@ export const MatchCardList: React.FC<{
             <div className="filter-row">
               <Text type="secondary" style={{ fontSize: 13, minWidth: 60 }}>年龄：</Text>
               <div className="filter-tags">
-                {DEFAULT_FILTER_CONFIG.ageRanges.map(range => (
+                {ageRangeOptions.map(range => (
                   <Tag
                     key={range}
                     className={`filter-tag ${selectedAgeRange === range ? 'selected' : ''}`}
-                    onClick={() => handleFilterChange(selectedRegion, range, selectedSort)}
+                    onClick={() => handleFilterChange(selectedLocation, range, selectedRelationshipGoal)}
                   >
                     {range}
                   </Tag>
                 ))}
               </div>
             </div>
-            {/* 排序 */}
+            {/* 关系目标筛选 */}
             <div className="filter-row">
-              <Text type="secondary" style={{ fontSize: 13, minWidth: 60 }}>排序：</Text>
-              <Segmented
-                size="small"
-                options={DEFAULT_FILTER_CONFIG.sortOptions.map(opt => ({ label: opt, value: opt }))}
-                value={selectedSort}
-                onChange={(val) => handleFilterChange(selectedRegion, selectedAgeRange, val as string)}
-                style={{ background: '#f5f5f5' }}
-              />
+              <Text type="secondary" style={{ fontSize: 13, minWidth: 60 }}>目标：</Text>
+              <div className="filter-tags">
+                {relationshipGoalOptions.slice(0, 5).map(goal => (
+                  <Tag
+                    key={goal}
+                    className={`filter-tag ${selectedRelationshipGoal === goal ? 'selected' : ''}`}
+                    onClick={() => handleFilterChange(selectedLocation, selectedAgeRange, goal)}
+                  >
+                    {goal}
+                  </Tag>
+                ))}
+              </div>
             </div>
           </div>
         )}
       </div>
 
       {/* ===== 候选人列表 ===== */}
-      <div className="match-cards-scrollable">
-        {filteredMatches.length === 0 ? (
-          <Empty
-            description={
-              <Space direction="vertical" size={4}>
-                <Text type="secondary">没有符合条件的候选人</Text>
-                <Button type="link" onClick={() => handleFilterChange('全部', '全部', '匹配度')}>
-                  清除筛选
-                </Button>
+      {/* 🚀 [改进] 篮选中显示骨架屏（而非在已有数据里过滤） */}
+      {isFiltering ? (
+        <div className="match-cards-loading">
+          <Spin size="small" style={{ marginBottom: 8 }} />
+          <Text type="secondary">正在查询符合条件的候选人...</Text>
+          {/* 骨架屏卡片占位 */}
+          {[1, 2, 3].map(i => (
+            <Card key={i} style={{ borderRadius: 12, marginBottom: 12 }}>
+              <Space align="start" style={{ width: '100%' }}>
+                <Avatar size={56} style={{ borderRadius: 12 }} icon={<UserOutlined />} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ height: 20, width: '60%', background: '#f5f5f5', borderRadius: 4, marginBottom: 8 }} />
+                  <div style={{ height: 14, width: '40%', background: '#f5f5f5', borderRadius: 4 }} />
+                </div>
               </Space>
-            }
-            style={{ padding: 24 }}
-          />
-        ) : (
-          filteredMatches.map(renderMatchCard)
-        )}
-      </div>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="match-cards-scrollable">
+          {matches.map(renderMatchCard)}
+        </div>
+      )}
 
       {/* ===== 底部提示 ===== */}
-      {filteredMatches.length > 0 && (
+      {!isFiltering && matches.length > 0 && (
         <div className="match-list-footer">
           <Text type="secondary" style={{ fontSize: 12 }}>
-            💬 想看更多？继续对话告诉我"看更多北京的"或点击上方筛选
+            💬 点击筛选按钮可重新查询符合条件的候选人
           </Text>
         </div>
       )}
@@ -411,7 +466,7 @@ export const MatchCarousel: React.FC<{ matches: any[]; onAction?: (action: Gener
     <div className="match-carousel">
       <Card className="match-carousel-card">
         <div className="match-carousel-content">
-          <Avatar size={100} src={getAvatarUrl(current.name, current.avatar_url)} />
+          <MatchCandidateAvatar match={current} size={100} />
           <div className="match-carousel-info">
             <Title level={4}>{current.name}</Title>
             <Text>{current.reasoning}</Text>

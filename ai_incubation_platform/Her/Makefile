@@ -7,6 +7,9 @@
 
 .PHONY: help dev dev-her dev-deerflow stop status logs test clean
 
+# 与 README / start.sh 中 Her 后端默认一致（可覆盖：make dev-her HER_BACKEND_PORT=8000）
+HER_BACKEND_PORT ?= 8002
+
 # 默认目标：显示帮助
 help:
 	@echo ""
@@ -18,13 +21,13 @@ help:
 	@echo "  make stop         停止所有服务"
 	@echo "  make status       检查服务状态"
 	@echo "  make logs         查看日志"
-	@echo "  make test         运行测试"
+	@echo "  make test         运行测试（DeerFlow: uv；Her: PYTHONPATH=src pytest）"
 	@echo "  make clean        清理进程和日志"
 	@echo ""
 	@echo "端口说明："
 	@echo "  DeerFlow LangGraph:  2024"
 	@echo "  DeerFlow Gateway:    8001"
-	@echo "  Her Backend:         8000"
+	@echo "  Her Backend:         $(HER_BACKEND_PORT)  (make dev-her / start.sh 默认与 README 一致)"
 	@echo "  Her Frontend:        3005"
 	@echo ""
 
@@ -35,9 +38,9 @@ dev:
 # 只启动 Her（无 DeerFlow 集成）
 dev-her:
 	@echo "启动 Her（无 DeerFlow）..."
-	@cd src && PYTHONPATH=. nohup uvicorn main:app --host 0.0.0.0 --port 8000 > /tmp/her_backend.log 2>&1 &
+	@cd src && PYTHONPATH=. nohup uvicorn main:app --host 0.0.0.0 --port $(HER_BACKEND_PORT) > /tmp/her_backend.log 2>&1 &
 	@cd frontend && nohup npm run dev > /tmp/her_frontend.log 2>&1 &
-	@echo "Her 后端: http://localhost:8000"
+	@echo "Her 后端: http://localhost:$(HER_BACKEND_PORT)"
 	@echo "Her 前端: http://localhost:3005"
 
 # 只启动 DeerFlow
@@ -61,12 +64,12 @@ status:
 	@curl -s http://localhost:2024/ok > /dev/null 2>&1 && echo "  ✓ 运行中" || echo "  ✗ 未运行"
 	@echo "DeerFlow Gateway (8001):"
 	@curl -s http://localhost:8001/health > /dev/null 2>&1 && echo "  ✓ 运行中" || echo "  ✗ 未运行"
-	@echo "Her Backend (8000):"
-	@curl -s http://localhost:8000/docs > /dev/null 2>&1 && echo "  ✓ 运行中" || echo "  ✗ 未运行"
+	@echo "Her Backend ($(HER_BACKEND_PORT)):"
+	@curl -s http://localhost:$(HER_BACKEND_PORT)/docs > /dev/null 2>&1 && echo "  ✓ 运行中" || echo "  ✗ 未运行"
 	@echo "Her Frontend (3005):"
 	@curl -s http://localhost:3005 > /dev/null 2>&1 && echo "  ✓ 运行中" || echo "  ✗ 未运行"
 	@echo "DeerFlow Integration:"
-	@curl -s http://localhost:8000/api/deerflow/status | python3 -m json.tool 2>/dev/null || echo "  ✗ API 未响应"
+	@curl -s http://localhost:$(HER_BACKEND_PORT)/api/deerflow/status | python3 -m json.tool 2>/dev/null || echo "  ✗ API 未响应"
 	@echo ""
 
 # 查看日志
@@ -81,13 +84,15 @@ logs:
 	@echo "  tail -f src/logs/server.log"
 	@echo "  tail -f /tmp/her_frontend.log"
 
-# 运行测试
+# 运行测试：
+# - DeerFlow：必须在 deerflow/backend 下用 uv（Python>=3.12），否则会误用上层 Her/pytest.ini 且 3.9 无法解析 harness 类型注解
+# - Her：在仓库根目录 PYTHONPATH=src pytest tests
 test:
-	@echo "运行 Her Tools 测试..."
-	@cd deerflow/backend && PYTHONPATH=packages/harness python -m pytest tests/test_her_tools.py -v
+	@echo "运行 DeerFlow 后端全量测试（deerflow/backend: uv run pytest）..."
+	@$(MAKE) -C deerflow/backend test
 	@echo ""
-	@echo "运行 Her 后端测试..."
-	@cd src && PYTHONPATH=. python -m pytest tests/ -v --tb=short -x
+	@echo "运行 Her 后端测试（PYTHONPATH=src）..."
+	@PYTHONPATH=src python3 -m pytest tests -v --tb=short
 
 # 清理
 clean:
@@ -102,4 +107,4 @@ clean:
 
 # 快速健康检查
 health:
-	@curl -s http://localhost:8000/api/deerflow/status | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'DeerFlow: {d.get(\"available\", False)}'); print(f'Memory: {d.get(\"memory_enabled\", False)}')"
+	@curl -s http://localhost:$(HER_BACKEND_PORT)/api/deerflow/status | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'DeerFlow: {d.get(\"available\", False)}'); print(f'Memory: {d.get(\"memory_enabled\", False)}')"

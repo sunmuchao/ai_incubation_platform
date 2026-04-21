@@ -44,10 +44,10 @@ class Settings(BaseSettings):
 
     # LLM 配置（核心 AI 引擎，默认启用）
     llm_enabled: bool = os.getenv("LLM_ENABLED", "true").lower() == "true"
-    llm_provider: str = os.getenv("LLM_PROVIDER", "volces")  # volces, qwen, glm, openai
+    llm_provider: str = os.getenv("LLM_PROVIDER", "dashscope")  # dashscope, volces, openai
     llm_api_key: str = os.getenv("LLM_API_KEY", "")
-    llm_api_base: str = os.getenv("LLM_API_BASE", "https://ark.cn-beijing.volces.com/api/v3")
-    llm_model: str = os.getenv("LLM_MODEL", "doubao-1-5-pro-32k-250115")
+    llm_api_base: str = os.getenv("LLM_API_BASE", "https://coding.dashscope.aliyuncs.com/v1")
+    llm_model: str = os.getenv("LLM_MODEL", "glm-5")
     llm_temperature: float = float(os.getenv("LLM_TEMPERATURE", "0.7"))
     llm_max_tokens: int = int(os.getenv("LLM_MAX_TOKENS", "1000"))
     # 豆包模型特殊参数
@@ -56,6 +56,13 @@ class Settings(BaseSettings):
     llm_request_timeout: int = int(os.getenv("LLM_REQUEST_TIMEOUT", "30"))
     llm_retry_count: int = int(os.getenv("LLM_RETRY_COUNT", "3"))
     llm_confidence_threshold: float = float(os.getenv("LLM_CONFIDENCE_THRESHOLD", "0.6"))  # 置信度阈值
+    chat_auto_update_cooldown_hours: int = int(os.getenv("CHAT_AUTO_UPDATE_COOLDOWN_HOURS", "24"))
+    chat_auto_update_confirm_window_days: int = int(os.getenv("CHAT_AUTO_UPDATE_CONFIRM_WINDOW_DAYS", "30"))
+    chat_auto_update_min_text_len_for_llm: int = int(os.getenv("CHAT_AUTO_UPDATE_MIN_TEXT_LEN_FOR_LLM", "18"))
+    chat_auto_update_llm_max_tokens: int = int(os.getenv("CHAT_AUTO_UPDATE_LLM_MAX_TOKENS", "120"))
+    chat_auto_update_pending_ttl_days: int = int(os.getenv("CHAT_AUTO_UPDATE_PENDING_TTL_DAYS", "30"))
+    chat_auto_update_location_threshold: float = float(os.getenv("CHAT_AUTO_UPDATE_LOCATION_THRESHOLD", "1.4"))
+    chat_auto_update_occupation_threshold: float = float(os.getenv("CHAT_AUTO_UPDATE_OCCUPATION_THRESHOLD", "1.4"))
 
     # LLM 降级方案配置
     llm_fallback_enabled: bool = os.getenv("LLM_FALLBACK_ENABLED", "true").lower() == "true"

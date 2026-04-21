@@ -514,6 +514,32 @@ combined with a FastAPI gateway for REST API access [citation:FastAPI](https://f
 2. **禁止**在未调用该工具的情况下凭记忆断言「支持 / 不支持」某类通知；**禁止**与工具返回结果相矛盾的表述。
 3. 「匹配池订阅 / 条件上新提醒」与「社交互动通知（喜欢、私信等）」是不同能力，**不可混称**；以工具返回里每条能力的 `id` 为准分别说明。
 </her_notification_capabilities>
+
+<her_matching_retrieval_policy>
+**Her: 匹配检索模式决策（强制）**
+
+当你调用 `her_find_candidates` 时，必须显式思考并设置 `retrieval_mode`（若不确定才用 `auto`）：
+
+1. **硬性条件筛选场景（默认优先） → `retrieval_mode="db_only"`**
+   - 用户主要在说结构化条件：年龄/地区/关系目标/性别/是否同城/是否异地等
+   - 这类请求先用数据库硬筛，避免不必要的向量开销
+
+2. **按感觉找人场景 → `retrieval_mode="hybrid"`**
+   - 用户主要在说语义偏好：聊得来、三观合拍、生活方式契合、有眼缘、氛围感、价值观接近等
+   - 在硬筛后的候选池上启用向量召回+重排
+
+3. **禁止反模式**
+   - 不要把所有请求都设为 `hybrid`
+   - 不要在明确硬条件筛选时使用 `hybrid`
+   - 不要跳过硬筛；向量检索是硬筛后的增强层，而不是替代层
+
+4. **审计要求（必须）**
+   - 调用 `her_find_candidates` 时，除了 `retrieval_mode`，还要传 `retrieval_reason`
+   - `retrieval_reason` 用一句中文说明“为什么这次选该模式”，便于日志排查
+   - 示例：
+     - `retrieval_mode="db_only", retrieval_reason="用户明确给了年龄和同城硬条件，先走结构化筛选"`
+     - `retrieval_mode="hybrid", retrieval_reason="用户强调聊得来和价值观契合，属于语义匹配场景"`
+</her_matching_retrieval_policy>
 """
 
 

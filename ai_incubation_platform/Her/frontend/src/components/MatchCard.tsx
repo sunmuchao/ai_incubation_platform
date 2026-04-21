@@ -1,6 +1,6 @@
 // MatchCard - 匹配对象卡片，温暖浪漫风格
 
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import { Card, Avatar, Tag, Button, Space, Typography, Modal, Rate } from 'antd'
 import {
   HeartOutlined,
@@ -14,12 +14,14 @@ import {
   EnvironmentOutlined,
 } from '@ant-design/icons'
 import type { MatchCandidate } from '../types'
+import { getMatchAvatarSrc } from '../utils/matchAvatar'
 import { aiAwarenessApi } from '../api'
 import { AIFeedback } from './AIFeedback'
 import RoseButton from './RoseButton'
 import VerificationBadge from './VerificationBadge'
 import ConfidenceBadge from './ConfidenceBadge'
 import { useCurrentUserId } from '../hooks/useCurrentUserId'
+import { useMatchCompatibilityDisplay } from '../hooks/useMatchCompatibilityDisplay'
 import './MatchCard.less'
 
 const { Text, Paragraph } = Typography
@@ -49,25 +51,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
   // 使用统一的 userId hook
   const currentUserId = useCurrentUserId()
 
-  // 兼容性分数
-  const compatibilityPercent = useMemo(() => {
-    return match.score || match.compatibility_score
-      ? Math.round((match.score || match.compatibility_score) * 100)
-      : 0
-  }, [match.score, match.compatibility_score])
-
-  const getCompatibilityColor = useCallback((score: number) => {
-    if (score >= 85) return '#95de64'
-    if (score >= 70) return '#D4A59A'
-    return '#faad14'
-  }, [])
-
-  const getCompatibilityText = useCallback((score: number) => {
-    if (score >= 90) return '天作之合'
-    if (score >= 80) return '非常匹配'
-    if (score >= 70) return '比较匹配'
-    return '有缘分'
-  }, [])
+  const { compatibilityPercent, getCompatibilityColor, getCompatibilityText } =
+    useMatchCompatibilityDisplay(match)
 
   const handleLike = useCallback(() => {
     setLiked(true)
@@ -153,6 +138,32 @@ const MatchCard: React.FC<MatchCardProps> = ({
     </div>
   )
 
+  const renderVectorHighlights = () => {
+    const h = match.vector_match_highlights
+    if (!h) return null
+
+    const tags: string[] = []
+    if (h.relationship_goal) tags.push(`关系目标：${h.relationship_goal}`)
+    if (h.want_children) tags.push(`生育观：${h.want_children}`)
+    if (h.spending_style) tags.push(`消费观：${h.spending_style}`)
+    if (h.attachment_style) tags.push(`依恋：${h.attachment_style}`)
+    if (h.conflict_style) tags.push(`冲突：${h.conflict_style}`)
+    if (h.repair_willingness) tags.push(`修复意愿：${h.repair_willingness}`)
+
+    if (tags.length === 0) return null
+
+    return (
+      <div className="interests-section" style={{ marginTop: 8 }}>
+        <Text className="section-label">匹配依据</Text>
+        <div className="interest-tags">
+          {tags.slice(0, 3).map((item) => (
+            <span key={item} className="interest-tag">{item}</span>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <>
       <Card
@@ -164,7 +175,12 @@ const MatchCard: React.FC<MatchCardProps> = ({
           <div className="avatar-container">
             <Avatar
               size={100}
-              src={match.user?.avatar || match.user?.avatar_url}
+              src={getMatchAvatarSrc(
+                match.user?.name || '用户',
+                match.user?.gender,
+                match.user?.avatar,
+                match.user?.avatar_url
+              )}
               icon={<UserOutlined />}
               className="main-avatar"
             />
@@ -213,6 +229,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
               </div>
             </div>
           )}
+
+          {renderVectorHighlights()}
         </div>
 
         {isSwipeMode && renderActionButtons()}
@@ -231,7 +249,12 @@ const MatchCard: React.FC<MatchCardProps> = ({
         <div className="modal-profile-header">
           <Avatar
             size={72}
-            src={match.user?.avatar || match.user?.avatar_url}
+            src={getMatchAvatarSrc(
+              match.user?.name || '用户',
+              match.user?.gender,
+              match.user?.avatar,
+              match.user?.avatar_url
+            )}
             icon={<UserOutlined />}
             className="modal-avatar"
           />
@@ -299,6 +322,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
               <Text className="reasoning-text">{match.reasoning}</Text>
             </div>
           )}
+
+          {renderVectorHighlights()}
         </div>
 
         {/* 操作按钮 */}

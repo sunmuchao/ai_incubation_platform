@@ -8,10 +8,12 @@
  */
 
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react'
-import { Layout, Typography, Space, Button, Avatar, notification, Drawer, message, Spin } from 'antd'
+import { Layout, Typography, Space, Button, Avatar, notification, Drawer, message, Spin, Descriptions, Tag, Card, Form, Input, Divider } from 'antd'
 import {
   UserOutlined,
   CommentOutlined,
+  EditOutlined,
+  SaveOutlined,
 } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import type { MatchCandidate } from '../types'
@@ -33,12 +35,29 @@ import { FeaturesButton } from '../components/FeaturesDrawer'
 import type { Feature } from '../components/FeaturesDrawer'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import HerAvatar from '../assets/her-avatar.svg'
-import { chatApi, conversationMatchingApi } from '../api'
-import { herStorage, guideStorage } from '../utils/storage' // 🔧 [问题17方案B] 导入 guideStorage
+import { chatApi, conversationMatchingApi, userApi } from '../api'
+import { useCurrentUserId } from '../hooks/useCurrentUserId'
+import { authStorage, herStorage, guideStorage, conversationSummaryStorage } from '../utils/storage' // 🔧 [问题17方案B] 导入 guideStorage
 import './HomePage.less'
 
 const { Header, Content } = Layout
 const { Text } = Typography
+const UUID_REGEX = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
+
+const isInvalidDisplayName = (value?: string): boolean => {
+  const name = (value || '').trim()
+  if (!name) return true
+  if (name === 'user-anonymous-dev') return true
+  return UUID_REGEX.test(name)
+}
+
+const normalizeDisplayName = (...candidates: Array<string | undefined>): string => {
+  for (const raw of candidates) {
+    if (isInvalidDisplayName(raw)) continue
+    return (raw || '').trim()
+  }
+  return 'TA'
+}
 
 // 聊天场景的快速入口选项
 const CHAT_SCENE_QUICK_OPTIONS = [
@@ -93,8 +112,127 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
       timestamp: Date
     }>
   } | null>(null)
+  const [profileDrawerOpen, setProfileDrawerOpen] = useState(false)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileEditMode, setProfileEditMode] = useState(false)
+  const [profileData, setProfileData] = useState<Record<string, any> | null>(null)
+  const [profileForm] = Form.useForm()
 
-  const userId = userInfo?.username || 'user-anonymous-dev'
+  const userId = useCurrentUserId()
+
+  // 用户信息展示：以本地认证信息为单一来源，避免 Header 丢失昵称
+  useEffect(() => {
+    const currentUser = authStorage.getUser()
+    if (!currentUser) return
+
+    setUserInfo({
+      username: currentUser.username,
+      name: currentUser.name,
+    })
+    setProfileData(currentUser)
+  }, [])
+
+  const loadMyProfile = async (options?: { background?: boolean }) => {
+    const shouldShowBlockingLoading = !options?.background
+    if (shouldShowBlockingLoading) {
+      setProfileLoading(true)
+    }
+    try {
+      const me = await userApi.getCurrentUser()
+      if (me) {
+        setProfileData(me)
+        setUserInfo({
+          username: me.username,
+          name: me.name,
+        })
+        authStorage.setUser({
+          ...(authStorage.getUser() || {}),
+          ...me,
+        })
+      }
+    } catch (error) {
+      // 保留本地兜底，不阻塞抽屉展示
+    } finally {
+      if (shouldShowBlockingLoading) {
+        setProfileLoading(false)
+      }
+    }
+  }
+
+  const handleOpenProfile = () => {
+    setProfileDrawerOpen(true)
+    setProfileEditMode(false)
+    // 已有本地资料时先秒开抽屉，再后台刷新，避免弱网下点击后长时间转圈
+    loadMyProfile({ background: !!profileData })
+  }
+
+  const handleEnterProfileEdit = () => {
+    setProfileEditMode(true)
+    profileForm.setFieldsValue({
+      name: profileData?.name || '',
+      location: profileData?.location || '',
+      bio: profileData?.bio || '',
+      interests: Array.isArray(profileData?.interests) ? profileData.interests.join('，') : '',
+    })
+  }
+
+  const handleCancelProfileEdit = () => {
+    setProfileEditMode(false)
+    profileForm.resetFields()
+  }
+
+  const handleSaveProfile = async () => {
+    try {
+      const values = await profileForm.validateFields()
+      const currentUserId = profileData?.id || authStorage.getUserId()
+      if (!currentUserId || currentUserId === 'anonymous') {
+        message.error('当前用户身份无效，无法保存')
+        return
+      }
+
+      const interests = String(values.interests || '')
+        .split(/[，,]/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+
+      const payload = {
+        name: values.name?.trim() || undefined,
+        location: values.location?.trim() || undefined,
+        bio: values.bio?.trim() || undefined,
+        interests,
+      }
+
+      setProfileSaving(true)
+      const updated = await userApi.updateCurrentUser(currentUserId, payload)
+      setProfileData(updated)
+      setUserInfo({
+        username: updated?.username || userInfo?.username,
+        name: updated?.name || userInfo?.name,
+      })
+      authStorage.setUser({
+        ...(authStorage.getUser() || {}),
+        ...updated,
+      })
+      setProfileEditMode(false)
+      message.success('资料已更新')
+    } catch (error) {
+      if ((error as any)?.errorFields) return
+      message.error('保存失败，请稍后重试')
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
+  // 微信式：先展示本地会话摘要，再后台增量刷新
+  useEffect(() => {
+    const cached = conversationSummaryStorage.getConversations(userId)
+    if (cached.length > 0) {
+      setConversations(cached)
+      const unread = cached.reduce((sum, conv) => sum + (conv.unread_count || 0), 0)
+      setUnreadCount(unread)
+    }
+  }, [userId])
 
   // 已通知的消息 ID 集合，避免重复弹窗
   const notifiedMessageIds = useRef<Set<string>>(new Set())
@@ -170,7 +308,10 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
           }
 
           newConversations.forEach(conv => {
-            const partnerId = conv.user_id_1 === userId ? conv.user_id_2 : conv.user_id_1
+            const partnerId = conv.partner_id || (conv.user_id_1 === userId ? conv.user_id_2 : conv.user_id_1)
+            if (!partnerId || partnerId === 'user-anonymous-dev' || partnerId === userId) {
+              return
+            }
 
             // 🔧 [修复] 如果用户正在聊天室中，跳过所有通知弹窗（避免打扰聊天体验）
             // 无论消息来自当前聊天对象还是其他人，都不弹窗
@@ -179,7 +320,7 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
             }
 
             const cachedMatch = matchesCacheRef.current[partnerId]
-            const partnerName = cachedMatch?.user?.name || partnerId
+            const partnerName = normalizeDisplayName(conv.partner_name, cachedMatch?.user?.name, partnerId)
 
             notification.info({
               message: t('conversation.newMessageNotify'),
@@ -195,8 +336,8 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
                     user: {
                       id: partnerId,
                       name: partnerName,
-                      avatar: undefined,
-                      avatar_url: undefined,
+                      avatar: conv.partner_avatar_url || undefined,
+                      avatar_url: conv.partner_avatar_url || undefined,
                     },
                     compatibility_score: 0,
                     score: 0,
@@ -221,6 +362,7 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
             setUnreadCount(totalUnread)
             setConversations(response)  // 保存会话列表
             setLastMessageTime(newLastMessageTime)
+            conversationSummaryStorage.setConversations(userId, response)
           }
         }
       } catch (error: unknown) {
@@ -267,11 +409,13 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
 
   // 打开聊天室（从 ChatInterface 回调）
   const handleOpenChatRoom = (partnerId: string, partnerName: string) => {
+    const cachedMatch = matchesCacheRef.current[partnerId] || matchesCache[partnerId]
+    const resolvedName = normalizeDisplayName(partnerName, cachedMatch?.user?.name, partnerId)
     // 创建匹配对象
     const match: MatchCandidate = {
       user: {
         id: partnerId,
-        name: partnerName,
+        name: resolvedName,
         avatar: undefined,
         avatar_url: undefined,
       },
@@ -375,16 +519,37 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
       setFloatingBallContext(e.detail)
     }
 
+    const handleConversationRead = (e: CustomEvent<{ partnerId?: string }>) => {
+      const partnerId = e.detail?.partnerId
+      if (!partnerId) return
+
+      setConversations((prev) => {
+        const next = prev.map((conv: any) => {
+          const convPartnerId = conv.partner_id || (conv.user_id_1 === userId ? conv.user_id_2 : conv.user_id_1)
+          if (convPartnerId === partnerId) {
+            return { ...conv, unread_count: 0 }
+          }
+          return conv
+        })
+        const unread = next.reduce((sum: number, conv: any) => sum + (conv.unread_count || 0), 0)
+        setUnreadCount(unread)
+        conversationSummaryStorage.setConversations(userId, next)
+        return next
+      })
+    }
+
     window.addEventListener('trigger-go-match', handleGoMatch)
     window.addEventListener('trigger-face-verification', handleFaceVerification)
     window.addEventListener('her-context-update', handleHerContextUpdate as EventListener)
+    window.addEventListener('conversation-read', handleConversationRead as EventListener)
 
     return () => {
       window.removeEventListener('trigger-go-match', handleGoMatch)
       window.removeEventListener('trigger-face-verification', handleFaceVerification)
       window.removeEventListener('her-context-update', handleHerContextUpdate as EventListener)
+      window.removeEventListener('conversation-read', handleConversationRead as EventListener)
     }
-  }, [])
+  }, [userId])
 
   const renderView = () => {
     // 滑动匹配页面
@@ -505,20 +670,19 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
             {/* 聊天室或滑动匹配模式下隐藏功能按钮，专注当前体验 */}
               {!chatRoomMatch && !showSwipeMatch && !showWhoLikesMe && !showConfidence && !showFaceVerification && <FeaturesButton onClick={() => setFeaturesDrawerOpen(true)} />}
             <Space>
-              {userInfo && (
-                <Text type="secondary" style={{ fontSize: 14 }}>
-                  {userInfo.name || userInfo.username}
-                </Text>
-              )}
-              <Button
-                type="text"
-                icon={<UserOutlined />}
-                onClick={() => onLogout?.()}
-                size="small"
-                className="logout-btn"
+              <button
+                type="button"
+                className="profile-entry"
+                onClick={handleOpenProfile}
+                aria-label={t('home.myProfile')}
               >
-                {t('auth.logout')}
-              </Button>
+                <Avatar size={28} icon={<UserOutlined />} className="profile-entry-avatar" />
+                {userInfo && (
+                  <Text type="secondary" style={{ fontSize: 14 }}>
+                    {userInfo.name || userInfo.username}
+                  </Text>
+                )}
+              </button>
             </Space>
           </Space>
         </div>
@@ -560,20 +724,138 @@ const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
         />
       </Suspense>
 
+      <Drawer
+        title={t('home.myProfile')}
+        placement="right"
+        width={380}
+        className="profile-drawer"
+        open={profileDrawerOpen}
+        onClose={() => {
+          setProfileDrawerOpen(false)
+          setProfileEditMode(false)
+        }}
+      >
+        {profileLoading ? (
+          <div style={{ textAlign: 'center', padding: '24px 0' }}>
+            <Spin size="large" />
+          </div>
+        ) : (
+          <>
+            <Card bordered={false} className="profile-summary-card">
+              <Space align="center">
+                <Avatar size={56} icon={<UserOutlined />} className="profile-summary-avatar" />
+                <div className="profile-summary-meta">
+                  <div className="profile-summary-name">{profileData?.name || profileData?.username || '未设置昵称'}</div>
+                  <Text type="secondary" className="profile-summary-username">@{profileData?.username || '-'}</Text>
+                </div>
+              </Space>
+              <Divider style={{ margin: '12px 0' }} />
+              <Space className="profile-summary-actions">
+                {!profileEditMode ? (
+                  <Button icon={<EditOutlined />} onClick={handleEnterProfileEdit} className="profile-edit-btn">
+                    编辑资料
+                  </Button>
+                ) : (
+                  <>
+                    <Button onClick={handleCancelProfileEdit} className="profile-cancel-btn">取消</Button>
+                    <Button type="primary" icon={<SaveOutlined />} loading={profileSaving} onClick={handleSaveProfile} className="profile-save-btn">
+                      保存
+                    </Button>
+                  </>
+                )}
+              </Space>
+            </Card>
+
+            {profileEditMode ? (
+              <Form form={profileForm} layout="vertical">
+                <Form.Item
+                  label={t('auth.name')}
+                  name="name"
+                  rules={[{ required: true, message: '请输入昵称' }]}
+                >
+                  <Input placeholder="请输入昵称" maxLength={32} />
+                </Form.Item>
+                <Form.Item label={t('profile.location')} name="location">
+                  <Input placeholder="例如：上海" maxLength={64} />
+                </Form.Item>
+                <Form.Item label={t('profile.bio')} name="bio">
+                  <Input.TextArea rows={4} placeholder="写点自我介绍" maxLength={300} showCount />
+                </Form.Item>
+                <Form.Item label={t('profile.interests')} name="interests">
+                  <Input.TextArea rows={3} placeholder="用逗号分隔，例如：旅行，美食，电影" maxLength={200} />
+                </Form.Item>
+              </Form>
+            ) : (
+              <Descriptions column={1} size="small" bordered className="profile-details">
+                <Descriptions.Item label={t('auth.username')}>
+                  {profileData?.username || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('auth.name')}>
+                  {profileData?.name || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('auth.email')}>
+                  {profileData?.email || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('profile.age')}>
+                  {profileData?.age ?? '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('profile.gender')}>
+                  {profileData?.gender || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('profile.location')}>
+                  {profileData?.location || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('profile.bio')}>
+                  {profileData?.bio || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label={t('profile.interests')}>
+                  {Array.isArray(profileData?.interests) && profileData.interests.length > 0
+                    ? profileData.interests.map((interest: string) => <Tag key={interest} className="profile-interest-tag">{interest}</Tag>)
+                    : '-'}
+                </Descriptions.Item>
+              </Descriptions>
+            )}
+
+            <div style={{ marginTop: 16 }}>
+              <Button
+                block
+                danger
+                icon={<UserOutlined />}
+                className="profile-logout-btn"
+                onClick={() => {
+                  setProfileDrawerOpen(false)
+                  onLogout?.()
+                }}
+              >
+                {t('auth.logout')}
+              </Button>
+            </div>
+          </>
+        )}
+      </Drawer>
+
       {/* PWA 安装提示 - 临时禁用，方便调试 */}
       {/* <PWAInstallPrompt /> */}
 
-      {/* 悬浮球 - 快速对话入口（只在聊天室模式显示，休眠时隐藏） */}
-      {chatRoomMatch && !herSleeping && (
+      {/* 🚀 [场景5方案2优化] 悬浮球 - 只在非主对话界面显示 */}
+      {/* 主对话界面已有 ChatInterface，悬浮球只在聊天室、滑动匹配页等场景显示 */}
+      {!herSleeping && (chatRoomMatch || showSwipeMatch || showConfidence || showFaceVerification) && (
         <Suspense fallback={null}>
           <AgentFloatingBall
             visible={true}
             hasNewMessage={hasNewMessage}
-            chatContext={floatingBallContext || {
+            chatContext={floatingBallContext || (chatRoomMatch ? {
               partnerId: chatRoomMatch.user?.id || '',
               partnerName: chatRoomMatch.user?.name || 'TA',
-            }}
-            quickOptions={CHAT_SCENE_QUICK_OPTIONS}
+            } : null)}
+            quickOptions={chatRoomMatch ? CHAT_SCENE_QUICK_OPTIONS : undefined}
+            // 根据当前页面状态推断场景
+            scene={
+              chatRoomMatch ? 'chat' :
+              showSwipeMatch ? 'swipe' :
+              showConfidence || showFaceVerification ? 'profile' :
+              'home'
+            }
             onQuickChat={handleQuickChat}
           />
         </Suspense>

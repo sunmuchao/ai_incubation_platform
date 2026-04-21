@@ -43,7 +43,7 @@
     }
   }
 
-  // 展开状态
+  // 展开状态 - 🚀 [性能优化] 移除动画
   &.expanded {
     pointer-events: none;
 
@@ -53,7 +53,10 @@
     }
 
     .agent-ball-panel {
-      animation: panelExpand 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      // 移除 animation: panelExpand
+      // 改用简单过渡
+      transition: opacity @transition-base;
+      opacity: 1;
       pointer-events: auto;
     }
   }
@@ -80,7 +83,9 @@
     overflow: hidden;
     flex-shrink: 0;
 
-    // 装饰光晕
+    // 装饰光晕 - 🚀 [性能优化] 移除持续旋转动画
+    // 原动画：animation: headerRotate 10s linear infinite 消耗 GPU
+    // 改为静态渐变效果
     &::before {
       content: '';
       position: absolute;
@@ -89,12 +94,7 @@
       width: 200%;
       height: 200%;
       background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
-      animation: headerRotate 10s linear infinite;
-    }
-
-    @keyframes headerRotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+      opacity: 0.8;
     }
 
     .agent-avatar {
@@ -189,7 +189,7 @@
       }
     }
 
-    // 🚀 [改进点3] Her 响应显示区域样式
+    // 🚀 [改进点3 + 场景5方案1] Her 响应显示区域样式
     .her-response-area {
       .her-loading {
         display: flex;
@@ -199,6 +199,19 @@
         background: rgba(200, 139, 139, 0.08);
         border-radius: @radius-md;
         margin-bottom: @space-2;
+
+        // 🚀 [性能优化] 移除思考动画的持续动画，改用静态样式
+        .thinking-text {
+          font-size: 13px;
+        }
+
+        // 移除 thinking-dots 动画
+        .thinking-dots {
+          display: inline-flex;
+          margin-left: 2px;
+          font-weight: bold;
+          color: @color-primary;
+        }
       }
 
       .her-response-bubble {
@@ -210,7 +223,7 @@
         border-radius: @radius-md;
         border: 1px solid rgba(200, 139, 139, 0.2);
         box-shadow: 0 2px 8px rgba(200, 139, 139, 0.15);
-        animation: responseFadeIn 0.3s ease-out;
+        // 🚀 [性能优化] 移除 responseFadeIn 动画
         position: relative;
 
         .ant-avatar {
@@ -249,17 +262,7 @@
           }
         }
       }
-
-      @keyframes responseFadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(8px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
+      // 🚀 [性能优化] 移除 responseFadeIn keyframes 定义
     }
 
     .quick-input-area {
@@ -282,57 +285,19 @@
   }
 }
 
-// ==================== 展开动画 ====================
+// 🚀 [性能优化] 移除展开动画定义，改用简单过渡
+// panelExpand 动画已移除
 
-@keyframes panelExpand {
-  from {
-    opacity: 0;
-    transform: scale(0.88) translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-// ==================== 悬浮球脉冲动画 ====================
-
-@keyframes floatPulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: @shadow-primary;
-  }
-  50% {
-    transform: scale(1.12);
-    box-shadow: @shadow-primary-strong;
-  }
-}
-
-@keyframes glowPulse {
-  0%, 100% {
-    box-shadow: @shadow-primary, 0 0 0 0 rgba(212, 165, 154, 0.6);
-  }
-  50% {
-    box-shadow: @shadow-primary-strong, 0 0 0 10px rgba(212, 165, 154, 0);
-  }
-}
-
-.agent-floating-ball.has-message .agent-ball {
-  animation: glowPulse 1.5s ease-in-out infinite;
-}
-
-// 浮动动画（待命状态）
-@keyframes floatIdle {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
+// 🚀 [性能优化] 移除待命状态浮动动画
+// 原动画：animation: floatIdle 3s ease-in-out infinite 消耗 GPU
 .agent-floating-ball:not(.has-message):not(.dragging) .agent-ball {
-  animation: floatIdle 3s ease-in-out infinite;
+  // 移除持续浮动动画
+}
+
+// 🚀 [性能优化] 移除有消息时的脉冲动画
+.agent-floating-ball.has-message .agent-ball {
+  // 用静态样式替代持续动画
+  box-shadow: @shadow-primary-strong;
 }
 
 // ==================== 响应式设计 ====================

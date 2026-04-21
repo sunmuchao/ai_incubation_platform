@@ -4,19 +4,28 @@
 核心组件：负责调用心跳 LLM 并处理 HEARTBEAT_OK 协议。
 功能：
 - 组装心跳提示词
-- 调用 LLM 判断是否需要行动
+- 调用 DeerFlow Agent 判断是否需要行动（个性化决策）
 - 解析 HEARTBEAT_OK / 行动指令
-- 触发推送执行器
+- 触发推送执行器（通过 WebSocket 推送到前端对话界面）
+
+【主动性重构 v2】
+- 原设计：直接调用 LLM，模板化推送内容
+- 新设计：调用 DeerFlow Agent，让 Agent 像真实对话一样思考
+- 效果：红娘主动在对话界面说话，而非系统通知
 """
 import uuid
 import re
 import json
 import asyncio
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 from utils.logger import logger
 from agent.autonomous.rule_parser import HeartbeatRule
+
+# 避免循环导入，使用 TYPE_CHECKING
+if TYPE_CHECKING:
+    from api.websocket import push_proactive_message_to_user
 
 
 # HEARTBEAT 协议常量
@@ -25,9 +34,9 @@ ACTION_TOKEN = "ACTION_REQUIRED"
 HEARTBEAT_ACK_MAX_CHARS = 300
 
 
-# 心跳提示词模板
+# 心跳提示词模板（用于 DeerFlow Agent）
 HEARTBEAT_PROMPT_TEMPLATE = """
-你是 Her 约会助手的心跳代理。请检查以下到期任务并判断是否需要采取行动。
+【心跳检查】请你作为红娘助手，检查以下到期任务并判断是否需要主动联系用户。
 
 ## 到期任务列表
 
@@ -45,7 +54,12 @@ HEARTBEAT_PROMPT_TEMPLATE = """
 
 ## 指导原则
 
-{guidelines_section}
+1. 如果无事需要处理，回复 HEARTBEAT_OK
+2. 如果需要主动联系用户，用自然语言写出要发送的消息（像真实对话一样）
+3. 消息要个性化，避免模板化，体现红娘的贴心和专业
+4. 注意用户推送偏好设置，尊重免打扰时段（22:00-08:00）
+5. 检查是否有重复推送，避免骚扰用户
+6. 优先级：破冰建议 > 约会提醒 > 话题激活 > 活跃唤醒 > 关系健康
 
 ## 响应格式要求
 
@@ -54,13 +68,9 @@ HEARTBEAT_PROMPT_TEMPLATE = """
 HEARTBEAT_OK
 ```
 
-如果需要推送，回复：
+如果需要主动联系用户，直接写出消息内容（用自然语言，像聊天一样）：
 ```
-ACTION_REQUIRED
-推送对象: <用户ID>, <匹配ID>
-推送类型: <icebreaker/topic/activation/date/health>
-推送理由: <为什么需要推送>
-推荐内容: <具体的推送内容建议>
+你好呀！昨天匹配的那位女生还没聊呢，我发现你们都喜欢户外徒步，要不要我帮你想个开场白？
 ```
 
 请开始检查。
@@ -71,26 +81,39 @@ class HeartbeatExecutor:
     """
     心跳执行器
 
-    调用 LLM 判断是否需要行动
+    调用 DeerFlow Agent 判断是否需要行动（主动性重构）
     """
 
     def __init__(self):
-        self.llm_client = None
-        self._init_llm_client()
+        self.deerflow_client = None
+        self._init_deerflow_client()
 
-    def _init_llm_client(self):
+    def _init_deerflow_client(self):
         """
-        初始化 LLM 客户端
+        初始化 DeerFlow 客户端
 
-        适配现有 LLMIntegrationClient
+        使用 Her 的 deerflow.py 中的 get_deerflow_client
         """
         try:
-            from integration.llm_client import llm_client
-            self.llm_client = llm_client
-            logger.info("HeartbeatExecutor: LLM client initialized (using existing LLMIntegrationClient)")
+            # 导入 Her 的 DeerFlow 客户端
+            import sys
+            import os
+            # 确保 Her 的 src 目录在 Python 路径中
+            her_src_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            if her_src_path not in sys.path:
+                sys.path.insert(0, her_src_path)
+
+            from api.deerflow import get_deerflow_client, DEERFLOW_AVAILABLE
+
+            if DEERFLOW_AVAILABLE:
+                self.deerflow_client = get_deerflow_client()
+                logger.info("HeartbeatExecutor: DeerFlow client initialized")
+            else:
+                logger.warning("HeartbeatExecutor: DeerFlow not available, using fallback")
+                self.deerflow_client = None
         except Exception as e:
-            logger.warning(f"HeartbeatExecutor: Failed to init LLM client: {e}")
-            self.llm_client = None
+            logger.warning(f"HeartbeatExecutor: Failed to init DeerFlow client: {e}")
+            self.deerflow_client = None
 
     def execute(
         self,
@@ -116,15 +139,15 @@ class HeartbeatExecutor:
         # 组装心跳提示词
         prompt = self._assemble_prompt(due_rules, context)
 
-        # 调用 LLM（同步包装异步调用）
-        llm_response = self._call_llm(heartbeat_id, prompt)
+        # 调用 DeerFlow Agent（而非直接调 LLM）
+        agent_response = self._call_deerflow_agent(heartbeat_id, prompt, context)
 
         # 解析响应
-        result = self._parse_response(llm_response)
+        result = self._parse_response(agent_response)
 
-        # 如果需要行动，触发推送执行器
+        # 如果需要行动，触发 WebSocket 推送
         if result['type'] == 'action_required':
-            self._trigger_push_executor(heartbeat_id, result, context)
+            self._trigger_websocket_push(heartbeat_id, result, context)
 
         return result
 
@@ -142,17 +165,6 @@ class HeartbeatExecutor:
             for rule in due_rules
         ])
 
-        # 指导原则部分
-        guidelines_text = """
-1. 如果无事需要处理，回复 HEARTBEAT_OK
-2. 如果需要推送，必须明确说明推送对象、类型和理由
-3. 推送内容要个性化，避免模板化
-4. 注意用户推送偏好设置，尊重免打扰时段
-5. 检查是否有重复推送，避免骚扰用户
-6. 优先级：icebreaker > date > topic > activation > health
-7. 一次心跳最多推送3条消息
-"""
-
         return HEARTBEAT_PROMPT_TEMPLATE.format(
             due_rules_section=due_rules_text,
             user_count=context.get('user_count', 0),
@@ -162,70 +174,71 @@ class HeartbeatExecutor:
             trigger_type=context.get('trigger_type', 'scheduled'),
             specific_user=context.get('specific_user', '无'),
             timestamp=context.get('timestamp', datetime.now().isoformat()),
-            guidelines_section=guidelines_text
         )
 
-    def _call_llm(self, heartbeat_id: str, prompt: str) -> str:
+    def _call_deerflow_agent(
+        self,
+        heartbeat_id: str,
+        prompt: str,
+        context: Dict[str, Any]
+    ) -> str:
         """
-        调用 LLM
+        调用 DeerFlow Agent（而非直接调 LLM）
 
-        适配现有 LLMIntegrationClient.generate_chat
-        使用线程安全的调用方式，避免 event loop 问题
+        使用 DeerFlow 的 chat 方法，让 Agent 像真实对话一样思考
         """
-        if self.llm_client is None:
-            logger.warning(f"🫀 [EXECUTOR:{heartbeat_id}] LLM client not available, using mock response")
-            return self._get_mock_response(prompt)
+        if self.deerflow_client is None:
+            logger.warning(f"🫀 [EXECUTOR:{heartbeat_id}] DeerFlow client not available, using fallback")
+            return self._get_fallback_response(prompt)
 
         try:
-            logger.debug(f"🫀 [EXECUTOR:{heartbeat_id}] Calling LLM with prompt length={len(prompt)}")
+            logger.debug(f"🫀 [EXECUTOR:{heartbeat_id}] Calling DeerFlow Agent with prompt length={len(prompt)}")
 
-            # 使用新的事件循环调用异步方法（线程安全）
-            new_loop = asyncio.new_event_loop()
-            try:
-                response = new_loop.run_until_complete(self.llm_client.generate_chat(prompt))
-            finally:
-                new_loop.close()
+            # 使用 DeerFlow 的 chat 方法
+            # thread_id 使用固定的 "heartbeat" 表示心跳专用对话
+            thread_id = "heartbeat-proactive-agent"
+
+            # 调用 DeerFlow Agent（使用 chat 方法）
+            response = self.deerflow_client.chat(prompt, thread_id=thread_id)
 
             # 提取响应文本
             if isinstance(response, dict):
-                content = response.get('text', '') or response.get('message', '') or str(response)
+                content = response.get('ai_message', '') or response.get('text', '') or str(response)
             elif isinstance(response, str):
                 content = response
             else:
                 content = str(response)
 
-            logger.debug(f"🫀 [EXECUTOR:{heartbeat_id}] LLM response: {content[:200]}...")
+            logger.debug(f"🫀 [EXECUTOR:{heartbeat_id}] Agent response: {content[:200]}...")
             return content
 
         except Exception as e:
-            logger.error(f"🫀 [EXECUTOR:{heartbeat_id}] LLM call failed: {e}")
-            return self._get_mock_response(prompt)
+            logger.error(f"🫀 [EXECUTOR:{heartbeat_id}] DeerFlow Agent call failed: {e}")
+            return self._get_fallback_response(prompt)
 
-    def _get_mock_response(self, prompt: str) -> str:
+    def _get_fallback_response(self, prompt: str) -> str:
         """
-        获取模拟响应（用于测试或 LLM 不可用时）
+        获取降级响应（DeerFlow 不可用时）
         """
         # 简单判断：如果有 check_new_matches 规则，返回行动指令
         if "check_new_matches" in prompt:
-            return """
-ACTION_REQUIRED
-推送对象: user_demo_001, match_demo_001
-推送类型: icebreaker
-推送理由: 检测到新匹配，建议推送破冰建议
-推荐内容: 你们有3个共同兴趣，可以从这些话题开始聊
-"""
+            return "你好呀！有新的匹配对象等你查看，要不要我帮你看看？"
+        elif "check_stale_conversations" in prompt:
+            return "你之前的聊天好像停了几天了，要不要我帮你想几个话题继续聊聊？"
+        elif "check_user_activity" in prompt:
+            return "好久不见！有新的人在等你，回来看看吧~"
         else:
             return "HEARTBEAT_OK"
 
     def _parse_response(self, response: str) -> Dict[str, Any]:
         """
-        解析 LLM 响应
+        解析 DeerFlow Agent 响应
 
-        支持 HEARTBEAT_OK 和 ACTION_REQUIRED 两种格式
+        支持 HEARTBEAT_OK 和自然语言消息两种格式
         """
         response = response.strip()
 
-        # 检查 HEARTBEAT_OK
+        # 检查 HEARTBEAT_OK（无事可做）
         if response.startswith(HEARTBEAT_TOKEN):
             remaining = response[len(HEARTBEAT_TOKEN):].strip()
 
@@ -243,79 +256,52 @@ ACTION_REQUIRED
                 "action": None
             }
 
-        # 检查 ACTION_REQUIRED
-        if response.startswith(ACTION_TOKEN) or "ACTION_REQUIRED" in response:
-            return self._parse_action_response(response)
-
-        # 无法识别，返回 unclear
-        logger.warning(f"Unrecognized heartbeat response format")
+        # 其他情况：Agent 输出了自然语言消息，需要推送
+        # 新设计：直接把 Agent 的消息作为推送内容
+        logger.info(f"Parsed action: Agent wants to send message: {response[:100]}...")
         return {
-            "type": "unclear",
-            "message": response
-        }
-
-    def _parse_action_response(self, response: str) -> Dict[str, Any]:
-        """
-        解析行动指令响应
-        """
-        result = {
             "type": "action_required",
-            "actions": []
+            "action_type": "proactive_message",
+            "message": response,  # Agent 的自然语言消息
+            "reason": "Agent 主动判断需要联系用户",
         }
 
-        # 提取推送对象
-        user_match = re.search(r'推送对象:\s*(.+)', response)
-        if user_match:
-            targets = user_match.group(1).strip()
-            # 解析用户ID和匹配ID
-            target_parts = targets.replace(',', ' ').split()
-            result["target_users"] = target_parts
-
-        # 提取推送类型
-        type_match = re.search(r'推送类型:\s*(\S+)', response)
-        if type_match:
-            result["action_type"] = type_match.group(1).strip()
-
-        # 提取推送理由
-        reason_match = re.search(r'推送理由:\s*(.+)', response)
-        if reason_match:
-            result["reason"] = reason_match.group(1).strip()
-
-        # 提取推荐内容
-        content_match = re.search(r'推荐内容:\s*(.+)', response)
-        if content_match:
-            result["recommended_content"] = content_match.group(1).strip()
-
-        logger.info(f"Parsed action: type={result.get('action_type')}, targets={result.get('target_users')}")
-
-        return result
-
-    def _trigger_push_executor(
+    def _trigger_websocket_push(
         self,
         heartbeat_id: str,
         action_result: Dict[str, Any],
         context: Dict[str, Any]
     ):
         """
-        触发推送执行器
+        触发 WebSocket 推送（而非极光推送）
+
+        将 Agent 的消息推送到前端对话界面，让用户看到红娘主动说话
         """
         try:
-            from agent.autonomous.push_executor import PushExecutor
+            # 获取目标用户（从 context 或规则中提取）
+            specific_user = context.get('specific_user')
 
-            executor = PushExecutor()
-            push_result = executor.execute(
-                heartbeat_id=heartbeat_id,
-                action_type=action_result.get('action_type', 'unknown'),
-                target_users=action_result.get('target_users', []),
-                reason=action_result.get('reason', ''),
-                recommended_content=action_result.get('recommended_content', ''),
-                context=context
+            if not specific_user:
+                logger.warning(f"🫀 [EXECUTOR:{heartbeat_id}] No specific user to push to")
+                return
+
+            # 调用 WebSocket 推送服务
+            from api.websocket import push_proactive_message_to_user
+
+            message = action_result.get('message', '')
+
+            logger.info(f"🫀 [EXECUTOR:{heartbeat_id}] Pushing to user {specific_user}: {message[:50]}...")
+
+            push_result = push_proactive_message_to_user(
+                user_id=specific_user,
+                message=message,
+                heartbeat_id=heartbeat_id
             )
 
             action_result["push_result"] = push_result
 
         except Exception as e:
-            logger.error(f"🫀 [EXECUTOR:{heartbeat_id}] Failed to trigger push executor: {e}")
+            logger.error(f"🫀 [EXECUTOR:{heartbeat_id}] Failed to trigger WebSocket push: {e}")
             action_result["push_error"] = str(e)
 
 

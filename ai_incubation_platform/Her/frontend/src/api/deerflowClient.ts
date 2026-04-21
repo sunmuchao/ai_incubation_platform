@@ -111,6 +111,15 @@ export interface DeerFlowStreamEvent {
   data: Record<string, any>;
 }
 
+export interface MatchReasonStatus {
+  success: boolean;
+  query_request_id: string;
+  status: 'pending' | 'completed' | 'not_found' | 'error' | string;
+  updated_at?: number;
+  elapsed_ms?: number;
+  reasons_by_user_id: Record<string, string[]>;
+}
+
 /**
  * DeerFlow Client
  */
@@ -254,6 +263,31 @@ export const deerflowClient = {
         success: false,
         facts_count: 0,
         message: '同步失败',
+      };
+    }
+  },
+
+  async getMatchReasonsStatus(queryRequestId: string): Promise<MatchReasonStatus> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/deerflow/match-reasons/${encodeURIComponent(queryRequestId)}`, {
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) {
+        return {
+          success: false,
+          query_request_id: queryRequestId,
+          status: 'error',
+          reasons_by_user_id: {},
+        };
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Get match reasons status error:', error);
+      return {
+        success: false,
+        query_request_id: queryRequestId,
+        status: 'error',
+        reasons_by_user_id: {},
       };
     }
   },

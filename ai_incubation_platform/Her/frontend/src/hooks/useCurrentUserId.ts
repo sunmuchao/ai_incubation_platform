@@ -18,16 +18,26 @@ import { authStorage, devStorage } from '../utils/storage'
  * @returns 当前用户 ID 字符串
  */
 export function useCurrentUserId(): string {
-  // 优先使用真实用户 ID
-  const userId = authStorage.getUserId()
-  if (userId) {
-    return userId
+  const token = authStorage.getToken()
+
+  // 有 token 时优先使用真实登录用户
+  if (token) {
+    const userId = authStorage.getUserId()
+    if (userId) {
+      return userId
+    }
   }
 
-  // 开发环境使用测试用户 ID
+  // 无 token 时优先使用开发态测试用户（与 API 请求头一致）
   const testUserId = devStorage.getTestUserId()
   if (testUserId) {
     return testUserId
+  }
+
+  // 次选本地用户 ID（兼容历史数据）
+  const userId = authStorage.getUserId()
+  if (userId) {
+    return userId
   }
 
   // 默认 fallback
@@ -40,7 +50,13 @@ export function useCurrentUserId(): string {
  * @returns 当前用户 ID 字符串
  */
 export function getCurrentUserId(): string {
-  return authStorage.getUserId() || devStorage.getTestUserId() || 'user-test-001'
+  const token = authStorage.getToken()
+
+  if (token) {
+    return authStorage.getUserId() || devStorage.getTestUserId() || 'user-test-001'
+  }
+
+  return devStorage.getTestUserId() || authStorage.getUserId() || 'user-test-001'
 }
 
 export default useCurrentUserId

@@ -25,7 +25,9 @@
   position: relative;
   overflow: hidden;
 
-  // 柔和背景光晕
+  // 🚀 [性能优化] 移除持续动画，改用静态渐变背景（避免 GPU 过载）
+  // 原动画：animation: homeAura 12s infinite 消耗大量 GPU 性能
+  // 优化后：静态渐变 + 微妙的 opacity，无动画开销
   &::before {
     content: '';
     position: absolute;
@@ -34,8 +36,9 @@
     width: 700px;
     height: 700px;
     background: radial-gradient(circle, @color-primary-light 0%, transparent 70%);
-    animation: homeAura 12s infinite ease-in-out;
+    opacity: 0.5;
     pointer-events: none;
+    // 移除 animation: homeAura 12s infinite
   }
 
   &::after {
@@ -46,20 +49,12 @@
     width: 500px;
     height: 500px;
     background: radial-gradient(circle, @color-accent-light 0%, transparent 70%);
-    animation: homeAura 12s infinite ease-in-out reverse;
+    opacity: 0.5;
     pointer-events: none;
+    // 移除 animation: homeAura 12s infinite reverse
   }
 
-  @keyframes homeAura {
-    0%, 100% {
-      transform: scale(1) translate(0, 0);
-      opacity: 0.5;
-    }
-    50% {
-      transform: scale(1.1) translate(-15px, 15px);
-      opacity: 0.7;
-    }
-  }
+  // 🚀 [性能优化] 移除无用的动画定义，减少 CSS 解析开销
 }
 
 // ==================== Header ====================
@@ -94,6 +89,21 @@
     display: flex;
     align-items: center;
     gap: @space-3;
+
+    .profile-entry {
+      display: inline-flex;
+      align-items: center;
+      gap: @space-2;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      color: inherit;
+
+      &:hover {
+        opacity: 0.85;
+      }
+    }
 
     // 退出按钮
     .logout-btn {
@@ -204,6 +214,83 @@
   overflow: hidden;
 }
 
+// ==================== Profile Drawer ====================
+.profile-drawer {
+  .ant-drawer-header {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 247, 250, 0.9) 100%);
+    border-bottom: 1px solid @border-light;
+  }
+
+  .ant-drawer-body {
+    background: linear-gradient(180deg, #fff 0%, #fffafb 100%);
+  }
+
+  .profile-summary-card {
+    margin-bottom: @space-3;
+    border-radius: @radius-xl;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 245, 249, 0.96) 100%);
+    border: 1px solid @border-light;
+    box-shadow: @shadow-sm;
+  }
+
+  .profile-summary-avatar {
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 6px 16px rgba(233, 124, 166, 0.18);
+  }
+
+  .profile-summary-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .profile-summary-name {
+    font-size: @font-size-lg;
+    font-weight: @font-weight-semibold;
+    color: @text-primary;
+  }
+
+  .profile-summary-username {
+    font-size: @font-size-sm;
+  }
+
+  .profile-summary-actions {
+    .ant-btn {
+      border-radius: @radius-md;
+    }
+  }
+
+  .profile-details {
+    border-radius: @radius-lg;
+    overflow: hidden;
+    box-shadow: @shadow-sm;
+
+    .ant-descriptions-item-label {
+      background: rgba(245, 237, 241, 0.55);
+      color: @text-secondary;
+      font-weight: @font-weight-medium;
+      width: 108px;
+    }
+
+    .ant-descriptions-item-content {
+      background: rgba(255, 255, 255, 0.92);
+      color: @text-primary;
+    }
+  }
+
+  .profile-interest-tag {
+    border-radius: @radius-full;
+    background: rgba(233, 124, 166, 0.1);
+    border-color: rgba(233, 124, 166, 0.25);
+    color: #8f4364;
+    margin-bottom: 4px;
+  }
+
+  .profile-logout-btn {
+    border-radius: @radius-md;
+  }
+}
+
 // 其他视图
 .discover-view,
 .timeline-view,
@@ -215,47 +302,20 @@
   height: 100%;
 }
 
-// ==================== Generative UI 动画 ====================
+// ==================== Generative UI ====================
+// 🚀 [性能优化] 移除所有动画定义，改用简单过渡
 
-@keyframes cardAppear {
-  from {
-    opacity: 0;
-    transform: translateY(16px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
+// 🚀 [性能优化] 移除卡片进入动画，改用简单过渡
 .generative-ui-container {
-  animation: cardAppear 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  // 移除 animation: cardAppear 0.4s cubic-bezier
+  transition: opacity @transition-base;
 
   &.animating {
     opacity: 0.8;
   }
 }
 
-// 卡片进入动画
-.card-enter {
-  animation: slideUp 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
+// 🚀 [性能优化] 移除卡片进入动画定义
 
 // 按钮点击波纹效果
 .ripple-effect {
@@ -283,15 +343,11 @@
 
 // ==================== 悬浮球容器 ====================
 
+// 🚀 [性能优化] 移除悬浮球浮动动画（避免持续 GPU 开销）
 .floating-ball-container {
   position: fixed;
   z-index: @z-index-float;
-  animation: float 3s ease-in-out infinite;
-
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-  }
+  // 移除 animation: float 3s ease-in-out infinite
 }
 
 // ==================== 通知动画 ====================

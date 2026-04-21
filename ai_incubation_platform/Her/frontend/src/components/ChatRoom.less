@@ -89,13 +89,11 @@
 .typing-indicator {
   font-size: 12px !important;
   color: #1890ff !important;
-  animation: pulse 1.5s ease-in-out infinite;
+  // 🚀 [性能优化] 移除 pulse 1.5s infinite 动画
+  opacity: 0.8;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
+// 🚀 [性能优化] 移除 pulse keyframes 定义
 
 .header-right {
   display: flex;
@@ -678,19 +676,10 @@
   }
 
   .ant-avatar {
-    animation: herPulse 2s ease-in-out infinite;
+    // 🚀 [性能优化] 移除 herPulse 2s infinite 动画
   }
 
-  @keyframes herPulse {
-    0%, 100% {
-      transform: scale(1);
-      box-shadow: 0 0 0 rgba(200, 139, 139, 0);
-    }
-    50% {
-      transform: scale(1.1);
-      box-shadow: 0 0 12px rgba(200, 139, 139, 0.3);
-    }
-  }
+  // 🚀 [性能优化] 移除 herPulse keyframes 定义
 
   .ant-btn-link {
     color: #C88B8B;
@@ -726,16 +715,7 @@
     gap: 8px;
 
     .ant-avatar {
-      animation: herAvatarPulse 2s ease-in-out infinite;
-    }
-
-    @keyframes herAvatarPulse {
-      0%, 100% {
-        transform: scale(1);
-      }
-      50% {
-        transform: scale(1.08);
-      }
+      // 🚀 [性能优化] 移除 herAvatarPulse 2s infinite 动画
     }
   }
 
